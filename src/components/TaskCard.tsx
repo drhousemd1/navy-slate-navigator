@@ -101,8 +101,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           
           <CompletionButton
-            taskId={task.id}
-            completed={task.completed}
+            task={task}
             onToggleComplete={onToggleComplete}
             disabled={disabled}
           />

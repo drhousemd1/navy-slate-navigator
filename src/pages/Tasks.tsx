@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import TaskEditor from '@/components/TaskEditor';
 import TasksList from '@/components/task/TasksList';
 import { useTasksData } from '@/hooks/useTasksData';
-import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
+import { Task, TaskFormValues, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
 import { toast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/errors';
 import { logger } from '@/lib/logger';
@@ -13,7 +14,7 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 
 const Tasks: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<TaskWithId | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const { user } = useAuth();
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
   
@@ -52,7 +53,7 @@ const Tasks: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  const handleEditTask = (task: TaskWithId) => {
+  const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setIsEditorOpen(true);
   };
@@ -158,7 +159,7 @@ const Tasks: React.FC = () => {
     }
   };
 
-  const convertTaskToPartial = (task: TaskWithId) => {
+  const convertTaskToPartial = (task: Task) => {
     const { id, created_at, updated_at, user_id, ...taskFormData } = task;
     return {
       ...taskFormData,
@@ -209,7 +210,7 @@ const Tasks: React.FC = () => {
             setIsEditorOpen(false);
             setEditingTask(null);
           }}
-          taskData={editingTask ? convertTaskToPartial(editingTask) : undefined}
+          task={editingTask ? convertTaskToPartial(editingTask) : undefined}
           onSave={handleSaveTask}
           onDelete={editingTask ? () => handleDeleteTask(editingTask.id) : undefined}
         />

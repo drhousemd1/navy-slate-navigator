@@ -37,6 +37,40 @@ export interface Task {
   image_meta?: Json; // JSONB field for optimized image metadata
 }
 
+// Export the TaskWithId type that other files are expecting
+export type TaskWithId = Task;
+
+// Export the RawSupabaseTask type that queries.ts is expecting
+export interface RawSupabaseTask {
+  id: string;
+  title: string;
+  description?: string;
+  priority: string;
+  frequency: string;
+  frequency_count: number;
+  points: number;
+  background_image_url?: string;
+  background_opacity: number;
+  icon_url?: string;
+  icon_name?: string;
+  title_color: string;
+  subtext_color: string;
+  calendar_color: string;
+  icon_color: string;
+  highlight_effect: boolean;
+  focal_point_x: number;
+  focal_point_y: number;
+  completed: boolean;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  last_completed_date?: string;
+  usage_data?: Json;
+  week_identifier?: string;
+  background_images?: Json;
+  image_meta?: Json;
+}
+
 export interface TaskFormValues {
   title: string;
   description?: string;
@@ -102,4 +136,5 @@ export interface UpdateTaskVariables {
   completed?: boolean;
   usage_data?: Json;
   image_meta?: Json; // JSONB field for optimized image metadata
+  last_completed_date?: string; // Add this missing field
 }

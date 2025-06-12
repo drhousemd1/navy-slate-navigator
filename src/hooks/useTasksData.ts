@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
-import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, Json } from '@/data/tasks/types';
+import { Task, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, Json } from '@/data/tasks/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -61,7 +61,7 @@ export const useTasksData = () => {
     }
   }, [queryClient, refetch]);
 
-  const saveTask = async (taskData: SaveTaskInput): Promise<TaskWithId | null> => {
+  const saveTask = async (taskData: SaveTaskInput): Promise<Task | null> => {
     try {
       // Check for resets before saving
       await checkAndReloadTasks();

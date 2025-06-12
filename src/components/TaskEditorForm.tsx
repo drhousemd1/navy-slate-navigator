@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Task } from '@/data/tasks/types';
+import { Task, Json } from '@/data/tasks/types';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import PrioritySelector from './task-editor/PrioritySelector';
@@ -43,7 +43,7 @@ const taskFormSchema = z.object({
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema> & {
-  image_meta?: ImageMeta;
+  image_meta?: Json;
 };
 
 interface TaskEditorFormProps {
@@ -90,6 +90,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
 
   useEffect(() => {
     if (task) {
+      const parsedImageMeta = task.image_meta ? task.image_meta as Json : undefined;
+      
       reset({
         title: task.title || '',
         description: task.description || '',
@@ -108,14 +110,25 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         highlight_effect: task.highlight_effect || false,
         focal_point_x: task.focal_point_x || 50,
         focal_point_y: task.focal_point_y || 50,
-        image_meta: task.image_meta || undefined,
+        image_meta: parsedImageMeta,
       });
       setSelectedIconName(task.icon_name || null);
     }
   }, [task, reset]);
 
   const handleImageUpload = (imageMeta: ImageMeta) => {
-    setValue('image_meta', imageMeta);
+    // Convert ImageMeta to Json type for database storage
+    const imageMetaJson: Json = {
+      full: imageMeta.full,
+      thumb: imageMeta.thumb,
+      originalName: imageMeta.originalName,
+      size: imageMeta.size,
+      compressionRatio: imageMeta.compressionRatio,
+      uploadedAt: imageMeta.uploadedAt,
+      version: imageMeta.version,
+    };
+    
+    setValue('image_meta', imageMetaJson);
     setValue('background_image_url', imageMeta.full);
     
     toast({
@@ -171,6 +184,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         id: task?.id,
         icon_name: selectedIconName || undefined,
         icon_url: values.icon_url || undefined,
+        image_meta: values.image_meta,
       };
       await onSave(taskToSave);
     } catch (error) {
@@ -264,9 +278,9 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-400">
                     Background image uploaded
-                    {watch('image_meta')?.compressionRatio && (
+                    {typeof watch('image_meta') === 'object' && watch('image_meta') && 'compressionRatio' in (watch('image_meta') as any) && (
                       <span className="ml-2 text-green-400">
-                        ({watch('image_meta')?.compressionRatio}% compression)
+                        ({(watch('image_meta') as any).compressionRatio}% compression)
                       </span>
                     )}
                   </div>
