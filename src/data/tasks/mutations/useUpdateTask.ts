@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
@@ -7,6 +8,7 @@ import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { processImageForSave } from '@/utils/image/taskIntegration';
 
 export type { UpdateTaskVariables }; // Changed to export type
 
@@ -19,9 +21,14 @@ export const useUpdateTask = () => {
     mutationFn: async (variables: UpdateTaskVariables) => {
       const { id, ...updatesFromVariables } = variables;
 
+      // Process image if present
+      const { processedUrl, metadata } = await processImageForSave(updatesFromVariables.background_image_url || null);
+
       // Ensure background_images is correctly typed if present
       const updatesForSupabase: Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at'>> & { background_images?: Json | null } = {
         ...updatesFromVariables,
+        background_image_url: processedUrl,
+        image_meta: updatesFromVariables.image_meta || metadata,
       };
       if (updatesFromVariables.background_images !== undefined) {
         updatesForSupabase.background_images = updatesFromVariables.background_images as Json | null;

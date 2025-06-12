@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useAuth } from '@/contexts/auth';
+import { processImageForSave } from '@/utils/image/taskIntegration';
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
@@ -23,6 +24,9 @@ export const useCreateTask = () => {
         throw new Error('User must be authenticated to create tasks');
       }
 
+      // Process image if present
+      const { processedUrl, metadata } = await processImageForSave(variables.background_image_url || null);
+
       const taskToInsert = {
         title: variables.title,
         points: variables.points,
@@ -35,7 +39,7 @@ export const useCreateTask = () => {
         title_color: variables.title_color || '#FFFFFF',
         subtext_color: variables.subtext_color || '#8E9196',
         calendar_color: variables.calendar_color || '#7E69AB',
-        background_image_url: variables.background_image_url,
+        background_image_url: processedUrl,
         background_opacity: variables.background_opacity || 100,
         highlight_effect: variables.highlight_effect || false,
         focal_point_x: variables.focal_point_x || 50,
@@ -43,6 +47,7 @@ export const useCreateTask = () => {
         week_identifier: variables.week_identifier, 
         background_images: variables.background_images as Json,
         icon_url: variables.icon_url,
+        image_meta: variables.image_meta || metadata,
         user_id: user.id, // Always use current authenticated user
       };
 
@@ -86,6 +91,7 @@ export const useCreateTask = () => {
         icon_url: variables.icon_url || null,
         usage_data: variables.usage_data || Array(7).fill(0),
         background_images: variables.background_images as Json || null,
+        image_meta: variables.image_meta || null,
         user_id: user?.id || '',
         ...variables, 
       } as TaskWithId;

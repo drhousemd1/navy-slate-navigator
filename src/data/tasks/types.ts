@@ -27,6 +27,7 @@ export interface Task {
   last_completed_date?: string;
   week_identifier?: string;
   usage_data?: Json;
+  image_meta?: Json | null;
   user_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -60,6 +61,7 @@ export interface TaskFormValues {
   focal_point_x: number;
   focal_point_y: number;
   highlight_effect: boolean;
+  image_meta?: Json | null;
 }
 
 export interface CreateTaskVariables extends TaskFormValues {
