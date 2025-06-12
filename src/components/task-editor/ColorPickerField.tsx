@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Control, Controller, FieldValues, Path } from 'react-hook-form';
 import { FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -28,12 +29,11 @@ const ColorPickerField = <T extends FieldValues>({ control, name, label }: Color
                   style={{ backgroundColor: field.value }}
                 >
                   <div className="w-4 h-4 rounded-full mr-2 border border-gray-400" style={{ backgroundColor: field.value }} />
-                  {field.value || 'Pick a color'}
+                  {field.value ? 'Color' : 'Pick a color'}
                 </Button>
               </FormControl>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 bg-dark-navy border-light-navy" align="start">
-              {/* Using a simple input type="color" for brevity. A more complex picker could be used. */}
               <Input
                 type="color"
                 className="p-0 m-0 border-none w-full h-10 cursor-pointer"
