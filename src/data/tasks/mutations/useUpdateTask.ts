@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
@@ -8,26 +7,21 @@ import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
-import { imageMetadataToJson } from '@/utils/image/integration';
 
-export type { UpdateTaskVariables };
+export type { UpdateTaskVariables }; // Changed to export type
 
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
 
   return useUpdateOptimisticMutation<TaskWithId, Error, UpdateTaskVariables>({
     queryClient,
-    queryKey: TASKS_QUERY_KEY,
+    queryKey: TASKS_QUERY_KEY, // Use the constant
     mutationFn: async (variables: UpdateTaskVariables) => {
       const { id, ...updatesFromVariables } = variables;
 
       // Ensure background_images is correctly typed if present
-      const updatesForSupabase: Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at'>> & { 
-        background_images?: Json | null;
-        image_meta?: Json | null;
-      } = {
+      const updatesForSupabase: Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at'>> & { background_images?: Json | null } = {
         ...updatesFromVariables,
-        image_meta: updatesFromVariables.image_meta ? imageMetadataToJson(updatesFromVariables.image_meta) : updatesFromVariables.image_meta,
       };
       if (updatesFromVariables.background_images !== undefined) {
         updatesForSupabase.background_images = updatesFromVariables.background_images as Json | null;
