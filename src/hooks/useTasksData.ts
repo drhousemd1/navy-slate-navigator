@@ -70,16 +70,28 @@ export const useTasksData = () => {
       // UpdateTaskVariables will have an 'id' property.
       if ('id' in taskData && taskData.id) {
         // This is UpdateTaskVariables
-        const updatePayload: UpdateTaskVariables = taskData;
+        const updatePayload: UpdateTaskVariables = {
+          ...taskData,
+          priority: taskData.priority && ['low', 'medium', 'high'].includes(taskData.priority) 
+            ? taskData.priority as 'low' | 'medium' | 'high'
+            : 'medium',
+          frequency: taskData.frequency && ['daily', 'weekly', 'monthly'].includes(taskData.frequency)
+            ? taskData.frequency as 'daily' | 'weekly' | 'monthly'
+            : 'daily'
+        };
         return await updateTaskMutation.mutateAsync(updatePayload);
 
       } else {
         // This is CreateTaskVariables.
-        // The incoming taskData, when 'id' is not present or falsy,
-        // is expected to conform to CreateTaskVariables based on how it's constructed
-        // (e.g., in Tasks.tsx from TaskFormValues).
-        // The 'as CreateTaskVariables' cast assures TypeScript of this specific shape.
-        const createPayload: CreateTaskVariables = taskData as CreateTaskVariables;
+        const createPayload: CreateTaskVariables = {
+          ...taskData as CreateTaskVariables,
+          priority: taskData.priority && ['low', 'medium', 'high'].includes(taskData.priority) 
+            ? taskData.priority as 'low' | 'medium' | 'high'
+            : 'medium',
+          frequency: taskData.frequency && ['daily', 'weekly', 'monthly'].includes(taskData.frequency)
+            ? taskData.frequency as 'daily' | 'weekly' | 'monthly'
+            : 'daily'
+        };
         return await createTaskMutation.mutateAsync(createPayload);
       }
     } catch (e: unknown) {

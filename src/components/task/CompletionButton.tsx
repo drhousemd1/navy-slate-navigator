@@ -1,32 +1,29 @@
 
 import React from 'react';
 import { Button } from '../ui/button';
+import { Task } from '@/data/tasks/types';
 
 interface CompletionButtonProps {
-  completed: boolean;
-  onToggleCompletion: (completed: boolean) => void;
-  currentCompletions: number;
-  maxCompletions: number;
+  task: Task;
+  onToggleComplete: (taskId: string) => void;
+  disabled?: boolean;
 }
 
 const CompletionButton: React.FC<CompletionButtonProps> = ({ 
-  completed, 
-  onToggleCompletion,
-  currentCompletions = 0,
-  maxCompletions = 1
+  task, 
+  onToggleComplete,
+  disabled = false
 }) => {
-  const hasReachedMax = currentCompletions >= maxCompletions;
-  
   return (
     <Button
       variant="default"
       size="sm"
-      className={`${hasReachedMax ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500'} text-white px-3 py-0 h-7`}
-      onClick={() => !hasReachedMax && onToggleCompletion(!completed)}
-      disabled={hasReachedMax}
+      className={`${task.completed ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500'} text-white px-3 py-0 h-7`}
+      onClick={() => !disabled && onToggleComplete(task.id)}
+      disabled={disabled || task.completed}
     >
       <span className="text-xs">
-        {hasReachedMax ? 'Completed' : 'Complete'}
+        {task.completed ? 'Completed' : 'Complete'}
       </span>
     </Button>
   );

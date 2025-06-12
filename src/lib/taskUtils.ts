@@ -191,6 +191,9 @@ export const transformSupabaseTask = (rawTask: RawSupabaseTask): TaskType => {
     ...rawTask,
     priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high') 
       ? rawTask.priority 
-      : 'medium' as const
+      : 'medium' as const,
+    frequency: (rawTask.frequency === 'daily' || rawTask.frequency === 'weekly' || rawTask.frequency === 'monthly')
+      ? rawTask.frequency 
+      : 'daily' as const
   };
 };

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Task, Json } from '@/data/tasks/types';
+import { Task, Json, TaskFormValues } from '@/data/tasks/types';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import PrioritySelector from './task-editor/PrioritySelector';
@@ -40,15 +40,14 @@ const taskFormSchema = z.object({
   highlight_effect: z.boolean(),
   focal_point_x: z.number().min(0).max(100),
   focal_point_y: z.number().min(0).max(100),
+  image_meta: z.any().optional(),
 });
 
-type TaskFormValues = z.infer<typeof taskFormSchema> & {
-  image_meta?: Json;
-};
+type FormValues = z.infer<typeof taskFormSchema>;
 
 interface TaskEditorFormProps {
   task?: Task;
-  onSave: (taskData: Partial<Task>) => Promise<void>;
+  onSave: (taskData: TaskFormValues) => Promise<void>;
   onDelete?: (taskId: string) => void;
   onCancel: () => void;
 }
@@ -63,7 +62,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const form = useForm<TaskFormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: '',
@@ -176,12 +175,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     setValue('icon_name', '');
   };
 
-  const onSubmit = async (values: TaskFormValues) => {
+  const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      const taskToSave: Partial<Task> = {
+      const taskToSave: TaskFormValues = {
         ...values,
-        id: task?.id,
         icon_name: selectedIconName || undefined,
         icon_url: values.icon_url || undefined,
         image_meta: values.image_meta,
