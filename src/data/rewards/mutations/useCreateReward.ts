@@ -21,6 +21,7 @@ export const useCreateRewardMutation = () => {
       }
 
       // Prepare the data for Supabase using the utility function
+      // Add user_id if not provided
       const rewardToInsert = prepareRewardDataForSupabase({
         title: variables.title,
         description: variables.description,
