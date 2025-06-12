@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
@@ -6,6 +7,7 @@ import { generateMondayBasedWeekDates } from '@/lib/utils';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 export interface WeeklyDataItem {
   date: string;
@@ -17,8 +19,8 @@ export interface WeeklyDataItem {
 
 export const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
-const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
-  logger.debug('Fetching weekly chart data via useWeeklyMetrics hook at', new Date().toISOString());
+const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<WeeklyDataItem[]> => {
+  logger.debug('Fetching weekly chart data via useWeeklyMetrics hook at', new Date().toISOString(), 'for users:', subUserId, domUserId);
   try {
     const weekDays = generateMondayBasedWeekDates();
     const metricsMap = new Map<string, WeeklyDataItem>();
@@ -40,6 +42,7 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
     const { data: taskCompletions, error: taskError } = await supabase
       .from('task_completion_history')
       .select('task_id, completed_at')
+      .in('user_id', [subUserId, domUserId])
       .gte('completed_at', start.toISOString())
       .lte('completed_at', end.toISOString());
 
@@ -60,6 +63,7 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
     const { data: ruleViolations, error: ruleError } = await supabase
       .from('rule_violations')
       .select('violation_date')
+      .in('user_id', [subUserId, domUserId])
       .gte('violation_date', start.toISOString())
       .lte('violation_date', end.toISOString());
 
@@ -75,6 +79,7 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
     const { data: rewardUsages, error: rewardError } = await supabase
       .from('reward_usage')
       .select('created_at')
+      .in('user_id', [subUserId, domUserId])
       .gte('created_at', start.toISOString())
       .lte('created_at', end.toISOString());
 
@@ -90,6 +95,7 @@ const fetchWeeklyData = async (): Promise<WeeklyDataItem[]> => {
     const { data: punishmentsData, error: punishmentError } = await supabase
       .from('punishment_history')
       .select('applied_date')
+      .in('user_id', [subUserId, domUserId])
       .gte('applied_date', start.toISOString())
       .lte('applied_date', end.toISOString());
 
@@ -120,10 +126,12 @@ interface UseWeeklyMetricsOptions {
 }
 
 export const useWeeklyMetrics = (options?: UseWeeklyMetricsOptions) => {
+  const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
+  
   return useQuery<WeeklyDataItem[], Error>({
-    queryKey: WEEKLY_METRICS_QUERY_KEY,
-    queryFn: fetchWeeklyData,
+    queryKey: [...WEEKLY_METRICS_QUERY_KEY, subUserId, domUserId],
+    queryFn: () => fetchWeeklyData(subUserId!, domUserId!),
+    enabled: !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? false),
     ...STANDARD_QUERY_CONFIG,
-    enabled: options?.enabled ?? false,
   });
 };

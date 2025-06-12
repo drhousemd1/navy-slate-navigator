@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '@/contexts/auth';
@@ -13,15 +12,21 @@ import { useWeeklyMetrics } from '@/data/queries/metrics/useWeeklyMetrics';
 import { useMonthlyMetrics } from '@/data/queries/metrics/useMonthlyMetrics';
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
 import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
-import { logger } from '@/lib/logger'; // Added logger import
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { logger } from '@/lib/logger';
 
 const ThroneRoom: React.FC = () => {
   const { isAdmin } = useAuth();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { isLoadingUserIds } = useUserIds();
   
-  useWeeklyMetrics({ enabled: true });
-  useMonthlyMetrics({ enabled: true });
+  // Enable hooks only when user IDs are available
+  const weeklyMetricsEnabled = !isLoadingUserIds;
+  const monthlyMetricsEnabled = !isLoadingUserIds;
+  
+  useWeeklyMetrics({ enabled: weeklyMetricsEnabled });
+  useMonthlyMetrics({ enabled: monthlyMetricsEnabled });
   
   const { data: metricsSummaryData, isLoading, error } = useWeeklyMetricsSummary();
 
@@ -44,7 +49,7 @@ const ThroneRoom: React.FC = () => {
     }
   }, [location.pathname, queryClient]);
 
-  if (isLoading) {
+  if (isLoading || isLoadingUserIds) {
     // Placeholder for loading state
   }
 

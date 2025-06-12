@@ -1,9 +1,11 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
-import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config'; // Import standard config
-import { logger } from '@/lib/logger'; // Added logger import
+import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
+import { logger } from '@/lib/logger';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 export interface MonthlyDataItem {
   date: string;
@@ -34,8 +36,8 @@ const generateMonthDays = (): string[] => {
   return eachDayOfInterval({ start, end }).map(date => format(date, 'yyyy-MM-dd'));
 };
 
-const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
-  logger.debug('Fetching monthly chart data via useMonthlyMetrics hook at', new Date().toISOString());
+const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<MonthlyMetricsData> => {
+  logger.debug('Fetching monthly chart data via useMonthlyMetrics hook at', new Date().toISOString(), 'for users:', subUserId, domUserId);
   const defaultResponse: MonthlyMetricsData = {
     dataArray: [],
     monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }
@@ -56,6 +58,7 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
     const { data: taskEntries, error: taskError } = await supabase
       .from('task_completion_history')
       .select('task_id, completed_at')
+      .in('user_id', [subUserId, domUserId])
       .gte('completed_at', start)
       .lte('completed_at', end);
     if (taskError) logger.error('Error loading task_completion_history for monthly hook', taskError);
@@ -75,6 +78,7 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
     const { data: ruleEntries, error: ruleError } = await supabase
       .from('rule_violations')
       .select('violation_date')
+      .in('user_id', [subUserId, domUserId])
       .gte('violation_date', start)
       .lte('violation_date', end);
     if (ruleError) logger.error('Error loading rule_violations for monthly hook', ruleError);
@@ -89,6 +93,7 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
     const { data: rewardEntries, error: rewardError } = await supabase
       .from('reward_usage')
       .select('created_at')
+      .in('user_id', [subUserId, domUserId])
       .gte('created_at', start)
       .lte('created_at', end);
     if (rewardError) logger.error('Error loading reward_usage for monthly hook', rewardError);
@@ -103,6 +108,7 @@ const fetchMonthlyData = async (): Promise<MonthlyMetricsData> => {
     const { data: punishmentEntries, error: punishmentError } = await supabase
       .from('punishment_history')
       .select('applied_date')
+      .in('user_id', [subUserId, domUserId])
       .gte('applied_date', start)
       .lte('applied_date', end);
     if (punishmentError) logger.error('Error loading punishment_history for monthly hook', punishmentError);
@@ -139,11 +145,12 @@ interface UseMonthlyMetricsOptions {
 }
 
 export const useMonthlyMetrics = (options?: UseMonthlyMetricsOptions) => {
+  const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
+  
   return useQuery<MonthlyMetricsData, Error>({
-    queryKey: MONTHLY_METRICS_QUERY_KEY,
-    queryFn: fetchMonthlyData,
-    ...STANDARD_QUERY_CONFIG, // Use standard config
-    enabled: options?.enabled ?? false, // Default to false, enable on ThroneRoom page
-     // Removed refetchInterval, staleTime, gcTime, refetchOnWindowFocus (now covered by STANDARD_QUERY_CONFIG or explicit enabled)
+    queryKey: [...MONTHLY_METRICS_QUERY_KEY, subUserId, domUserId],
+    queryFn: () => fetchMonthlyData(subUserId!, domUserId!),
+    enabled: !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? false),
+    ...STANDARD_QUERY_CONFIG,
   });
 };

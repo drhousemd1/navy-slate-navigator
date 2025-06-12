@@ -1,9 +1,11 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary';
 import { logger } from '@/lib/logger';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 // This is the type definition from the read-only file: src/components/throne/WeeklyMetricsSummary.ts
 // export interface WeeklyMetricsSummary {
@@ -13,7 +15,7 @@ import { logger } from '@/lib/logger';
 //   punishments: number;
 // }
 
-export const fetchWeeklyMetricsSummary = async (): Promise<WeeklyMetricsSummary> => {
+export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: string): Promise<WeeklyMetricsSummary> => {
   try {
     const today = new Date();
     const diff = today.getDay();
@@ -25,11 +27,12 @@ export const fetchWeeklyMetricsSummary = async (): Promise<WeeklyMetricsSummary>
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
 
-    logger.debug('Fetching weekly data from', weekStart.toISOString(), 'to', weekEnd.toISOString());
+    logger.debug('Fetching weekly data from', weekStart.toISOString(), 'to', weekEnd.toISOString(), 'for users:', subUserId, domUserId);
 
     const { data: taskCompletions, error: taskError } = await supabase
       .from('task_completion_history')
       .select('task_id, completed_at')
+      .in('user_id', [subUserId, domUserId])
       .gte('completed_at', weekStart.toISOString())
       .lt('completed_at', weekEnd.toISOString());
     if (taskError) throw new Error(`Error fetching tasks: ${taskError.message}`);
@@ -43,6 +46,7 @@ export const fetchWeeklyMetricsSummary = async (): Promise<WeeklyMetricsSummary>
     const { data: ruleViolations, error: ruleError } = await supabase
       .from('rule_violations')
       .select('*')
+      .in('user_id', [subUserId, domUserId])
       .gte('violation_date', weekStart.toISOString())
       .lt('violation_date', weekEnd.toISOString());
     if (ruleError) throw new Error(`Error fetching rule violations: ${ruleError.message}`);
@@ -50,6 +54,7 @@ export const fetchWeeklyMetricsSummary = async (): Promise<WeeklyMetricsSummary>
     const { data: rewardUsages, error: rewardError } = await supabase
       .from('reward_usage')
       .select('*')
+      .in('user_id', [subUserId, domUserId])
       .gte('created_at', weekStart.toISOString())
       .lt('created_at', weekEnd.toISOString());
     if (rewardError) throw new Error(`Error fetching rewards: ${rewardError.message}`);
@@ -57,6 +62,7 @@ export const fetchWeeklyMetricsSummary = async (): Promise<WeeklyMetricsSummary>
     const { data: punishments, error: punishmentError } = await supabase
       .from('punishment_history')
       .select('*')
+      .in('user_id', [subUserId, domUserId])
       .gte('applied_date', weekStart.toISOString())
       .lt('applied_date', weekEnd.toISOString());
     if (punishmentError) throw new Error(`Error fetching punishments: ${punishmentError.message}`);
@@ -81,9 +87,12 @@ export const fetchWeeklyMetricsSummary = async (): Promise<WeeklyMetricsSummary>
 };
 
 export function useWeeklyMetricsSummary() {
+  const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
+  
   return useQuery<WeeklyMetricsSummary>({
-    queryKey: ['weekly-metrics-summary'],
-    queryFn: fetchWeeklyMetricsSummary,
+    queryKey: ['weekly-metrics-summary', subUserId, domUserId],
+    queryFn: () => fetchWeeklyMetricsSummary(subUserId!, domUserId!),
+    enabled: !isLoadingUserIds && !!subUserId && !!domUserId,
     ...STANDARD_QUERY_CONFIG
   });
 }
