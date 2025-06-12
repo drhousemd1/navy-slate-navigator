@@ -178,12 +178,28 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
+      // Ensure we have all required fields for TaskFormValues
       const taskToSave: TaskFormValues = {
-        ...values,
-        icon_name: selectedIconName || undefined,
+        title: values.title, // This is guaranteed to be present due to form validation
+        description: values.description,
+        priority: values.priority,
+        frequency: values.frequency,
+        frequency_count: values.frequency_count,
+        points: values.points,
+        background_image_url: values.background_image_url,
+        background_opacity: values.background_opacity,
         icon_url: values.icon_url || undefined,
+        icon_name: selectedIconName || undefined,
+        title_color: values.title_color,
+        subtext_color: values.subtext_color,
+        calendar_color: values.calendar_color,
+        icon_color: values.icon_color,
+        highlight_effect: values.highlight_effect,
+        focal_point_x: values.focal_point_x,
+        focal_point_y: values.focal_point_y,
         image_meta: values.image_meta,
       };
+      
       await onSave(taskToSave);
     } catch (error) {
       logger.error('Error saving task:', error);

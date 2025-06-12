@@ -69,26 +69,26 @@ export const useTasksData = () => {
       // Discriminate between CreateTaskVariables and UpdateTaskVariables
       // UpdateTaskVariables will have an 'id' property.
       if ('id' in taskData && taskData.id) {
-        // This is UpdateTaskVariables
+        // This is UpdateTaskVariables - ensure proper type casting
         const updatePayload: UpdateTaskVariables = {
           ...taskData,
-          priority: taskData.priority && ['low', 'medium', 'high'].includes(taskData.priority) 
+          priority: (taskData.priority && ['low', 'medium', 'high'].includes(taskData.priority)) 
             ? taskData.priority as 'low' | 'medium' | 'high'
             : 'medium',
-          frequency: taskData.frequency && ['daily', 'weekly', 'monthly'].includes(taskData.frequency)
+          frequency: (taskData.frequency && ['daily', 'weekly', 'monthly'].includes(taskData.frequency))
             ? taskData.frequency as 'daily' | 'weekly' | 'monthly'
             : 'daily'
         };
         return await updateTaskMutation.mutateAsync(updatePayload);
 
       } else {
-        // This is CreateTaskVariables.
+        // This is CreateTaskVariables - ensure proper type casting
         const createPayload: CreateTaskVariables = {
           ...taskData as CreateTaskVariables,
-          priority: taskData.priority && ['low', 'medium', 'high'].includes(taskData.priority) 
+          priority: (taskData.priority && ['low', 'medium', 'high'].includes(taskData.priority)) 
             ? taskData.priority as 'low' | 'medium' | 'high'
             : 'medium',
-          frequency: taskData.frequency && ['daily', 'weekly', 'monthly'].includes(taskData.frequency)
+          frequency: (taskData.frequency && ['daily', 'weekly', 'monthly'].includes(taskData.frequency))
             ? taskData.frequency as 'daily' | 'weekly' | 'monthly'
             : 'daily'
         };
