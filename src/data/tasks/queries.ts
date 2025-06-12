@@ -24,8 +24,15 @@ export type TasksQueryResult = UseQueryResult<Task[], Error> & {
 };
 
 const transformSupabaseTask = (rawTask: RawSupabaseTask): Task => {
-  // Since RawSupabaseTask now has the correct union types, no transformation needed
-  return rawTask as Task;
+  return {
+    ...rawTask,
+    priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high') 
+      ? rawTask.priority as 'low' | 'medium' | 'high'
+      : 'medium',
+    frequency: (rawTask.frequency === 'daily' || rawTask.frequency === 'weekly' || rawTask.frequency === 'monthly')
+      ? rawTask.frequency as 'daily' | 'weekly' | 'monthly'
+      : 'daily'
+  };
 };
 
 export const fetchTasks = async (subUserId: string | null, domUserId: string | null): Promise<Task[]> => {

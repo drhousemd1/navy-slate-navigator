@@ -13,7 +13,6 @@ import { useUpdateTask } from '@/data/tasks/mutations/useUpdateTask';
 import { getErrorMessage } from '@/lib/errors';
 import { checkAndPerformTaskResets } from '@/lib/taskUtils';
 
-// Define a type for the data saveTask might receive
 type SaveTaskInput = CreateTaskVariables | UpdateTaskVariables;
 
 export const useTasksData = () => {

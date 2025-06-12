@@ -40,13 +40,13 @@ export interface Task {
 // Export the TaskWithId type that other files are expecting
 export type TaskWithId = Task;
 
-// Export the RawSupabaseTask type that queries.ts is expecting - make it compatible with Task
+// This represents what actually comes from Supabase - strings, not union types
 export interface RawSupabaseTask {
   id: string;
   title: string;
   description?: string;
-  priority: 'low' | 'medium' | 'high'; // Fixed: use union type instead of string
-  frequency: 'daily' | 'weekly' | 'monthly'; // Fixed: use union type instead of string
+  priority: string; // Supabase returns string, not union type
+  frequency: string; // Supabase returns string, not union type
   frequency_count: number;
   points: number;
   background_image_url?: string;
