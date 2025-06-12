@@ -40,37 +40,6 @@ export interface Task {
 // Export the TaskWithId type that other files are expecting
 export type TaskWithId = Task;
 
-// This represents what actually comes from Supabase - strings, not union types
-export interface RawSupabaseTask {
-  id: string;
-  title: string;
-  description?: string;
-  priority: string; // Supabase returns string, not union type
-  frequency: string; // Supabase returns string, not union type
-  frequency_count: number;
-  points: number;
-  background_image_url?: string;
-  background_opacity: number;
-  icon_url?: string;
-  icon_name?: string;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  icon_color: string;
-  highlight_effect: boolean;
-  focal_point_x: number;
-  focal_point_y: number;
-  completed: boolean;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
-  last_completed_date?: string;
-  usage_data?: Json;
-  week_identifier?: string;
-  background_images?: Json;
-  image_meta?: Json;
-}
-
 export interface TaskFormValues {
   title: string;
   description?: string;

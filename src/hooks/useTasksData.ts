@@ -1,8 +1,7 @@
 
 import { useCallback } from 'react';
 import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
-import { Task, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, Json } from '@/data/tasks/types';
-import { supabase } from '@/integrations/supabase/client';
+import { Task, TaskFormValues, CreateTaskVariables, UpdateTaskVariables } from '@/data/tasks/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { saveTasksToDB, loadTasksFromDB } from '@/data/indexedDB/useIndexedDB';
