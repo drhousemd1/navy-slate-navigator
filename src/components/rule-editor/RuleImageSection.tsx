@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
-import ImageUploadSection from '@/components/common/ImageUploadSection';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import { ImageMetadata } from '@/utils/image/helpers';
 import { getBestImageUrl, imageMetadataToJson, jsonToImageMetadata } from '@/utils/image/integration';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { logger } from '@/lib/logger';
 
 interface RuleImageSectionProps {
   control: Control<any>;
@@ -28,66 +29,62 @@ const RuleImageSection: React.FC<RuleImageSectionProps> = ({
   // Convert Json back to ImageMetadata if needed
   const imageMeta = jsonToImageMetadata(currentImageMeta);
 
-  const handleImageChange = (imageUrl: string | null, metadata: ImageMetadata | null) => {
-    // Update form with new data
-    setValue('background_image_url', imageUrl);
-    setValue('image_meta', imageMetadataToJson(metadata));
-    
-    // Update preview
-    setImagePreview(imageUrl);
-  };
-
-  const handleRemoveImage = () => {
-    setValue('background_image_url', undefined);
-    setValue('image_meta', null);
-    setImagePreview(null);
-  };
+  const imageUpload = useImageUpload({
+    category: 'rules',
+    onUploadComplete: (result) => {
+      logger.debug('[Rule Image Section] Upload completed:', result);
+      
+      // Update form with new optimized data
+      setValue('background_image_url', result.metadata.fullUrl || result.metadata.originalUrl);
+      setValue('image_meta', imageMetadataToJson(result.metadata));
+      
+      // Update preview
+      const bestUrl = getBestImageUrl(result.metadata, null, false);
+      setImagePreview(bestUrl);
+    },
+    onUploadError: (error) => {
+      logger.error('[Rule Image Section] Upload failed:', error);
+    }
+  });
 
   const handleLegacyImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Start optimized upload in background
+      imageUpload.uploadImage(file);
+      
+      // Create immediate preview for UI responsiveness
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
         setImagePreview(base64String);
-        setValue('background_image_url', base64String);
+        // Don't set background_image_url yet - wait for optimized upload
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleLegacyRemoveImage = () => {
-    setImagePreview(null);
     setValue('background_image_url', undefined);
+    setValue('image_meta', null);
+    setImagePreview(null);
   };
 
-  return (
-    <div className="space-y-6">
-      {/* New optimized image upload */}
-      <ImageUploadSection
-        label="Background Image (Optimized)"
-        currentImageUrl={currentImageUrl}
-        currentImageMeta={imageMeta}
-        onImageChange={handleImageChange}
-        onRemoveImage={handleRemoveImage}
-        category="rules"
-      />
+  // Use the best available image URL for display
+  const displayImageUrl = getBestImageUrl(imageMeta, currentImageUrl, false) || imagePreview;
 
-      {/* Fallback to existing BackgroundImageSelector for compatibility */}
-      <div className="border-t border-light-navy pt-4">
-        <BackgroundImageSelector
-          control={control}
-          imagePreview={imagePreview}
-          initialPosition={{ 
-            x: watch('focal_point_x') || 50, 
-            y: watch('focal_point_y') || 50 
-          }}
-          onRemoveImage={handleLegacyRemoveImage}
-          onImageUpload={handleLegacyImageUpload}
-          setValue={setValue}
-        />
-      </div>
-    </div>
+  return (
+    <BackgroundImageSelector
+      control={control}
+      imagePreview={displayImageUrl}
+      initialPosition={{ 
+        x: watch('focal_point_x') || 50, 
+        y: watch('focal_point_y') || 50 
+      }}
+      onRemoveImage={handleLegacyRemoveImage}
+      onImageUpload={handleLegacyImageUpload}
+      setValue={setValue}
+    />
   );
 };
 
