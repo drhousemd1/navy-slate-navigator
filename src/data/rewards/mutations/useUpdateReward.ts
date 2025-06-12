@@ -16,19 +16,15 @@ export const useUpdateReward = () => {
     mutationFn: async (variables: UpdateRewardVariables) => {
       const { id, ...updates } = variables;
       
-      // Prepare data for Supabase (converts image metadata to JSON)
-      const preparedUpdates = prepareRewardDataForSupabase({
-        ...updates,
-        updated_at: new Date().toISOString()
-      });
-
+      // Prepare data for Supabase storage with image metadata conversion
+      const preparedUpdates = prepareRewardDataForSupabase(updates);
+      
       const { data, error } = await supabase
         .from('rewards')
-        .update(preparedUpdates)
+        .update({ ...preparedUpdates, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();
-        
       if (error) throw error;
       if (!data) throw new Error('Reward update failed, no data returned.');
       return data as Reward;

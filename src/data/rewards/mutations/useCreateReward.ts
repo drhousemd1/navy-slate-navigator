@@ -22,7 +22,7 @@ export const useCreateRewardMutation = () => {
         user_id: subUserId
       };
 
-      // Prepare data for Supabase (converts image metadata to JSON)
+      // Prepare data for Supabase storage with image metadata conversion
       const preparedData = prepareRewardDataForSupabase(rewardData);
 
       const { data, error } = await supabase

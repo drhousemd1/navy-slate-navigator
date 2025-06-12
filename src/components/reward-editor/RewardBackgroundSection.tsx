@@ -1,31 +1,40 @@
 
-import React from 'react';
-import { Control, UseFormSetValue } from 'react-hook-form';
+import React, { useState } from 'react';
+import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { RewardFormValues } from '@/data/rewards/types';
-// import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector'; // Old import
-import RewardBackgroundImageSelector from './RewardBackgroundImageSelector'; // New import
+import RewardImageSection from './RewardImageSection';
 import { FormLabel } from '@/components/ui/form';
 import { logger } from '@/lib/logger';
 
 interface RewardBackgroundSectionProps {
   control: Control<RewardFormValues>;
+  setValue: UseFormSetValue<RewardFormValues>;
+  watch: UseFormWatch<RewardFormValues>;
   imagePreview: string | null;
   initialPosition: { x: number; y: number };
   onRemoveImage: () => void;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  setValue: UseFormSetValue<RewardFormValues>;
 }
 
 const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   control,
+  setValue,
+  watch,
   imagePreview,
   initialPosition,
   onRemoveImage,
-  onImageUpload,
-  setValue
+  onImageUpload
 }) => {
+  // Create local state for image preview to work with the new component
+  const [localImagePreview, setLocalImagePreview] = useState<string | null>(imagePreview);
+  
   const currentOpacity = control._formValues?.background_opacity; 
   logger.debug("RewardBackgroundSection initializing with opacity:", currentOpacity);
+  
+  // Update local preview when prop changes
+  React.useEffect(() => {
+    setLocalImagePreview(imagePreview);
+  }, [imagePreview]);
   
   return (
     <div className="space-y-4">
@@ -33,13 +42,12 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
       <p className="text-sm text-muted-foreground pb-2">
         Add a background image to make your reward more visually appealing.
       </p>
-      <RewardBackgroundImageSelector
+      <RewardImageSection
         control={control}
-        imagePreview={imagePreview}
-        initialPosition={initialPosition}
-        onRemoveImage={onRemoveImage}
-        onImageUpload={onImageUpload}
         setValue={setValue}
+        watch={watch}
+        imagePreview={localImagePreview}
+        setImagePreview={setLocalImagePreview}
       />
     </div>
   );

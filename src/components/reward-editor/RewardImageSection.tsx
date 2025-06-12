@@ -1,96 +1,89 @@
 
-import React, { useCallback } from 'react';
-import { Control, UseFormSetValue } from 'react-hook-form';
-import { RewardFormValues } from '@/data/rewards/types';
-import RewardBackgroundSection from './RewardBackgroundSection';
-import { uploadImageWithCompression } from '@/utils/image/storage';
-import { useUserIds } from '@/contexts/UserIdsContext';
+import React from 'react';
+import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
+import { ImageMetadata } from '@/utils/image/helpers';
+import { getRewardBestImageUrl, rewardImageMetadataToJson, rewardJsonToImageMetadata } from '@/utils/image/rewardIntegration';
+import { useImageUpload } from '@/hooks/useImageUpload';
 import { logger } from '@/lib/logger';
-import { toast } from '@/hooks/use-toast';
+import { RewardFormValues } from '@/data/rewards/types';
+import RewardBackgroundImageSelector from './RewardBackgroundImageSelector';
 
 interface RewardImageSectionProps {
   control: Control<RewardFormValues>;
-  imagePreview: string | null;
-  initialPosition: { x: number; y: number };
-  onRemoveImage: () => void;
-  onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   setValue: UseFormSetValue<RewardFormValues>;
+  watch: UseFormWatch<RewardFormValues>;
+  imagePreview: string | null;
+  setImagePreview: (url: string | null) => void;
 }
 
 const RewardImageSection: React.FC<RewardImageSectionProps> = ({
   control,
+  setValue,
+  watch,
   imagePreview,
-  initialPosition,
-  onRemoveImage,
-  onImageUpload,
-  setValue
+  setImagePreview
 }) => {
-  const { subUserId } = useUserIds();
+  // Get current image metadata from form
+  const currentImageMeta = watch('image_meta' as any);
+  const currentImageUrl = watch('background_image_url');
+  
+  // Convert Json back to ImageMetadata if needed
+  const imageMeta = rewardJsonToImageMetadata(currentImageMeta);
 
-  const handleImageUploadWithCompression = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !subUserId) {
-      onImageUpload(event);
-      return;
+  const imageUpload = useImageUpload({
+    category: 'rewards',
+    onUploadComplete: (result) => {
+      logger.debug('[Reward Image Section] Upload completed:', result);
+      
+      // Update form with new optimized data
+      setValue('background_image_url', result.metadata.fullUrl || result.metadata.originalUrl);
+      setValue('image_meta' as any, rewardImageMetadataToJson(result.metadata));
+      
+      // Update preview
+      const bestUrl = getRewardBestImageUrl(result.metadata, null, false);
+      setImagePreview(bestUrl);
+    },
+    onUploadError: (error) => {
+      logger.error('[Reward Image Section] Upload failed:', error);
     }
+  });
 
-    try {
-      logger.debug('[Reward Image] Starting compression for:', file.name);
+  const handleLegacyImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Start optimized upload in background
+      imageUpload.uploadImage(file);
       
-      const { metadata, previewUrl } = await uploadImageWithCompression(file, {
-        category: 'rewards',
-        userId: subUserId,
-        generateThumbnail: true,
-        onProgress: (progress) => {
-          logger.debug(`[Reward Image] Upload progress: ${progress}%`);
-        }
-      });
-
-      // Set both the preview URL and metadata
-      setValue('background_image_url', previewUrl);
-      setValue('image_meta', metadata);
-      
-      logger.debug('[Reward Image] Compression completed:', {
-        originalSize: metadata.originalSize,
-        compressedSize: metadata.compressedSize,
-        compressionRatio: metadata.compressionRatio
-      });
-
-      toast({
-        title: "Image uploaded successfully",
-        description: metadata.compressionRatio 
-          ? `Compressed by ${metadata.compressionRatio.toFixed(1)}%` 
-          : "Image processed",
-      });
-
-    } catch (error) {
-      logger.error('[Reward Image] Compression failed:', error);
-      
-      // Fallback to original behavior
-      onImageUpload(event);
-      
-      toast({
-        title: "Image uploaded (uncompressed)",
-        description: "Compression failed, but image was uploaded normally",
-        variant: "destructive",
-      });
+      // Create immediate preview for UI responsiveness
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+        // Don't set background_image_url yet - wait for optimized upload
+      };
+      reader.readAsDataURL(file);
     }
-  }, [onImageUpload, setValue, subUserId]);
+  };
 
-  const handleRemoveImageWithCleanup = useCallback(() => {
-    // Clear both the URL and metadata
+  const handleLegacyRemoveImage = () => {
     setValue('background_image_url', null);
-    setValue('image_meta', null);
-    onRemoveImage();
-  }, [onRemoveImage, setValue]);
+    setValue('image_meta' as any, null);
+    setImagePreview(null);
+  };
+
+  // Use the best available image URL for display
+  const displayImageUrl = getRewardBestImageUrl(imageMeta, currentImageUrl, false) || imagePreview;
 
   return (
-    <RewardBackgroundSection
+    <RewardBackgroundImageSelector
       control={control}
-      imagePreview={imagePreview}
-      initialPosition={initialPosition}
-      onRemoveImage={handleRemoveImageWithCleanup}
-      onImageUpload={handleImageUploadWithCompression}
+      imagePreview={displayImageUrl}
+      initialPosition={{ 
+        x: watch('focal_point_x') || 50, 
+        y: watch('focal_point_y') || 50 
+      }}
+      onRemoveImage={handleLegacyRemoveImage}
+      onImageUpload={handleLegacyImageUpload}
       setValue={setValue}
     />
   );
