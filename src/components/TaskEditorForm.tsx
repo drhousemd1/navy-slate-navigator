@@ -400,20 +400,18 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         
         <div className="pt-4 w-full flex items-center justify-end gap-3">
           {taskData?.id && onDelete && (
-            <Button 
-              type="button" 
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              className="text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
-            >
-              Delete Task
-            </Button>
+            <DeleteTaskDialog
+              isOpen={isDeleteDialogOpen}
+              onOpenChange={setIsDeleteDialogOpen}
+              onDelete={handleDeleteWrapped}
+              taskName={taskData?.title || 'this task'}
+            />
           )}
           <Button 
             type="button" 
-            variant="ghost" 
+            variant="destructive" 
             onClick={handleCancelWrapped} 
-            className="text-white hover:bg-light-navy"
+            className="bg-red-700 border-light-navy text-white hover:bg-red-600"
           >
             Cancel
           </Button>
@@ -430,13 +428,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             )}
           </Button>
         </div>
-        
-        <DeleteTaskDialog
-          isOpen={isDeleteDialogOpen}
-          onOpenChange={setIsDeleteDialogOpen}
-          onDelete={handleDeleteWrapped}
-          taskName={taskData?.title || 'this task'}
-        />
       </form>
     </Form>
   );
