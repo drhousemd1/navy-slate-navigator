@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Control, Controller, FieldValues, Path } from 'react-hook-form';
 import { FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -29,7 +30,6 @@ const ColorPickerField = <T extends FieldValues>({ control, name, label }: Color
                   style={{ backgroundColor: field.value }}
                 >
                   <div className="w-4 h-4 rounded-full mr-2 border border-gray-400" style={{ backgroundColor: field.value }} />
-                  {field.value ? 'Color' : 'Pick a color'}
                 </Button>
               </FormControl>
             </PopoverTrigger>
@@ -49,3 +49,4 @@ const ColorPickerField = <T extends FieldValues>({ control, name, label }: Color
 };
 
 export default ColorPickerField;
+
