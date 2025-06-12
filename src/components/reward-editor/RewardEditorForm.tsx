@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form } from "@/components/ui/form";
@@ -9,11 +8,12 @@ import RewardColorSettings from './RewardColorSettings';
 import RewardFormActions from './RewardFormActions';
 import DeleteRewardDialog from './DeleteRewardDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+import { handleImageUpload } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
 
 interface RewardEditorFormProps {
-  rewardData?: Reward; // Changed from Partial<Reward>
+  rewardData?: Reward;
   onSave: (formData: RewardFormValues) => Promise<void>;
   onCancel: () => void;
   onDelete?: (id: string) => void;
@@ -34,7 +34,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       title: '',
       description: '',
       cost: 10,
-      supply: 1, // Added supply default
+      supply: 1,
       is_dom_reward: false,
       icon_name: null,
       icon_color: '#9b87f5',
@@ -59,14 +59,13 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   useEffect(() => {
     if (rewardData) {
-      // Fixed: Directly use boolean or default, removing string check
       const isDomRewardValue = rewardData.is_dom_reward ?? false;
       
       reset({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        supply: rewardData.supply || 1, // Added supply
+        supply: rewardData.supply || 1,
         is_dom_reward: isDomRewardValue,
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
@@ -90,13 +89,21 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     }
   }, [rewardData, reset]);
 
-  const handleImageUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setValue('background_image_url', result);
-    };
-    reader.readAsDataURL(file);
+  const handleImageUploadWithCompression = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        await handleImageUpload(
+          file,
+          setValue,
+          (url: string | null) => {
+            // This will be handled by the setValue calls in handleImageUpload
+          }
+        );
+      } catch (error) {
+        console.error('Error handling image upload:', error);
+      }
+    }
   };
 
   const handleRemoveImage = () => {
@@ -133,7 +140,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const decrementSupply = () => {
     const currentSupply = watch('supply') || 0;
-    if (currentSupply > 0) { // Or 1 if supply cannot be 0
+    if (currentSupply > 0) {
       setValue('supply', currentSupply - 1);
     }
   };
@@ -148,7 +155,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const onSubmitWrapped = async (data: RewardFormValues) => {
     try {
-      await onSave(data); // onSave now expects RewardFormValues
+      await onSave(data);
       await clearPersistedState();
     } catch (error) {
       logger.error("Error during onSave callback:", error);
@@ -167,18 +174,18 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           control={control}
           incrementCost={incrementCost}
           decrementCost={decrementCost}
-          incrementSupply={incrementSupply} // Added supply handlers
-          decrementSupply={decrementSupply} // Added supply handlers
-          watch={watch} // Pass watch for supply field
+          incrementSupply={incrementSupply}
+          decrementSupply={decrementSupply}
+          watch={watch}
         />
         
         <RewardIconSection 
           control={control}
           selectedIconName={watch('icon_name')}
-          iconPreview={null} // Assuming iconPreview comes from state or elsewhere if custom upload is used
+          iconPreview={null}
           iconColor={watch('icon_color')}
           onSelectIcon={handleSelectIcon}
-          onUploadIcon={handleUploadIcon} // This should eventually set icon_url or preview
+          onUploadIcon={handleUploadIcon}
           onRemoveIcon={handleRemoveIcon}
         />
         
@@ -187,11 +194,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           imagePreview={watch('background_image_url')}
           initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}
           onRemoveImage={handleRemoveImage}
-          onImageUpload={(e) => {
-            if (e.target.files?.[0]) {
-              handleImageUpload(e.target.files[0]);
-            }
-          }}
+          onImageUpload={handleImageUploadWithCompression}
           setValue={setValue}
         />
         
@@ -200,7 +203,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         />
         
         <RewardFormActions 
-          rewardData={rewardData} // This is now Reward | undefined
+          rewardData={rewardData}
           isDeleteDialogOpen={isDeleteDialogOpen}
           setIsDeleteDialogOpen={setIsDeleteDialogOpen}
           onCancel={handleCancelWrapped}

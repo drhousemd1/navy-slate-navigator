@@ -2,7 +2,6 @@
 import React from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-import { handleImageUpload } from '@/utils/image/rewardIntegration';
 import { RewardFormValues } from '@/data/rewards/types';
 
 interface RewardImageSectionProps {
@@ -14,40 +13,8 @@ interface RewardImageSectionProps {
   setValue: UseFormSetValue<RewardFormValues>;
 }
 
-const RewardImageSection: React.FC<RewardImageSectionProps> = ({
-  control,
-  imagePreview,
-  initialPosition,
-  onRemoveImage,
-  setValue
-}) => {
-  const handleImageUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        await handleImageUpload(
-          file,
-          setValue,
-          (url: string | null) => {
-            // This will be handled by the parent component's state
-          }
-        );
-      } catch (error) {
-        console.error('Error handling image upload:', error);
-      }
-    }
-  };
-
-  return (
-    <BackgroundImageSelector
-      control={control}
-      imagePreview={imagePreview}
-      initialPosition={initialPosition}
-      onRemoveImage={onRemoveImage}
-      onImageUpload={handleImageUploadWrapper}
-      setValue={setValue}
-    />
-  );
+const RewardImageSection: React.FC<RewardImageSectionProps> = (props) => {
+  return <BackgroundImageSelector {...props} />;
 };
 
 export default RewardImageSection;
