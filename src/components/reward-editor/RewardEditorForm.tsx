@@ -33,7 +33,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       title: '',
       description: '',
       cost: 10,
-      supply: 1,
+      supply: 1, // Added supply default
       is_dom_reward: false,
       icon_name: null,
       icon_color: '#9b87f5',
@@ -64,7 +64,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        supply: rewardData.supply || 1,
+        supply: rewardData.supply || 1, // Added supply
         is_dom_reward: isDomRewardValue,
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
@@ -129,7 +129,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const decrementSupply = () => {
     const currentSupply = watch('supply') || 0;
-    if (currentSupply > 0) {
+    if (currentSupply > 0) { // Or 1 if supply cannot be 0
       setValue('supply', currentSupply - 1);
     }
   };
@@ -144,13 +144,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const onSubmitWrapped = async (data: RewardFormValues) => {
     try {
-      // Prepare form data with image_meta if it exists in the reward data
-      const submissionData = {
-        ...data,
-        ...(rewardData?.image_meta && { image_meta: rewardData.image_meta })
-      };
-      
-      await onSave(submissionData);
+      await onSave(data); // onSave now expects RewardFormValues
       await clearPersistedState();
     } catch (error) {
       logger.error("Error during onSave callback:", error);
@@ -169,25 +163,23 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           control={control}
           incrementCost={incrementCost}
           decrementCost={decrementCost}
-          incrementSupply={incrementSupply}
-          decrementSupply={decrementSupply}
-          watch={watch}
+          incrementSupply={incrementSupply} // Added supply handlers
+          decrementSupply={decrementSupply} // Added supply handlers
+          watch={watch} // Pass watch for supply field
         />
         
         <RewardIconSection 
           control={control}
           selectedIconName={watch('icon_name')}
-          iconPreview={null}
+          iconPreview={null} // Assuming iconPreview comes from state or elsewhere if custom upload is used
           iconColor={watch('icon_color')}
           onSelectIcon={handleSelectIcon}
-          onUploadIcon={handleUploadIcon}
+          onUploadIcon={handleUploadIcon} // This should eventually set icon_url or preview
           onRemoveIcon={handleRemoveIcon}
         />
         
         <RewardBackgroundSection 
           control={control}
-          setValue={setValue}
-          watch={watch}
           imagePreview={watch('background_image_url')}
           initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}
           onRemoveImage={handleRemoveImage}
@@ -196,6 +188,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
               handleImageUpload(e.target.files[0]);
             }
           }}
+          setValue={setValue}
         />
         
         <RewardColorSettings 
@@ -203,7 +196,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         />
         
         <RewardFormActions 
-          rewardData={rewardData}
+          rewardData={rewardData} // This is now Reward | undefined
           isDeleteDialogOpen={isDeleteDialogOpen}
           setIsDeleteDialogOpen={setIsDeleteDialogOpen}
           onCancel={handleCancelWrapped}

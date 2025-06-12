@@ -10,12 +10,11 @@ import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
 import NumberField from '../task-editor/NumberField';
 import ColorPickerField from '../task-editor/ColorPickerField';
+import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
-import RuleImageSection from './RuleImageSection';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
-import { imageMetadataToJson, jsonToImageMetadata } from '@/utils/image/integration';
 import { logger } from '@/lib/logger';
 
 interface RuleFormValues {
@@ -34,7 +33,6 @@ interface RuleFormValues {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  image_meta?: any; // Allow Json type from database
 }
 
 interface RuleEditorFormProps {
@@ -73,7 +71,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       highlight_effect: false,
       focal_point_x: 50,
       focal_point_y: 50,
-      image_meta: null,
     },
   });
 
@@ -81,7 +78,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
 
   const persisterFormId = `rule-editor-${ruleData?.id || 'new'}`;
   const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-    exclude: ['background_image_url', 'icon_url', 'image_meta'] 
+    exclude: ['background_image_url', 'icon_url'] 
   });
 
   useEffect(() => {
@@ -102,7 +99,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         highlight_effect: ruleData.highlight_effect || false,
         focal_point_x: ruleData.focal_point_x || 50,
         focal_point_y: ruleData.focal_point_y || 50,
-        image_meta: (ruleData as any).image_meta || null, // Handle database Json type
       });
       setImagePreview(ruleData.background_image_url || null);
       setIconPreview(ruleData.icon_url || null);
@@ -114,7 +110,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         icon_url: undefined, icon_name: undefined,
         title_color: '#FFFFFF', subtext_color: '#8E9196', calendar_color: '#7E69AB',
         icon_color: '#FF6B6B', highlight_effect: false,
-        focal_point_x: 50, focal_point_y: 50, image_meta: null,
+        focal_point_x: 50, focal_point_y: 50,
       });
       setImagePreview(null);
       setIconPreview(null);
@@ -203,7 +199,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         id: ruleData?.id,
         icon_name: selectedIconName || undefined,
         icon_url: iconPreview || undefined,
-        // Keep image_meta as-is (it's already in the correct format)
       };
       await onSave(ruleToSave);
       await clearPersistedState();
@@ -311,14 +306,20 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           />
         </div>
         
-        {/* New integrated image section */}
-        <RuleImageSection
-          control={control}
-          setValue={setValue}
-          watch={watch}
-          imagePreview={imagePreview}
-          setImagePreview={setImagePreview}
-        />
+        <div className="space-y-4">
+          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <BackgroundImageSelector
+            control={control}
+            imagePreview={imagePreview}
+            initialPosition={{ 
+              x: watch('focal_point_x') || 50, 
+              y: watch('focal_point_y') || 50 
+            }}
+            onRemoveImage={handleRemoveImage}
+            onImageUpload={handleImageUpload}
+            setValue={setValue}
+          />
+        </div>
 
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Rule Icon</FormLabel>

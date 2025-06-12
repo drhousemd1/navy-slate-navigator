@@ -19,7 +19,6 @@ export interface Task {
   calendar_color: string;
   background_image_url?: string;
   background_images?: Json;
-  image_meta?: Json;
   background_opacity: number;
   focal_point_x: number;
   focal_point_y: number;
@@ -57,7 +56,6 @@ export interface TaskFormValues {
   calendar_color: string;
   background_image_url?: string;
   background_images?: Json;
-  image_meta?: Json;
   background_opacity: number;
   focal_point_x: number;
   focal_point_y: number;

@@ -62,7 +62,6 @@ export type Database = {
           formatted_sections: Json | null
           highlight_effect: boolean | null
           id: string
-          image_meta: Json | null
           image_url: string | null
           opacity: number | null
           popup_opacity: number | null
@@ -81,7 +80,6 @@ export type Database = {
           formatted_sections?: Json | null
           highlight_effect?: boolean | null
           id?: string
-          image_meta?: Json | null
           image_url?: string | null
           opacity?: number | null
           popup_opacity?: number | null
@@ -100,7 +98,6 @@ export type Database = {
           formatted_sections?: Json | null
           highlight_effect?: boolean | null
           id?: string
-          image_meta?: Json | null
           image_url?: string | null
           opacity?: number | null
           popup_opacity?: number | null
@@ -240,7 +237,6 @@ export type Database = {
           icon_color: string
           icon_name: string | null
           id: string
-          image_meta: Json | null
           points: number
           subtext_color: string
           title: string
@@ -263,7 +259,6 @@ export type Database = {
           icon_color?: string
           icon_name?: string | null
           id?: string
-          image_meta?: Json | null
           points?: number
           subtext_color?: string
           title: string
@@ -286,7 +281,6 @@ export type Database = {
           icon_color?: string
           icon_name?: string | null
           id?: string
-          image_meta?: Json | null
           points?: number
           subtext_color?: string
           title?: string
@@ -363,7 +357,6 @@ export type Database = {
           icon_color: string | null
           icon_name: string | null
           id: string
-          image_meta: Json | null
           is_dom_reward: boolean | null
           subtext_color: string | null
           supply: number
@@ -385,7 +378,6 @@ export type Database = {
           icon_color?: string | null
           icon_name?: string | null
           id?: string
-          image_meta?: Json | null
           is_dom_reward?: boolean | null
           subtext_color?: string | null
           supply?: number
@@ -407,7 +399,6 @@ export type Database = {
           icon_color?: string | null
           icon_name?: string | null
           id?: string
-          image_meta?: Json | null
           is_dom_reward?: boolean | null
           subtext_color?: string | null
           supply?: number
@@ -486,7 +477,6 @@ export type Database = {
           icon_name: string | null
           icon_url: string | null
           id: string
-          image_meta: Json | null
           priority: string
           subtext_color: string
           title: string
@@ -512,7 +502,6 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
-          image_meta?: Json | null
           priority?: string
           subtext_color?: string
           title: string
@@ -538,7 +527,6 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
-          image_meta?: Json | null
           priority?: string
           subtext_color?: string
           title?: string
@@ -596,7 +584,6 @@ export type Database = {
           icon_name: string | null
           icon_url: string | null
           id: string
-          image_meta: Json | null
           last_completed_date: string | null
           points: number
           priority: string
@@ -625,7 +612,6 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
-          image_meta?: Json | null
           last_completed_date?: string | null
           points?: number
           priority?: string
@@ -654,7 +640,6 @@ export type Database = {
           icon_name?: string | null
           icon_url?: string | null
           id?: string
-          image_meta?: Json | null
           last_completed_date?: string | null
           points?: number
           priority?: string
