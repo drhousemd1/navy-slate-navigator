@@ -2,8 +2,7 @@
 import React from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import { RewardFormValues } from '@/data/rewards/types';
-// import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector'; // Old import
-import RewardBackgroundImageSelector from './RewardBackgroundImageSelector'; // New import
+import RewardImageSection from './RewardImageSection';
 import { FormLabel } from '@/components/ui/form';
 import { logger } from '@/lib/logger';
 
@@ -24,6 +23,9 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   onImageUpload,
   setValue
 }) => {
+  // Use watch to get values for RewardImageSection
+  const watch = control._formValues ? () => control._formValues : control.register().onChange;
+  
   const currentOpacity = control._formValues?.background_opacity; 
   logger.debug("RewardBackgroundSection initializing with opacity:", currentOpacity);
   
@@ -33,13 +35,17 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
       <p className="text-sm text-muted-foreground pb-2">
         Add a background image to make your reward more visually appealing.
       </p>
-      <RewardBackgroundImageSelector
+      <RewardImageSection
         control={control}
-        imagePreview={imagePreview}
-        initialPosition={initialPosition}
-        onRemoveImage={onRemoveImage}
-        onImageUpload={onImageUpload}
         setValue={setValue}
+        watch={watch}
+        imagePreview={imagePreview}
+        setImagePreview={(url) => {
+          // This will be handled by the parent component through setValue
+          if (url) {
+            setValue('background_image_url', url);
+          }
+        }}
       />
     </div>
   );
