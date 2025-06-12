@@ -8,7 +8,6 @@ import RewardColorSettings from './RewardColorSettings';
 import RewardFormActions from './RewardFormActions';
 import DeleteRewardDialog from './DeleteRewardDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
-import { handleImageUpload } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
 
@@ -28,6 +27,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   isSaving = false
 }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
 
   const form = useForm<RewardFormValues>({
     defaultValues: {
@@ -79,6 +79,8 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         focal_point_y: rewardData.focal_point_y || 50,
         image_meta: rewardData.image_meta || null,
       });
+      
+      setImagePreview(rewardData.background_image_url || null);
     } else {
       reset({
         title: '', description: '', cost: 10, supply: 1, is_dom_reward: false, icon_name: null,
@@ -86,29 +88,18 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         calendar_color: '#7E69AB', highlight_effect: false, background_image_url: null,
         background_opacity: 100, focal_point_x: 50, focal_point_y: 50, image_meta: null,
       });
+      setImagePreview(null);
     }
   }, [rewardData, reset]);
 
-  const handleImageUploadWithCompression = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        await handleImageUpload(
-          file,
-          setValue,
-          (url: string | null) => {
-            // This will be handled by the setValue calls in handleImageUpload
-          }
-        );
-      } catch (error) {
-        console.error('Error handling image upload:', error);
-      }
-    }
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // This will be handled by the wrapper component
   };
 
   const handleRemoveImage = () => {
     setValue('background_image_url', null);
     setValue('image_meta', null);
+    setImagePreview(null);
   };
 
   const handleSelectIcon = (iconName: string) => {
@@ -191,11 +182,12 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         
         <RewardImageSection 
           control={control}
-          imagePreview={watch('background_image_url')}
+          imagePreview={imagePreview}
           initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}
           onRemoveImage={handleRemoveImage}
-          onImageUpload={handleImageUploadWithCompression}
+          onImageUpload={handleImageUpload}
           setValue={setValue}
+          setImagePreview={setImagePreview}
         />
         
         <RewardColorSettings 
