@@ -6,7 +6,7 @@
  */
 
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { Task } from "./types";
+import { Task, RawSupabaseTask } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import {
   loadTasksFromDB,
@@ -21,6 +21,15 @@ export const TASKS_QUERY_KEY = ['tasks'];
 
 export type TasksQueryResult = UseQueryResult<Task[], Error> & {
   isUsingCachedData?: boolean;
+};
+
+const transformSupabaseTask = (rawTask: RawSupabaseTask): Task => {
+  return {
+    ...rawTask,
+    priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high') 
+      ? rawTask.priority 
+      : 'medium' as const
+  };
 };
 
 export const fetchTasks = async (subUserId: string | null, domUserId: string | null): Promise<Task[]> => {
@@ -67,7 +76,7 @@ export const fetchTasks = async (subUserId: string | null, domUserId: string | n
       logger.debug('[fetchTasks] Sample task user_ids:', data.slice(0, 3).map(t => t.user_id));
     }
 
-    return data || [];
+    return (data || []).map(transformSupabaseTask);
   } catch (error) {
     logger.error('[fetchTasks] Error fetching tasks:', error);
     throw error;
@@ -107,7 +116,7 @@ export function useTasksQuery(): TasksQueryResult {
 
       if (!shouldFetch && localData) {
         logger.debug('[useTasksQuery queryFn] Using local data for tasks.');
-        return localData;
+        return localData.map(task => transformSupabaseTask(task as RawSupabaseTask));
       }
 
       logger.debug('[useTasksQuery queryFn] Fetching tasks from server.');
@@ -121,7 +130,7 @@ export function useTasksQuery(): TasksQueryResult {
       }
       
       logger.debug('[useTasksQuery queryFn] No server data, returning local data or empty array for tasks.');
-      return localData || [];
+      return localData ? localData.map(task => transformSupabaseTask(task as RawSupabaseTask)) : [];
     },
     staleTime: Infinity,
     refetchOnWindowFocus: false,

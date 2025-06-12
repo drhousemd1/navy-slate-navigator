@@ -1,11 +1,10 @@
-
-import { Task as TaskType, Json } from '@/data/tasks/types';
+import { Task as TaskType, RawSupabaseTask, Json } from '@/data/tasks/types';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logger';
 import { saveTasksToDB, loadTasksFromDB } from '../data/indexedDB/useIndexedDB';
 import { getISOWeekString } from './dateUtils';
 
-export type { TaskType as Task, Json };
+export type { TaskType as Task, RawSupabaseTask, Json };
 
 /**
  * Get current date in ISO format (YYYY-MM-DD) using local timezone
@@ -174,7 +173,7 @@ export const calculateTaskProgress = (task: TaskType): number => {
   return Math.min(100, (completedDays / totalDays) * 100);
 };
 
-export const getTaskPriorityColor = (priority: string): string => {
+export const getTaskPriorityColor = (priority: 'low' | 'medium' | 'high'): string => {
   switch (priority) {
     case 'high':
       return 'text-red-500';
@@ -185,4 +184,13 @@ export const getTaskPriorityColor = (priority: string): string => {
     default:
       return 'text-gray-500';
   }
+};
+
+export const transformSupabaseTask = (rawTask: RawSupabaseTask): TaskType => {
+  return {
+    ...rawTask,
+    priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high') 
+      ? rawTask.priority 
+      : 'medium' as const
+  };
 };

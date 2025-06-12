@@ -1,111 +1,162 @@
 
 import React from 'react';
-import { Task } from '@/data/tasks/types';
-import TaskIcon from '@/components/task/TaskIcon';
-import CompletionButton from '@/components/task/CompletionButton';
-import PointsBadge from '@/components/task/PointsBadge';
-import PriorityBadge from '@/components/task/PriorityBadge';
-import { Button } from '@/components/ui/button';
+import { Card } from './ui/card';
+import { Button } from './ui/button';
 import { Edit } from 'lucide-react';
+import PriorityBadge from './task/PriorityBadge';
+import PointsBadge from './task/PointsBadge';
+import CompletionButton from './task/CompletionButton';
+import CompletionCounter from './task/CompletionCounter';
+import TaskIcon from './task/TaskIcon';
+import FrequencyTracker from './task/FrequencyTracker';
+import HighlightedText from './task/HighlightedText';
+import { getCurrentDayOfWeek } from '@/lib/taskUtils';
 
 interface TaskCardProps {
-  task: Task;
-  onEdit: (task: Task) => void;
-  onToggleComplete: (taskId: string) => void;
-  disabled?: boolean;
+  title: string;
+  description: string;
+  points: number;
+  completed?: boolean;
+  backgroundImage?: string;
+  backgroundOpacity?: number;
+  focalPointX?: number;
+  focalPointY?: number;
+  onEdit: () => void;
+  onToggleCompletion?: (completed: boolean) => void;
+  onDelete?: () => void;
+  frequency?: 'daily' | 'weekly';
+  frequency_count?: number;
+  usage_data?: number[];
+  icon_url?: string;
+  icon_name?: string;
+  priority?: 'low' | 'medium' | 'high';
+  highlight_effect?: boolean;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  icon_color?: string;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ 
-  task, 
-  onEdit, 
-  onToggleComplete, 
-  disabled = false 
+const TaskCard: React.FC<TaskCardProps> = ({
+  title,
+  description,
+  points,
+  completed = false,
+  backgroundImage,
+  backgroundOpacity = 100,
+  focalPointX = 50,
+  focalPointY = 50,
+  onEdit,
+  onToggleCompletion,
+  frequency,
+  frequency_count = 1,
+  usage_data = Array(7).fill(0),
+  icon_url,
+  icon_name,
+  priority = 'medium',
+  highlight_effect = false,
+  title_color = '#FFFFFF',
+  subtext_color = '#8E9196',
+  calendar_color = '#7E69AB',
+  icon_color = '#9b87f5'
 }) => {
-  const backgroundStyle = task.background_image_url ? {
-    position: 'relative' as const,
-    overflow: 'hidden' as const,
-  } : {};
-
-  const overlayStyle = {
-    backgroundColor: `rgba(0, 0, 0, ${(100 - task.background_opacity) / 100})`,
-  };
+  const currentDayOfWeek = getCurrentDayOfWeek();
+  const currentCompletions = usage_data[currentDayOfWeek] || 0;
+  const maxCompletions = frequency_count || 1;
+  const isFullyCompleted = currentCompletions >= maxCompletions;
 
   return (
-    <div className="relative rounded-xl overflow-hidden shadow-lg bg-navy" style={backgroundStyle}>
-      {task.background_image_url && (
-        <>
-          <div className="absolute inset-0">
-            <img
-              src={task.background_image_url}
-              alt={`${task.title} background`}
-              className="w-full h-full object-cover"
-              style={{
-                objectPosition: `${task.focal_point_x}% ${task.focal_point_y}%`
-              }}
-            />
-          </div>
-          <div className="absolute inset-0" style={overlayStyle}></div>
-        </>
+    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
+      {backgroundImage && (
+        <div 
+          className="absolute inset-0 w-full h-full z-0"
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: `${focalPointX}% ${focalPointY}%`,
+            opacity: backgroundOpacity / 100,
+          }}
+        />
       )}
-      
-      <div className="relative p-6 min-h-[200px] flex flex-col justify-between">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            {(task.icon_name || task.icon_url) && (
-              <TaskIcon
-                icon_name={task.icon_name}
-                icon_url={task.icon_url}
-                icon_color={task.icon_color}
-                className="h-8 w-8"
+
+      <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
+        <div className="flex justify-between items-start mb-3">
+          <PriorityBadge priority={priority} />
+          
+          {onToggleCompletion && (
+            <div className="flex items-center gap-2">
+              <PointsBadge points={points} />
+              <CompletionCounter 
+                currentCompletions={currentCompletions}
+                maxCompletions={maxCompletions}
               />
-            )}
-            <div>
-              <h3 
-                className={`text-xl font-bold ${task.highlight_effect ? 'bg-yellow-300 bg-opacity-50 px-2 py-1 rounded' : ''}`}
-                style={{ color: task.title_color }}
-              >
-                {task.title}
-              </h3>
-              {task.description && (
-                <p 
-                  className={`text-sm mt-1 ${task.highlight_effect ? 'bg-yellow-300 bg-opacity-30 px-2 py-1 rounded' : ''}`}
-                  style={{ color: task.subtext_color }}
-                >
-                  {task.description}
-                </p>
-              )}
+              <CompletionButton 
+                completed={completed} 
+                onToggleCompletion={onToggleCompletion}
+                currentCompletions={currentCompletions}
+                maxCompletions={maxCompletions}
+              />
+            </div>
+          )}
+        </div>
+        
+        <div className="flex items-start mb-auto">
+          <div className="mr-4 flex-shrink-0">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
+              <TaskIcon 
+                icon_url={icon_url} 
+                icon_name={icon_name} 
+                icon_color={icon_color} 
+              />
             </div>
           </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit(task)}
-            className="text-white hover:bg-white/10"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <PriorityBadge priority={task.priority as "high" | "medium" | "low"} />
-            <PointsBadge points={task.points} />
-            <span className="text-sm" style={{ color: task.subtext_color }}>
-              {task.frequency === 'daily' ? 'Daily' : 
-               task.frequency === 'weekly' ? `${task.frequency_count}x/week` :
-               `${task.frequency_count}x/month`}
-            </span>
+          <div className="flex-1 flex flex-col">
+            <h3 className="text-xl font-semibold inline-block">
+              <HighlightedText 
+                text={title} 
+                highlight={highlight_effect || false} 
+                color={title_color} 
+              />
+            </h3>
+            
+            <div className="text-sm mt-1 inline-block">
+              <HighlightedText 
+                text={description} 
+                highlight={highlight_effect || false} 
+                color={subtext_color} 
+              />
+            </div>
           </div>
+        </div>
+        
+        <div className="flex items-center justify-between mt-4">
+          {frequency && (
+            <FrequencyTracker 
+              frequency={frequency} 
+              frequency_count={frequency_count} 
+              calendar_color={calendar_color}
+              usage_data={usage_data}
+            />
+          )}
           
-          <CompletionButton
-            task={task}
-            onToggleComplete={onToggleComplete}
-            disabled={disabled}
-          />
+          <div className="flex space-x-2 ml-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+              className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+      
+      {isFullyCompleted && (
+        <div className="absolute inset-0 z-20 bg-white/30 rounded pointer-events-none" />
+      )}
+    </Card>
   );
 };
 
