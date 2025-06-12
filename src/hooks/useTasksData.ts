@@ -14,7 +14,6 @@ import { getErrorMessage } from '@/lib/errors';
 import { checkAndPerformTaskResets } from '@/lib/taskUtils';
 
 // Define a type for the data saveTask might receive
-// This will now be more specific: CreateTaskVariables or UpdateTaskVariables
 type SaveTaskInput = CreateTaskVariables | UpdateTaskVariables;
 
 export const useTasksData = () => {
@@ -66,33 +65,13 @@ export const useTasksData = () => {
       // Check for resets before saving
       await checkAndReloadTasks();
       
-      // Discriminate between CreateTaskVariables and UpdateTaskVariables
-      // UpdateTaskVariables will have an 'id' property.
+      // Check if this is an update (has id) or create (no id)
       if ('id' in taskData && taskData.id) {
-        // This is UpdateTaskVariables - ensure proper type casting
-        const updatePayload: UpdateTaskVariables = {
-          ...taskData,
-          priority: (taskData.priority && ['low', 'medium', 'high'].includes(taskData.priority)) 
-            ? taskData.priority as 'low' | 'medium' | 'high'
-            : 'medium',
-          frequency: (taskData.frequency && ['daily', 'weekly', 'monthly'].includes(taskData.frequency))
-            ? taskData.frequency as 'daily' | 'weekly' | 'monthly'
-            : 'daily'
-        };
-        return await updateTaskMutation.mutateAsync(updatePayload);
-
+        // This is an update
+        return await updateTaskMutation.mutateAsync(taskData as UpdateTaskVariables);
       } else {
-        // This is CreateTaskVariables - ensure proper type casting
-        const createPayload: CreateTaskVariables = {
-          ...taskData as CreateTaskVariables,
-          priority: (taskData.priority && ['low', 'medium', 'high'].includes(taskData.priority)) 
-            ? taskData.priority as 'low' | 'medium' | 'high'
-            : 'medium',
-          frequency: (taskData.frequency && ['daily', 'weekly', 'monthly'].includes(taskData.frequency))
-            ? taskData.frequency as 'daily' | 'weekly' | 'monthly'
-            : 'daily'
-        };
-        return await createTaskMutation.mutateAsync(createPayload);
+        // This is a create
+        return await createTaskMutation.mutateAsync(taskData as CreateTaskVariables);
       }
     } catch (e: unknown) {
       const descriptiveMessage = getErrorMessage(e);
