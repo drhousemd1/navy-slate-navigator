@@ -24,7 +24,7 @@ const RewardImageSection: React.FC<RewardImageSectionProps> = ({
   setImagePreview
 }) => {
   // Get current image metadata from form
-  const currentImageMeta = watch('image_meta' as any); // Type assertion for backward compatibility
+  const currentImageMeta = watch('image_meta' as any);
   const currentImageUrl = watch('background_image_url');
   
   // Convert Json back to ImageMetadata if needed
@@ -37,7 +37,7 @@ const RewardImageSection: React.FC<RewardImageSectionProps> = ({
       
       // Update form with new optimized data
       setValue('background_image_url', result.metadata.fullUrl || result.metadata.originalUrl);
-      setValue('image_meta' as any, rewardImageMetadataToJson(result.metadata)); // Type assertion for backward compatibility
+      setValue('image_meta' as any, rewardImageMetadataToJson(result.metadata));
       
       // Update preview
       const bestUrl = getRewardBestImageUrl(result.metadata, null, false);
@@ -67,7 +67,7 @@ const RewardImageSection: React.FC<RewardImageSectionProps> = ({
 
   const handleLegacyRemoveImage = () => {
     setValue('background_image_url', null);
-    setValue('image_meta' as any, null); // Type assertion for backward compatibility
+    setValue('image_meta' as any, null);
     setImagePreview(null);
   };
 

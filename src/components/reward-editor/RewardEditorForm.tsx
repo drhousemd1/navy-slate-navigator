@@ -33,7 +33,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       title: '',
       description: '',
       cost: 10,
-      supply: 1, // Added supply default
+      supply: 1,
       is_dom_reward: false,
       icon_name: null,
       icon_color: '#9b87f5',
@@ -64,7 +64,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        supply: rewardData.supply || 1, // Added supply
+        supply: rewardData.supply || 1,
         is_dom_reward: isDomRewardValue,
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
@@ -129,7 +129,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const decrementSupply = () => {
     const currentSupply = watch('supply') || 0;
-    if (currentSupply > 0) { // Or 1 if supply cannot be 0
+    if (currentSupply > 0) {
       setValue('supply', currentSupply - 1);
     }
   };
@@ -169,23 +169,25 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           control={control}
           incrementCost={incrementCost}
           decrementCost={decrementCost}
-          incrementSupply={incrementSupply} // Added supply handlers
-          decrementSupply={decrementSupply} // Added supply handlers
-          watch={watch} // Pass watch for supply field
+          incrementSupply={incrementSupply}
+          decrementSupply={decrementSupply}
+          watch={watch}
         />
         
         <RewardIconSection 
           control={control}
           selectedIconName={watch('icon_name')}
-          iconPreview={null} // Assuming iconPreview comes from state or elsewhere if custom upload is used
+          iconPreview={null}
           iconColor={watch('icon_color')}
           onSelectIcon={handleSelectIcon}
-          onUploadIcon={handleUploadIcon} // This should eventually set icon_url or preview
+          onUploadIcon={handleUploadIcon}
           onRemoveIcon={handleRemoveIcon}
         />
         
         <RewardBackgroundSection 
           control={control}
+          setValue={setValue}
+          watch={watch}
           imagePreview={watch('background_image_url')}
           initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}
           onRemoveImage={handleRemoveImage}
@@ -194,7 +196,6 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
               handleImageUpload(e.target.files[0]);
             }
           }}
-          setValue={setValue}
         />
         
         <RewardColorSettings 
@@ -202,7 +203,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         />
         
         <RewardFormActions 
-          rewardData={rewardData} // This is now Reward | undefined
+          rewardData={rewardData}
           isDeleteDialogOpen={isDeleteDialogOpen}
           setIsDeleteDialogOpen={setIsDeleteDialogOpen}
           onCancel={handleCancelWrapped}

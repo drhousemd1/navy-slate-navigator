@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Control, UseFormSetValue } from 'react-hook-form';
+import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { RewardFormValues } from '@/data/rewards/types';
 import RewardImageSection from './RewardImageSection';
 import { FormLabel } from '@/components/ui/form';
@@ -8,20 +8,22 @@ import { logger } from '@/lib/logger';
 
 interface RewardBackgroundSectionProps {
   control: Control<RewardFormValues>;
+  setValue: UseFormSetValue<RewardFormValues>;
+  watch: UseFormWatch<RewardFormValues>;
   imagePreview: string | null;
   initialPosition: { x: number; y: number };
   onRemoveImage: () => void;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  setValue: UseFormSetValue<RewardFormValues>;
 }
 
 const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   control,
+  setValue,
+  watch,
   imagePreview,
   initialPosition,
   onRemoveImage,
-  onImageUpload,
-  setValue
+  onImageUpload
 }) => {
   // Create local state for image preview to work with the new component
   const [localImagePreview, setLocalImagePreview] = useState<string | null>(imagePreview);
@@ -43,7 +45,7 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
       <RewardImageSection
         control={control}
         setValue={setValue}
-        watch={control._formValues ? (() => (key: string) => control._formValues[key]) : (() => () => null)}
+        watch={watch}
         imagePreview={localImagePreview}
         setImagePreview={setLocalImagePreview}
       />
