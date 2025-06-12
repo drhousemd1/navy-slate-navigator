@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useAuth } from '@/contexts/auth';
+import { createTaskDataToLegacyFormat } from '@/utils/image/taskIntegration';
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
@@ -23,26 +24,30 @@ export const useCreateTask = () => {
         throw new Error('User must be authenticated to create tasks');
       }
 
+      // Convert to legacy format for database insertion
+      const legacyData = createTaskDataToLegacyFormat(variables);
+
       const taskToInsert = {
-        title: variables.title,
-        points: variables.points,
-        description: variables.description,
-        frequency: variables.frequency || 'daily',
-        frequency_count: variables.frequency_count || 1,
-        priority: variables.priority || 'medium',
-        icon_name: variables.icon_name,
-        icon_color: variables.icon_color || '#9b87f5',
-        title_color: variables.title_color || '#FFFFFF',
-        subtext_color: variables.subtext_color || '#8E9196',
-        calendar_color: variables.calendar_color || '#7E69AB',
-        background_image_url: variables.background_image_url,
-        background_opacity: variables.background_opacity || 100,
-        highlight_effect: variables.highlight_effect || false,
-        focal_point_x: variables.focal_point_x || 50,
-        focal_point_y: variables.focal_point_y || 50,
-        week_identifier: variables.week_identifier, 
-        background_images: variables.background_images as Json,
-        icon_url: variables.icon_url,
+        title: legacyData.title,
+        points: legacyData.points,
+        description: legacyData.description,
+        frequency: legacyData.frequency || 'daily',
+        frequency_count: legacyData.frequency_count || 1,
+        priority: legacyData.priority || 'medium',
+        icon_name: legacyData.icon_name,
+        icon_color: legacyData.icon_color || '#9b87f5',
+        title_color: legacyData.title_color || '#FFFFFF',
+        subtext_color: legacyData.subtext_color || '#8E9196',
+        calendar_color: legacyData.calendar_color || '#7E69AB',
+        background_image_url: legacyData.background_image_url,
+        background_opacity: legacyData.background_opacity || 100,
+        highlight_effect: legacyData.highlight_effect || false,
+        focal_point_x: legacyData.focal_point_x || 50,
+        focal_point_y: legacyData.focal_point_y || 50,
+        week_identifier: legacyData.week_identifier, 
+        background_images: legacyData.background_images as Json,
+        icon_url: legacyData.icon_url,
+        image_meta: legacyData.image_meta as Json,
         user_id: user.id, // Always use current authenticated user
       };
 
@@ -59,6 +64,7 @@ export const useCreateTask = () => {
     entityName: 'Task',
     createOptimisticItem: (variables, optimisticId) => {
       const now = new Date().toISOString();
+      const legacyData = createTaskDataToLegacyFormat(variables);
       return {
         id: optimisticId,
         optimisticId: optimisticId,
@@ -66,28 +72,28 @@ export const useCreateTask = () => {
         updated_at: now,
         completed: false,
         last_completed_date: null,
-        title: variables.title,
-        points: variables.points,
-        description: variables.description || null,
-        frequency: variables.frequency || 'daily',
-        frequency_count: variables.frequency_count || 1,
-        priority: variables.priority || 'medium',
-        icon_name: variables.icon_name || null,
-        icon_color: variables.icon_color || '#9b87f5',
-        title_color: variables.title_color || '#FFFFFF',
-        subtext_color: variables.subtext_color || '#8E9196',
-        calendar_color: variables.calendar_color || '#7E69AB',
-        background_image_url: variables.background_image_url || null,
-        background_opacity: variables.background_opacity || 100,
-        highlight_effect: variables.highlight_effect || false,
-        focal_point_x: variables.focal_point_x || 50,
-        focal_point_y: variables.focal_point_y || 50,
-        week_identifier: variables.week_identifier || null,
-        icon_url: variables.icon_url || null,
-        usage_data: variables.usage_data || Array(7).fill(0),
-        background_images: variables.background_images as Json || null,
+        title: legacyData.title,
+        points: legacyData.points,
+        description: legacyData.description || null,
+        frequency: legacyData.frequency || 'daily',
+        frequency_count: legacyData.frequency_count || 1,
+        priority: legacyData.priority || 'medium',
+        icon_name: legacyData.icon_name || null,
+        icon_color: legacyData.icon_color || '#9b87f5',
+        title_color: legacyData.title_color || '#FFFFFF',
+        subtext_color: legacyData.subtext_color || '#8E9196',
+        calendar_color: legacyData.calendar_color || '#7E69AB',
+        background_image_url: legacyData.background_image_url || null,
+        background_opacity: legacyData.background_opacity || 100,
+        highlight_effect: legacyData.highlight_effect || false,
+        focal_point_x: legacyData.focal_point_x || 50,
+        focal_point_y: legacyData.focal_point_y || 50,
+        week_identifier: legacyData.week_identifier || null,
+        icon_url: legacyData.icon_url || null,
+        usage_data: legacyData.usage_data || Array(7).fill(0),
+        background_images: legacyData.background_images as Json || null,
+        image_meta: legacyData.image_meta as Json || null,
         user_id: user?.id || '',
-        ...variables, 
       } as TaskWithId;
     },
     onSuccessCallback: async (newTaskData) => {
