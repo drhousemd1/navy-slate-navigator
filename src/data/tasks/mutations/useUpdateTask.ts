@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
@@ -8,7 +7,6 @@ import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
-import { imageMetadataToJson } from '@/utils/image/helpers';
 
 export type { UpdateTaskVariables }; // Changed to export type
 
@@ -19,25 +17,19 @@ export const useUpdateTask = () => {
     queryClient,
     queryKey: TASKS_QUERY_KEY, // Use the constant
     mutationFn: async (variables: UpdateTaskVariables) => {
-      const { id, image_meta, background_images, ...updatesFromVariables } = variables;
+      const { id, ...updatesFromVariables } = variables;
 
-      // Ensure background_images is correctly typed if present and convert image_meta
-      const updatesForSupabase: Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at'>> & { background_images?: Json | null; image_meta?: Json | null } = {
+      // Ensure background_images is correctly typed if present
+      const updatesForSupabase: Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at'>> & { background_images?: Json | null } = {
         ...updatesFromVariables,
-        updated_at: new Date().toISOString(),
       };
-      
-      if (background_images !== undefined) {
-        updatesForSupabase.background_images = background_images as Json | null;
-      }
-      
-      if (image_meta !== undefined) {
-        updatesForSupabase.image_meta = imageMetadataToJson(image_meta) as Json | null;
+      if (updatesFromVariables.background_images !== undefined) {
+        updatesForSupabase.background_images = updatesFromVariables.background_images as Json | null;
       }
 
       const { data, error } = await supabase
         .from('tasks')
-        .update(updatesForSupabase)
+        .update({ ...updatesForSupabase, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();

@@ -1,6 +1,5 @@
 
 import type { Json } from "@/integrations/supabase/types";
-import { ImageMetadata } from '@/utils/image/helpers';
 
 export type { Json } from "@/integrations/supabase/types";
 
@@ -31,8 +30,6 @@ export interface Task {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
-  // New image metadata fields for compression system
-  image_meta?: ImageMetadata;
 }
 
 export interface TaskWithId extends Task {
@@ -63,8 +60,6 @@ export interface TaskFormValues {
   focal_point_x: number;
   focal_point_y: number;
   highlight_effect: boolean;
-  // New image metadata fields for compression system
-  image_meta?: ImageMetadata;
 }
 
 export interface CreateTaskVariables extends TaskFormValues {

@@ -16,7 +16,6 @@ import {
 } from "../indexedDB/useIndexedDB";
 import { logger } from '@/lib/logger';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { jsonToImageMetadata } from '@/utils/image/helpers';
 
 export const TASKS_QUERY_KEY = ['tasks'];
 
@@ -24,14 +23,12 @@ export type TasksQueryResult = UseQueryResult<Task[], Error> & {
   isUsingCachedData?: boolean;
 };
 
-const transformSupabaseTask = (rawTask: any): Task => {
+const transformSupabaseTask = (rawTask: RawSupabaseTask): Task => {
   return {
     ...rawTask,
     priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high') 
       ? rawTask.priority 
-      : 'medium' as const,
-    // Convert Json back to ImageMetadata
-    image_meta: jsonToImageMetadata(rawTask.image_meta)
+      : 'medium' as const
   };
 };
 
@@ -119,7 +116,7 @@ export function useTasksQuery(): TasksQueryResult {
 
       if (!shouldFetch && localData) {
         logger.debug('[useTasksQuery queryFn] Using local data for tasks.');
-        return localData.map(task => transformSupabaseTask(task));
+        return localData.map(task => transformSupabaseTask(task as RawSupabaseTask));
       }
 
       logger.debug('[useTasksQuery queryFn] Fetching tasks from server.');
@@ -133,7 +130,7 @@ export function useTasksQuery(): TasksQueryResult {
       }
       
       logger.debug('[useTasksQuery queryFn] No server data, returning local data or empty array for tasks.');
-      return localData ? localData.map(task => transformSupabaseTask(task)) : [];
+      return localData ? localData.map(task => transformSupabaseTask(task as RawSupabaseTask)) : [];
     },
     staleTime: Infinity,
     refetchOnWindowFocus: false,
