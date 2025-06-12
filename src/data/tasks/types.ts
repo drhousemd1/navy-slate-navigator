@@ -11,8 +11,8 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  priority: 'low' | 'medium' | 'high';
-  frequency: 'daily' | 'weekly' | 'monthly';
+  priority: string;  // Simple string, not union type
+  frequency: string; // Simple string, not union type
   frequency_count: number;
   points: number;
   background_image_url?: string;
@@ -34,7 +34,6 @@ export interface Task {
   usage_data?: Json;
   week_identifier?: string;
   background_images?: Json;
-  image_meta?: Json; // JSONB field for optimized image metadata
 }
 
 // Export the TaskWithId type that other files are expecting
@@ -43,8 +42,8 @@ export type TaskWithId = Task;
 export interface TaskFormValues {
   title: string;
   description?: string;
-  priority: 'low' | 'medium' | 'high';
-  frequency: 'daily' | 'weekly' | 'monthly';
+  priority: string;  // Simple string
+  frequency: string; // Simple string
   frequency_count: number;
   points: number;
   background_image_url?: string;
@@ -58,15 +57,14 @@ export interface TaskFormValues {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  image_meta?: Json; // JSONB field for optimized image metadata
 }
 
 export interface CreateTaskVariables {
   title: string;
   user_id: string;
   description?: string;
-  priority?: 'low' | 'medium' | 'high';
-  frequency?: 'daily' | 'weekly' | 'monthly';
+  priority?: string;  // Simple string
+  frequency?: string; // Simple string
   frequency_count?: number;
   points?: number;
   background_image_url?: string;
@@ -80,15 +78,14 @@ export interface CreateTaskVariables {
   highlight_effect?: boolean;
   focal_point_x?: number;
   focal_point_y?: number;
-  image_meta?: Json; // JSONB field for optimized image metadata
 }
 
 export interface UpdateTaskVariables {
   id: string;
   title?: string;
   description?: string;
-  priority?: 'low' | 'medium' | 'high';
-  frequency?: 'daily' | 'weekly' | 'monthly';
+  priority?: string;  // Simple string
+  frequency?: string; // Simple string
   frequency_count?: number;
   points?: number;
   background_image_url?: string;
@@ -104,6 +101,5 @@ export interface UpdateTaskVariables {
   focal_point_y?: number;
   completed?: boolean;
   usage_data?: Json;
-  image_meta?: Json; // JSONB field for optimized image metadata
-  last_completed_date?: string; // Add this missing field
+  last_completed_date?: string;
 }
