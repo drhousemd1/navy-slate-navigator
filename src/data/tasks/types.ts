@@ -30,7 +30,6 @@ export interface Task {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
-  image_meta?: Json;
 }
 
 export interface TaskWithId extends Task {
@@ -61,7 +60,6 @@ export interface TaskFormValues {
   focal_point_x: number;
   focal_point_y: number;
   highlight_effect: boolean;
-  image_meta?: Json;
 }
 
 export interface CreateTaskVariables extends TaskFormValues {
