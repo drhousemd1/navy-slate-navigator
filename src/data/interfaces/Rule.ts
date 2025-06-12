@@ -1,4 +1,6 @@
 
+import { ImageMetadata } from '@/utils/image/helpers';
+
 // Rule interface definition to be used across rule-related data handling
 export interface Rule {
   id: string;
@@ -22,4 +24,7 @@ export interface Rule {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  // New image metadata fields for compression system
+  image_meta?: ImageMetadata;
+  background_images?: any; // For multiple image support
 }

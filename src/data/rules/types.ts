@@ -1,5 +1,6 @@
 
 import { Json } from '@/data/tasks/types'; // Assuming Json type is available from tasks/types or define it if not
+import { ImageMetadata } from '@/utils/image/helpers';
 
 export interface Rule {
   id: string;
@@ -20,6 +21,9 @@ export interface Rule {
   focal_point_y: number;
   created_at?: string;
   updated_at?: string;
+  // New image metadata fields for compression system
+  image_meta?: ImageMetadata;
+  background_images?: Json; // For multiple image support
 }
 
 export interface RuleViolation {
@@ -47,6 +51,9 @@ export interface RuleFormValues {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
+  // New image metadata fields for compression system
+  image_meta?: ImageMetadata;
+  background_images?: Json;
 }
 
 // Variables needed to create a rule violation.
@@ -81,7 +88,7 @@ export interface RawSupabaseRule {
   frequency_count: number; // integer
   usage_data?: Json | null; // jsonb (can be an array or other JSON structure)
   background_images?: Json | null; // jsonb
+  image_meta?: Json | null; // jsonb - New image metadata field
   created_at: string; // timestamp with time zone
   updated_at: string; // timestamp with time zone
 }
-
