@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Form } from "@/components/ui/form";
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
-import RewardBackgroundSection from './RewardBackgroundSection';
+import RewardImageSection from './RewardImageSection';
 import RewardColorSettings from './RewardColorSettings';
 import RewardFormActions from './RewardFormActions';
 import DeleteRewardDialog from './DeleteRewardDialog';
@@ -33,7 +33,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       title: '',
       description: '',
       cost: 10,
-      supply: 1, // Added supply default
+      supply: 1,
       is_dom_reward: false,
       icon_name: null,
       icon_color: '#9b87f5',
@@ -45,6 +45,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       background_opacity: 100,
       focal_point_x: 50,
       focal_point_y: 50,
+      image_meta: null,
     }
   });
 
@@ -64,7 +65,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        supply: rewardData.supply || 1, // Added supply
+        supply: rewardData.supply || 1,
         is_dom_reward: isDomRewardValue,
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
@@ -76,13 +77,14 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         background_opacity: rewardData.background_opacity || 100,
         focal_point_x: rewardData.focal_point_x || 50,
         focal_point_y: rewardData.focal_point_y || 50,
+        image_meta: rewardData.image_meta || null,
       });
     } else {
       reset({
         title: '', description: '', cost: 10, supply: 1, is_dom_reward: false, icon_name: null,
         icon_color: '#9b87f5', title_color: '#FFFFFF', subtext_color: '#8E9196',
         calendar_color: '#7E69AB', highlight_effect: false, background_image_url: null,
-        background_opacity: 100, focal_point_x: 50, focal_point_y: 50,
+        background_opacity: 100, focal_point_x: 50, focal_point_y: 50, image_meta: null,
       });
     }
   }, [rewardData, reset]);
@@ -178,7 +180,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           onRemoveIcon={handleRemoveIcon}
         />
         
-        <RewardBackgroundSection 
+        <RewardImageSection 
           control={control}
           imagePreview={watch('background_image_url')}
           initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}

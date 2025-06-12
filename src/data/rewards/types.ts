@@ -26,6 +26,7 @@
       focal_point_x: number;
       focal_point_y: number;
       is_dom_reward: boolean;
+      image_meta?: Json | null;
       created_at?: string;
       updated_at?: string;
     }
@@ -50,6 +51,7 @@
       background_opacity: number;
       focal_point_x: number;
       focal_point_y: number;
+      image_meta?: Json | null;
     }
     
     // Align this with the type in useSaveReward.ts by making all fields from Reward present and required
@@ -70,8 +72,7 @@
       highlight_effect: boolean;
       focal_point_x: number;
       focal_point_y: number;
+      image_meta?: Json | null;
     };
 
     export type UpdateRewardVariables = { id: string } & Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>>;
-
-    
