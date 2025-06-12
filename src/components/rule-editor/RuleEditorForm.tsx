@@ -10,12 +10,13 @@ import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
 import NumberField from '../task-editor/NumberField';
 import ColorPickerField from '../task-editor/ColorPickerField';
-import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
+import RuleImageSection from './RuleImageSection';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
+import { handleImageUpload } from '@/utils/image/ruleIntegration';
 
 interface RuleFormValues {
   title: string;
@@ -33,6 +34,7 @@ interface RuleFormValues {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
+  image_meta?: any;
 }
 
 interface RuleEditorFormProps {
@@ -71,6 +73,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       highlight_effect: false,
       focal_point_x: 50,
       focal_point_y: 50,
+      image_meta: null,
     },
   });
 
@@ -78,7 +81,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
 
   const persisterFormId = `rule-editor-${ruleData?.id || 'new'}`;
   const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-    exclude: ['background_image_url', 'icon_url'] 
+    exclude: ['background_image_url', 'icon_url', 'image_meta'] 
   });
 
   useEffect(() => {
@@ -99,6 +102,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         highlight_effect: ruleData.highlight_effect || false,
         focal_point_x: ruleData.focal_point_x || 50,
         focal_point_y: ruleData.focal_point_y || 50,
+        image_meta: ruleData.image_meta || null,
       });
       setImagePreview(ruleData.background_image_url || null);
       setIconPreview(ruleData.icon_url || null);
@@ -110,7 +114,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         icon_url: undefined, icon_name: undefined,
         title_color: '#FFFFFF', subtext_color: '#8E9196', calendar_color: '#7E69AB',
         icon_color: '#FF6B6B', highlight_effect: false,
-        focal_point_x: 50, focal_point_y: 50,
+        focal_point_x: 50, focal_point_y: 50, image_meta: null,
       });
       setImagePreview(null);
       setIconPreview(null);
@@ -118,22 +122,26 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   }, [ruleData, reset]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setImagePreview(base64String);
-        setValue('background_image_url', base64String);
-      };
-      reader.readAsDataURL(file);
+      try {
+        await handleImageUpload(file, setValue, setImagePreview);
+      } catch (error) {
+        console.error('Error handling image upload:', error);
+        toast({
+          title: "Error",
+          description: "Failed to process image. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleRemoveImage = () => {
     setImagePreview(null);
     setValue('background_image_url', undefined);
+    setValue('image_meta', null);
   };
 
   const handleIconUpload = () => {
@@ -308,7 +316,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Background Image</FormLabel>
-          <BackgroundImageSelector
+          <RuleImageSection
             control={control}
             imagePreview={imagePreview}
             initialPosition={{ 
@@ -316,7 +324,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
               y: watch('focal_point_y') || 50 
             }}
             onRemoveImage={handleRemoveImage}
-            onImageUpload={handleImageUpload}
+            onImageUpload={handleImageUploadWrapper}
             setValue={setValue}
           />
         </div>

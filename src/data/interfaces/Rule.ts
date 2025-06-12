@@ -1,4 +1,6 @@
 
+import { Json } from '@/data/tasks/types';
+
 // Rule interface definition to be used across rule-related data handling
 export interface Rule {
   id: string;
@@ -19,6 +21,7 @@ export interface Rule {
   focal_point_x: number;
   focal_point_y: number;
   usage_data: number[];
+  image_meta?: Json | null;
   created_at?: string;
   updated_at?: string;
   user_id?: string;

@@ -18,6 +18,7 @@ export interface Rule {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
+  image_meta?: Json | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -47,6 +48,7 @@ export interface RuleFormValues {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
+  image_meta?: Json | null;
 }
 
 // Variables needed to create a rule violation.
@@ -81,7 +83,7 @@ export interface RawSupabaseRule {
   frequency_count: number; // integer
   usage_data?: Json | null; // jsonb (can be an array or other JSON structure)
   background_images?: Json | null; // jsonb
+  image_meta?: Json | null; // jsonb
   created_at: string; // timestamp with time zone
   updated_at: string; // timestamp with time zone
 }
-

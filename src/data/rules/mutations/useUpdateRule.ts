@@ -7,6 +7,7 @@ import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/
 import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { processImageForSave } from '@/utils/image/ruleIntegration';
 
 export type UpdateRuleVariables = { id: string } & Partial<Omit<Rule, 'id'>>;
 
@@ -18,9 +19,20 @@ export const useUpdateRule = () => {
     queryKey: [...RULES_QUERY_KEY], // Ensure mutable array
     mutationFn: async (variables: UpdateRuleVariables) => {
       const { id, ...updates } = variables;
+      
+      // Process image if present
+      const { processedUrl, metadata } = await processImageForSave(updates.background_image_url || null);
+      
+      const updatedData = {
+        ...updates,
+        background_image_url: processedUrl,
+        image_meta: updates.image_meta || metadata,
+        updated_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('rules')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update(updatedData)
         .eq('id', id)
         .select()
         .single();
