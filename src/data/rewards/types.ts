@@ -26,6 +26,7 @@
       focal_point_x: number;
       focal_point_y: number;
       is_dom_reward: boolean;
+      image_meta?: Json | null; // Added for image optimization support
       created_at?: string;
       updated_at?: string;
     }
@@ -73,5 +74,3 @@
     };
 
     export type UpdateRewardVariables = { id: string } & Partial<Omit<Reward, 'id' | 'created_at' | 'updated_at'>>;
-
-    

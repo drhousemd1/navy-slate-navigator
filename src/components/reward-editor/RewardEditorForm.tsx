@@ -144,7 +144,13 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const onSubmitWrapped = async (data: RewardFormValues) => {
     try {
-      await onSave(data); // onSave now expects RewardFormValues
+      // Prepare form data with image_meta if it exists in the reward data
+      const submissionData = {
+        ...data,
+        ...(rewardData?.image_meta && { image_meta: rewardData.image_meta })
+      };
+      
+      await onSave(submissionData);
       await clearPersistedState();
     } catch (error) {
       logger.error("Error during onSave callback:", error);

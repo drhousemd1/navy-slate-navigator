@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { Reward, CreateRewardVariables } from '../types';
 import { REWARDS_QUERY_KEY } from '../queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { prepareRewardDataForSupabase } from '@/utils/image/rewardIntegration';
 
 export const useCreateRewardMutation = () => {
   const queryClient = useQueryClient();
@@ -21,9 +22,12 @@ export const useCreateRewardMutation = () => {
         user_id: subUserId
       };
 
+      // Prepare data for Supabase storage with image metadata conversion
+      const preparedData = prepareRewardDataForSupabase(rewardData);
+
       const { data, error } = await supabase
         .from('rewards')
-        .insert(rewardData)
+        .insert(preparedData)
         .select()
         .single();
 

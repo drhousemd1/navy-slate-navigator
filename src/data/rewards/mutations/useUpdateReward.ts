@@ -1,8 +1,9 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward, UpdateRewardVariables } from '@/data/rewards/types';
-// Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+import { prepareRewardDataForSupabase } from '@/utils/image/rewardIntegration';
 
 const REWARDS_QUERY_KEY = ['rewards'];
 
@@ -11,12 +12,16 @@ export const useUpdateReward = () => {
 
   return useUpdateOptimisticMutation<Reward, Error, UpdateRewardVariables>({
     queryClient,
-    queryKey: REWARDS_QUERY_KEY, // Replaced [...CRITICAL_QUERY_KEYS.REWARDS]
+    queryKey: REWARDS_QUERY_KEY,
     mutationFn: async (variables: UpdateRewardVariables) => {
       const { id, ...updates } = variables;
+      
+      // Prepare data for Supabase storage with image metadata conversion
+      const preparedUpdates = prepareRewardDataForSupabase(updates);
+      
       const { data, error } = await supabase
         .from('rewards')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...preparedUpdates, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();
