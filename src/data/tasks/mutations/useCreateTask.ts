@@ -32,7 +32,6 @@ export const useCreateTask = () => {
         focal_point_x: variables.focal_point_x ?? 50,
         focal_point_y: variables.focal_point_y ?? 50,
         usage_data: [0, 0, 0, 0, 0, 0, 0], // Initialize as 7-element array
-        image_meta: variables.image_meta,
       };
 
       const { data, error } = await supabase

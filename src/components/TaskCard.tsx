@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Task } from '@/data/tasks/types';
-import { OptimizedImage } from '@/components/common/OptimizedImage';
 import TaskIcon from '@/components/task/TaskIcon';
 import CompletionButton from '@/components/task/CompletionButton';
 import PointsBadge from '@/components/task/PointsBadge';
@@ -22,7 +21,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onToggleComplete, 
   disabled = false 
 }) => {
-  const backgroundStyle = task.image_meta || task.background_image_url ? {
+  const backgroundStyle = task.background_image_url ? {
     position: 'relative' as const,
     overflow: 'hidden' as const,
   } : {};
@@ -33,12 +32,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
   return (
     <div className="relative rounded-xl overflow-hidden shadow-lg bg-navy" style={backgroundStyle}>
-      {(task.image_meta || task.background_image_url) && (
+      {task.background_image_url && (
         <>
           <div className="absolute inset-0">
-            <OptimizedImage
-              imageMeta={task.image_meta}
-              imageUrl={task.background_image_url}
+            <img
+              src={task.background_image_url}
               alt={`${task.title} background`}
               className="w-full h-full object-cover"
               style={{
@@ -91,7 +89,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <PriorityBadge priority={task.priority} />
+            <PriorityBadge priority={task.priority as "high" | "medium" | "low"} />
             <PointsBadge points={task.points} />
             <span className="text-sm" style={{ color: task.subtext_color }}>
               {task.frequency === 'daily' ? 'Daily' : 

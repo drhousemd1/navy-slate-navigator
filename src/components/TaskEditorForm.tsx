@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Task, Json, TaskFormValues } from '@/data/tasks/types';
+import { Task, TaskFormValues } from '@/data/tasks/types';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import PrioritySelector from './task-editor/PrioritySelector';
@@ -18,15 +19,12 @@ import NumberField from './task-editor/NumberField';
 import IconSelector from './task-editor/IconSelector';
 import PredefinedIconsGrid from './task-editor/PredefinedIconsGrid';
 import DeleteTaskDialog from './task-editor/DeleteTaskDialog';
-import { ImageUploadButton } from '@/components/common/ImageUploadButton';
-import { OptimizedImage } from '@/components/common/OptimizedImage';
-import { type ImageMeta } from '@/utils/image/helpers';
 
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  priority: z.enum(['low', 'medium', 'high']),
-  frequency: z.enum(['daily', 'weekly', 'monthly']),
+  priority: z.string(),
+  frequency: z.string(),
   frequency_count: z.number().min(1).max(30),
   points: z.number().min(0).max(1000),
   background_image_url: z.string().optional(),
@@ -40,7 +38,6 @@ const taskFormSchema = z.object({
   highlight_effect: z.boolean(),
   focal_point_x: z.number().min(0).max(100),
   focal_point_y: z.number().min(0).max(100),
-  image_meta: z.any().optional(),
 });
 
 type FormValues = z.infer<typeof taskFormSchema>;
@@ -89,13 +86,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
 
   useEffect(() => {
     if (task) {
-      const parsedImageMeta = task.image_meta ? task.image_meta as Json : undefined;
-      
       reset({
         title: task.title || '',
         description: task.description || '',
-        priority: task.priority || 'medium',
-        frequency: task.frequency || 'daily',
+        priority: task.priority as string || 'medium',
+        frequency: task.frequency as string || 'daily',
         frequency_count: task.frequency_count || 1,
         points: task.points || 10,
         background_image_url: task.background_image_url || '',
@@ -109,35 +104,32 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         highlight_effect: task.highlight_effect || false,
         focal_point_x: task.focal_point_x || 50,
         focal_point_y: task.focal_point_y || 50,
-        image_meta: parsedImageMeta,
       });
       setSelectedIconName(task.icon_name || null);
     }
   }, [task, reset]);
 
-  const handleImageUpload = (imageMeta: ImageMeta) => {
-    // Convert ImageMeta to Json type for database storage
-    const imageMetaJson: Json = {
-      full: imageMeta.full,
-      thumb: imageMeta.thumb,
-      originalName: imageMeta.originalName,
-      size: imageMeta.size,
-      compressionRatio: imageMeta.compressionRatio,
-      uploadedAt: imageMeta.uploadedAt,
-      version: imageMeta.version,
+  const handleImageUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      if (e.target instanceof HTMLInputElement && e.target.files) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64String = reader.result as string;
+            setValue('background_image_url', base64String);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
     };
-    
-    setValue('image_meta', imageMetaJson);
-    setValue('background_image_url', imageMeta.full);
-    
-    toast({
-      title: "Image uploaded successfully",
-      description: `Saved ${imageMeta.compressionRatio}% space through compression`,
-    });
+    input.click();
   };
 
   const handleRemoveImage = () => {
-    setValue('image_meta', undefined);
     setValue('background_image_url', '');
   };
 
@@ -178,9 +170,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      // Ensure we have all required fields for TaskFormValues
       const taskToSave: TaskFormValues = {
-        title: values.title, // This is guaranteed to be present due to form validation
+        title: values.title,
         description: values.description,
         priority: values.priority,
         frequency: values.frequency,
@@ -197,7 +188,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         highlight_effect: values.highlight_effect,
         focal_point_x: values.focal_point_x,
         focal_point_y: values.focal_point_y,
-        image_meta: values.image_meta,
       };
       
       await onSave(taskToSave);
@@ -278,12 +268,11 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
           <FormLabel className="text-white text-lg">Background Image</FormLabel>
           
           <div className="border-2 border-dashed border-light-navy rounded-lg p-4">
-            {watch('image_meta') || watch('background_image_url') ? (
+            {watch('background_image_url') ? (
               <div className="space-y-4">
                 <div className="relative w-full h-48 rounded-lg overflow-hidden">
-                  <OptimizedImage
-                    imageMeta={watch('image_meta')}
-                    imageUrl={watch('background_image_url')}
+                  <img
+                    src={watch('background_image_url')}
                     alt="Task background preview"
                     className="w-full h-full object-cover"
                   />
@@ -292,11 +281,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-400">
                     Background image uploaded
-                    {typeof watch('image_meta') === 'object' && watch('image_meta') && 'compressionRatio' in (watch('image_meta') as any) && (
-                      <span className="ml-2 text-green-400">
-                        ({(watch('image_meta') as any).compressionRatio}% compression)
-                      </span>
-                    )}
                   </div>
                   <Button
                     type="button"
@@ -310,13 +294,14 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               </div>
             ) : (
               <div className="text-center py-8">
-                <ImageUploadButton
-                  onImageUploaded={handleImageUpload}
+                <Button
+                  type="button"
                   variant="outline"
                   className="w-full"
+                  onClick={handleImageUpload}
                 >
                   Upload Background Image
-                </ImageUploadButton>
+                </Button>
                 <p className="text-sm text-gray-400 mt-2">
                   Upload an image to use as the task background
                 </p>
@@ -324,7 +309,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             )}
           </div>
 
-          {(watch('image_meta') || watch('background_image_url')) && (
+          {watch('background_image_url') && (
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={control}
