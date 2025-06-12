@@ -8,10 +8,12 @@ import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/contexts/auth';
+import { imageMetadataToJson } from '@/utils/image/integration';
 
 export type CreateRuleVariables = Partial<Omit<Rule, 'id' | 'created_at' | 'updated_at' | 'usage_data' | 'user_id'>> & {
   title: string;
   user_id: string; // Make user_id required
+  image_meta?: any; // Allow ImageMetadata from form
 };
 
 export const useCreateRule = () => {
@@ -27,10 +29,11 @@ export const useCreateRule = () => {
         throw new Error('User must be authenticated to create rules');
       }
 
-      // Ensure user_id is set to current authenticated user
+      // Prepare data for database, converting ImageMetadata to Json if needed
       const ruleData = {
         ...variables,
         user_id: user.id, // Always use current authenticated user
+        image_meta: variables.image_meta ? imageMetadataToJson(variables.image_meta) : null,
       };
 
       const { data, error } = await supabase
