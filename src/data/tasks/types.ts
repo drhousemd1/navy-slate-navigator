@@ -1,78 +1,105 @@
 
-import type { Json } from "@/integrations/supabase/types";
-
-export type { Json } from "@/integrations/supabase/types";
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export interface Task {
   id: string;
   title: string;
   description?: string;
-  frequency: string;
+  priority: 'low' | 'medium' | 'high';
+  frequency: 'daily' | 'weekly' | 'monthly';
   frequency_count: number;
   points: number;
-  priority: 'low' | 'medium' | 'high';
-  icon_name?: string;
-  icon_color: string;
+  background_image_url?: string;
+  background_opacity: number;
   icon_url?: string;
+  icon_name?: string;
   title_color: string;
   subtext_color: string;
   calendar_color: string;
-  background_image_url?: string;
-  background_images?: Json;
-  background_opacity: number;
+  icon_color: string;
+  highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  highlight_effect: boolean;
   completed: boolean;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
   last_completed_date?: string;
-  week_identifier?: string;
   usage_data?: Json;
-  user_id?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface TaskWithId extends Task {
-  id: string;
-  optimisticId?: string;
-}
-
-export interface RawSupabaseTask extends Omit<Task, 'priority'> {
-  priority: string;
+  week_identifier?: string;
+  background_images?: Json;
+  image_meta?: Json; // JSONB field for optimized image metadata
 }
 
 export interface TaskFormValues {
   title: string;
   description?: string;
-  frequency: string;
+  priority: 'low' | 'medium' | 'high';
+  frequency: 'daily' | 'weekly' | 'monthly';
   frequency_count: number;
   points: number;
-  priority: 'low' | 'medium' | 'high';
-  icon_name?: string;
-  icon_color: string;
+  background_image_url?: string;
+  background_opacity: number;
   icon_url?: string;
+  icon_name?: string;
   title_color: string;
   subtext_color: string;
   calendar_color: string;
-  background_image_url?: string;
-  background_images?: Json;
-  background_opacity: number;
+  icon_color: string;
+  highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  highlight_effect: boolean;
+  image_meta?: Json; // JSONB field for optimized image metadata
 }
 
-export interface CreateTaskVariables extends TaskFormValues {
+export interface CreateTaskVariables {
+  title: string;
   user_id: string;
-  week_identifier?: string;
-  usage_data?: Json;
+  description?: string;
+  priority?: 'low' | 'medium' | 'high';
+  frequency?: 'daily' | 'weekly' | 'monthly';
+  frequency_count?: number;
+  points?: number;
+  background_image_url?: string;
+  background_opacity?: number;
+  icon_url?: string;
+  icon_name?: string;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  icon_color?: string;
+  highlight_effect?: boolean;
+  focal_point_x?: number;
+  focal_point_y?: number;
+  image_meta?: Json; // JSONB field for optimized image metadata
 }
 
-export interface UpdateTaskVariables extends Partial<TaskFormValues> {
+export interface UpdateTaskVariables {
   id: string;
-  user_id?: string;
-  week_identifier?: string;
-  usage_data?: Json;
+  title?: string;
+  description?: string;
+  priority?: 'low' | 'medium' | 'high';
+  frequency?: 'daily' | 'weekly' | 'monthly';
+  frequency_count?: number;
+  points?: number;
+  background_image_url?: string;
+  background_opacity?: number;
+  icon_url?: string;
+  icon_name?: string;
+  title_color?: string;
+  subtext_color?: string;
+  calendar_color?: string;
+  icon_color?: string;
+  highlight_effect?: boolean;
+  focal_point_x?: number;
+  focal_point_y?: number;
   completed?: boolean;
-  last_completed_date?: string;
+  usage_data?: Json;
+  image_meta?: Json; // JSONB field for optimized image metadata
 }
