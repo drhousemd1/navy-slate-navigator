@@ -1,13 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form } from "@/components/ui/form";
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
-import RewardBackgroundSection from './RewardBackgroundSection';
+import RewardImageSection from './RewardImageSection';
 import RewardColorSettings from './RewardColorSettings';
 import RewardFormActions from './RewardFormActions';
 import DeleteRewardDialog from './DeleteRewardDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+import { handleImageUpload } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
 
@@ -27,6 +28,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   isSaving = false
 }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<RewardFormValues>({
     defaultValues: {
@@ -45,6 +47,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       background_opacity: 100,
       focal_point_x: 50,
       focal_point_y: 50,
+      image_meta: null,
     }
   });
 
@@ -52,7 +55,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 
   const persisterFormId = `reward-editor-${rewardData?.id || 'new'}`;
   const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-    exclude: ['background_image_url']
+    exclude: ['background_image_url', 'image_meta']
   });
 
   useEffect(() => {
@@ -76,28 +79,36 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         background_opacity: rewardData.background_opacity || 100,
         focal_point_x: rewardData.focal_point_x || 50,
         focal_point_y: rewardData.focal_point_y || 50,
+        image_meta: rewardData.image_meta || null,
       });
+      
+      setImagePreview(rewardData.background_image_url || null);
     } else {
       reset({
         title: '', description: '', cost: 10, supply: 1, is_dom_reward: false, icon_name: null,
         icon_color: '#9b87f5', title_color: '#FFFFFF', subtext_color: '#8E9196',
         calendar_color: '#7E69AB', highlight_effect: false, background_image_url: null,
-        background_opacity: 100, focal_point_x: 50, focal_point_y: 50,
+        background_opacity: 100, focal_point_x: 50, focal_point_y: 50, image_meta: null,
       });
+      setImagePreview(null);
     }
   }, [rewardData, reset]);
 
-  const handleImageUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setValue('background_image_url', result);
-    };
-    reader.readAsDataURL(file);
+  const handleImageUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        await handleImageUpload(file, setValue, setImagePreview);
+      } catch (error) {
+        logger.error('Error uploading image:', error);
+      }
+    }
   };
 
   const handleRemoveImage = () => {
     setValue('background_image_url', null);
+    setValue('image_meta', null);
+    setImagePreview(null);
   };
 
   const handleSelectIcon = (iconName: string) => {
@@ -178,16 +189,12 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           onRemoveIcon={handleRemoveIcon}
         />
         
-        <RewardBackgroundSection 
+        <RewardImageSection 
           control={control}
-          imagePreview={watch('background_image_url')}
+          imagePreview={imagePreview}
           initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}
           onRemoveImage={handleRemoveImage}
-          onImageUpload={(e) => {
-            if (e.target.files?.[0]) {
-              handleImageUpload(e.target.files[0]);
-            }
-          }}
+          onImageUpload={handleImageUploadWrapper}
           setValue={setValue}
         />
         

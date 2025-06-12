@@ -5,6 +5,8 @@ import { toast } from '@/hooks/use-toast';
 import { Reward, CreateRewardVariables } from '../types';
 import { REWARDS_QUERY_KEY } from '../queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { processImageForSave } from '@/utils/image/rewardIntegration';
+import { logger } from '@/lib/logger';
 
 export const useCreateRewardMutation = () => {
   const queryClient = useQueryClient();
@@ -16,8 +18,13 @@ export const useCreateRewardMutation = () => {
         throw new Error("User not authenticated");
       }
 
+      // Process image if present
+      const { processedUrl, metadata } = await processImageForSave(variables.background_image_url || null);
+
       const rewardData = {
         ...variables,
+        background_image_url: processedUrl,
+        image_meta: variables.image_meta || metadata,
         user_id: subUserId
       };
 
@@ -42,8 +49,11 @@ export const useCreateRewardMutation = () => {
         title: "Reward Created",
         description: `Successfully created ${newReward.title}`,
       });
+      
+      logger.debug('[Create Reward] Reward created successfully with image compression');
     },
     onError: (error) => {
+      logger.error('[Create Reward] Error creating reward:', error);
       toast({
         title: "Failed to Create Reward",
         description: error.message,
