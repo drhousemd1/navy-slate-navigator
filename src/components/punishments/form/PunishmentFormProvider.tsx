@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,6 +21,8 @@ export const punishmentFormSchema = z.object({
   background_opacity: z.number().min(0).max(100).default(50),
   focal_point_x: z.number().min(0).max(100).default(50),
   focal_point_y: z.number().min(0).max(100).default(50),
+  background_image_url: z.string().optional(),
+  image_meta: z.any().optional(),
 });
 
 export type PunishmentFormValues = z.infer<typeof punishmentFormSchema>;
@@ -56,6 +59,8 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
       background_opacity: punishmentData?.background_opacity ?? 50, // Use ??
       focal_point_x: punishmentData?.focal_point_x ?? 50, // Use ??
       focal_point_y: punishmentData?.focal_point_y ?? 50, // Use ??
+      background_image_url: punishmentData?.background_image_url || undefined,
+      image_meta: punishmentData?.image_meta || undefined,
     }
   });
 
