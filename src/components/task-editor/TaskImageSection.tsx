@@ -3,7 +3,7 @@ import React from 'react';
 import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import { ImageMetadata } from '@/utils/image/helpers';
-import { getBestImageUrl, imageMetadataToJson, jsonToImageMetadata } from '@/utils/image/integration';
+import { getTaskBestImageUrl, taskImageMetadataToJson, taskJsonToImageMetadata } from '@/utils/image/taskIntegration';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { logger } from '@/lib/logger';
 
@@ -27,7 +27,7 @@ const TaskImageSection: React.FC<TaskImageSectionProps> = ({
   const currentImageUrl = watch('background_image_url');
   
   // Convert Json back to ImageMetadata if needed
-  const imageMeta = jsonToImageMetadata(currentImageMeta);
+  const imageMeta = taskJsonToImageMetadata(currentImageMeta);
 
   const imageUpload = useImageUpload({
     category: 'tasks',
@@ -36,10 +36,10 @@ const TaskImageSection: React.FC<TaskImageSectionProps> = ({
       
       // Update form with new optimized data
       setValue('background_image_url', result.metadata.fullUrl || result.metadata.originalUrl);
-      setValue('image_meta', imageMetadataToJson(result.metadata));
+      setValue('image_meta', taskImageMetadataToJson(result.metadata));
       
       // Update preview
-      const bestUrl = getBestImageUrl(result.metadata, null, false);
+      const bestUrl = getTaskBestImageUrl(result.metadata, null, false);
       setImagePreview(bestUrl);
     },
     onUploadError: (error) => {
@@ -71,7 +71,7 @@ const TaskImageSection: React.FC<TaskImageSectionProps> = ({
   };
 
   // Use the best available image URL for display
-  const displayImageUrl = getBestImageUrl(imageMeta, currentImageUrl, false) || imagePreview;
+  const displayImageUrl = getTaskBestImageUrl(imageMeta, currentImageUrl, false) || imagePreview;
 
   return (
     <BackgroundImageSelector
