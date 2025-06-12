@@ -3,23 +3,15 @@ import React from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import { handleImageUpload } from '@/utils/image/rewardIntegration';
-
-// Define local interface to avoid circular dependency
-interface RewardImageFormFields {
-  background_image_url: string | null;
-  background_opacity: number;
-  focal_point_x: number;
-  focal_point_y: number;
-  image_meta?: any;
-}
+import { RewardFormValues } from '@/data/rewards/types';
 
 interface RewardImageSectionProps {
-  control: Control<RewardImageFormFields>;
+  control: Control<RewardFormValues>;
   imagePreview: string | null;
   initialPosition?: { x: number; y: number };
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setValue: UseFormSetValue<RewardImageFormFields>;
+  setValue: UseFormSetValue<RewardFormValues>;
   setImagePreview: (url: string | null) => void;
 }
 
