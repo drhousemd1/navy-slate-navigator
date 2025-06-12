@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { Reward, CreateRewardVariables } from '../types';
 import { REWARDS_QUERY_KEY } from '../queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { processImageForSave } from '@/utils/image/rewardIntegration';
 
 export const useCreateRewardMutation = () => {
   const queryClient = useQueryClient();
@@ -16,8 +17,13 @@ export const useCreateRewardMutation = () => {
         throw new Error("User not authenticated");
       }
 
+      // Process image if present
+      const { processedUrl, metadata } = await processImageForSave(variables.background_image_url || null);
+
       const rewardData = {
         ...variables,
+        background_image_url: processedUrl,
+        image_meta: variables.image_meta || metadata,
         user_id: subUserId
       };
 
