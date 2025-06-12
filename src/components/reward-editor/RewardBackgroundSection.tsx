@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
+import { Control, UseFormSetValue } from 'react-hook-form';
 import { RewardFormValues } from '@/data/rewards/types';
-import RewardImageSection from './RewardImageSection';
+// import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector'; // Old import
+import RewardBackgroundImageSelector from './RewardBackgroundImageSelector'; // New import
 import { FormLabel } from '@/components/ui/form';
 import { logger } from '@/lib/logger';
 
@@ -13,7 +14,6 @@ interface RewardBackgroundSectionProps {
   onRemoveImage: () => void;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   setValue: UseFormSetValue<RewardFormValues>;
-  watch: UseFormWatch<RewardFormValues>;
 }
 
 const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
@@ -22,10 +22,9 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   initialPosition,
   onRemoveImage,
   onImageUpload,
-  setValue,
-  watch
+  setValue
 }) => {
-  const currentOpacity = watch('background_opacity');
+  const currentOpacity = control._formValues?.background_opacity; 
   logger.debug("RewardBackgroundSection initializing with opacity:", currentOpacity);
   
   return (
@@ -34,17 +33,13 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
       <p className="text-sm text-muted-foreground pb-2">
         Add a background image to make your reward more visually appealing.
       </p>
-      <RewardImageSection
+      <RewardBackgroundImageSelector
         control={control}
-        setValue={setValue}
-        watch={watch}
         imagePreview={imagePreview}
-        setImagePreview={(url) => {
-          // This will be handled by the parent component through setValue
-          if (url) {
-            setValue('background_image_url', url);
-          }
-        }}
+        initialPosition={initialPosition}
+        onRemoveImage={onRemoveImage}
+        onImageUpload={onImageUpload}
+        setValue={setValue}
       />
     </div>
   );

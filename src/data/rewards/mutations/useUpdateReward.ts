@@ -1,65 +1,30 @@
-
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { UpdateRewardVariables, Reward } from '../types';
-import { REWARDS_QUERY_KEY } from '../queries';
-import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger';
-import { prepareRewardDataForSupabase } from '@/utils/image/rewardIntegration';
+import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
+import { Reward, UpdateRewardVariables } from '@/data/rewards/types';
+// Removed: import { CRITICAL_QUERY_KEYS } from '@/hooks/useSyncManager';
+
+const REWARDS_QUERY_KEY = ['rewards'];
 
 export const useUpdateReward = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (variables: UpdateRewardVariables): Promise<Reward> => {
-      const { id, ...updateData } = variables;
-      logger.debug('[useUpdateReward] Updating reward with variables:', variables);
-
-      // Prepare the data for Supabase using the utility function
-      const updatesForSupabase = prepareRewardDataForSupabase({
-        ...updateData,
-        updated_at: new Date().toISOString()
-      });
-
-      logger.debug('[useUpdateReward] Prepared updates for Supabase:', updatesForSupabase);
-
+  return useUpdateOptimisticMutation<Reward, Error, UpdateRewardVariables>({
+    queryClient,
+    queryKey: REWARDS_QUERY_KEY, // Replaced [...CRITICAL_QUERY_KEYS.REWARDS]
+    mutationFn: async (variables: UpdateRewardVariables) => {
+      const { id, ...updates } = variables;
       const { data, error } = await supabase
         .from('rewards')
-        .update(updatesForSupabase)
+        .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();
-
-      if (error) {
-        logger.error('[useUpdateReward] Error updating reward:', error);
-        throw error;
-      }
-
-      if (!data) {
-        throw new Error('No data returned from reward update');
-      }
-
-      logger.debug('[useUpdateReward] Successfully updated reward:', data);
+      if (error) throw error;
+      if (!data) throw new Error('Reward update failed, no data returned.');
       return data as Reward;
     },
-    onSuccess: (data) => {
-      logger.debug('[useUpdateReward] Reward updated successfully:', data);
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      toast({
-        title: "Success",
-        description: "Reward updated successfully!",
-      });
-    },
-    onError: (error) => {
-      logger.error('[useUpdateReward] Error updating reward:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update reward. Please try again.",
-        variant: "destructive",
-      });
-    },
+    entityName: 'Reward',
+    idField: 'id',
   });
 };
-
-// Also export as useUpdateRewardMutation for backwards compatibility
-export const useUpdateRewardMutation = useUpdateReward;
