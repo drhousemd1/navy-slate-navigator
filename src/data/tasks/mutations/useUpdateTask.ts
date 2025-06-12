@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
@@ -7,29 +8,28 @@ import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { prepareTaskDataForSupabase } from '@/utils/image/taskIntegration';
 
-export type { UpdateTaskVariables }; // Changed to export type
+export type { UpdateTaskVariables };
 
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
 
   return useUpdateOptimisticMutation<TaskWithId, Error, UpdateTaskVariables>({
     queryClient,
-    queryKey: TASKS_QUERY_KEY, // Use the constant
+    queryKey: TASKS_QUERY_KEY,
     mutationFn: async (variables: UpdateTaskVariables) => {
-      const { id, ...updatesFromVariables } = variables;
+      const { id, ...updateData } = variables;
 
-      // Ensure background_images is correctly typed if present
-      const updatesForSupabase: Partial<Omit<TaskWithId, 'id' | 'created_at' | 'updated_at'>> & { background_images?: Json | null } = {
-        ...updatesFromVariables,
-      };
-      if (updatesFromVariables.background_images !== undefined) {
-        updatesForSupabase.background_images = updatesFromVariables.background_images as Json | null;
-      }
+      // Prepare the data for Supabase using the utility function
+      const updatesForSupabase = prepareTaskDataForSupabase({
+        ...updateData,
+        updated_at: new Date().toISOString()
+      });
 
       const { data, error } = await supabase
         .from('tasks')
-        .update({ ...updatesForSupabase, updated_at: new Date().toISOString() })
+        .update(updatesForSupabase)
         .eq('id', id)
         .select()
         .single();

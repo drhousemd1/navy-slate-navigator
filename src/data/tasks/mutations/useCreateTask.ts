@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useAuth } from '@/contexts/auth';
+import { prepareTaskDataForSupabase } from '@/utils/image/taskIntegration';
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
@@ -23,7 +24,7 @@ export const useCreateTask = () => {
         throw new Error('User must be authenticated to create tasks');
       }
 
-      const taskToInsert = {
+      const taskToInsert = prepareTaskDataForSupabase({
         title: variables.title,
         points: variables.points,
         description: variables.description,
@@ -42,9 +43,10 @@ export const useCreateTask = () => {
         focal_point_y: variables.focal_point_y || 50,
         week_identifier: variables.week_identifier, 
         background_images: variables.background_images as Json,
+        image_meta: variables.image_meta as Json,
         icon_url: variables.icon_url,
         user_id: user.id, // Always use current authenticated user
-      };
+      });
 
       const { data, error } = await supabase
         .from('tasks')
@@ -86,6 +88,7 @@ export const useCreateTask = () => {
         icon_url: variables.icon_url || null,
         usage_data: variables.usage_data || Array(7).fill(0),
         background_images: variables.background_images as Json || null,
+        image_meta: variables.image_meta as Json || null,
         user_id: user?.id || '',
         ...variables, 
       } as TaskWithId;

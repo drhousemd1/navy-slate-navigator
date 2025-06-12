@@ -12,13 +12,13 @@ import NumberField from './task-editor/NumberField';
 import ColorPickerField from './task-editor/ColorPickerField';
 import PrioritySelector from './task-editor/PrioritySelector';
 import FrequencySelector from './task-editor/FrequencySelector';
-import BackgroundImageSelector from './task-editor/BackgroundImageSelector';
 import IconSelector from './task-editor/IconSelector';
 import PredefinedIconsGrid from './task-editor/PredefinedIconsGrid';
 import DeleteTaskDialog from './task-editor/DeleteTaskDialog';
+import TaskImageSection from './task-editor/TaskImageSection';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { getErrorMessage } from '@/lib/errors';
 
 interface TaskFormValues {
   title: string;
@@ -38,6 +38,7 @@ interface TaskFormValues {
   focal_point_x: number;
   focal_point_y: number;
   priority: 'low' | 'medium' | 'high';
+  image_meta?: any;
 }
 
 interface TaskEditorFormProps {
@@ -77,6 +78,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       focal_point_x: 50,
       focal_point_y: 50,
       priority: 'medium',
+      image_meta: null,
     },
   });
 
@@ -84,7 +86,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
 
   const persisterFormId = `task-editor-${taskData?.id || 'new'}`;
   const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-    exclude: ['background_image_url', 'icon_url'] 
+    exclude: ['background_image_url', 'icon_url', 'image_meta'] 
   });
 
   useEffect(() => {
@@ -107,6 +109,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         focal_point_x: taskData.focal_point_x || 50,
         focal_point_y: taskData.focal_point_y || 50,
         priority: taskData.priority || 'medium',
+        image_meta: (taskData as any)?.image_meta || null,
       });
       setImagePreview(taskData.background_image_url || null);
       setIconPreview(taskData.icon_url || null);
@@ -115,7 +118,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         title: '', description: '', points: 5, frequency: 'daily', frequency_count: 1,
         background_image_url: undefined, background_opacity: 100, icon_url: undefined, icon_name: undefined,
         title_color: '#FFFFFF', subtext_color: '#8E9196', calendar_color: '#7E69AB', icon_color: '#9b87f5',
-        highlight_effect: false, focal_point_x: 50, focal_point_y: 50, priority: 'medium'
+        highlight_effect: false, focal_point_x: 50, focal_point_y: 50, priority: 'medium', image_meta: null
       });
       setImagePreview(null);
       setIconPreview(null);
@@ -188,6 +191,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         background_image_url: imagePreview || values.background_image_url,
         icon_url: iconPreview || values.icon_url,
         icon_name: watch('icon_name'),
+        image_meta: watch('image_meta'),
       };
       
       await onSave(taskToSave);
@@ -308,19 +312,12 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Background Image</FormLabel>
-          <BackgroundImageSelector
+          <TaskImageSection
             control={control}
-            imagePreview={imagePreview} 
-            initialPosition={{ 
-              x: watch('focal_point_x') || 50, 
-              y: watch('focal_point_y') || 50 
-            }}
-            onRemoveImage={() => {
-              setImagePreview(null);
-              setValue('background_image_url', undefined);
-            }}
-            onImageUpload={handleImageUpload}
-            setValue={setValue} 
+            setValue={setValue}
+            watch={watch}
+            imagePreview={imagePreview}
+            setImagePreview={setImagePreview}
           />
         </div>
         
