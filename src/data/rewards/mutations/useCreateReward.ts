@@ -14,6 +14,12 @@ export const useCreateRewardMutation = () => {
     mutationFn: async (variables: CreateRewardVariables): Promise<Reward> => {
       logger.debug('[useCreateRewardMutation] Creating reward with variables:', variables);
 
+      // Get the current user ID if not provided
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id && !variables.user_id) {
+        throw new Error('User not authenticated');
+      }
+
       // Prepare the data for Supabase using the utility function
       const rewardToInsert = prepareRewardDataForSupabase({
         title: variables.title,
@@ -32,7 +38,7 @@ export const useCreateRewardMutation = () => {
         focal_point_x: variables.focal_point_x,
         focal_point_y: variables.focal_point_y,
         image_meta: variables.image_meta,
-        user_id: variables.user_id
+        user_id: variables.user_id || userData.user.id
       });
 
       logger.debug('[useCreateRewardMutation] Prepared data for Supabase:', rewardToInsert);

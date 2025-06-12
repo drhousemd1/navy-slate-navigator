@@ -7,13 +7,13 @@ import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { prepareRewardDataForSupabase } from '@/utils/image/rewardIntegration';
 
-export const useUpdateRewardMutation = () => {
+export const useUpdateReward = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (variables: UpdateRewardVariables): Promise<Reward> => {
       const { id, ...updateData } = variables;
-      logger.debug('[useUpdateRewardMutation] Updating reward with variables:', variables);
+      logger.debug('[useUpdateReward] Updating reward with variables:', variables);
 
       // Prepare the data for Supabase using the utility function
       const updatesForSupabase = prepareRewardDataForSupabase({
@@ -21,7 +21,7 @@ export const useUpdateRewardMutation = () => {
         updated_at: new Date().toISOString()
       });
 
-      logger.debug('[useUpdateRewardMutation] Prepared updates for Supabase:', updatesForSupabase);
+      logger.debug('[useUpdateReward] Prepared updates for Supabase:', updatesForSupabase);
 
       const { data, error } = await supabase
         .from('rewards')
@@ -31,7 +31,7 @@ export const useUpdateRewardMutation = () => {
         .single();
 
       if (error) {
-        logger.error('[useUpdateRewardMutation] Error updating reward:', error);
+        logger.error('[useUpdateReward] Error updating reward:', error);
         throw error;
       }
 
@@ -39,11 +39,11 @@ export const useUpdateRewardMutation = () => {
         throw new Error('No data returned from reward update');
       }
 
-      logger.debug('[useUpdateRewardMutation] Successfully updated reward:', data);
+      logger.debug('[useUpdateReward] Successfully updated reward:', data);
       return data as Reward;
     },
     onSuccess: (data) => {
-      logger.debug('[useUpdateRewardMutation] Reward updated successfully:', data);
+      logger.debug('[useUpdateReward] Reward updated successfully:', data);
       queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
       toast({
         title: "Success",
@@ -51,7 +51,7 @@ export const useUpdateRewardMutation = () => {
       });
     },
     onError: (error) => {
-      logger.error('[useUpdateRewardMutation] Error updating reward:', error);
+      logger.error('[useUpdateReward] Error updating reward:', error);
       toast({
         title: "Error",
         description: "Failed to update reward. Please try again.",
@@ -60,3 +60,6 @@ export const useUpdateRewardMutation = () => {
     },
   });
 };
+
+// Also export as useUpdateRewardMutation for backwards compatibility
+export const useUpdateRewardMutation = useUpdateReward;

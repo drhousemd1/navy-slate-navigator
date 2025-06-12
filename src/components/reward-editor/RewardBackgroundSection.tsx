@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Control, UseFormSetValue } from 'react-hook-form';
+import { Control, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { RewardFormValues } from '@/data/rewards/types';
 import RewardImageSection from './RewardImageSection';
 import { FormLabel } from '@/components/ui/form';
@@ -13,6 +13,7 @@ interface RewardBackgroundSectionProps {
   onRemoveImage: () => void;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   setValue: UseFormSetValue<RewardFormValues>;
+  watch: UseFormWatch<RewardFormValues>;
 }
 
 const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
@@ -21,12 +22,10 @@ const RewardBackgroundSection: React.FC<RewardBackgroundSectionProps> = ({
   initialPosition,
   onRemoveImage,
   onImageUpload,
-  setValue
+  setValue,
+  watch
 }) => {
-  // Use watch to get values for RewardImageSection
-  const watch = control._formValues ? () => control._formValues : control.register().onChange;
-  
-  const currentOpacity = control._formValues?.background_opacity; 
+  const currentOpacity = watch('background_opacity');
   logger.debug("RewardBackgroundSection initializing with opacity:", currentOpacity);
   
   return (

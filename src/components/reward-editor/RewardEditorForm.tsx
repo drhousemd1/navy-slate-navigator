@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form } from "@/components/ui/form";
@@ -46,6 +47,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       background_opacity: 100,
       focal_point_x: 50,
       focal_point_y: 50,
+      image_meta: null,
     }
   });
 
