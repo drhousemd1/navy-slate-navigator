@@ -7,6 +7,8 @@ import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/
 import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { imageMetadataToJson } from '@/utils/image/helpers';
+import type { Json } from "@/integrations/supabase/types";
 
 export type UpdateRuleVariables = { id: string } & Partial<Omit<Rule, 'id'>>;
 
@@ -17,10 +19,19 @@ export const useUpdateRule = () => {
     queryClient,
     queryKey: [...RULES_QUERY_KEY], // Ensure mutable array
     mutationFn: async (variables: UpdateRuleVariables) => {
-      const { id, ...updates } = variables;
+      const { id, image_meta, background_images, ...updates } = variables;
+      
+      // Convert ImageMetadata to Json for database storage
+      const updatesForSupabase = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+        image_meta: image_meta ? imageMetadataToJson(image_meta) as Json : undefined,
+        background_images: background_images as Json,
+      };
+
       const { data, error } = await supabase
         .from('rules')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update(updatesForSupabase)
         .eq('id', id)
         .select()
         .single();

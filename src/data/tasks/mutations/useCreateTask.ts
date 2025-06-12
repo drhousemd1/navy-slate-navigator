@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useAuth } from '@/contexts/auth';
+import { imageMetadataToJson } from '@/utils/image/helpers';
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
@@ -23,26 +24,29 @@ export const useCreateTask = () => {
         throw new Error('User must be authenticated to create tasks');
       }
 
+      const { image_meta, background_images, ...otherVariables } = variables;
+
       const taskToInsert = {
-        title: variables.title,
-        points: variables.points,
-        description: variables.description,
-        frequency: variables.frequency || 'daily',
-        frequency_count: variables.frequency_count || 1,
-        priority: variables.priority || 'medium',
-        icon_name: variables.icon_name,
-        icon_color: variables.icon_color || '#9b87f5',
-        title_color: variables.title_color || '#FFFFFF',
-        subtext_color: variables.subtext_color || '#8E9196',
-        calendar_color: variables.calendar_color || '#7E69AB',
-        background_image_url: variables.background_image_url,
-        background_opacity: variables.background_opacity || 100,
-        highlight_effect: variables.highlight_effect || false,
-        focal_point_x: variables.focal_point_x || 50,
-        focal_point_y: variables.focal_point_y || 50,
-        week_identifier: variables.week_identifier, 
-        background_images: variables.background_images as Json,
-        icon_url: variables.icon_url,
+        title: otherVariables.title,
+        points: otherVariables.points,
+        description: otherVariables.description,
+        frequency: otherVariables.frequency || 'daily',
+        frequency_count: otherVariables.frequency_count || 1,
+        priority: otherVariables.priority || 'medium',
+        icon_name: otherVariables.icon_name,
+        icon_color: otherVariables.icon_color || '#9b87f5',
+        title_color: otherVariables.title_color || '#FFFFFF',
+        subtext_color: otherVariables.subtext_color || '#8E9196',
+        calendar_color: otherVariables.calendar_color || '#7E69AB',
+        background_image_url: otherVariables.background_image_url,
+        background_opacity: otherVariables.background_opacity || 100,
+        highlight_effect: otherVariables.highlight_effect || false,
+        focal_point_x: otherVariables.focal_point_x || 50,
+        focal_point_y: otherVariables.focal_point_y || 50,
+        week_identifier: otherVariables.week_identifier, 
+        background_images: background_images as Json,
+        image_meta: imageMetadataToJson(image_meta) as Json,
+        icon_url: otherVariables.icon_url,
         user_id: user.id, // Always use current authenticated user
       };
 
@@ -86,6 +90,7 @@ export const useCreateTask = () => {
         icon_url: variables.icon_url || null,
         usage_data: variables.usage_data || Array(7).fill(0),
         background_images: variables.background_images as Json || null,
+        image_meta: variables.image_meta || null,
         user_id: user?.id || '',
         ...variables, 
       } as TaskWithId;

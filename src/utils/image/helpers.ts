@@ -1,5 +1,6 @@
 
 import { logger } from '@/lib/logger';
+import type { Json } from "@/integrations/supabase/types";
 
 export interface ImageMetadata {
   originalUrl?: string;
@@ -10,6 +11,22 @@ export interface ImageMetadata {
   compressedSize?: number;
   compressionRatio?: number;
   version?: number;
+}
+
+/**
+ * Converts ImageMetadata to Json for database storage
+ */
+export function imageMetadataToJson(meta: ImageMetadata | null | undefined): Json | null {
+  if (!meta) return null;
+  return meta as Json;
+}
+
+/**
+ * Converts Json back to ImageMetadata from database
+ */
+export function jsonToImageMetadata(json: Json | null | undefined): ImageMetadata | null {
+  if (!json || typeof json !== 'object') return null;
+  return json as ImageMetadata;
 }
 
 /**
