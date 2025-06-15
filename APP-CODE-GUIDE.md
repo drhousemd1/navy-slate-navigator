@@ -1,530 +1,183 @@
-# App Code Guide
+***File Locked: LOVABLE IS NEVER TO DELETE TEXT FROM THIS FILE. LOVABLE MAY ONLY ADD NEW SECTIONS IF NECESSARY. IF ADDING NEW SECTIONS FOLLOW THE EXACT STYLE OF FORMATTING ALREADY IN PLACE ***
 
-## ⚠️ CRITICAL: READ BEFORE MAKING ANY CHANGES
-/**
- * OVERVIEW
- *
- * This app connects a Dominant and Submissive user in a structured behavior-tracking dynamic.
- * It enables:
- *  - Persistent RULES set by the Dominant with infraction tracking
- *  - One-time or recurring TASKS assigned to the Submissive with completion tracking
- *  - Configurable REWARDS earned/spent by the Submissive (and Dominant)
- *  - PUNISHMENTS assigned by the Dominant when rules are broken or tasks missed
- *  - THRONE ROOM dashboard for real-time oversight and metrics
- *
- * A shared architecture ensures:
- *  - Instant display via IndexedDB caching (src/data/indexedDB/useIndexedDB.ts)
- *  - Periodic sync (every 30 minutes) with Supabase via React Query
- *  - Unified mutation layer for create/update/delete actions (src/data/mutations)
- *  - Consistent UI layout with <AppLayout> and global counters
- *  - Robust error handling via <ErrorBoundary>
- *
- * GLOBAL LAYOUT & PROVIDERS
- * --------------------------
- * - src/components/app/AppProviders.tsx
- *    • Wraps BrowserRouter, React Query (QueryClientProvider), IndexedDB hydration, and preloads core data (usePreloadTasks, usePreloadRules, etc.)
- * - src/components/AppLayout.tsx
- *    • Renders universal header: Submissive Points, Submissive Supply, DOM Points, DOM Supply
- *    • Includes <MobileNavbar>, <OfflineBanner>, and global <ErrorBoundary>
- * - src/data/indexedDB/useIndexedDB.ts
- *    • Generic IndexedDB API: getItem, setItem, clearItem, getLastSyncTime, setLastSyncTime
- * - src/data/preload/usePreload*.ts
- *    • Fired on app startup to seed IndexedDB with cached Tasks, Rules, Rewards, Punishments
- *
- * RULES PAGE (src/pages/Rules.tsx)
- * -------------------------------
- * • Data Hook: useRulesData (src/data/hooks/useRulesData.ts)
- *    – loadRulesFromDB(), getLastSyncTime('rules')
- *    – fetchRules() via RulesDataHandler (src/data/RulesDataHandler.tsx)
- *    – saveRulesToDB(), setLastSyncTime
- *    – React Query key: ['rules'], config: staleTime=Infinity, refetchOnMount/Focus/Reconn=false, gcTime=30m, retry=3, exponential backoff
- * • Card Component: src/components/RuleCard.tsx
- *    – Displays title, subtext, icon badge, priority badge, background image
- *    – "Rule Broken" button → triggers useCreateRuleViolation mutation, dispatches 'add-new-punishment' event
- *    – Calendar tracker (Mon–Sun) shows infraction days
- * • Editor Modal: src/components/RuleEditor.tsx
- *    – Form fields for title, subtext, priority, icon, bg image (focal point, opacity), color pickers, highlighter toggle
- *    – Buttons: Save (floppy icon), Cancel, Delete (trash icon)
- *
- * TASKS PAGE (src/pages/Tasks.tsx)
- * -------------------------------
- * • Data Hook: useTasksData (src/data/hooks/useTasksData.ts)
- *    – IndexedDB + lastSyncTime('tasks') logic, fetchTasks via TasksDataHandler
- *    – React Query key: ['tasks'], staleTime=Infinity, gcTime=1h, retry=3
- * • Card Component: src/components/TaskCard.tsx
- *    – Title, subtext, icon badge, priority badge, bg image
- *    – Calendar tracker, Complete button (green) – triggers useToggleTaskCompletionMutation; updates points via usePointsManager
- *    – Badges: points earned badge, times-per-period (e.g., 2/5)
- * • Editor Modal: src/components/TaskEditor.tsx + TaskEditorForm.tsx
- *    – Fields: title, subtext, priority, points (+/–), frequency, max per period, icon, bg image, colors, highlighter
- *    – Save/Cancel/Delete controls
- *
- * REWARDS PAGE (src/pages/Rewards.tsx)
- * ----------------------------------
- * • Data Hook: useRewards (src/data/queries/useRewards.ts)
- *    – IndexedDB + lastSyncTime('rewards'), fetchRewards via RewardsDataHandler
- *    – React Query key: ['rewards'], staleTime=Infinity, gcTime=30m, retry=1
- * • Card Component: src/components/RewardCard.tsx
- *    – Title, subtext, icon, bg image, cost badge, supply badge, calendar tracker
- *    – "Buy" button (blue/red) → useBuySubReward mutation; deduct Submissive points via usePointsManager; inc supply
- *    – "Use" icon when supply>0 → useRedeemReward mutation; fill calendar
- *    – Border color: Submissive (#00F0FF) or Dominant (#FF0000)
- * • Editor Modal: src/components/RewardEditor.tsx
- *    – Fields: title, subtext, cost (+/–), type toggle, icon, bg image, colors, highlighter
- *    – Save/Cancel/Delete controls
- *
- * PUNISHMENTS PAGE (src/pages/Punishments.tsx)
- * -----------------------------------------
- * • Data Hook: usePunishmentsQuery (src/data/punishments/queries/usePunishmentsQuery.ts)
- *    – IndexedDB + lastSyncTime('punishments'), fetchPunishments
- *    – React Query key: ['punishments'], staleTime=Infinity, gcTime=1h, retry=1
- * • Card Component: src/components/PunishmentCard.tsx
- *    – Title, subtext, icon, bg image, calendar tracker
- *    – "Punish" button (red) → applyPunishmentMutation; updates DOM/Sub points via usePointsManager
- *    – Badges: DOM points earned, Sub points lost
- * • Editor Modal: src/components/PunishmentEditor.tsx
- *    – Fields: title, subtext, DOM points (+/–), Sub points (+/–), icon, bg image, colors, highlighter
- *    – Save/Cancel/Delete controls
- * • Random Punishment Feature:
- *    – src/components/Punishments.tsx hooks into <RandomPunishmentModal>
- *    – Reroll, Confirm actions generate/apply punishment
- *
- * THRONE ROOM PAGE (src/pages/ThroneRoom.tsx)
- * -----------------------------------------
- * • Hook: useCardData (src/components/throne/hooks/useCardData.ts)
- *    – Aggregates metrics (tasks completed, rules broken, rewards used, punishments applied)
- * • Summary Tiles: 
- *    – WeeklyMetricsSummaryTiles.tsx, MonthlyMetricsSummaryTiles.tsx
- * • Charts:
- *    – WeeklyMetricsChart.tsx / MonthlyMetricsChart.tsx
- * • Admin Settings: AdminSettingsCard.tsx
- * • Editors: ThroneRoomEditModal.tsx
- *
- * COMMON COMPONENTS
- * -----------------
- * - src/components/common/EmptyState.tsx
- * - src/components/common/ErrorDisplay.tsx
- * - src/components/common/CachedDataBanner.tsx
- * - src/components/Hydrate.tsx & HydrationErrorBoundary.tsx
- *
- * CUSTOM EVENTS & INTEGRATIONS
- * ----------------------------
- * - 'add-new-rule', 'add-new-task', 'add-new-reward', 'add-new-punishment'
- * - usePointsManager (src/data/points/usePointsManager.ts)
- * - React Query invalidation on each mutation
- *
- * This documentation is the single source of truth for refactoring.
- */
-export default {};
+***This application follows strict architectural patterns that have been carefully designed and tested. **DO NOT** modify the core data flow patterns without understanding the full system architecture.***
 
-// ==================================================
-// GOLDEN RULE: USER DATA PRIVACY & SECURITY ENFORCEMENT
-// ==================================================
-//
-// 🔒 CORE PRINCIPLE:
-// All data within the application MUST be strictly scoped to either:
-//   - The current authenticated user (auth.uid())
-//   - Their explicitly linked partner (linked_partner_id)
-//
-// Under no circumstances should data be visible, accessible, or queryable by
-// any other user outside of that direct Dom/Sub pairing.
-//
-// There is NO SUCH THING as global/public/shared data across unrelated users.
-//
-// ✅ ENFORCEMENT REQUIREMENTS:
-//
-// 1. DATABASE-LEVEL SECURITY
-// --------------------------
-// • Row Level Security (RLS) MUST be enabled on ALL user-related tables.
-// • Every user-facing table MUST contain a valid `user_id` UUID column.
-// • RLS policies MUST permit access ONLY when:
-//     auth.uid() = user_id
-//     OR auth.uid() = (SELECT linked_partner_id FROM profiles WHERE id = user_id)
-//
-// 2. FRONTEND QUERY STRUCTURE
-// ---------------------------
-// • All Supabase queries MUST include filtering logic scoped to:
-//     .eq('user_id', currentUserId)
-//     OR .eq('user_id', linkedPartnerId)
-//
-// • All create/update/delete mutations MUST set the correct `user_id` value.
-// • Fetching full tables (i.e. no filter) is STRICTLY PROHIBITED.
-// • If a partner is linked, treat their user ID as fully interchangeable.
-//
-// 3. USER CONTEXT RELIABILITY
-// ---------------------------
-// • All components must access user ID and linked partner ID via `useUserIds()`.
-// • The context must ALWAYS resolve both IDs prior to executing any data query.
-// • Partner-linking logic MUST be respected across all features.
-//
-// 4. ISOLATION IS UNIVERSAL
-// -------------------------
-// • There is NO exception for any feature, table, or page.
-// • All user-generated content (tasks, rewards, punishments, rules, completions, history, etc.)
-//   MUST be private and ONLY visible to:
-//     - The user who created it
-//     - Their linked partner (if applicable)
-//
-// • Even if a table has no sensitive data, DO NOT make it global unless approved.
-//
-// 5. FAIL-SAFE BEHAVIOR
-// ----------------------
-// • If context fails to load user or partner ID, block queries.
-// • Never fallback to an unsafe default like "show everything" or "assume public".
-// • Log all auth errors, context failures, or ID mismatches immediately.
-//
-// 6. TESTING + FUTURE MIGRATIONS
-// -------------------------------
-// • Every new table must include a `user_id` column by default.
-// • No new feature may launch without tested RLS and filter logic.
-// • Before merging changes, validate behavior as:
-//     - Solo user
-//     - Linked pair
-//     - Unlinked unrelated users
-//
-// ================================
-// PERMANENT NON-NEGOTIABLE RULE:
-// ================================
-//
-// 🔐 IF A QUERY DOES NOT FILTER BY `user_id` OR `linked_partner_id`, IT IS A SECURITY BUG.
-// 🔐 IF A TABLE HAS NO RLS, IT IS A SECURITY BUG.
-// 🔐 IF A PAGE SHOWS DATA TO A NON-LINKED ACCOUNT, IT IS A SECURITY BUG.
-//
-// These rules are not flexible. If functionality ever appears to work without respecting
-// this security model, the behavior is broken — even if it seems functional.
-//
-// ====================================
-// ALWAYS:
-// ====================================
-// • Verify context returns both user and partner IDs
-// • Confirm Supabase policies are active and correct
-// • Check that every query includes proper `.eq('user_id', ...)` logic
-// • Enforce this as part of every code review, every refactor, every feature
+================================
+# APP OVERVIEW:
+================================
+- This app is designed to connect a Dominant and Submissive user within a structured behavioral dynamic. The platform allows the creation and enforcement of rules, assignment of tasks, and management of a customizable reward and punishment system.
 
-This application follows strict architectural patterns that have been carefully designed and tested. **DO NOT** modify the core data flow patterns without understanding the full system architecture.
+- It serves as both a tracker and engagement tool for BDSM-like relationship structures. The Submissive is responsible for completing assigned behaviors and tasks, while the Dominant retains full oversight, decision-making authority, and control over earned or corrective actions.
 
-## Architecture Contract
+- The goal of the app is to facilitate consistent structure, accountability, and mutual interaction in a consensual power exchange relationship.
 
-This app uses a dual-layer caching strategy with IndexedDB + React Query for optimal performance and offline capability. Each page follows a specific pattern that must be maintained.
+================================
+# PAGE BREAKDOWN FOR APP
+================================
 
-### Page Architecture Overview
+- The app consists of five main pages, each serving a specific role in behavior tracking and relationship dynamics:
 
-```typescript
-// architectureContract.tsx
-export interface PageConfig {
-  page: string;
-  dataHook: string;
-  cacheStrategy: string;
-  syncInterval: string;
-  reactQueryConfig: {
-    staleTime: string;
-    refetchOnWindowFocus: boolean;
-    refetchOnReconnect: boolean;
-    refetchOnMount: boolean;
-    gcTime: string;
-    retry: number;
-    retryDelay: string;
-  };
-  mutations: string[];
-  uiWrapping: string;
-}
+- RULES PAGE: This is where the Dominant sets expectations. Rules are persistent guidelines that define the structure of the relationship. Users can create, edit, and track the status of each rule, including infractions.
 
-export const architectureContract: PageConfig[] = [
-  {
-    page: "Tasks",
-    dataHook: "useTasksData (src/hooks/useTasksData.ts) → useTasksQuery (src/data/tasks/queries.ts)",
-    cacheStrategy:
-      "loadTasksFromDB(); getLastSyncTimeForTasks() < 30min && localData.length > 0 skip network; else fetchTasks() → saveTasksToDB() + setLastSyncTimeForTasks()",
-    syncInterval: "30 minutes",
-    reactQueryConfig: {
-      staleTime: "Infinity",
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-      gcTime: "1 hour",
-      retry: 3,
-      retryDelay: "exponential",
-    },
-    mutations: [
-      "useCreateTask",
-      "useUpdateTask",
-      "useDeleteTask",
-      "useToggleTaskCompletionMutation",
-    ],
-    uiWrapping:
-      "<AppLayout> + <RewardsProvider>, <ErrorBoundary>, isLoading, error, <EmptyState>, <TasksList>, listens for 'add-new-task' event to open <TaskEditor>",
-  },
-  {
-    page: "Rules",
-    dataHook: "useRulesData (src/data/hooks/useRulesData.ts) → useRules (src/data/rules/queries.ts)",
-    cacheStrategy:
-      "loadRulesFromDB(); getLastSyncTimeForRules() < 30min skip network; else fetchRulesFromServer() → saveRulesToDB() + setLastSyncTimeForRules(); on error use localData",
-    syncInterval: "30 minutes",
-    reactQueryConfig: {
-      staleTime: "Infinity",
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-      gcTime: "30 minutes",
-      retry: 3,
-      retryDelay: "exponential",
-    },
-    mutations: [
-      "useCreateRule",
-      "useUpdateRule",
-      "useDeleteRule",
-      "useCreateRuleViolation",
-    ],
-    uiWrapping:
-      "<AppLayout>, <ErrorBoundary>, isLoading, error, <RulesList>, listens for 'add-new-rule' event to open <RuleEditor>",
-  },
-  {
-    page: "Rewards",
-    dataHook: "useRewards (src/data/queries/useRewards.ts)",
-    cacheStrategy:
-      "loadRewardsFromDB(); getLastSyncTimeForRewards() < 30min && localData.length > 0 skip network; else fetchRewards() → saveRewardsToDB() + setLastSyncTimeForRewards(); on error use localData",
-    syncInterval: "30 minutes",
-    reactQueryConfig: {
-      staleTime: "Infinity",
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-      gcTime: "30 minutes",
-      retry: 1,
-      retryDelay: "exponential",
-    },
-    mutations: [
-      "useCreateRewardMutation",
-      "useUpdateRewardMutation",
-      "useDeleteRewardMutation",
-      "useBuySubReward",
-      "useRedeemSubReward",
-    ],
-    uiWrapping:
-      "<AppLayout>, <ErrorBoundary>, <AuthContext>, <PointsManager>, <RewardsList>, <RewardEditor>, header add button opens editor",
-  },
-  {
-    page: "Punishments",
-    dataHook:
-      "usePunishmentsQuery (src/data/punishments/queries/usePunishmentsQuery.ts) → fetchPunishments() (src/data/punishments/queries/fetchPunishments.ts)",
-    cacheStrategy:
-      "loadPunishmentsFromDB(); getLastSyncTimeForPunishments() < 30min && localData.length > 0 skip network; else fetchPunishments() → savePunishmentsToDB() + setLastSyncTimeForPunishments(); on error use localData",
-    syncInterval: "30 minutes",
-    reactQueryConfig: {
-      staleTime: "Infinity",
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-      gcTime: "1 hour",
-      retry: 1,
-      retryDelay: "exponential",
-    },
-    mutations: [
-      "useCreatePunishment",
-      "useUpdatePunishment",
-      "useDeletePunishment",
-    ],
-    uiWrapping:
-      "<AppLayout>, <ErrorBoundary>, <PunishmentList>, listens for 'add-new-punishment' event to open <PunishmentEditor>",
-  },
-];
+- TASKS PAGE: Tasks are individual, one-time or recurring assignments given to the Submissive. This page allows tracking progress, completion, and status of assigned tasks. Some tasks may be mandatory, others optional, and some may have deadlines.
 
-## Critical System Components
+- REWARDS PAGE: Rewards are configured by the Dominant and earned by the Submissive based on completed tasks, good behavior, or earned points. This page manages the available reward pool and redemption options.
 
-### 1. IndexedDB Dual-Layer Caching System
+- PUNISHMENTS PAGE: This page allows the Dominant to assign, track, and manage punishments when rules are broken or tasks are missed. Punishments can vary in severity and type and are logged for accountability.
 
-**Location**: `src/data/indexedDB/useIndexedDB.ts`
+- THRONE ROOM: The Throne Room acts as the central dashboard and authority center for the Dominant. It displays key summaries, active punishments, rewards, tasks, and allows real-time decisions and oversight over the Submissive's behavior and performance.
 
-**Purpose**: Provides offline-first data persistence with automatic sync management.
+================================
+# USER ROLES  
+================================
 
-**Key Functions**:
-- `loadXFromDB()` - Load cached data
-- `saveXToDB()` - Save data to cache
-- `getLastSyncTimeForX()` - Check when data was last synced
-- `setLastSyncTimeForX()` - Update sync timestamp
+- Submissive users:
+	- Follow rules on the Rules page
+	- Receive punishments when rules are broken
+	- Complete tasks to earn points
+	- Spend points on Rewards
 
-**⚠️ DO NOT MODIFY** these functions without understanding the full sync strategy.
+- Dominant users:
+	- Maintain structure and discipline
+	- Select punishments and issue consequences
+	- Earn DOM points through punishments
+	- Spend DOM points on Dominant Rewards
 
-### 2. React Query Configuration
+================================
+# UNIVERSAL PAGE HEADER  
+================================
 
-All pages use consistent React Query settings:
+- At the top of each page is a universal header displaying four global counters:
+	- Submissive Points (black background, turquoise border, coin icon)
+	- Submissive Supply (black background, turquoise border, box icon)
+	- DOM Points (black background, red border, crown icon)
+	- DOM Supply (black background, red border, box icon)
 
-```typescript
-{
-  staleTime: Infinity,        // Data never goes stale automatically
-  refetchOnWindowFocus: false, // No automatic refetching
-  refetchOnReconnect: false,   // No automatic refetching
-  refetchOnMount: false,       // Rely on cache first
-  gcTime: "30min-1hour",       // Garbage collection time varies
-  retry: 1-3,                  // Retry attempts vary by page
-  retryDelay: "exponential"    // Exponential backoff
-}
-```
+-  These are updated automatically when actions occur such as buying rewards or issuing punishments.
 
-**⚠️ DO NOT CHANGE** these settings without updating all pages consistently.
+================================
+# RULES PAGE
+================================
 
-### 3. Data Fetching Pattern
+- Each rule card contains:
+	- Title and subtext
+	- Icon badge
+	- Priority badge (Low/Medium/High)
+	- Background image (customizable with opacity and focal point)
+	- Rule Broken button (red with white text)
+	- Calendar tracker (Monday–Sunday view)
 
-Every page follows this exact pattern:
+- The Edit Modal allows:
+	- Title/subtext
+	- Priority
+	- Background image with focal point + opacity
+	- Icon selection
+	- Title/subtext/icon/calendar color
+	- Highlighter toggle
+	- Delete (red with trash icon), Cancel (red), Save Changes (light blue with floppy icon)
 
-```typescript
-export const fetchX = async (): Promise<X[]> => {
-  const localData = await loadXFromDB();
-  const lastSync = await getLastSyncTimeForX();
-  let shouldFetchFromServer = true;
+- Data Hook:
+	- `useRulesData (src/data/hooks/useRulesData.ts)`  
+	→ `useRules (src/data/rules/queries.ts)`
 
-  // Check if we can use cached data (30 min threshold)
-  if (lastSync) {
-    const timeDiff = Date.now() - new Date(lastSync).getTime();
-    if (timeDiff < 1000 * 60 * 30 && localData && localData.length > 0) {
-      shouldFetchFromServer = false;
-    }
-  } else if (localData && localData.length > 0) {
-    shouldFetchFromServer = false;
-  }
+- Cache Strategy:
+	- `loadRulesFromDB()`  
+	- If `getLastSyncTimeForRules()` < 30min → skip network  
+	- Else → `fetchRulesFromServer()` → `saveRulesToDB()` + `setLastSyncTimeForRules()`  
+	- On error → use localData fallback
 
-  if (!shouldFetchFromServer && localData) {
-    return localData; // Return cached data
-  }
+- React Query Config:
+	- `staleTime: Infinity`  
+	- `refetchOnWindowFocus: false`  
+	- `refetchOnReconnect: false`  
+	- `refetchOnMount: false`  
+	- `gcTime: 1 hour`  
+	- `retry: 3`  
+	- `retryDelay: exponential`
 
-  // Fetch from server
-  try {
-    const { data, error } = await supabase.from('table').select('*');
-    if (error) throw error;
-    
-    if (data) {
-      await saveXToDB(data);
-      await setLastSyncTimeForX(new Date().toISOString());
-      return data;
-    }
-    return localData || [];
-  } catch (error) {
-    // Fallback to cached data on error
-    if (localData) return localData;
-    throw error;
-  }
-};
-```
+- Mutations:
+	- `useCreateRule`  
+	- `useUpdateRule`  
+	- `useDeleteRule`  
+	- `useCreateRuleViolation`
 
-**⚠️ DO NOT MODIFY** this pattern. It ensures consistent offline capability.
+- UI Wrapping:
+	- `<AppLayout>`, `<ErrorBoundary>`  
+	- Conditional: `isLoading`, `error`, `<RulesList>`  
+	- Listens for `'add-new-rule'` event → opens `<RuleEditor>`
 
-### 4. Mutation Patterns
+================================
+# TASKS PAGE
+================================
 
-#### Standard CRUD Mutations
-All pages use optimistic mutations with automatic IndexedDB sync:
+- Each task card contains:
+	- Title and subtext
+	- Icon badge
+	- Priority badge
+	- Background image (customizable)
+	- Calendar tracker
+	- Complete button (green)
+	- Points badge (submissive points)
+	- Times per period badge (e.g. 2/5 completions)
 
-```typescript
-const useCreateX = () => {
-  return useCreateOptimisticMutation({
-    queryClient,
-    queryKey: X_QUERY_KEY,
-    mutationFn: async (variables) => {
-      const { data, error } = await supabase.from('table').insert(variables);
-      if (error) throw error;
-      return data;
-    },
-    entityName: 'Entity',
-    onSuccessCallback: async (newData) => {
-      // Update IndexedDB
-      const localData = await loadXFromDB() || [];
-      const updatedData = [newData, ...localData];
-      await saveXToDB(updatedData);
-      await setLastSyncTimeForX(new Date().toISOString());
-    },
-  });
-};
-```
+- The Edit Modal allows:
+	- Title/subtext
+	- Priority
+	- Points (plus/minus buttons)
+	- Frequency (daily/weekly)
+	- Times per period (plus/minus)
+	- Background image with focal point + opacity
+	- Icon selection
+	- Title/subtext/icon/calendar color
+	- Highlighter toggle
+	- Delete (red with trash icon), Cancel (red), Save Changes (light blue with floppy icon)
 
-#### Special Task Completion Mutation
-Tasks have a unique completion system that tracks usage data:
+- Data Hook:
+	- `useTasksData (src/hooks/useTasksData.ts)`  
+	→ `useTasksQuery (src/data/tasks/queries.ts)`
 
-```typescript
-const useToggleTaskCompletionMutation = () => {
-  // Complex completion logic with points, usage tracking, etc.
-  // DO NOT MODIFY without understanding the full system
-};
-```
+- Cache Strategy:
+	- `loadTasksFromDB()`  
+	- If `getLastSyncTimeForTasks()` < 30min **and** localData exists → skip network  
+	- Else → `fetchTasks()` → `saveTasksToDB()` + `setLastSyncTimeForTasks()`
 
-### 5. UI Wrapping Patterns
+- React Query Config:
+	- `staleTime: Infinity`  
+	- `refetchOnWindowFocus: false`  
+	- `refetchOnReconnect: false`  
+	- `refetchOnMount: false`  
+	- `gcTime: 1 hour`  
+	- `retry: 3`  
+  - `retryDelay: exponential`
 
-Each page follows a specific component hierarchy:
+- Mutations:
+	- `useCreateTask`  
+	- `useUpdateTask`  
+	- `useDeleteTask`  
+	- `useToggleTaskCompletionMutation`
 
-#### Tasks Page Structure
-```typescript
-<AppLayout onAddNewItem={handleAddNewItem}>
-  <RewardsProvider>
-    <ErrorBoundary fallbackMessage="...">
-      <TasksPageContent>
-        <TasksHeader />
-        {loading ? <LoadingState /> : 
-         error ? <ErrorDisplay /> :
-         empty ? <EmptyState /> :
-         <TasksList />}
-        <TaskEditor />
-      </TasksPageContent>
-    </ErrorBoundary>
-  </RewardsProvider>
-</AppLayout>
-```
+- UI Wrapping:
+	- `<AppLayout>`, `<RewardsProvider>`, `<ErrorBoundary>`  
+	- Conditional: `isLoading`, `error`, `<EmptyState>`, `<TasksList>`  
+	- Listens for `'add-new-task'` event → opens `<TaskEditor>`
 
-#### Other Pages Structure
-```typescript
-<AppLayout onAddNewItem={handleAddNewItem}>
-  <ErrorBoundary fallbackMessage="...">
-    <PageContent>
-      <PageHeader />
-      <PageList />
-      <PageEditor />
-    </PageContent>
-  </ErrorBoundary>
-</AppLayout>
-```
+================================
+# TASKS PAGE (Calendar tracker & Task tracking/handling)
+================================
 
-### 6. Event System
+- DAILY & WEEKLY CALENDAR TRACKER TRIGGER (on Tasks page load)
+	- Compute keys:
+		- const today = todayKey();          // "YYYY-MM-DD"
+		- const week  = currentWeekKey();    // "YYYY-Www"
+	- If localStorage.getItem("lastDaily") !== today:
+		- resetTaskCompletions("daily");
+		- localStorage.setItem("lastDaily", today);
+- If localStorage.getItem("lastWeek") !== week:
+		- resetTaskCompletions("weekly");
+ 		- localStorage.setItem("lastWeek", week);
 
-Pages use custom events for cross-component communication:
-
-```typescript
-// Dispatching events
-const handleAddNewItem = () => {
-  const contentElement = document.querySelector('.PageContent');
-  if (contentElement) {
-    const event = new CustomEvent('add-new-item');
-    contentElement.dispatchEvent(event);
-  }
-};
-
-// Listening for events
-useEffect(() => {
-  const element = document.querySelector('.PageContent');
-  if (element) {
-    const handleAddEvent = () => setIsEditorOpen(true);
-    element.addEventListener('add-new-item', handleAddEvent);
-    return () => element.removeEventListener('add-new-item', handleAddEvent);
-  }
-}, []);
-```
-
-### 7. Tasks Page: Frequency Tracker & Reset System
-
-**Location**: Multiple files coordinated for task reset functionality
-
-**TASKS PAGE: FREQUENCY-TRACKER RESET**
-**——————————————————————————————————————**
-
-#### 1. DAILY & WEEKLY TRIGGER (on Tasks page load)
-   • Compute keys:
-       const today = todayKey();          // "YYYY-MM-DD"
-       const week  = currentWeekKey();    // "YYYY-Www"
-   • If localStorage.getItem("lastDaily") !== today:
-       ▶ resetTaskCompletions("daily");
-       ▶ localStorage.setItem("lastDaily", today);
-   • If localStorage.getItem("lastWeek") !== week:
-       ▶ resetTaskCompletions("weekly");
-       ▶ localStorage.setItem("lastWeek", week);
-
-#### 2. RESET TASK COMPLETIONS (in src/lib/taskUtils.ts)
-   async function resetTaskCompletions(frequency) {
+- TASK COMPLETION RESET (in src/lib/taskUtils.ts)
+  async function resetTaskCompletions(frequency) {
      // Supabase & IndexedDB UPDATE for current user:
      //   UPDATE tasks
      //     SET completed = false,
@@ -534,7 +187,7 @@ useEffect(() => {
      // Returns array of reset task IDs for logging.
    }
 
-#### 3. HOOK: checkAndReloadTasks (in src/hooks/useTasksData.ts)
+- HOOK: checkAndReloadTasks (in src/hooks/useTasksData.ts)
    export async function checkAndReloadTasks() {
      const didReset = await checkAndPerformTaskResets();  // handles localStorage logic + calls resetTaskCompletions()
      if (didReset) {
@@ -543,70 +196,258 @@ useEffect(() => {
      }
    }
 
-#### 4. PAGE-LEVEL EFFECT (in src/pages/Tasks.tsx)
+- PAGE-LEVEL EFFECT (in src/pages/Tasks.tsx)
    const { user } = useAuthContext();
    const { checkAndReloadTasks } = useTasksData();
-
    useEffect(() => {
      if (user) {
        checkAndReloadTasks();
      }
    }, [user, checkAndReloadTasks]);
 
-#### 5. VISUAL: FrequencyTracker Component (in src/components/task/FrequencyTracker.tsx)
+- VISUAL: FrequencyTracker Component (in src/components/task/FrequencyTracker.tsx)
    • Always render 7 circles (Mon–Sun).
    • If usage_data.length === 0 → all circles empty.
    • If usage_data[i] > 0 → that day's circle is "filled"; otherwise empty.
    • Highlight "today" circle using getCurrentDayOfWeek() index.
 
-#### GOLDEN RULE SUMMARY:
+- GOLDEN RULE SUMMARY:
   - ALWAYS run resetTaskCompletions for "daily" and "weekly" on Tasks page load if localStorage keys are missing or outdated.
   - ALWAYS reset ALL tasks matching that frequency: set completed=false, last_completed_date=null, usage_data=[].
   - ALWAYS sync Supabase → IndexedDB → React Query cache immediately after reset.
   - ALWAYS update localStorage keys (lastDaily, lastWeek) immediately after a successful reset.
   - NEVER allow stale usage_data to persist: if usage_data === [], FrequencyTracker must render all circles empty.
 
-**⚠️ DO NOT MODIFY** this reset system without understanding the full data flow and sync strategy.
 
-## IMAGE COMPRESSION SYSTEM
+================================
+# REWARDS PAGE
+================================
 
-### Overview & Architecture
+- Each reward card contains:
+	- Title and subtext
+	- Icon badge
+	- Background image (custom)
+	- Cost badge
+	- Supply badge (increments on purchase)
+	- Calendar tracker
+	- Buy button (top-right, blue or red depending on reward type)
 
-The app implements a unified image compression system that automatically optimizes all uploaded images across Rules, Tasks, Rewards, and Punishments. This system reduces file sizes by 60-80% while maintaining visual quality, improving performance and reducing storage costs.
+- Border color indicates type:
+	- Submissive = light blue `#00F0FF`
+	- Dominant = red (e.g. `#FF0000` from code)
 
-**Key Benefits:**
-- **Performance**: Faster page loads and smoother scrolling
-- **Storage**: Reduced Supabase storage usage and costs  
-- **Bandwidth**: Less data transfer for users
-- **UX**: Maintains visual quality while optimizing file sizes
+- Dominant rewards show a crown icon in the cost badge. Submissive rewards use the coin icon.
 
-### Core Components
+- The Edit Modal allows:
+	- Title/subtext
+	- Cost (plus/minus)
+	- Reward type toggle (Dominant/Submissive)
+	- Icon selection
+	- Background image with focal point + opacity
+	- Title/subtext/icon/calendar color
+	- Highlighter toggle
+	- Delete (red with trash icon), Cancel (red), Save Changes (light blue with floppy icon)
 
-#### 1. Compression Engine (`src/utils/image/compression.ts`)
-```typescript
-export const compressImage = async (file: File): Promise<{ blob: Blob; metadata: ImageMetadata }> => {
-  // Automatically resizes to max 1920x1080, maintains aspect ratio
-  // Converts to JPEG at 80% quality for optimal size/quality balance
-  // Returns compressed blob + comprehensive metadata
-};
+- Data Hook:
+	- `useRewards (src/data/queries/useRewards.ts)`
 
-export interface ImageMetadata {
-  originalSize: number;          // Original file size in bytes
-  compressedSize: number;        // Compressed file size in bytes  
-  compressionRatio: number;      // Percentage savings (e.g., 75%)
-  originalDimensions: { width: number; height: number };
-  compressedDimensions: { width: number; height: number };
-  timestamp: string;             // ISO timestamp of compression
-}
-```
+- Cache Strategy:
+	- `loadRewardsFromDB()`  
+	- If `getLastSyncTimeForRewards()` < 30min **and** localData exists → skip network  
+	- Else → `fetchRewards()` → `saveRewardsToDB()` + `setLastSyncTimeForRewards()`  
+	- On error → use localData fallback
 
-#### 2. Integration Utilities (Per Feature)
-- `src/utils/image/taskIntegration.ts` - Tasks-specific image handling
-- `src/utils/image/ruleIntegration.ts` - Rules-specific image handling  
-- `src/utils/image/rewardIntegration.ts` - Rewards-specific image handling
-- `src/utils/image/punishmentIntegration.ts` - Punishments-specific image handling
+- React Query Config:
+	- `staleTime: Infinity`  
+	- `refetchOnWindowFocus: false`  
+	- `refetchOnReconnect: false`  
+	- `refetchOnMount: false`  
+	- `gcTime: 1 hour`  
+	- `retry: 3`  
+	- `retryDelay: exponential`
 
-Each provides:
+- Mutations:
+	- `useCreateRewardMutation`  
+	- `useUpdateRewardMutation`  
+	- `useDeleteRewardMutation`  
+	- `useBuySubReward`  
+	- `useRedeemSubReward`
+
+- UI Wrapping:
+	- `<AppLayout>`, `<ErrorBoundary>`, `<AuthContext>`, `<PointsManager>`  
+	- Displays: `<RewardsList>`, `<RewardEditor>`  
+	- Header add button → opens editor
+
+================================
+# PUNISHMENTS PAGE
+================================
+
+- Each punishment card contains:
+	- Title and subtext
+	- Icon badge
+	- Background image (custom)
+	- Calendar tracker
+	- Punish button (red, top-right)
+	- DOM Points badge (crown icon, red border, black background)
+	- Submissive Points badge (negative value, turquoise border, black background)
+
+- The Edit Modal allows:
+	- Title/subtext
+	- DOM Points Earned (plus/minus)
+	- Submissive Points Lost (plus/minus)
+	- Background image with focal point + opacity
+	- Icon selection
+ 	- Title/subtext/icon/calendar color
+	- Highlighter toggle
+	- Delete (red with trash icon), Cancel (red), Save Changes (light blue with floppy icon)
+
+
+- The page also includes a Random button:
+	-src/components/Punishments.tsx hooks into <RandomPunishmentModal>
+	- Reroll, Confirm actions generate/apply punishment
+	- Opens a modal to randomly select a punishment
+	- Previews the selected card
+	- Allows user to confirm or reroll
+
+- Data Hook:
+	- `usePunishmentsQuery (src/data/punishments/queries/usePunishmentsQuery.ts)`  
+	→ `fetchPunishments (src/data/punishments/queries/fetchPunishments.ts)`
+
+- Cache Strategy:
+	- `loadPunishmentsFromDB()`  
+	- If `getLastSyncTimeForPunishments()` < 30min **and** localData exists → skip network  
+	- Else → `fetchPunishments()` → `savePunishmentsToDB()` + `setLastSyncTimeForPunishments()`  
+	- On error → use localData fallback
+
+- React Query Config:
+	- `staleTime: Infinity`  
+	- `refetchOnWindowFocus: false`  
+	- `refetchOnReconnect: false`  
+	- `refetchOnMount: false`  
+	- `gcTime: 1 hour`  
+	- `retry: 3`  
+	- `retryDelay: exponential`
+
+- **Mutations:**
+  - `useCreatePunishment`  
+  - `useUpdatePunishment`  
+  - `useDeletePunishment`
+
+- **UI Wrapping:**
+  - `<AppLayout>`, `<ErrorBoundary>`  
+  - Displays: `<PunishmentList>`  
+  - Listens for `'add-new-punishment'` event → opens `<PunishmentEditor>`
+
+================================
+# THRONE ROOM
+================================
+
+- Displays weekly chart + tiles displaying weekly data:
+	- Tasks completed
+	- Rules broken
+	- Rewards (redeemed)
+	- Punishments 
+
+- Displays monthly chart + tiles displaying monthly data:
+	- Tasks completed
+	- Rules broken
+	- Rewards (redeemed)
+	- Punishments 
+
+- Hook: useCardData (src/components/throne/hooks/useCardData.ts)
+
+================================
+# DATA SYNC & CACHING GOLD STANDARD
+================================
+
+- GOALS **NON-NEGOTIABLE**:
+	- Eliminate loading spinners and flickers **caused by delayed rendering**
+	- Render all pages instantly from local cache or hydration
+	- Any code that shows loading screens instead of immediate UI is considered **BROKEN**
+	- Allow offline use and full sync recovery
+	- Prevent over-querying Supabase or hitting data cap limits
+	- Support long-term scaling to thousands of users
+	- Support consistent behavior, instant rendering, and long-term maintainability across all primary feature pages — **Rewards**, **Rules**, **Tasks**, **Punishments**, and **Throne Room**
+
+- LOADING UI GUIDELINES:
+	- Do **not** use skeleton cards or placeholder shapes
+	- Do **not** delay card render to show a "Loading..." message
+	- Do **not** hardcode loading logic in the component structure
+	- DO allow a **simple spinning circle icon**, positioned in the **app header**, to indicate background sync activity — *but only if the rest of the page is already visible and interactive*
+	- Pages must render cards immediately from cache without delay or visual placeholders
+	- No skeleton or fallback card placeholders are allowed — cards must either render or the page should remain static
+
+- REQUIRED STRUCTURE FOR ALL PAGES (RULES, TASKS, REWARDS, PUNISHMENTS, THRONE ROOM):
+
+1. Centralized Query Hooks:
+	- All data fetching must be performed using a domain-specific hook (e.g. `useTasks.ts`) located in `/src/data/queries/`
+	- Each uses `useQuery({ staleTime: Infinity })` to avoid re-fetching unnecessarily
+	- All React Query hooks must disable auto-refetching by setting `staleTime: Infinity`
+
+2. Centralized Mutation Hooks:
+	- All create, update, and delete actions must use isolated mutation hooks in `/src/data/mutations/`
+	- Use `queryClient.setQueryData()` to optimistically update the UI
+	- Mutations must use `queryClient.setQueryData()` to update cache. `.refetch()` is not allowed
+	- No logic embedded in UI files
+
+3. Persistent Local Cache:
+	- All query data must persist between sessions using `@tanstack/react-query-persist-client` and IndexedDB hydration
+	- Store cache in `IndexedDB` with versioning and hydration
+	- The root app layout must include `<Hydrate />` and initialize persisted data before rendering pages
+
+4. No Supabase in UI:
+	- UI components must not use `supabase.from(...)` directly
+	- Pages and components must not directly call `supabase.from(...)`. All database access must go through query/mutation hooks
+
+5. Hooks-Only Interface:
+	- UI should only interact with hook returns — no direct data shaping, filtering, or persistence logic in components
+	- Components only access and display data returned by hooks
+
+6. Immediate Card Render:
+	- All cards and pages must render immediately from the hydrated cache
+	- Never wait for queries to return from Supabase before displaying UI
+
+7. Controlled Background Refetching:
+	- Background syncing (Supabase) must be triggered only on tab focus or app startup — never on page mount
+	- Only allow background refetch on app startup or tab focus
+	- Disable auto-refetching on mount, reconnect, or window focus
+
+8. Global Query Config:
+	- All query clients must be configured centrally in `react-query-config.ts` with uniform behavior for retries, refetch, etc
+
+9. useSyncManager Hook:
+	- Each page must use `useSyncManager` to control when syncing occurs without tying it to render logic
+
+10. Global Points Cache:
+	- Submissive and DOM points must be cached and updated through React Query
+	- Do not calculate totals manually or via multiple DB calls
+
+================================
+# IMAGE HANDLING & COMPRESSION 
+================================
+
+- Controlled Image Upload Flow:
+	- All user-uploaded images are automatically optimized before storage
+	- Images are compressed using `browser-image-compression`
+	- Maximum dimensions: 1920×1080 (for card backgrounds)
+	- All files are converted to `.jpeg` format regardless of original
+	- No cropping or resizing is required from the user
+	- Upload is silent and handled on the backend
+	- URLs are stored via Supabase Storage with public access
+	- Ensure upload loading states are scoped and don’t trigger full rerenders
+- **NEVER** bypass image compression for any uploaded images
+- **NEVER** modify core compression settings without system-wide testing
+- **NEVER** skip `processImageForSave` in create/update mutations
+- **NEVER** omit `background_image_url` and `image_meta` from entity schemas
+- **NEVER** store uncompressed images in the database
+
+- Integration Utilities (Per Feature)
+	- `src/utils/image/taskIntegration.ts` - Tasks-specific image handling
+	- `src/utils/image/ruleIntegration.ts` - Rules-specific image handling  
+	- `src/utils/image/rewardIntegration.ts` - Rewards-specific image handling
+	- `src/utils/image/punishmentIntegration.ts` - Punishments-specific image handling
+
+- Each provides:
 ```typescript
 export const handleImageUpload = async (
   file: File,
@@ -626,312 +467,148 @@ export const processImageForSave = async (
 };
 ```
 
-#### 3. UI Pattern (Per Feature)
-Each feature follows identical patterns:
+================================
+# TOAST POSITIONING — UI POLICY  
+================================
+- All toast notifications must appear at the **very top of the screen**, directly inside the app's header container — **above the page content but below the top system bar**.
+- Toast width should stretch across the full horizontal space of the app without fixed max width.
+- Text should use a **very small font size** to avoid visual disruption.
+- Toasts must not float in random corners or center overlays.
+- Position must be consistent across all pages.
+- Applies to all types: success, error, warning, and info.
+- Styling must be minimal: no shadows, no border radius, flat background color.
 
-**Image Section Components:**
-- `*ImageSection.tsx` - Wraps BackgroundImageSelectorComponent with feature-specific props
-- **Reuses**: `src/components/task-editor/BackgroundImageSelector.tsx` for consistent UI
+================================
+# GLOBAL LAYOUT & PROVIDERS
+================================
 
-**Background Hooks:**
-- `use*Background.tsx` - Manages image state and upload handling per feature
-- Provides: `imagePreview`, `handleImageUpload`, `handleRemoveImage`, `setImagePreview`
+- src/components/app/AppProviders.tsx
+	- Wraps BrowserRouter, React Query (QueryClientProvider), IndexedDB hydration, and preloads core data (usePreloadTasks, usePreloadRules, etc.)
+- src/components/AppLayout.tsx
+	- Renders universal header: Submissive Points, Submissive Supply, DOM Points, DOM Supply
+	- Includes <MobileNavbar>, <OfflineBanner>, and global <ErrorBoundary>
+- src/data/indexedDB/useIndexedDB.ts
+	- Generic IndexedDB API: getItem, setItem, clearItem, getLastSyncTime, setLastSyncTime
+- src/data/preload/usePreload*.ts
+	- Fired on app startup to seed IndexedDB with cached Tasks, Rules, Rewards, Punishments
 
-### Implementation Pattern (Universal Flow)
+================================
+# COMMON COMPONENTS
+================================
 
-#### Step 1: User Upload Interaction
-```typescript
-// User selects image file
-<input type="file" accept="image/*" onChange={handleImageUpload} />
-```
+- src/components/common/EmptyState.tsx
+- src/components/common/ErrorDisplay.tsx
+- src/components/common/CachedDataBanner.tsx
+- src/components/Hydrate.tsx & HydrationErrorBoundary.tsx
 
-#### Step 2: Compression & Preview
-```typescript
-const handleImageUpload = async (file: File) => {
-  // 1. Validate file type/size
-  // 2. Compress using compressImage(file)  
-  // 3. Convert compressed blob to base64
-  // 4. Update imagePreview for immediate UI display
-  // 5. Store base64 + metadata in form values
-  // 6. Log compression statistics
-};
-```
+================================
+# CUSTOM EVENTS & INTEGRATIONS
+================================
 
-#### Step 3: Form Submission
-```typescript
-// Form data includes:
-{
-  background_image_url: "data:image/jpeg;base64,/9j/4AAQ...", // Compressed base64
-  image_meta: {
-    originalSize: 2500000,
-    compressedSize: 580000, 
-    compressionRatio: 77,
-    // ... additional metadata
-  }
-}
-```
+- 'add-new-rule', 'add-new-task', 'add-new-reward', 'add-new-punishment'
+- usePointsManager (src/data/points/usePointsManager.ts)
+- React Query invalidation on each mutation
 
-#### Step 4: Database Storage
-```typescript
-const mutation = async (formData) => {
-  // processImageForSave handles base64 vs existing URL logic
-  const { processedUrl, metadata } = await processImageForSave(formData.background_image_url);
-  
-  const dataToSave = {
-    ...formData,
-    background_image_url: processedUrl,  // Compressed base64 or existing URL
-    image_meta: metadata || formData.image_meta,
-    updated_at: new Date().toISOString()
-  };
-  
-  // Save to Supabase with compressed data
-};
-```
+================================
+# USER DATA PRIVACY & SECURITY ENFORCEMENT
+================================
 
-### Database & Type Schema Requirements
+- CORE PRINCIPLE:
+	- All data within the application MUST be strictly scoped to either:
+	- The current authenticated user (auth.uid())
+	- Their explicitly linked partner (linked_partner_id)
 
-#### Required Database Fields
-Every entity table MUST include:
-```sql
-background_image_url TEXT,        -- Stores base64 compressed image or URL
-image_meta JSONB,                -- Stores compression metadata
-```
+- Under no circumstances should data be visible, accessible, or queryable by any other user outside of that direct Dom/Sub pairing.
 
-#### TypeScript Type Schema
-Every entity type MUST include:
-```typescript
-export interface EntityData {
-  // ... other fields
-  background_image_url?: string | null;  // Optional base64 or URL
-  image_meta?: ImageMetadata;            // Optional compression metadata
-}
-```
+- There is NO SUCH THING as global/public/shared data across unrelated users.
 
-#### Form Schema (Zod)
-Every form schema MUST include:
-```typescript
-export const entityFormSchema = z.object({
-  // ... other fields  
-  background_image_url: z.string().optional(),
-  image_meta: z.any().optional(),
-});
-```
+1. DATABASE-LEVEL SECURITY:
+	- Row Level Security (RLS) MUST be enabled on ALL user-related tables.
+	- Every user-facing table MUST contain a valid `user_id` UUID column.
+	- RLS policies MUST permit access ONLY when:
+	- auth.uid() = user_id
+	- OR auth.uid() = (SELECT linked_partner_id FROM profiles WHERE id = user_id)
 
-### Mutation Integration
+2. FRONTEND QUERY STRUCTURE:
+- All Supabase queries MUST include filtering logic scoped to:
+	- .eq('user_id', currentUserId)
+	- OR .eq('user_id', linkedPartnerId)
+	- All create/update/delete mutations MUST set the correct `user_id` value.
+	- Fetching full tables (i.e. no filter) is STRICTLY PROHIBITED.
+	- If a partner is linked, treat their user ID as fully interchangeable.
 
-#### Create Mutations
-```typescript
-export const useCreateEntity = () => {
-  return useMutation({
-    mutationFn: async (variables: CreateEntityVariables) => {
-      // ALWAYS process image before saving
-      const { processedUrl, metadata } = await processImageForSave(variables.background_image_url || null);
-      
-      const entityData = {
-        ...variables,
-        background_image_url: processedUrl,
-        image_meta: variables.image_meta || metadata,
-        user_id: currentUserId  // CRITICAL: User context required
-      };
-      
-      const { data, error } = await supabase.from('table').insert(entityData);
-      // ... error handling & return
-    },
-    // ... success/error callbacks
-  });
-};
-```
+3. USER CONTEXT RELIABILITY:
+	- All components must access user ID and linked partner ID via `useUserIds()`.
+	- The context must ALWAYS resolve both IDs prior to executing any data query.
+	- Partner-linking logic MUST be respected across all features.
 
-#### Update Mutations  
-```typescript
-export const useUpdateEntity = () => {
-  return useUpdateOptimisticMutation({
-    mutationFn: async (variables: UpdateEntityVariables) => {
-      // ALWAYS process image before updating
-      const { processedUrl, metadata } = await processImageForSave(variables.background_image_url || null);
-      
-      const updatesWithImage = {
-        ...variables,
-        background_image_url: processedUrl,
-        image_meta: variables.image_meta || metadata,
-        updated_at: new Date().toISOString()
-      };
-      
-      const { data, error } = await supabase.from('table').update(updatesWithImage);
-      // ... error handling & return
-    },
-    // ... optimistic update config
-  });
-};
-```
+ 4. ISOLATION IS UNIVERSAL
+	- There is NO exception for any feature, table, or page.
+	- All user-generated content (tasks, rewards, punishments, rules, completions, history, etc.)
+	- MUST be private and ONLY visible to:
+		- The user who created it
+		- Their linked partner (if applicable)
+	- Even if a table has no sensitive data, DO NOT make it global unless approved.
 
-### Critical Rules & Patterns
+5. FAIL-SAFE BEHAVIOR
+	- If context fails to load user or partner ID, block queries.
+	- Never fallback to an unsafe default like "show everything" or "assume public".
+	- Log all auth errors, context failures, or ID mismatches immediately.
 
-#### 1. **NEVER** Skip Compression
-```typescript
-// ❌ WRONG - Bypassing compression
-setValue('background_image_url', originalImageUrl);
+6. TESTING + FUTURE MIGRATIONS
+	- Every new table must include a `user_id` column by default.
+	- No new feature may launch without tested RLS and filter logic.
+	- Before merging changes, validate behavior as:
+		- Solo user
+		- Linked pair
+		- Unlinked unrelated users
 
-// ✅ CORRECT - Always compress
-const { blob, metadata } = await compressImage(file);
-// ... convert to base64 and store
-```
+7. PERMANENT NON-NEGOTIABLE RULE:
+	- IF A QUERY DOES NOT FILTER BY `user_id` OR `linked_partner_id`, IT IS A SECURITY BUG.
+	- IF A TABLE HAS NO RLS, IT IS A SECURITY BUG.
+	- IF A PAGE SHOWS DATA TO A NON-LINKED ACCOUNT, IT IS A SECURITY BUG.
+	- Verify context returns both user and partner IDs
+	- Confirm Supabase policies are active and correct
+	- Check that every query includes proper `.eq('user_id', ...)` logic
+	- Enforce this as part of every code review, every refactor, every feature
 
-#### 2. **ALWAYS** Store Metadata
-```typescript
-// ❌ WRONG - Missing metadata
-setValue('background_image_url', compressedBase64);
+- These rules are not flexible. If functionality ever appears to work without respecting this security model, the behavior is broken — even if it seems functional.
 
-// ✅ CORRECT - Include compression metadata  
-setValue('background_image_url', compressedBase64);
-setValue('image_meta', metadata);
-```
+================================
+# CRITICAL RULES - NEVER BREAK THESE
+================================
 
-#### 3. **ALWAYS** Use Integration Utilities
-```typescript
-// ❌ WRONG - Direct compression in components
-const compressedImage = await compressImage(file);
-
-// ✅ CORRECT - Use feature-specific integration
-await handleImageUpload(file, setValue, setImagePreview);
-```
-
-#### 4. **ALWAYS** Process Before Save
-```typescript
-// ❌ WRONG - Saving raw form data
-const { data } = await supabase.from('table').insert(formData);
-
-// ✅ CORRECT - Process image first
-const { processedUrl, metadata } = await processImageForSave(formData.background_image_url);
-const dataWithProcessedImage = { ...formData, background_image_url: processedUrl };
-```
-
-#### 5. **NEVER** Modify Core Compression
-```typescript
-// ❌ WRONG - Changing compression settings without system-wide update
-const QUALITY = 0.9; // Don't change from 0.8 without updating everywhere
-
-// ✅ CORRECT - Use established settings
-const QUALITY = 0.8; // Optimized for size/quality balance
-```
-
-### Performance Benefits
-
-#### Before Compression
-- **Rules**: 2.5MB → 580KB (77% reduction)
-- **Tasks**: 3.2MB → 720KB (78% reduction)  
-- **Rewards**: 1.8MB → 410KB (77% reduction)
-- **Punishments**: 2.1MB → 490KB (77% reduction)
-
-#### After Compression
-- **Page Load**: 60-75% faster with compressed images
-- **Storage**: 75% reduction in Supabase storage usage
-- **Bandwidth**: Significant reduction in data transfer
-- **UX**: Smooth scrolling with large image lists
-
-### Troubleshooting
-
-#### 1. Images Not Compressing
-**Check**: Integration utility is being called
-```typescript
-// Verify handleImageUpload is triggered on file input change
-const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (file) {
-    await featureIntegration.handleImageUpload(file, setValue, setImagePreview);
-  }
-};
-```
-
-#### 2. Form Schema Errors
-**Check**: Required fields are in schema
-```typescript
-export const entityFormSchema = z.object({
-  // ... existing fields
-  background_image_url: z.string().optional(),  // REQUIRED
-  image_meta: z.any().optional(),               // REQUIRED  
-});
-```
-
-#### 3. Database Errors  
-**Check**: Table has required columns
-```sql
-ALTER TABLE entity_table 
-ADD COLUMN background_image_url TEXT,
-ADD COLUMN image_meta JSONB;
-```
-
-#### 4. Metadata Not Saving
-**Check**: Mutation processes image before save
-```typescript
-// MUST call processImageForSave in every create/update mutation
-const { processedUrl, metadata } = await processImageForSave(variables.background_image_url);
-```
-
-#### 5. TypeScript Errors
-**Check**: Entity types include image fields
-```typescript
-export interface EntityData {
-  // ... other fields
-  background_image_url?: string | null;  // REQUIRED
-  image_meta?: any;                      // REQUIRED
-}
-```
-
-### Maintenance Guidelines
-
-#### When Adding New Features:
-1. **Create** `src/utils/image/[feature]Integration.ts`
-2. **Add** `background_image_url` and `image_meta` to database table
-3. **Update** TypeScript types to include image fields
-4. **Add** image fields to Zod form schema  
-5. **Integrate** `processImageForSave` in create/update mutations
-6. **Create** `use[Feature]Background` hook
-7. **Add** `[Feature]ImageSection` component
-8. **Test** compression end-to-end
-
-#### When Modifying Compression:
-1. **Update** `src/utils/image/compression.ts` ONLY
-2. **Test** across ALL features (Rules, Tasks, Rewards, Punishments)  
-3. **Verify** compression ratios remain 60-80%
-4. **Check** visual quality is acceptable
-5. **Update** documentation if settings change
-
-**⚠️ CRITICAL**: Never modify compression settings without testing impact across all features. The 80% JPEG quality at 1920x1080 max resolution provides the optimal balance of size reduction and visual quality.
-
-## 🚨 CRITICAL RULES - NEVER BREAK THESE
-
-### 1. IndexedDB Functions
+1. IndexedDB Functions:
 - **NEVER** modify functions in `src/data/indexedDB/useIndexedDB.ts`
 - **NEVER** change the 30-minute sync threshold
 - **NEVER** remove the fallback-to-cache-on-error logic
 
-### 2. React Query Configuration
+2. React Query Configuration:
 - **NEVER** change `staleTime: Infinity`
 - **NEVER** enable `refetchOnWindowFocus`, `refetchOnReconnect`, or `refetchOnMount`
 - **NEVER** modify retry/gcTime without updating all pages
 
-### 3. Data Flow
+3. Data Flow:
 - **NEVER** bypass the IndexedDB caching layer
 - **NEVER** call Supabase directly from UI components
 - **NEVER** modify the dual-layer caching strategy
 
-### 4. Task Completion System
+4. Task Completion System:
 - **NEVER** simplify the task completion logic without understanding points/usage tracking
 - **NEVER** remove optimistic updates from task operations
 - **NEVER** modify `useToggleTaskCompletionMutation` without full system understanding
 
-### 5. Error Handling
+5. Error Handling:
 - **NEVER** remove try/catch blocks in data fetching
 - **NEVER** remove fallback to cached data on errors
 - **NEVER** change the error boundary structure
 
-### 6. Mutation Callbacks
+6. Mutation Callbacks:
 - **NEVER** remove `onSuccessCallback` from mutations
 - **NEVER** skip IndexedDB updates in mutation success handlers
 - **NEVER** remove sync time updates
 
-### 7. 🚫 NO LOADING SCREENS POLICY - ABSOLUTELY CRITICAL
+7. NO LOADING SCREENS POLICY - ABSOLUTELY CRITICAL:
 - **NEVER** add loading screens, loading spinners, or "Loading..." text anywhere in the app
 - **NEVER** show loading states that block or replace the actual UI content
 - **NEVER** use conditional rendering based on loading states that hide content
@@ -939,91 +616,54 @@ export interface EntityData {
 - **NEVER** show "Please wait...", "Loading session...", "Restoring data..." or any loading messages
 - **NEVER** use `if (loading) return <LoadingComponent />` patterns anywhere
 
-#### ✅ CORRECT APPROACH - IMMEDIATE UI RENDERING:
-- **ALWAYS** render the actual UI immediately, even if data is still loading
-- **ALWAYS** let data load in the background while showing the real interface
-- **ALWAYS** use empty states, skeleton placeholders, or show cached data while loading fresh data
-- **ALWAYS** make components render their UI structure immediately
-- **ALWAYS** handle loading states gracefully without blocking the user interface
+8. NEVER CHANGE UI ELEMENTS:
+- **NEVER** move UI elements
+- **NEVER** add UI elements without specific instructions
+- **NEVER** change UI element styling, coloring, text etc. without instruction.
 
-#### 🚫 EXAMPLES OF WHAT TO NEVER DO:
-```typescript
-// ❌ NEVER DO THIS - Loading screens that block UI
-if (loading) {
-  return <div>Loading...</div>;
-}
+9. NO CODE CREEP:
+- **NEVER** code creep, ALWAYS stick to the outlined plan you have presented to the {{user}}
 
-// ❌ NEVER DO THIS - Loading spinners that replace content
-if (isLoading) {
-  return <LoadingSpinner />;
-}
+10. ERROR HANDLING:
+- **NEVER** SPOT FIX ERRORS. Always review the entire code structure for the APP/PAGE/FILE before making changes.
+- **NEVER** Adress errors without fully reading the APP-CODE-GUIDE read me file.
 
-// ❌ NEVER DO THIS - Loading messages
-{loading && <div>Please wait, loading data...</div>}
-```
+================================
+# TROUBLESHOOTING COMMON ISSUES
+================================
 
-#### ✅ EXAMPLES OF CORRECT PATTERNS:
-```typescript
-// ✅ ALWAYS DO THIS - Render UI immediately with fallbacks
-return (
-  <div>
-    <Header />
-    <TasksList tasks={tasks || []} />
-    {error && <ErrorMessage />}
-  </div>
-);
+- "Data not loading"
+	- Check if IndexedDB functions are working
+	- Verify 30-minute sync logic
+	- Check React Query cache status
+	- Ensure error fallbacks are intact
 
-// ✅ ALWAYS DO THIS - Show content immediately, load in background
-const { data: tasks = [] } = useQuery({ ... });
-return <TasksList tasks={tasks} />;
-```
+- "Mutations not working"
+	- Verify `onSuccessCallback` is updating IndexedDB
+- Check if `entityName` is provided for optimistic mutations
+- Ensure sync timestamps are being updated
 
-#### ENFORCEMENT:
-- This is a **NON-NEGOTIABLE** architectural decision
-- Any code that shows loading screens instead of immediate UI is considered **BROKEN**
-- The app must **ALWAYS** show the actual user interface immediately
-- Loading must happen in the background without blocking or hiding the UI
-- This rule applies to **ALL** components, pages, hooks, and any new features
+- "Offline mode broken"
+	- Verify IndexedDB caching is functioning
+	- Check if fallback-to-cache logic is intact
+	- Ensure error handling preserves cached data
 
-### 8. Image Compression System
-- **NEVER** bypass image compression for any uploaded images
-- **NEVER** modify core compression settings without system-wide testing
-- **NEVER** skip `processImageForSave` in create/update mutations
-- **NEVER** omit `background_image_url` and `image_meta` from entity schemas
-- **NEVER** store uncompressed images in the database
+- "Performance issues"
+	- Check if React Query settings match the contract
+	- Verify IndexedDB operations aren't being called excessively
+	- Ensure proper garbage collection times
 
-## Troubleshooting Common Issues
+- "Images not compressing"
+	- Verify `handleImageUpload` is called on file selection
+	- Check if integration utility exists for the feature
+	- Ensure `processImageForSave` is used in mutations
+	- Verify database schema includes image fields
 
-### "Data not loading"
-1. Check if IndexedDB functions are working
-2. Verify 30-minute sync logic
-3. Check React Query cache status
-4. Ensure error fallbacks are intact
+================================
+# FILE STRUCTURE REFERENCE
+================================
+// LOVABLE ONLY HAS PERMISSION TO DELETE/REORGANIZE/REFORMAT TEXT IN THIS SECTION ONLY IF IT IS REQUIRED TO REBUILD THE FILE STRUCTURE REFERENCE:
 
-### "Mutations not working"
-1. Verify `onSuccessCallback` is updating IndexedDB
-2. Check if `entityName` is provided for optimistic mutations
-3. Ensure sync timestamps are being updated
-
-### "Offline mode broken"
-1. Verify IndexedDB caching is functioning
-2. Check if fallback-to-cache logic is intact
-3. Ensure error handling preserves cached data
-
-### "Performance issues"
-1. Check if React Query settings match the contract
-2. Verify IndexedDB operations aren't being called excessively
-3. Ensure proper garbage collection times
-
-### "Images not compressing"
-1. Verify `handleImageUpload` is called on file selection
-2. Check if integration utility exists for the feature
-3. Ensure `processImageForSave` is used in mutations
-4. Verify database schema includes image fields
-
-## File Structure Reference
-
-```
 src/
 ├── data/
 │   ├── indexedDB/useIndexedDB.ts        # 🚨 CRITICAL - DO NOT MODIFY
@@ -1054,17 +694,7 @@ src/
 └── lib/
     ├── optimistic-mutations.ts          # 🚨 CRITICAL - Mutation system
     └── taskUtils.ts                     # 🚨 CRITICAL - Task processing logic
-```
 
-## Summary
 
-This application's architecture has been carefully designed for:
-- **Offline-first** operation with IndexedDB caching
-- **Optimistic updates** for better UX
-- **Consistent error handling** with graceful fallbacks
-- **Performance optimization** through intelligent caching
-- **Automatic image compression** for optimal performance and storage efficiency
 
-**Before making ANY changes**, ensure you understand how your modification fits into this architecture. When in doubt, refer to this guide and follow the established patterns exactly.
 
-**Remember**: The complexity exists for good reasons. Simplifying without understanding the full system will break critical functionality.
