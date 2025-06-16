@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +7,7 @@ import localforage from 'localforage';
 import { STORAGE_PREFIX as FORM_STATE_PREFIX } from '@/hooks/useFormStatePersister';
 import { useAuthOperations } from './auth/useAuthOperations';
 import { useUserProfile } from './auth/useUserProfile';
+import { usePartnerLinking } from './auth/usePartnerLinking';
 import { logger } from '@/lib/logger';
 
 interface AuthState {
@@ -35,6 +35,14 @@ export interface AuthContextType extends AuthState {
   deleteUserProfileImage: ReturnType<typeof useUserProfile>['deleteUserProfileImage'];
   updateUserRole: ReturnType<typeof useUserProfile>['updateUserRole'];
   checkAdminStatus: () => Promise<boolean>;
+  // Partner linking functions
+  generateLinkCode: ReturnType<typeof usePartnerLinking>['generateLinkCode'];
+  linkToPartner: ReturnType<typeof usePartnerLinking>['linkToPartner'];
+  unlinkFromPartner: ReturnType<typeof usePartnerLinking>['unlinkFromPartner'];
+  getLinkedPartnerInfo: ReturnType<typeof usePartnerLinking>['getLinkedPartnerInfo'];
+  getCurrentLinkCode: ReturnType<typeof usePartnerLinking>['getCurrentLinkCode'];
+  getLinkedPartnerId: ReturnType<typeof usePartnerLinking>['getLinkedPartnerId'];
+  partnerLinkingLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,6 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   };
   const userProfileUtils = useUserProfile(authState.user, wrappedSetUserForProfile);
+  const partnerLinkingUtils = usePartnerLinking(authState.user, wrappedSetUserForProfile);
 
   // On-demand admin check function
   const checkAdminStatus = async (): Promise<boolean> => {
@@ -222,6 +231,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     deleteUserProfileImage: userProfileUtils.deleteUserProfileImage,
     updateUserRole: userProfileUtils.updateUserRole,
     checkAdminStatus,
+    // Partner linking functions
+    generateLinkCode: partnerLinkingUtils.generateLinkCode,
+    linkToPartner: partnerLinkingUtils.linkToPartner,
+    unlinkFromPartner: partnerLinkingUtils.unlinkFromPartner,
+    getLinkedPartnerInfo: partnerLinkingUtils.getLinkedPartnerInfo,
+    getCurrentLinkCode: partnerLinkingUtils.getCurrentLinkCode,
+    getLinkedPartnerId: partnerLinkingUtils.getLinkedPartnerId,
+    partnerLinkingLoading: partnerLinkingUtils.loading,
   };
 
   return (
