@@ -5,6 +5,7 @@ import { RULES_QUERY_KEY } from '../queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
 import { toast } from '@/hooks/use-toast';
+import { getMondayBasedDay } from '@/lib/utils';
 
 interface CreateRuleViolationParams {
   ruleId: string;
@@ -17,12 +18,24 @@ export const useCreateRuleViolation = () => {
 
   return useMutation({
     mutationFn: async ({ ruleId, userId }: CreateRuleViolationParams) => {
+      const now = new Date();
+      const currentDay = getMondayBasedDay();
+      
+      // Calculate week number in YYYY-Www format
+      const year = now.getFullYear();
+      const startOfYear = new Date(year, 0, 1);
+      const days = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+      const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+      const weekString = `${year}-W${weekNumber.toString().padStart(2, '0')}`;
+
       const { error } = await supabase
         .from('rule_violations')
         .insert({
           rule_id: ruleId,
           user_id: userId,
-          violated_at: new Date().toISOString()
+          violation_date: now.toISOString(),
+          day_of_week: currentDay,
+          week_number: weekString
         });
 
       if (error) {

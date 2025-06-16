@@ -117,7 +117,14 @@ export const useRulesData = () => {
 
   const markRuleBroken = async (rule: Rule): Promise<void> => {
     try {
-      await createRuleViolationMutation({ rule_id: rule.id });
+      if (!user?.id) {
+        throw new Error('User must be authenticated to mark rule as broken');
+      }
+
+      await createRuleViolationMutation({ 
+        ruleId: rule.id, 
+        userId: user.id 
+      });
 
       // Get current day of week (0=Monday, 6=Sunday)
       const currentDay = getMondayBasedDay();
