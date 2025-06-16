@@ -2,7 +2,6 @@
 import React from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-import { handleImageUpload } from '@/utils/image/taskIntegration';
 
 interface TaskFormValues {
   title: string;
@@ -39,32 +38,16 @@ const TaskImageSection: React.FC<TaskImageSectionProps> = ({
   imagePreview,
   initialPosition,
   onRemoveImage,
+  onImageUpload,
   setValue
 }) => {
-  const handleImageUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        await handleImageUpload(
-          file,
-          setValue,
-          (url: string | null) => {
-            // This will be handled by the parent component's state
-          }
-        );
-      } catch (error) {
-        console.error('Error handling image upload:', error);
-      }
-    }
-  };
-
   return (
     <BackgroundImageSelector
       control={control}
       imagePreview={imagePreview}
       initialPosition={initialPosition}
       onRemoveImage={onRemoveImage}
-      onImageUpload={handleImageUploadWrapper}
+      onImageUpload={onImageUpload}
       setValue={setValue}
     />
   );

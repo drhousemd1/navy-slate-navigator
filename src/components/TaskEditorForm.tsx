@@ -19,6 +19,7 @@ import DeleteTaskDialog from './task-editor/DeleteTaskDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { handleImageUpload } from '@/utils/image/taskIntegration';
 
 interface TaskFormValues {
   title: string;
@@ -125,16 +126,23 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     }
   }, [taskData, reset]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setImagePreview(base64String);
-        setValue('background_image_url', base64String);
-      };
-      reader.readAsDataURL(file);
+      try {
+        await handleImageUpload(
+          file,
+          setValue,
+          setImagePreview
+        );
+      } catch (error) {
+        logger.error('Error handling image upload:', error);
+        toast({
+          title: "Image Upload Error",
+          description: "Failed to process the uploaded image",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -322,7 +330,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               setImagePreview(null);
               setValue('background_image_url', undefined);
             }}
-            onImageUpload={() => {}} // This is handled by the wrapper
+            onImageUpload={handleImageUploadWrapper}
             setValue={setValue} 
           />
         </div>
