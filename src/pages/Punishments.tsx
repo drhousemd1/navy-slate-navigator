@@ -129,7 +129,7 @@ const PunishmentsContent: React.FC<{
   };
   
   return (
-    <div className="p-4 pt-6">
+    <div className="p-4 pt-6 max-w-4xl mx-auto">
       <PunishmentsHeader />
       
       <PunishmentList 

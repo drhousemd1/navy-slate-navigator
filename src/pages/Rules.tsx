@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
@@ -126,7 +127,7 @@ const RulesPageContent: React.FC = () => {
   };
   
   return (
-    <div className="p-4 pt-6 RulesContent">
+    <div className="p-4 pt-6 max-w-4xl mx-auto RulesContent">
       <RulesHeader />
 
       <RulesList

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -133,7 +134,7 @@ const RewardsContent: React.FC<{
   };
   
   return (
-    <div className="p-4 pt-6">
+    <div className="p-4 pt-6 max-w-4xl mx-auto">
       <RewardsHeader onAddNewReward={handleAddNewReward} /> 
       <div className="mt-4">
         <RewardsList 

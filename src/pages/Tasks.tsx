@@ -170,7 +170,7 @@ const Tasks: React.FC = () => {
   // Show loading state while user IDs are being resolved
   if (isLoadingUserIds) {
     return (
-      <div className="p-4 pt-6">
+      <div className="p-4 pt-6 max-w-4xl mx-auto">
         <div className="flex items-center justify-center py-10">
           <p className="text-muted-foreground">Loading user session...</p>
         </div>
@@ -181,7 +181,7 @@ const Tasks: React.FC = () => {
   // Show authentication requirement if no user
   if (!user) {
     return (
-      <div className="p-4 pt-6">
+      <div className="p-4 pt-6 max-w-4xl mx-auto">
         <div className="flex items-center justify-center py-10">
           <p className="text-muted-foreground">Please log in to view your tasks.</p>
         </div>
@@ -191,7 +191,7 @@ const Tasks: React.FC = () => {
 
   return (
     <AppLayout onAddNewItem={handleCreateTask}>
-      <div className="p-4 pt-6">
+      <div className="p-4 pt-6 max-w-4xl mx-auto">
         <TasksHeader onCreateTask={handleCreateTask} />
         
         <TasksList
