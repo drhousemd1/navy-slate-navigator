@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
@@ -33,12 +34,11 @@ const PunishmentsHeader: React.FC = () => {
       <h1 className="text-base font-semibold text-white mr-2">Punishments</h1>
       <Button 
         variant="outline" 
-        className="relative mr-auto flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white border-none h-8 px-3 text-sm font-medium rounded-md"
+        className="relative mr-auto flex items-center justify-center bg-red-600 hover:bg-red-700 text-white border-none h-8 w-8 p-0 rounded-md"
         onClick={() => setIsRandomSelectorOpen(true)}
         disabled={punishments.length === 0}
       >
         <Shuffle className="w-4 h-4" />
-        Random
       </Button>
       <div className="flex items-center gap-2">
         <Badge 
