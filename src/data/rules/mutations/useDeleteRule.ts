@@ -23,7 +23,7 @@ export const useDeleteRule = () => {
     entityName: 'Rule',
     idField: 'id',
     onSuccessCallback: async (ruleId: string) => { 
-      logger.debug('[useDeleteRule onSuccessCallback] Rule deleted on server, updating IndexedDB for rule ID:', ruleId);
+      logger.debug('[useDeleteRule onSuccessCallback] Rule deleted on server, updating IndexedDB only for rule ID:', ruleId);
       try {
         const localRules = await loadRulesFromDB() || [];
         const updatedLocalRules = localRules.filter(r => r.id !== ruleId);

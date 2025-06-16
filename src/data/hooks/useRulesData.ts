@@ -12,6 +12,8 @@ import { useCreateRule, useUpdateRule, useDeleteRule, CreateRuleVariables, Updat
 import { useCreateRuleViolation } from '../rules/mutations/useCreateRuleViolation';
 import { useAuth } from '@/contexts/auth';
 import { getMondayBasedDay } from '@/lib/utils';
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { RULES_QUERY_KEY } from '../rules/queries';
 
 export const useRulesData = () => {
   const { 
@@ -26,6 +28,7 @@ export const useRulesData = () => {
   
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { subUserId, domUserId } = useUserIds();
   
   const { mutateAsync: createRuleMutation } = useCreateRule();
   const { mutateAsync: updateRuleMutation } = useUpdateRule();
@@ -44,10 +47,10 @@ export const useRulesData = () => {
       if (resetPerformed) {
         logger.debug('[useRulesData] Resets performed, updating cache with fresh IndexedDB data');
         
-        // Load fresh rules from IndexedDB and set them on the cache
+        // Load fresh rules from IndexedDB and set them on the cache with correct query key
         const freshData = await loadRulesFromDB();
         if (freshData && Array.isArray(freshData)) {
-          queryClient.setQueryData(['rules'], freshData);
+          queryClient.setQueryData([...RULES_QUERY_KEY, subUserId, domUserId], freshData);
           logger.debug('[useRulesData] Updated cache with fresh reset data');
         }
       } else {
@@ -56,7 +59,7 @@ export const useRulesData = () => {
     } catch (error) {
       logger.error('[useRulesData] Error during reset check:', error);
     }
-  }, [queryClient]);
+  }, [queryClient, subUserId, domUserId]);
 
   const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
     try {

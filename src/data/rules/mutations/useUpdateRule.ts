@@ -45,7 +45,7 @@ export const useUpdateRule = () => {
     entityName: 'Rule',
     idField: 'id',
     onSuccessCallback: async (updatedRuleData) => {
-      logger.debug('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB.', updatedRuleData);
+      logger.debug('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB only.', updatedRuleData);
       try {
         const localRules = await loadRulesFromDB() || [];
         const updatedLocalRules = localRules.map(r => r.id === updatedRuleData.id ? updatedRuleData : r);

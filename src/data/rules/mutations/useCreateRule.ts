@@ -76,7 +76,7 @@ export const useCreateRule = () => {
       } as Rule;
     },
     onSuccessCallback: async (newRuleData) => {
-      logger.debug('[useCreateRule onSuccessCallback] New rule created on server, updating IndexedDB.', newRuleData);
+      logger.debug('[useCreateRule onSuccessCallback] New rule created on server, updating IndexedDB only.', newRuleData);
       try {
         const localRules = await loadRulesFromDB() || [];
         const updatedLocalRules = [newRuleData, ...localRules.filter(r => r.id !== newRuleData.id && r.id !== (newRuleData as any).optimisticId)];
