@@ -67,17 +67,19 @@ export function useCreateOptimisticMutation<
       }
       toast({ title: `Error creating ${entityName}`, description: err.message, variant: 'destructive' });
     },
-    onSuccess: (data, variables, context) => { // data is the actual item from server
+    onSuccess: async (data, variables, context) => { // data is the actual item from server
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) => {
         const filteredList = old.filter(item => !(context?.optimisticId && item[idField] === context.optimisticId));
         return [data, ...filteredList];
       });
       toast({ title: `${entityName} created successfully!` });
       if (onSuccessCallback) {
-        onSuccessCallback(data, variables);
+        await onSuccessCallback(data, variables);
       }
     },
-    onSettled: () => {
+    onSettled: async () => {
+      // Add a small delay to ensure IndexedDB operations complete
+      await new Promise(resolve => setTimeout(resolve, 100));
       queryClient.invalidateQueries({ queryKey });
     },
     ...mutationOptions,
@@ -133,16 +135,18 @@ export function useUpdateOptimisticMutation<
       }
       toast({ title: `Error updating ${entityName}`, description: err.message, variant: 'destructive' });
     },
-    onSuccess: (data, variables, _context) => { // data is the actual item from server
+    onSuccess: async (data, variables, _context) => { // data is the actual item from server
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) =>
         old.map(item => (item[idField] === data[idField as keyof TItem] ? data : item))
       );
       toast({ title: `${entityName} updated successfully!` });
       if (onSuccessCallback) {
-        onSuccessCallback(data, variables);
+        await onSuccessCallback(data, variables);
       }
     },
-    onSettled: () => {
+    onSettled: async () => {
+      // Add a small delay to ensure IndexedDB operations complete
+      await new Promise(resolve => setTimeout(resolve, 100));
       queryClient.invalidateQueries({ queryKey });
     },
     ...mutationOptions,
@@ -213,13 +217,15 @@ export function useDeleteOptimisticMutation<
       }
       toast({ title: `Error deleting ${entityName}`, description: err.message, variant: 'destructive' });
     },
-    onSuccess: (_data, idDeleted, _context) => {
+    onSuccess: async (_data, idDeleted, _context) => {
       toast({ title: `${entityName} deleted successfully!` });
       if (onSuccessCallback) {
-        onSuccessCallback(idDeleted);
+        await onSuccessCallback(idDeleted);
       }
     },
-    onSettled: () => {
+    onSettled: async () => {
+      // Add a small delay to ensure IndexedDB operations complete
+      await new Promise(resolve => setTimeout(resolve, 100));
       queryClient.invalidateQueries({ queryKey });
       if (relatedQueryKey) {
         queryClient.invalidateQueries({ queryKey: relatedQueryKey });
