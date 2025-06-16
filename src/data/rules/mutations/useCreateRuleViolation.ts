@@ -1,54 +1,53 @@
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
-import { RuleViolation, CreateRuleViolationVariables } from '@/data/rules/types';
-import { getISOWeekString } from '@/lib/dateUtils';
+import { RULES_QUERY_KEY } from '../queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { logger } from '@/lib/logger';
+import { toast } from '@/hooks/use-toast';
 
-export const RULE_VIOLATIONS_QUERY_KEY = 'rule_violations';
+interface CreateRuleViolationParams {
+  ruleId: string;
+  userId: string;
+}
 
 export const useCreateRuleViolation = () => {
   const queryClient = useQueryClient();
-  const { subUserId } = useUserIds();
+  const { subUserId, domUserId } = useUserIds();
 
-  return useCreateOptimisticMutation<RuleViolation, Error, CreateRuleViolationVariables>({
-    queryClient,
-    queryKey: [RULE_VIOLATIONS_QUERY_KEY],
-    mutationFn: async (variables: CreateRuleViolationVariables) => {
-      if (!subUserId) {
-        throw new Error("User not authenticated");
-      }
-
-      const now = new Date();
-      const violationData = {
-        rule_id: variables.rule_id,
-        violation_date: now.toISOString(),
-        day_of_week: now.getDay(),
-        week_number: getISOWeekString(now),
-        user_id: subUserId,
-      };
-      const { data, error } = await supabase
+  return useMutation({
+    mutationFn: async ({ ruleId, userId }: CreateRuleViolationParams) => {
+      const { error } = await supabase
         .from('rule_violations')
-        .insert(violationData)
-        .select()
-        .single();
-      if (error) throw error;
-      if (!data) throw new Error('Rule violation creation failed, no data returned.');
-      return data as RuleViolation;
+        .insert({
+          rule_id: ruleId,
+          user_id: userId,
+          violated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        logger.error('Error creating rule violation:', error);
+        throw error;
+      }
     },
-    entityName: 'Rule Violation',
-    createOptimisticItem: (variables, optimisticId) => {
-      const now = new Date();
-      return {
-        id: optimisticId,
-        rule_id: variables.rule_id,
-        violation_date: now.toISOString(),
-        day_of_week: now.getDay(),
-        week_number: getISOWeekString(now),
-        user_id: subUserId!,
-        // created_at is handled by DB but good to have for optimistic item consistency if type includes it
-      } as RuleViolation;
+    onSuccess: () => {
+      // Invalidate rules query to refetch and update violation counts
+      queryClient.invalidateQueries({ 
+        queryKey: [...RULES_QUERY_KEY, subUserId, domUserId] 
+      });
+      
+      toast({
+        title: "Rule Violation Recorded",
+        description: "The rule violation has been recorded successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      logger.error('Failed to record rule violation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record the rule violation. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 };

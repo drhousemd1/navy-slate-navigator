@@ -7,17 +7,18 @@ import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/
 import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { useUserIds } from '@/contexts/UserIdsContext';
 
 export const useDeleteRule = () => {
   const queryClient = useQueryClient();
+  const { subUserId, domUserId } = useUserIds();
 
   return useDeleteOptimisticMutation<Rule, Error, string>({
     queryClient,
-    queryKey: [...RULES_QUERY_KEY], // Ensure mutable array
+    queryKey: [...RULES_QUERY_KEY, subUserId, domUserId],
     mutationFn: async (ruleId: string) => {
       const { error } = await supabase.from('rules').delete().eq('id', ruleId);
       if (error) throw error;
-      // No explicit data returned by Supabase delete, but mutationFn should resolve if successful
     },
     entityName: 'Rule',
     idField: 'id',
@@ -29,16 +30,11 @@ export const useDeleteRule = () => {
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
         logger.debug('[useDeleteRule onSuccessCallback] IndexedDB updated after deleting rule.');
-        // Generic success toast is handled by useDeleteOptimisticMutation
       } catch (error) {
         logger.error('[useDeleteRule onSuccessCallback] Error updating IndexedDB:', error);
         toast({ variant: "destructive", title: "Local Update Error", description: "Rule deleted on server, but failed to update local data." });
       }
     },
-    mutationOptions: { 
-      // onError was here, it's removed as the optimistic hook handles it.
-      // The generic error toast is handled by useDeleteOptimisticMutation.
-      // Specific console logging is now omitted.
-    }
+    mutationOptions: {}
   });
 };

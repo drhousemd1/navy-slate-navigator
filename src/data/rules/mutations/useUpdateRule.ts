@@ -7,16 +7,18 @@ import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/
 import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { useUserIds } from '@/contexts/UserIdsContext';
 import { processImageForSave } from '@/utils/image/ruleIntegration';
 
 export type UpdateRuleVariables = { id: string } & Partial<Omit<Rule, 'id'>>;
 
 export const useUpdateRule = () => {
   const queryClient = useQueryClient();
+  const { subUserId, domUserId } = useUserIds();
 
   return useUpdateOptimisticMutation<Rule, Error, UpdateRuleVariables>({
     queryClient,
-    queryKey: [...RULES_QUERY_KEY], // Ensure mutable array
+    queryKey: [...RULES_QUERY_KEY, subUserId, domUserId],
     mutationFn: async (variables: UpdateRuleVariables) => {
       const { id, ...updates } = variables;
       
@@ -50,16 +52,11 @@ export const useUpdateRule = () => {
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
         logger.debug('[useUpdateRule onSuccessCallback] IndexedDB updated with updated rule.');
-        // Generic success toast is handled by useUpdateOptimisticMutation
       } catch (error) {
         logger.error('[useUpdateRule onSuccessCallback] Error updating IndexedDB:', error);
         toast({ variant: "destructive", title: "Local Save Error", description: "Rule updated on server, but failed to save changes locally." });
       }
     },
-    mutationOptions: { 
-      // onError was here, it's removed as the optimistic hook handles it.
-      // The generic error toast is handled by useUpdateOptimisticMutation.
-      // Specific console logging is now omitted.
-    }
+    mutationOptions: {}
   });
 };

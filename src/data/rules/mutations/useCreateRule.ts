@@ -8,6 +8,7 @@ import { RULES_QUERY_KEY } from '../queries';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/contexts/auth';
+import { useUserIds } from '@/contexts/UserIdsContext';
 import { processImageForSave } from '@/utils/image/ruleIntegration';
 
 export type CreateRuleVariables = Partial<Omit<Rule, 'id' | 'created_at' | 'updated_at' | 'usage_data' | 'user_id'>> & {
@@ -18,10 +19,11 @@ export type CreateRuleVariables = Partial<Omit<Rule, 'id' | 'created_at' | 'upda
 export const useCreateRule = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { subUserId, domUserId } = useUserIds();
 
   return useCreateOptimisticMutation<Rule, Error, CreateRuleVariables>({
     queryClient,
-    queryKey: [...RULES_QUERY_KEY],
+    queryKey: [...RULES_QUERY_KEY, subUserId, domUserId],
     mutationFn: async (variables: CreateRuleVariables) => {
       // Ensure user is authenticated
       if (!user?.id) {
