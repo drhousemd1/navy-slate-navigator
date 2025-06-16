@@ -6,18 +6,24 @@ import { PostgrestError } from '@supabase/supabase-js';
 
 export const DOM_REWARD_TYPES_COUNT_QUERY_KEY = 'domRewardTypesCount';
 
-const fetchDomRewardTypesCount = async (): Promise<number> => {
+const fetchDomRewardTypesCount = async (userId: string | null): Promise<number> => {
+  if (!userId) {
+    logger.debug('fetchDomRewardTypesCount: No userId provided, returning 0.');
+    return 0;
+  }
+
   const { data, error } = await supabase
     .from('rewards')
     .select('supply')
-    .eq('is_dom_reward', true);
+    .eq('is_dom_reward', true)
+    .eq('user_id', userId);
 
   if (error) {
     logger.error('Error fetching dom reward types count:', error.message);
     return 0;
   }
   
-  // Calculate total supply of all dom rewards
+  // Calculate total supply of all dom rewards for this user
   const totalSupply = data?.reduce((total, reward) => {
     return total + (reward.supply === -1 ? 0 : reward.supply); // Handle infinite supply
   }, 0) || 0;
@@ -25,10 +31,11 @@ const fetchDomRewardTypesCount = async (): Promise<number> => {
   return totalSupply;
 };
 
-export const useDomRewardTypesCountQuery = () => {
+export const useDomRewardTypesCountQuery = (userId: string | null) => {
   return useQuery<number, PostgrestError | Error>({
-    queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY],
-    queryFn: fetchDomRewardTypesCount,
+    queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY, userId],
+    queryFn: () => fetchDomRewardTypesCount(userId),
+    enabled: !!userId,
     staleTime: 0, // Always refetch when invalidated
     refetchOnWindowFocus: true,
   });

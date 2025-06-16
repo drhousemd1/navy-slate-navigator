@@ -3,6 +3,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth';
 import { logger } from '@/lib/logger';
+import { useQueryClient } from '@tanstack/react-query';
+import { clearUserDataFromDB } from '@/data/indexedDB/useIndexedDB';
 
 interface UserIds {
   subUserId: string | null;
@@ -19,17 +21,46 @@ const UserIdsContext = createContext<UserIdsContextType | undefined>(undefined);
 export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [userIds, setUserIds] = useState<UserIds>({ subUserId: null, domUserId: null });
   const [isLoadingUserIds, setIsLoadingUserIds] = useState(true);
+  const [previousUserId, setPreviousUserId] = useState<string | null>(null);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const clearPreviousUserData = useCallback(async (prevUserId: string) => {
+    try {
+      // Clear React Query cache
+      await queryClient.clear();
+      
+      // Clear user-specific IndexedDB data
+      await clearUserDataFromDB(prevUserId);
+      
+      logger.debug(`Cleared data for previous user: ${prevUserId}`);
+    } catch (error) {
+      logger.error('Error clearing previous user data:', error);
+    }
+  }, [queryClient]);
 
   const initializeUserIds = useCallback(async () => {
     logger.debug('[UserIdsProvider] initializeUserIds called with user:', user?.id);
     
     if (!user) {
       logger.debug('[UserIdsProvider] No user, resetting userIds');
+      
+      // Clear cache if we had a previous user
+      if (previousUserId) {
+        await clearPreviousUserData(previousUserId);
+        setPreviousUserId(null);
+      }
+      
       setUserIds({ subUserId: null, domUserId: null });
       setIsLoadingUserIds(false);
       return;
     }
+
+    // Check if user changed and clear previous data
+    if (previousUserId && previousUserId !== user.id) {
+      await clearPreviousUserData(previousUserId);
+    }
+    setPreviousUserId(user.id);
 
     setIsLoadingUserIds(true);
     try {
@@ -93,7 +124,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
       setIsLoadingUserIds(false);
       logger.debug('[UserIdsProvider] initializeUserIds completed');
     }
-  }, [user]);
+  }, [user, previousUserId, clearPreviousUserData]);
 
   useEffect(() => {
     initializeUserIds();

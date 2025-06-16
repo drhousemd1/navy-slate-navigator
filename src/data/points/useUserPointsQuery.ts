@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { loadPointsFromDB, savePointsToDB } from '@/data/indexedDB/useIndexedDB';
@@ -23,7 +24,7 @@ const fetchUserPoints = async (userId: string | null): Promise<number> => {
 
     if (supabaseError) {
       logger.error(`fetchUserPoints: Supabase error for user ${userId}: ${supabaseError.message}. Falling back to IndexedDB.`);
-      const cachedPoints = await loadPointsFromDB(); // Assumes this loads points for the 'sub' user context
+      const cachedPoints = await loadPointsFromDB(userId);
       logger.debug(`fetchUserPoints: Loaded ${cachedPoints ?? 0} from IndexedDB for fallback.`);
       return cachedPoints ?? 0;
     }
@@ -31,18 +32,18 @@ const fetchUserPoints = async (userId: string | null): Promise<number> => {
     if (supabaseData) {
       const pointsToSave = supabaseData.points ?? 0;
       logger.debug(`fetchUserPoints: Successfully fetched ${pointsToSave} points from Supabase for user ${userId}. Saving to IndexedDB.`);
-      await savePointsToDB(pointsToSave); // Assumes this saves points for the 'sub' user context
+      await savePointsToDB(pointsToSave, userId);
       return pointsToSave;
     }
     
     // Fallback if supabaseData is null but no error (e.g. profile not found if not using .single(), or unexpected case)
     logger.warn(`fetchUserPoints: No data from Supabase for user ${userId} but no error. Attempting IndexedDB fallback.`);
-    const cachedPoints = await loadPointsFromDB();
+    const cachedPoints = await loadPointsFromDB(userId);
     return cachedPoints ?? 0;
 
   } catch (error: unknown) {
     logger.error(`fetchUserPoints: Exception for user ${userId}: ${getErrorMessage(error)}. Falling back to IndexedDB.`);
-    const cachedPoints = await loadPointsFromDB();
+    const cachedPoints = await loadPointsFromDB(userId);
     logger.debug(`fetchUserPoints: Loaded ${cachedPoints ?? 0} from IndexedDB after exception.`);
     return cachedPoints ?? 0;
   }
@@ -54,7 +55,6 @@ export const useUserPointsQuery = (userId: string | null) => {
     queryFn: () => fetchUserPoints(userId),
     enabled: !!userId, // Only run query if userId is available
     staleTime: 1000 * 60 * 5, // Keep data fresh for 5 minutes, then refetch on next access
-    // Consider gcTime if you want to keep it longer in cache even when not used
   });
 };
 

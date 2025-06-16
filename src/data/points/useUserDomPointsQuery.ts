@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { loadDomPointsFromDB, saveDomPointsToDB } from '@/data/indexedDB/useIndexedDB';
@@ -23,7 +24,7 @@ const fetchUserDomPoints = async (userId: string | null): Promise<number> => {
 
     if (supabaseError) {
       logger.error(`fetchUserDomPoints: Supabase error for user ${userId}: ${supabaseError.message}. Falling back to IndexedDB.`);
-      const cachedDomPoints = await loadDomPointsFromDB(); // Assumes this loads points for the 'dom' user context
+      const cachedDomPoints = await loadDomPointsFromDB(userId);
       logger.debug(`fetchUserDomPoints: Loaded ${cachedDomPoints ?? 0} DOM points from IndexedDB for fallback.`);
       return cachedDomPoints ?? 0;
     }
@@ -31,17 +32,17 @@ const fetchUserDomPoints = async (userId: string | null): Promise<number> => {
     if (supabaseData) {
       const domPointsToSave = supabaseData.dom_points ?? 0;
       logger.debug(`fetchUserDomPoints: Successfully fetched ${domPointsToSave} DOM points from Supabase for user ${userId}. Saving to IndexedDB.`);
-      await saveDomPointsToDB(domPointsToSave); // Assumes this saves points for the 'dom' user context
+      await saveDomPointsToDB(domPointsToSave, userId);
       return domPointsToSave;
     }
 
     logger.warn(`fetchUserDomPoints: No data from Supabase for user ${userId} but no error. Attempting IndexedDB fallback.`);
-    const cachedDomPoints = await loadDomPointsFromDB();
+    const cachedDomPoints = await loadDomPointsFromDB(userId);
     return cachedDomPoints ?? 0;
 
   } catch (error: unknown) {
     logger.error(`fetchUserDomPoints: Exception for user ${userId}: ${getErrorMessage(error)}. Falling back to IndexedDB.`);
-    const cachedDomPoints = await loadDomPointsFromDB();
+    const cachedDomPoints = await loadDomPointsFromDB(userId);
     logger.debug(`fetchUserDomPoints: Loaded ${cachedDomPoints ?? 0} DOM points from IndexedDB after exception.`);
     return cachedDomPoints ?? 0;
   }

@@ -1,3 +1,4 @@
+
 import localforage from 'localforage';
 import { Reward } from '@/data/rewards/types';
 import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
@@ -6,12 +7,10 @@ import { logger } from '@/lib/logger';
 
 // Define types for other entities or import them if they exist elsewhere
 export interface Task { id: string; [key: string]: any; }
-// export interface Rule { id: string; [key: string]: any; } // REMOVED: Local, generic Rule interface
 
 // Use imported types for consistency
 export type PunishmentData = ContextPunishmentData;
 export type PunishmentHistory = ContextPunishmentHistoryItem;
-
 
 const DB_NAME = 'appData';
 const REWARDS_STORE_NAME = 'rewards';
@@ -20,9 +19,8 @@ const RULES_STORE_NAME = 'rules';
 const PUNISHMENTS_STORE_NAME = 'punishments';
 const PUNISHMENT_HISTORY_STORE_NAME = 'punishmentHistory';
 const LAST_SYNC_STORE_NAME = 'lastSyncTimes';
-const POINTS_STORE_NAME = 'points'; // For general points
-const DOM_POINTS_STORE_NAME = 'domPoints'; // For dom points
-
+const POINTS_STORE_NAME = 'points';
+const DOM_POINTS_STORE_NAME = 'domPoints';
 
 // Configure localforage instance
 localforage.config({
@@ -39,10 +37,16 @@ const lastSyncStore = localforage.createInstance({ name: DB_NAME, storeName: LAS
 const pointsStore = localforage.createInstance({ name: DB_NAME, storeName: POINTS_STORE_NAME });
 const domPointsStore = localforage.createInstance({ name: DB_NAME, storeName: DOM_POINTS_STORE_NAME });
 
+// Helper function to create user-specific keys
+const getUserKey = (baseKey: string, userId: string | null): string => {
+  return userId ? `${baseKey}_${userId}` : baseKey;
+};
+
 // Rewards specific functions
-export const loadRewardsFromDB = async (): Promise<Reward[] | null> => {
+export const loadRewardsFromDB = async (userId?: string | null): Promise<Reward[] | null> => {
   try {
-    const rewards = await rewardsStore.getItem<Reward[]>('allRewards');
+    const key = getUserKey('allRewards', userId || null);
+    const rewards = await rewardsStore.getItem<Reward[]>(key);
     return rewards;
   } catch (error) {
     logger.error('Error loading rewards from IndexedDB:', error);
@@ -50,108 +54,117 @@ export const loadRewardsFromDB = async (): Promise<Reward[] | null> => {
   }
 };
 
-export const saveRewardsToDB = async (rewards: Reward[]): Promise<void> => {
+export const saveRewardsToDB = async (rewards: Reward[], userId?: string | null): Promise<void> => {
   try {
-    await rewardsStore.setItem('allRewards', rewards);
+    const key = getUserKey('allRewards', userId || null);
+    await rewardsStore.setItem(key, rewards);
   } catch (error) {
     logger.error('Error saving rewards to IndexedDB:', error);
   }
 };
 
-export const getLastSyncTimeForRewards = async (): Promise<string | null> => {
+export const getLastSyncTimeForRewards = async (userId?: string | null): Promise<string | null> => {
   try {
-    return await lastSyncStore.getItem<string>('rewardsLastSync');
+    const key = getUserKey('rewardsLastSync', userId || null);
+    return await lastSyncStore.getItem<string>(key);
   } catch (error) {
     logger.error('Error getting last sync time for rewards:', error);
     return null;
   }
 };
 
-export const setLastSyncTimeForRewards = async (time: string): Promise<void> => {
+export const setLastSyncTimeForRewards = async (time: string, userId?: string | null): Promise<void> => {
   try {
-    await lastSyncStore.setItem('rewardsLastSync', time);
+    const key = getUserKey('rewardsLastSync', userId || null);
+    await lastSyncStore.setItem(key, time);
   } catch (error) {
     logger.error('Error setting last sync time for rewards:', error);
   }
 };
 
 // Tasks specific functions
-export const loadTasksFromDB = async (): Promise<Task[] | null> => {
+export const loadTasksFromDB = async (userId?: string | null): Promise<Task[] | null> => {
   try {
-    return await tasksStore.getItem<Task[]>('allTasks');
+    const key = getUserKey('allTasks', userId || null);
+    return await tasksStore.getItem<Task[]>(key);
   } catch (error) {
     logger.error('Error loading tasks from IndexedDB:', error);
     return null;
   }
 };
 
-export const saveTasksToDB = async (tasks: Task[]): Promise<void> => {
+export const saveTasksToDB = async (tasks: Task[], userId?: string | null): Promise<void> => {
   try {
-    await tasksStore.setItem('allTasks', tasks);
+    const key = getUserKey('allTasks', userId || null);
+    await tasksStore.setItem(key, tasks);
   } catch (error) {
     logger.error('Error saving tasks to IndexedDB:', error);
   }
 };
 
-export const getLastSyncTimeForTasks = async (): Promise<string | null> => {
+export const getLastSyncTimeForTasks = async (userId?: string | null): Promise<string | null> => {
   try {
-    return await lastSyncStore.getItem<string>('tasksLastSync');
+    const key = getUserKey('tasksLastSync', userId || null);
+    return await lastSyncStore.getItem<string>(key);
   } catch (error) {
     logger.error('Error getting last sync time for tasks:', error);
     return null;
   }
 };
 
-export const setLastSyncTimeForTasks = async (time: string): Promise<void> => {
+export const setLastSyncTimeForTasks = async (time: string, userId?: string | null): Promise<void> => {
   try {
-    await lastSyncStore.setItem('tasksLastSync', time);
+    const key = getUserKey('tasksLastSync', userId || null);
+    await lastSyncStore.setItem(key, time);
   } catch (error) {
     logger.error('Error setting last sync time for tasks:', error);
   }
 };
 
 // Rules specific functions
-export const loadRulesFromDB = async (): Promise<Rule[] | null> => {
+export const loadRulesFromDB = async (userId?: string | null): Promise<Rule[] | null> => {
   try {
-    // Use the imported Rule interface here
-    return await rulesStore.getItem<Rule[]>('allRules');
+    const key = getUserKey('allRules', userId || null);
+    return await rulesStore.getItem<Rule[]>(key);
   } catch (error) {
     logger.error('Error loading rules from IndexedDB:', error);
     return null;
   }
 };
 
-export const saveRulesToDB = async (rules: Rule[]): Promise<void> => {
+export const saveRulesToDB = async (rules: Rule[], userId?: string | null): Promise<void> => {
   try {
-    // Use the imported Rule interface here
-    await rulesStore.setItem('allRules', rules);
+    const key = getUserKey('allRules', userId || null);
+    await rulesStore.setItem(key, rules);
   } catch (error) {
     logger.error('Error saving rules to IndexedDB:', error);
   }
 };
 
-export const getLastSyncTimeForRules = async (): Promise<string | null> => {
+export const getLastSyncTimeForRules = async (userId?: string | null): Promise<string | null> => {
   try {
-    return await lastSyncStore.getItem<string>('rulesLastSync');
+    const key = getUserKey('rulesLastSync', userId || null);
+    return await lastSyncStore.getItem<string>(key);
   } catch (error) {
     logger.error('Error getting last sync time for rules:', error);
     return null;
   }
 };
 
-export const setLastSyncTimeForRules = async (time: string): Promise<void> => {
+export const setLastSyncTimeForRules = async (time: string, userId?: string | null): Promise<void> => {
   try {
-    await lastSyncStore.setItem('rulesLastSync', time);
+    const key = getUserKey('rulesLastSync', userId || null);
+    await lastSyncStore.setItem(key, time);
   } catch (error) {
     logger.error('Error setting last sync time for rules:', error);
   }
 };
 
 // Punishments specific functions
-export const loadPunishmentsFromDB = async (): Promise<PunishmentData[] | null> => {
+export const loadPunishmentsFromDB = async (userId?: string | null): Promise<PunishmentData[] | null> => {
   try {
-    // Ensure the loaded data conforms to PunishmentData (which is ContextPunishmentData)
-    const punishments = await punishmentsStore.getItem<PunishmentData[]>('allPunishments');
+    const key = getUserKey('allPunishments', userId || null);
+    const punishments = await punishmentsStore.getItem<PunishmentData[]>(key);
     return punishments;
   } catch (error) {
     logger.error('Error loading punishments from IndexedDB:', error);
@@ -159,38 +172,39 @@ export const loadPunishmentsFromDB = async (): Promise<PunishmentData[] | null> 
   }
 };
 
-export const savePunishmentsToDB = async (punishments: PunishmentData[]): Promise<void> => {
+export const savePunishmentsToDB = async (punishments: PunishmentData[], userId?: string | null): Promise<void> => {
   try {
-    // punishments should be ContextPunishmentData[] here, which has id?: string
-    // Ensure items actually stored have IDs, or handle appropriately if needed
-    await punishmentsStore.setItem('allPunishments', punishments.filter(p => p.id));
+    const key = getUserKey('allPunishments', userId || null);
+    await punishmentsStore.setItem(key, punishments.filter(p => p.id));
   } catch (error) {
     logger.error('Error saving punishments to IndexedDB:', error);
   }
 };
 
-export const getLastSyncTimeForPunishments = async (): Promise<string | null> => {
+export const getLastSyncTimeForPunishments = async (userId?: string | null): Promise<string | null> => {
   try {
-    return await lastSyncStore.getItem<string>('punishmentsLastSync');
+    const key = getUserKey('punishmentsLastSync', userId || null);
+    return await lastSyncStore.getItem<string>(key);
   } catch (error) {
     logger.error('Error getting last sync time for punishments:', error);
     return null;
   }
 };
 
-export const setLastSyncTimeForPunishments = async (time: string): Promise<void> => {
+export const setLastSyncTimeForPunishments = async (time: string, userId?: string | null): Promise<void> => {
   try {
-    await lastSyncStore.setItem('punishmentsLastSync', time);
+    const key = getUserKey('punishmentsLastSync', userId || null);
+    await lastSyncStore.setItem(key, time);
   } catch (error) {
     logger.error('Error setting last sync time for punishments:', error);
   }
 };
 
 // Punishment History specific functions
-export const loadPunishmentHistoryFromDB = async (): Promise<PunishmentHistory[] | null> => {
+export const loadPunishmentHistoryFromDB = async (userId?: string | null): Promise<PunishmentHistory[] | null> => {
   try {
-    // Ensure the loaded data conforms to PunishmentHistory (which is ContextPunishmentHistoryItem)
-    const history = await punishmentHistoryStore.getItem<PunishmentHistory[]>('allPunishmentHistory');
+    const key = getUserKey('allPunishmentHistory', userId || null);
+    const history = await punishmentHistoryStore.getItem<PunishmentHistory[]>(key);
     return history;
   } catch (error) {
     logger.error('Error loading punishment history from IndexedDB:', error);
@@ -198,26 +212,29 @@ export const loadPunishmentHistoryFromDB = async (): Promise<PunishmentHistory[]
   }
 };
 
-export const savePunishmentHistoryToDB = async (history: PunishmentHistory[]): Promise<void> => {
+export const savePunishmentHistoryToDB = async (history: PunishmentHistory[], userId?: string | null): Promise<void> => {
   try {
-    await punishmentHistoryStore.setItem('allPunishmentHistory', history);
+    const key = getUserKey('allPunishmentHistory', userId || null);
+    await punishmentHistoryStore.setItem(key, history);
   } catch (error) {
     logger.error('Error saving punishment history to IndexedDB:', error);
   }
 };
 
 // Points specific functions
-export const savePointsToDB = async (points: number): Promise<void> => {
+export const savePointsToDB = async (points: number, userId?: string | null): Promise<void> => {
   try {
-    await pointsStore.setItem('userPoints', points);
+    const key = getUserKey('userPoints', userId || null);
+    await pointsStore.setItem(key, points);
   } catch (error) {
     logger.error('Error saving points to IndexedDB:', error);
   }
 };
 
-export const loadPointsFromDB = async (): Promise<number | null> => {
+export const loadPointsFromDB = async (userId?: string | null): Promise<number | null> => {
   try {
-    return await pointsStore.getItem<number>('userPoints');
+    const key = getUserKey('userPoints', userId || null);
+    return await pointsStore.getItem<number>(key);
   } catch (error) {
     logger.error('Error loading points from IndexedDB:', error);
     return null;
@@ -225,19 +242,55 @@ export const loadPointsFromDB = async (): Promise<number | null> => {
 };
 
 // Dom Points specific functions
-export const saveDomPointsToDB = async (points: number): Promise<void> => {
+export const saveDomPointsToDB = async (points: number, userId?: string | null): Promise<void> => {
   try {
-    await domPointsStore.setItem('userDomPoints', points);
+    const key = getUserKey('userDomPoints', userId || null);
+    await domPointsStore.setItem(key, points);
   } catch (error) {
     logger.error('Error saving dom points to IndexedDB:', error);
   }
 };
 
-export const loadDomPointsFromDB = async (): Promise<number | null> => {
+export const loadDomPointsFromDB = async (userId?: string | null): Promise<number | null> => {
   try {
-    return await domPointsStore.getItem<number>('userDomPoints');
+    const key = getUserKey('userDomPoints', userId || null);
+    return await domPointsStore.getItem<number>(key);
   } catch (error) {
     logger.error('Error loading dom points from IndexedDB:', error);
     return null;
+  }
+};
+
+// Function to clear all data for a specific user
+export const clearUserDataFromDB = async (userId: string): Promise<void> => {
+  try {
+    const userKeys = [
+      getUserKey('allRewards', userId),
+      getUserKey('allTasks', userId),
+      getUserKey('allRules', userId),
+      getUserKey('allPunishments', userId),
+      getUserKey('allPunishmentHistory', userId),
+      getUserKey('userPoints', userId),
+      getUserKey('userDomPoints', userId),
+      getUserKey('rewardsLastSync', userId),
+      getUserKey('tasksLastSync', userId),
+      getUserKey('rulesLastSync', userId),
+      getUserKey('punishmentsLastSync', userId),
+    ];
+
+    await Promise.all([
+      ...userKeys.map(key => rewardsStore.removeItem(key).catch(() => {})),
+      ...userKeys.map(key => tasksStore.removeItem(key).catch(() => {})),
+      ...userKeys.map(key => rulesStore.removeItem(key).catch(() => {})),
+      ...userKeys.map(key => punishmentsStore.removeItem(key).catch(() => {})),
+      ...userKeys.map(key => punishmentHistoryStore.removeItem(key).catch(() => {})),
+      ...userKeys.map(key => pointsStore.removeItem(key).catch(() => {})),
+      ...userKeys.map(key => domPointsStore.removeItem(key).catch(() => {})),
+      ...userKeys.map(key => lastSyncStore.removeItem(key).catch(() => {})),
+    ]);
+
+    logger.debug(`Cleared IndexedDB data for user: ${userId}`);
+  } catch (error) {
+    logger.error('Error clearing user data from IndexedDB:', error);
   }
 };

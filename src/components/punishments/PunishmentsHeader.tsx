@@ -4,8 +4,7 @@ import { Badge } from '../ui/badge';
 import { DOMBadge } from '../ui/dom-badge';
 import { Box, Coins, Shuffle } from 'lucide-react';
 import { Button } from '../ui/button';
-// import { usePunishments } from '@/contexts/PunishmentsContext'; // Old context - REMOVED
-import { usePunishmentsData } from '@/data/punishments/usePunishmentsData'; // New data hook
+import { usePunishmentsData } from '@/data/punishments/usePunishmentsData';
 import RandomPunishmentSelections from './RandomPunishmentSelections';
 
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -15,19 +14,17 @@ import { useSubRewardTypesCountQuery } from '@/data/rewards/queries/useSubReward
 import { useDomRewardTypesCountQuery } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
 
 const PunishmentsHeader: React.FC = () => {
-  const { punishments } = usePunishmentsData(); // Using new data hook
+  const { punishments } = usePunishmentsData();
   const { subUserId, domUserId } = useUserIds();
 
   const { data: subPoints } = useUserPointsQuery(subUserId);
   const { data: domPoints } = useUserDomPointsQuery(domUserId);
-  const { data: subRewardTypesCount } = useSubRewardTypesCountQuery();
-  const { data: domRewardTypesCount } = useDomRewardTypesCountQuery();
+  const { data: subRewardTypesCount } = useSubRewardTypesCountQuery(subUserId);
+  const { data: domRewardTypesCount } = useDomRewardTypesCountQuery(domUserId);
   
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
-
-  // isLoadingDisplay logic removed
 
   return (
     <div className="flex items-center mb-6">
@@ -46,17 +43,17 @@ const PunishmentsHeader: React.FC = () => {
           style={badgeStyle}
         >
           <Box className="w-3 h-3" />
-          <span>{subRewardTypesCount ?? 0}</span> {/* Submissive "Supply" (Reward Types Count) */}
+          <span>{subRewardTypesCount ?? 0}</span>
         </Badge>
         <Badge 
           className="text-white font-bold px-3 py-1 flex items-center gap-1"
           style={badgeStyle}
         >
           <Coins className="w-3 h-3" />
-          <span>{subPoints ?? 0}</span> {/* Submissive Points */}
+          <span>{subPoints ?? 0}</span>
         </Badge>
-        <DOMBadge icon="box" value={domRewardTypesCount ?? 0} /> {/* Dominant "Supply" (Reward Types Count) */}
-        <DOMBadge icon="crown" value={domPoints ?? 0} /> {/* Dominant Points */}
+        <DOMBadge icon="box" value={domRewardTypesCount ?? 0} />
+        <DOMBadge icon="crown" value={domPoints ?? 0} />
       </div>
       
       <RandomPunishmentSelections
