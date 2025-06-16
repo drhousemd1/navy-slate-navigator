@@ -19,8 +19,8 @@ const RewardsHeader: React.FC<RewardsHeaderProps> = ({ onAddNewReward }) => {
 
   const { data: subPoints, refetch: refetchSubPoints } = useUserPointsQuery(subUserId);
   const { data: domPoints, refetch: refetchDomPoints } = useUserDomPointsQuery(domUserId);
-  const { data: subRewardTypesCount, refetch: refetchSubCount } = useSubRewardTypesCountQuery();
-  const { data: domRewardTypesCount, refetch: refetchDomCount } = useDomRewardTypesCountQuery();
+  const { data: subRewardTypesCount, refetch: refetchSubCount } = useSubRewardTypesCountQuery(subUserId);
+  const { data: domRewardTypesCount, refetch: refetchDomCount } = useDomRewardTypesCountQuery(domUserId);
 
   // Refetch all data when component mounts or when badges are clicked
   React.useEffect(() => {
