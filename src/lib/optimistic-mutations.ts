@@ -77,9 +77,7 @@ export function useCreateOptimisticMutation<
         onSuccessCallback(data, variables);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
-    },
+    // Removed onSettled to prevent race conditions
     ...mutationOptions,
   });
 }
@@ -142,9 +140,7 @@ export function useUpdateOptimisticMutation<
         onSuccessCallback(data, variables);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
-    },
+    // Removed onSettled to prevent race conditions
     ...mutationOptions,
   });
 }
@@ -219,12 +215,7 @@ export function useDeleteOptimisticMutation<
         onSuccessCallback(idDeleted);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
-      if (relatedQueryKey) {
-        queryClient.invalidateQueries({ queryKey: relatedQueryKey });
-      }
-    },
+    // Removed onSettled to prevent race conditions
     ...mutationOptions,
   });
 }
