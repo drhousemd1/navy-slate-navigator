@@ -1,7 +1,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { Reward, CreateRewardVariables } from '../types';
 import { REWARDS_QUERY_KEY } from '../queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -18,7 +18,6 @@ export const useCreateRewardMutation = () => {
         throw new Error("User not authenticated");
       }
 
-      // Process image if present
       const { processedUrl, metadata } = await processImageForSave(variables.background_image_url || null);
 
       const rewardData = {
@@ -45,20 +44,13 @@ export const useCreateRewardMutation = () => {
         ...oldRewards
       ]);
       
-      toast({
-        title: "Reward Created",
-        description: `Successfully created ${newReward.title}`,
-      });
+      toastManager.success("Reward Created", `Successfully created ${newReward.title}`);
       
       logger.debug('[Create Reward] Reward created successfully with image compression');
     },
     onError: (error) => {
       logger.error('[Create Reward] Error creating reward:', error);
-      toast({
-        title: "Failed to Create Reward",
-        description: error.message,
-        variant: "destructive",
-      });
+      toastManager.error("Failed to Create Reward", error.message);
     },
   });
 };

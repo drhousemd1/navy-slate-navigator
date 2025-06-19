@@ -5,6 +5,7 @@ import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward, UpdateRewardVariables } from '@/data/rewards/types';
 import { processImageForSave } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
+import { toastManager } from '@/lib/toastManager';
 
 const REWARDS_QUERY_KEY = ['rewards'];
 
@@ -17,7 +18,6 @@ export const useUpdateReward = () => {
     mutationFn: async (variables: UpdateRewardVariables) => {
       const { id, ...updates } = variables;
       
-      // Process image if present
       const { processedUrl, metadata } = await processImageForSave(updates.background_image_url || null);
       
       const updatesWithImage = {
@@ -42,5 +42,14 @@ export const useUpdateReward = () => {
     },
     entityName: 'Reward',
     idField: 'id',
+    mutationOptions: {
+      onSuccess: () => {
+        // Remove the duplicate toast since optimistic mutation already handles it
+      },
+      onError: (error) => {
+        // Override the default optimistic error toast with our custom one
+        toastManager.error("Failed to Update Reward", error.message);
+      }
+    }
   });
 };

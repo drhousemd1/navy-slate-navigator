@@ -1,7 +1,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -41,19 +41,16 @@ export const useBuySubReward = () => {
           throw new Error("Not enough points to purchase this reward.");
         }
 
-        // Increase supply when buying (you now own one more)
         const newSupply = currentSupply === -1 ? currentSupply : currentSupply + 1;
 
-        // Update reward supply
         const { error: supplyError } = await supabase
           .from('rewards')
           .update({ supply: newSupply })
           .eq('id', rewardId)
-          .eq('user_id', subUserId); // Ensure we only update user's own reward
+          .eq('user_id', subUserId);
 
         if (supplyError) throw supplyError;
 
-        // Update profile points
         const newPoints = currentPoints - cost;
         const { error: profileError } = await supabase
           .from('profiles')
@@ -61,12 +58,10 @@ export const useBuySubReward = () => {
           .eq('id', subUserId);
         
         if (profileError) {
-          // Rollback supply update if points update fails
           await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId).eq('user_id', subUserId);
           throw profileError;
         }
 
-        // Fetch the updated reward
         const { data: updatedReward, error: fetchError } = await supabase
           .from('rewards')
           .select('*')
@@ -94,7 +89,6 @@ export const useBuySubReward = () => {
       const previousPoints = queryClient.getQueryData<number>(userPointsQueryKey);
       const previousSubCount = queryClient.getQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY]);
 
-      // Optimistically increase supply when buying
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
@@ -103,37 +97,28 @@ export const useBuySubReward = () => {
         )
       );
 
-      // Optimistically update user points
       queryClient.setQueryData<number>(userPointsQueryKey, (oldUserPoints = 0) =>
         (oldUserPoints || 0) - variables.cost
       );
 
-      // Optimistically update sub reward count
       queryClient.setQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY], (old = 0) => old + 1);
       
       return { previousRewards, previousPoints, previousSubCount };
     },
     onSuccess: async (data, variables) => {
-      // Immediately update the cache with the actual data from the server
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
       
-      // Invalidate all related queries to ensure fresh data
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] }),
         queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] }),
         queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
       ]);
       
-      // Always show toast on successful purchase
-      toast({
-        title: "Reward Purchased",
-        description: `You bought ${data.title}!`,
-      });
+      toastManager.success("Reward Purchased", `You bought ${data.title}!`);
     },
     onError: (error: Error, variables, context) => {
-      // Restore previous state on error
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
@@ -145,14 +130,9 @@ export const useBuySubReward = () => {
         queryClient.setQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY], context.previousSubCount);
       }
 
-      toast({
-        title: "Purchase Failed",
-        description: `Failed to purchase reward: ${error.message}`,
-        variant: "destructive",
-      });
+      toastManager.error("Purchase Failed", `Failed to purchase reward: ${error.message}`);
     },
     onSettled: async (data, error, variables) => {
-      // Final invalidation to ensure consistency - DON'T invalidate REWARDS_QUERY_KEY to prevent rollback
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] }),
         queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] })

@@ -1,7 +1,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { Reward } from '../types';
 import { useUserIds } from '@/contexts/UserIdsContext';
 
@@ -19,7 +19,7 @@ interface RedeemDomRewardOptimisticContext {
 
 const recordRewardUsage = async (rewardId: string, userId: string) => {
   const now = new Date();
-  const dayOfWeek = (now.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0 format
+  const dayOfWeek = (now.getDay() + 6) % 7;
   const startOfWeek = new Date(now);
   startOfWeek.setDate(now.getDate() - now.getDay() + 1);
   const weekNumber = `${startOfWeek.getFullYear()}-W${Math.ceil(startOfWeek.getDate() / 7)}`;
@@ -57,7 +57,6 @@ export const useRedeemDomReward = () => {
 
       if (supplyError) throw supplyError;
 
-      // Record usage in reward_usage table
       await recordRewardUsage(rewardId, domUserId);
 
       const { data: updatedReward, error: fetchError } = await supabase
@@ -88,21 +87,16 @@ export const useRedeemDomReward = () => {
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
-      toast({ 
-        title: "Failed to Use Reward", 
-        description: err.message, 
-        variant: "destructive" 
-      });
+      toastManager.error("Failed to Use Reward", err.message);
     },
     onSuccess: (data, variables) => {
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
       
-      // Invalidate usage query to refresh the tracker
       queryClient.invalidateQueries({ queryKey: ['reward-usage', variables.rewardId] });
       
-      toast({ title: "Reward Used!", description: `You used ${data.title}.` });
+      toastManager.success("Reward Used!", `You used ${data.title}.`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });

@@ -1,9 +1,8 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 
 export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
   const [loading, setLoading] = useState(false);
@@ -14,7 +13,6 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
     try {
       setLoading(true);
       
-      // Generate a unique 8-character code
       const linkCode = Math.random().toString(36).substring(2, 10).toUpperCase();
       
       const { error } = await supabase
@@ -24,7 +22,6 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
 
       if (error) throw error;
 
-      // Update user state
       setUser({
         ...user,
         user_metadata: {
@@ -38,7 +35,7 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       logger.error('Error generating link code:', errorMessage);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toastManager.error('Error', errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -51,7 +48,6 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
     try {
       setLoading(true);
       
-      // Find partner by link code
       const { data: partnerProfile, error: findError } = await supabase
         .from('profiles')
         .select('id')
@@ -59,16 +55,15 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
         .single();
 
       if (findError || !partnerProfile) {
-        toast({ title: 'Error', description: 'Invalid link code. Please check and try again.', variant: 'destructive' });
+        toastManager.error('Error', 'Invalid link code. Please check and try again.');
         return false;
       }
 
       if (partnerProfile.id === user.id) {
-        toast({ title: 'Error', description: 'You cannot link to yourself.', variant: 'destructive' });
+        toastManager.error('Error', 'You cannot link to yourself.');
         return false;
       }
 
-      // Check if either user is already linked
       const { data: currentUserProfile } = await supabase
         .from('profiles')
         .select('linked_partner_id')
@@ -82,16 +77,15 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
         .single();
 
       if (currentUserProfile?.linked_partner_id) {
-        toast({ title: 'Error', description: 'You are already linked to a partner. Please unlink first.', variant: 'destructive' });
+        toastManager.error('Error', 'You are already linked to a partner. Please unlink first.');
         return false;
       }
 
       if (partnerCurrentProfile?.linked_partner_id) {
-        toast({ title: 'Error', description: 'That user is already linked to someone else.', variant: 'destructive' });
+        toastManager.error('Error', 'That user is already linked to someone else.');
         return false;
       }
 
-      // Link both users
       const { error: linkError1 } = await supabase
         .from('profiles')
         .update({ linked_partner_id: partnerProfile.id })
@@ -106,7 +100,6 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
         throw linkError1 || linkError2;
       }
 
-      // Update user state
       setUser({
         ...user,
         user_metadata: {
@@ -115,12 +108,12 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
         }
       });
 
-      toast({ title: 'Success', description: 'Successfully linked to partner!' });
+      toastManager.success('Success', 'Successfully linked to partner!');
       return true;
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       logger.error('Error linking to partner:', errorMessage);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toastManager.error('Error', errorMessage);
       return false;
     } finally {
       setLoading(false);
@@ -133,7 +126,6 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
     try {
       setLoading(true);
       
-      // Get current partner ID
       const { data: currentProfile } = await supabase
         .from('profiles')
         .select('linked_partner_id')
@@ -143,11 +135,10 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
       const partnerId = currentProfile?.linked_partner_id;
       
       if (!partnerId) {
-        toast({ title: 'Info', description: 'You are not currently linked to anyone.' });
+        toastManager.info('Info', 'You are not currently linked to anyone.');
         return false;
       }
 
-      // Unlink both users
       const { error: unlinkError1 } = await supabase
         .from('profiles')
         .update({ linked_partner_id: null })
@@ -162,7 +153,6 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
         throw unlinkError1 || unlinkError2;
       }
 
-      // Update user state
       setUser({
         ...user,
         user_metadata: {
@@ -171,12 +161,12 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
         }
       });
 
-      toast({ title: 'Success', description: 'Successfully unlinked from partner.' });
+      toastManager.success('Success', 'Successfully unlinked from partner.');
       return true;
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       logger.error('Error unlinking from partner:', errorMessage);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toastManager.error('Error', errorMessage);
       return false;
     } finally {
       setLoading(false);
@@ -197,7 +187,6 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
       
       if (!partnerId) return null;
 
-      // Get partner's email from auth.users through profiles
       const { data: partnerData } = await supabase
         .from('profiles')
         .select('id')
@@ -205,8 +194,7 @@ export const usePartnerLinking = (user: any, setUser: (user: any) => void) => {
         .single();
 
       if (partnerData) {
-        // For now, just return basic info - we can't easily get email from auth.users
-        return { email: 'Partner' }; // Placeholder since we can't access auth.users email
+        return { email: 'Partner' };
       }
 
       return null;

@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth';
 import { Copy, Users, Unlink, RefreshCw } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 
 const PartnerLinkingSection: React.FC = () => {
   const { 
@@ -24,7 +23,6 @@ const PartnerLinkingSection: React.FC = () => {
   const [isLinked, setIsLinked] = useState(false);
 
   useEffect(() => {
-    // Initialize component state
     const currentCode = getCurrentLinkCode();
     const partnerId = getLinkedPartnerId();
     
@@ -48,13 +46,13 @@ const PartnerLinkingSection: React.FC = () => {
   const handleCopyCode = () => {
     if (linkCode) {
       navigator.clipboard.writeText(linkCode);
-      toast({ title: 'Copied!', description: 'Link code copied to clipboard.' });
+      toastManager.success('Copied!', 'Link code copied to clipboard.');
     }
   };
 
   const handleLinkToPartner = async () => {
     if (!partnerCode.trim()) {
-      toast({ title: 'Error', description: 'Please enter a link code.', variant: 'destructive' });
+      toastManager.error('Error', 'Please enter a link code.');
       return;
     }
 
@@ -62,7 +60,6 @@ const PartnerLinkingSection: React.FC = () => {
     if (success) {
       setPartnerCode('');
       setIsLinked(true);
-      // Refresh partner info
       const info = await getLinkedPartnerInfo();
       setLinkedPartner(info);
     }
@@ -83,7 +80,6 @@ const PartnerLinkingSection: React.FC = () => {
         Partner Linking
       </h2>
 
-      {/* Current Link Code Section */}
       <div>
         <Label className="block text-sm font-medium text-gray-300 mb-2">Your Link Code</Label>
         <p className="text-sm text-gray-400 mb-3">Share this code with your partner to connect your accounts.</p>
@@ -115,7 +111,6 @@ const PartnerLinkingSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Link to Partner Section */}
       {!isLinked ? (
         <div>
           <Label htmlFor="partnerCode" className="block text-sm font-medium text-gray-300 mb-2">
@@ -146,7 +141,6 @@ const PartnerLinkingSection: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* Linked Partner Status */
         <div>
           <Label className="block text-sm font-medium text-gray-300 mb-2">Partner Status</Label>
           <div className="bg-green-900/30 border border-green-700 text-green-300 px-4 py-3 rounded mb-4">

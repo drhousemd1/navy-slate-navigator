@@ -4,7 +4,7 @@ import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { Label } from '@/components/ui/label';
 import { Camera, Trash2, LogOut } from 'lucide-react';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
@@ -61,12 +61,12 @@ const Profile: React.FC = () => {
     setError(null);
     try {
       await updateNickname(nickname.trim());
-      toast({ title: 'Success', description: 'Nickname updated successfully.' });
+      toastManager.success('Success', 'Nickname updated successfully.');
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       logger.error('Error updating nickname:', errorMessage);
       setError(errorMessage);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toastManager.error('Error', errorMessage);
     } finally {
       setLoadingNickname(false);
     }
@@ -76,7 +76,6 @@ const Profile: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setNewProfileImageFile(file);
-      // Preview image
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result as string);
@@ -90,12 +89,11 @@ const Profile: React.FC = () => {
     setLoadingProfileImage(true);
     setError(null);
     try {
-      // Use the new function for uploading
       const newImageUrl = await uploadProfileImageAndUpdateState(newProfileImageFile);
       if (newImageUrl) {
         setProfileImage(newImageUrl); 
         setNewProfileImageFile(null); 
-        toast({ title: 'Success', description: 'Profile image updated successfully.' });
+        toastManager.success('Success', 'Profile image updated successfully.');
       } else {
         logger.warn('Profile Page: uploadProfileImageAndUpdateState did not return a new image URL as expected, but did not throw.');
       }
@@ -103,7 +101,7 @@ const Profile: React.FC = () => {
       const errorMessage = getErrorMessage(error);
       logger.error('Error uploading profile image:', errorMessage);
       setError(errorMessage);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toastManager.error('Error', errorMessage);
     } finally {
       setLoadingProfileImage(false);
     }
@@ -114,16 +112,15 @@ const Profile: React.FC = () => {
     setLoadingProfileImage(true); 
     setError(null);
     try {
-      // Use the new function for deleting
       await deleteUserProfileImage(); 
       setProfileImage(null); 
       setNewProfileImageFile(null); 
-      toast({ title: 'Success', description: 'Profile image removed.' });
+      toastManager.success('Success', 'Profile image removed.');
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       logger.error('Error deleting profile image:', errorMessage);
       setError(errorMessage);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toastManager.error('Error', errorMessage);
     } finally {
       setLoadingProfileImage(false);
       setIsDeleteAvatarDialogOpen(false);
@@ -136,15 +133,14 @@ const Profile: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !deleteAccount) return; // Check if deleteAccount is available
+    if (!user || !deleteAccount) return;
     try {
       await deleteAccount();
-      toast({ title: "Account Deletion Initiated", description: "Your account is scheduled for deletion. You will be logged out." });
-      // signOut is called within deleteAccount if successful, or handled by onAuthStateChange
+      toastManager.success("Account Deletion Initiated", "Your account is scheduled for deletion. You will be logged out.");
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       logger.error('Error deleting account:', errorMessage);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toastManager.error('Error', errorMessage);
     } finally {
       setIsDeleteAccountDialogOpen(false);
     }
@@ -154,12 +150,12 @@ const Profile: React.FC = () => {
     if (!user) return;
     try {
       await updateUserRole(newRole);
-      setCurrentRole(newRole); // Update local state to reflect change immediately
-      toast({ title: 'Success', description: `Role updated to ${newRole}.` });
+      setCurrentRole(newRole);
+      toastManager.success('Success', `Role updated to ${newRole}.`);
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       logger.error('Error updating role:', errorMessage);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toastManager.error('Error', errorMessage);
     }
   };
 
