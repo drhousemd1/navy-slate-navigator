@@ -1,5 +1,5 @@
 
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode } from 'react';
 import MobileNavbar from './MobileNavbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
@@ -18,7 +18,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { getNickname, getProfileImage, getUserRole } = useAuth();
-  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   // Only show "Add" button for specific routes
   const shouldShowAddButton = 
@@ -39,15 +38,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   // Get profile image and nickname for the avatar directly from context
   const nickname = getNickname();
   const userRole = getUserRole();
-
-  // Get profile image from context - no direct Supabase calls
-  useEffect(() => {
-    const contextImage = getProfileImage();
-    if (contextImage) {
-      logger.debug('Using profile image from context:', contextImage);
-      setProfileImage(contextImage);
-    }
-  }, [getProfileImage]);
+  const profileImage = getProfileImage();
 
   // Determine if we're on the rewards page, tasks page, punishments page, or rules page for special styling
   const isRewardsPage = location.pathname === '/rewards';
