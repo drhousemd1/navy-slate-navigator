@@ -43,9 +43,6 @@ export const useUpdateReward = () => {
     entityName: 'Reward',
     idField: 'id',
     mutationOptions: {
-      onSuccess: () => {
-        // Remove the duplicate toast since optimistic mutation already handles it
-      },
       onError: (error) => {
         // Override the default optimistic error toast with our custom one
         toastManager.error("Failed to Update Reward", error.message);
