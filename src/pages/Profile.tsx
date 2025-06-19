@@ -231,7 +231,7 @@ const Profile: React.FC = () => {
                 placeholder="Enter your nickname"
               />
             </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loadingNickname}>
+            <Button type="submit" className="w-full bg-gray-600 text-white hover:bg-gray-500 hover:text-white" disabled={loadingNickname}>
               {loadingNickname ? 'Saving...' : 'Save Nickname'}
             </Button>
           </form>
