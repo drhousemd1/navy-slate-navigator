@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -192,17 +191,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const onSubmitWrapped = async (values: RuleFormValues) => {
     setLoading(true);
     try {
-      logger.debug('[RuleEditorForm] Submitting rule with values:', {
-        hasImage: !!values.background_image_url,
-        hasImageMeta: !!values.image_meta,
-        imagePreview: !!imagePreview
-      });
-
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
-        // Use the form value which was set by handleImageUpload
-        background_image_url: values.background_image_url,
+        // EXACT SAME PATTERN AS TASKS PAGE - use imagePreview if available, otherwise form value
+        background_image_url: imagePreview || values.background_image_url,
         image_meta: values.image_meta,
         // Set icon data separately 
         icon_name: selectedIconName || undefined,
