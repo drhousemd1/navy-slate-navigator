@@ -1,6 +1,6 @@
 
 import { useMutation, UseMutationOptions, QueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { v4 as uuidv4 } from 'uuid';
 
 // Context for optimistic updates
@@ -65,14 +65,14 @@ export function useCreateOptimisticMutation<
       if (context?.previousData) {
         queryClient.setQueryData<TItem[]>(queryKey, context.previousData);
       }
-      toast({ title: `Error creating ${entityName}`, description: err.message, variant: 'destructive' });
+      toastManager.error(`Error creating ${entityName}`, err.message);
     },
     onSuccess: async (data, variables, context) => { // data is the actual item from server
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) => {
         const filteredList = old.filter(item => !(context?.optimisticId && item[idField] === context.optimisticId));
         return [data, ...filteredList];
       });
-      toast({ title: `${entityName} created successfully!` });
+      toastManager.success(`${entityName} created successfully!`);
       if (onSuccessCallback) {
         await onSuccessCallback(data, variables);
       }
@@ -133,13 +133,13 @@ export function useUpdateOptimisticMutation<
       if (context?.previousData) {
         queryClient.setQueryData<TItem[]>(queryKey, context.previousData);
       }
-      toast({ title: `Error updating ${entityName}`, description: err.message, variant: 'destructive' });
+      toastManager.error(`Error updating ${entityName}`, err.message);
     },
     onSuccess: async (data, variables, _context) => { // data is the actual item from server
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) =>
         old.map(item => (item[idField] === data[idField as keyof TItem] ? data : item))
       );
-      toast({ title: `${entityName} updated successfully!` });
+      toastManager.success(`${entityName} updated successfully!`);
       if (onSuccessCallback) {
         await onSuccessCallback(data, variables);
       }
@@ -215,10 +215,10 @@ export function useDeleteOptimisticMutation<
       if (context?.previousHistoryData && relatedQueryKey) {
         queryClient.setQueryData<any[]>(relatedQueryKey, context.previousHistoryData);
       }
-      toast({ title: `Error deleting ${entityName}`, description: err.message, variant: 'destructive' });
+      toastManager.error(`Error deleting ${entityName}`, err.message);
     },
     onSuccess: async (_data, idDeleted, _context) => {
-      toast({ title: `${entityName} deleted successfully!` });
+      toastManager.success(`${entityName} deleted successfully!`);
       if (onSuccessCallback) {
         await onSuccessCallback(idDeleted);
       }

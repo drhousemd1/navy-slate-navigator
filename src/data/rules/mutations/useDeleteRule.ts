@@ -5,7 +5,7 @@ import { Rule } from '@/data/interfaces/Rule';
 import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
 import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/indexedDB/useIndexedDB';
 import { RULES_QUERY_KEY } from '../queries';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
 import { useUserIds } from '@/contexts/UserIdsContext';
 
@@ -32,7 +32,7 @@ export const useDeleteRule = () => {
         logger.debug('[useDeleteRule onSuccessCallback] IndexedDB updated after deleting rule.');
       } catch (error) {
         logger.error('[useDeleteRule onSuccessCallback] Error updating IndexedDB:', error);
-        toast({ variant: "destructive", title: "Local Update Error", description: "Rule deleted on server, but failed to update local data." });
+        toastManager.error("Local Update Error", "Rule deleted on server, but failed to update local data.");
       }
     },
     mutationOptions: {}

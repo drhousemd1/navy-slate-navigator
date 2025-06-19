@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
@@ -104,11 +103,7 @@ const RulesPageContent: React.FC = () => {
       if (success) {
         setCurrentRule(null);
         setIsEditorOpen(false);
-        
-        toast({
-          title: "Success",
-          description: "Rule deleted successfully!",
-        });
+        // Toast is now handled by the optimistic mutation - no duplicate toast here
       }
     } catch (err: unknown) {
       // Error handling is already done in useRulesData
