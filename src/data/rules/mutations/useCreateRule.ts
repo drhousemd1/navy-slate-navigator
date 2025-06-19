@@ -5,7 +5,7 @@ import { Rule } from '@/data/interfaces/Rule';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/indexedDB/useIndexedDB';
 import { RULES_QUERY_KEY } from '../queries';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/contexts/auth';
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -85,7 +85,7 @@ export const useCreateRule = () => {
         logger.debug('[useCreateRule onSuccessCallback] IndexedDB updated with new rule.');
       } catch (error) {
         logger.error('[useCreateRule onSuccessCallback] Error updating IndexedDB:', error);
-        toast({ variant: "destructive", title: "Local Save Error", description: "Rule created on server, but failed to save locally." });
+        toastManager.error("Local Save Error", "Rule created on server, but failed to save locally.");
       }
     },
     mutationOptions: {}

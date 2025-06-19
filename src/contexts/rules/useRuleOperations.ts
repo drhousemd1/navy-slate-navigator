@@ -1,5 +1,5 @@
+
 import { useState, useCallback } from 'react';
-import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule'; // This is for the state and return types
 import { RuleFormValues } from '@/data/rules/types'; // This is for input to mutations
 import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
@@ -32,21 +32,14 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
       // newRule might be undefined if mutation doesn't return on success or type is different
       // For now, we assume it returns Rule. If not, the return type of createRule needs adjustment.
       if (newRule) { 
-        toast({
-          title: "Rule Created",
-          description: `${ruleData.title} has been added to your rules.`,
-        });
+        // Toast is now handled by the optimistic mutation - no duplicate toast here
         // If rules state needs to be updated manually:
         // setRules(prevRules => [...prevRules, newRule]); 
         return newRule;
       }
     } catch (error: unknown) { 
       logger.error('Error creating rule:', getErrorMessage(error)); // Use getErrorMessage
-      toast({
-        title: 'Error',
-        description: `Failed to create rule: ${getErrorMessage(error)}`,
-        variant: 'destructive',
-      });
+      // Error handling is already done in useCreateRule - no duplicate toast here
       // throw error; // Re-throwing might be desired depending on caller's needs
     }
     return undefined; // Explicitly return undefined if creation fails or no new rule
@@ -59,21 +52,14 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
       const updatedRule: Rule = await updateRuleMutation({ id: ruleId, ...updates });
       
       if (updatedRule) {
-        toast({
-          title: "Rule Updated",
-          description: `${updates.title || 'Rule'} has been updated.`,
-        });
+        // Toast is now handled by the optimistic mutation - no duplicate toast here
         // If rules state needs to be updated manually:
         // setRules(prevRules => prevRules.map(r => r.id === ruleId ? updatedRule : r));
         return updatedRule;
       }
     } catch (error: unknown) { 
       logger.error('Error updating rule:', getErrorMessage(error)); // Use getErrorMessage
-      toast({
-        title: 'Error',
-        description: `Failed to update rule: ${getErrorMessage(error)}`,
-        variant: 'destructive',
-      });
+      // Error handling is already done in useUpdateRule - no duplicate toast here
       // throw error;
     }
     return undefined; // Explicitly return undefined if update fails
@@ -84,20 +70,13 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
     try {
       await deleteRuleMutation(ruleId);
       
-      toast({
-        title: "Rule Deleted",
-        description: "The rule has been deleted.",
-      });
+      // Toast is now handled by the optimistic mutation - no duplicate toast here
       // If rules state needs to be updated manually:
       // setRules(prevRules => prevRules.filter(r => r.id !== ruleId));
       return true;
     } catch (error: unknown) { 
       logger.error('Error deleting rule:', getErrorMessage(error)); // Use getErrorMessage
-      toast({
-        title: 'Error',
-        description: `Failed to delete rule: ${getErrorMessage(error)}`,
-        variant: 'destructive',
-      });
+      // Error handling is already done in useDeleteRule - no duplicate toast here
       // throw error;
       return false;
     }

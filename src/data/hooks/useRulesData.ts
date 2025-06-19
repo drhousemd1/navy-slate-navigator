@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { useRules } from '../rules/queries';
 import { Rule } from '@/data/interfaces/Rule';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { saveRulesToDB, loadRulesFromDB } from '@/data/indexedDB/useIndexedDB';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -93,11 +93,7 @@ export const useRulesData = () => {
     } catch (e: unknown) {
       const errorMessage = getErrorMessage(e);
       logger.error('[useRulesData] Error saving rule:', errorMessage);
-      toast({
-        title: 'Error Saving Rule',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      toastManager.error('Error Saving Rule', errorMessage);
       throw e;
     }
   };
@@ -109,11 +105,7 @@ export const useRulesData = () => {
     } catch (e: unknown) {
       const errorMessage = getErrorMessage(e);
       logger.error('[useRulesData] Error deleting rule:', errorMessage);
-      toast({
-        title: 'Error Deleting Rule',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      toastManager.error('Error Deleting Rule', errorMessage);
       return false;
     }
   };
@@ -151,19 +143,12 @@ export const useRulesData = () => {
         usage_data: newUsageData as number[] & {toJSON?: () => any},
       });
 
-      toast({
-        title: "Rule Marked Broken",
-        description: `${rule.title} marked as broken. Violation recorded and usage updated.`,
-      });
+      toastManager.success("Rule Marked Broken", `${rule.title} marked as broken. Violation recorded and usage updated.`);
 
     } catch (e: unknown) {
       const errorMessage = getErrorMessage(e);
       logger.error('[useRulesData] Error marking rule broken:', errorMessage);
-      toast({
-        title: 'Error',
-        description: `Failed to mark rule "${rule.title}" as broken: ${errorMessage}`,
-        variant: 'destructive',
-      });
+      toastManager.error('Error', `Failed to mark rule "${rule.title}" as broken: ${errorMessage}`);
       throw e;
     }
   };
