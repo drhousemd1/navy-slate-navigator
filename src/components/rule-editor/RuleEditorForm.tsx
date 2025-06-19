@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -9,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { Rule } from '@/data/interfaces/Rule';
 import ColorPickerField from '../task-editor/ColorPickerField';
-import RuleImageSection from './RuleImageSection';
+import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
@@ -260,7 +259,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Background Image</FormLabel>
-          <RuleImageSection
+          <BackgroundImageSelector
             control={control}
             imagePreview={imagePreview}
             initialPosition={{ 
