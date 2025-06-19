@@ -23,6 +23,7 @@ export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
         highlight_effect: ruleData.highlight_effect,
         focal_point_x: ruleData.focal_point_x,
         focal_point_y: ruleData.focal_point_y,
+        image_meta: ruleData.image_meta,
         updated_at: new Date().toISOString()
       })
       .eq('id', ruleData.id)
@@ -59,6 +60,7 @@ export const saveRuleToDb = async (ruleData: Partial<Rule>): Promise<Rule> => {
       ...(ruleWithoutId.background_image_url && { background_image_url: ruleWithoutId.background_image_url }),
       ...(ruleWithoutId.icon_url && { icon_url: ruleWithoutId.icon_url }),
       ...(ruleWithoutId.icon_name && { icon_name: ruleWithoutId.icon_name }),
+      ...(ruleWithoutId.image_meta && { image_meta: ruleWithoutId.image_meta }),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       user_id: (await supabase.auth.getUser()).data.user?.id,
