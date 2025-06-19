@@ -86,6 +86,7 @@ export const useRulesData = () => {
           highlight_effect: ruleData.highlight_effect === undefined ? false : ruleData.highlight_effect,
           focal_point_x: ruleData.focal_point_x === undefined ? 50 : ruleData.focal_point_x,
           focal_point_y: ruleData.focal_point_y === undefined ? 50 : ruleData.focal_point_y,
+          image_meta: ruleData.image_meta,
         };
         return await createRuleMutation(createVariables);
       }
