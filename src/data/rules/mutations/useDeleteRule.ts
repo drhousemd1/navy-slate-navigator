@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -35,6 +34,8 @@ export const useDeleteRule = () => {
         toastManager.error("Local Update Error", "Rule deleted on server, but failed to update local data.");
       }
     },
-    mutationOptions: {}
+    mutationOptions: {
+      onSuccess: () => {} // Override optimistic success toast
+    }
   });
 };

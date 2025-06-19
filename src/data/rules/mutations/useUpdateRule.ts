@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -61,6 +60,8 @@ export const useUpdateRule = () => {
         toastManager.error("Local Save Error", "Rule updated on server, but failed to save changes locally.");
       }
     },
-    mutationOptions: {}
+    mutationOptions: {
+      onSuccess: () => {} // Override optimistic success toast
+    }
   });
 };

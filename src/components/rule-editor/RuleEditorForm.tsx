@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -8,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { Rule } from '@/data/interfaces/Rule';
+import { RuleFormValues } from '@/data/rules/types';
 import ColorPickerField from '../task-editor/ColorPickerField';
 import RuleImageSection from './RuleImageSection';
 import IconSelector from '../task-editor/IconSelector';
@@ -17,23 +17,6 @@ import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
 import { toastManager } from '@/lib/toastManager';
 import { handleImageUpload } from '@/utils/image/ruleIntegration';
-
-interface RuleFormValues {
-  title: string;
-  description: string;
-  background_image_url?: string;
-  background_opacity: number;
-  icon_url?: string;
-  icon_name?: string;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  icon_color: string;
-  highlight_effect: boolean;
-  focal_point_x: number;
-  focal_point_y: number;
-  image_meta?: any;
-}
 
 interface RuleEditorFormProps {
   ruleData?: Rule;
@@ -125,7 +108,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         logger.debug('[RuleEditorForm] Image upload completed successfully');
       } catch (error) {
         logger.error('[RuleEditorForm] Error handling image upload:', error);
-        toastManager.error("Error", "Failed to process image. Please try again.");
       }
     }
   };
@@ -201,7 +183,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       await clearPersistedState();
     } catch (error) {
       logger.error('[RuleEditorForm] Error saving rule:', error);
-      toastManager.error("Error", "Failed to save rule. Please try again.");
     } finally {
       setLoading(false);
     }
