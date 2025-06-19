@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useRules } from '../rules/queries';
 import { Rule } from '@/data/interfaces/Rule';
@@ -93,7 +92,7 @@ export const useRulesData = () => {
     } catch (e: unknown) {
       const errorMessage = getErrorMessage(e);
       logger.error('[useRulesData] Error saving rule:', errorMessage);
-      toastManager.error('Error Saving Rule', errorMessage);
+      // Remove duplicate error toast - let calling component handle it
       throw e;
     }
   };
@@ -105,7 +104,7 @@ export const useRulesData = () => {
     } catch (e: unknown) {
       const errorMessage = getErrorMessage(e);
       logger.error('[useRulesData] Error deleting rule:', errorMessage);
-      toastManager.error('Error Deleting Rule', errorMessage);
+      // Remove duplicate error toast - let calling component handle it
       return false;
     }
   };

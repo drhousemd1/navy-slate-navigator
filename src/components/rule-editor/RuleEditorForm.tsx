@@ -192,15 +192,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setSelectedIconName(null);
       setValue('icon_url', iconUrl);
       setValue('icon_name', undefined);
-      
-      toastManager.success("Custom icon selected", "Custom icon has been applied to the rule");
     } else {
       setSelectedIconName(iconName);
       setIconPreview(null);
       setValue('icon_name', iconName);
       setValue('icon_url', undefined);
-      
-      toastManager.success("Icon selected", `${iconName} icon selected`);
     }
   };
   
@@ -217,6 +213,9 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
+        // Keep the background image from form values
+        background_image_url: values.background_image_url,
+        // Set icon data separately 
         icon_name: selectedIconName || undefined,
         icon_url: iconPreview || undefined,
       };

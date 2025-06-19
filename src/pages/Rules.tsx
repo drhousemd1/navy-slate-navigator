@@ -87,7 +87,7 @@ const RulesPageContent: React.FC = () => {
       setIsEditorOpen(false);
       setCurrentRule(null);
       
-      toastManager.success("Success", ruleData.id ? "Rule updated successfully!" : "Rule created successfully!");
+      // Remove duplicate success toast - let optimistic mutations handle it
     } catch (err: unknown) {
       // Error handling is already done in useRulesData
       logger.error('Error in handleSaveRule:', getErrorMessage(err));
