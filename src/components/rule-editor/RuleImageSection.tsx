@@ -2,25 +2,7 @@
 import React from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-
-interface RuleFormValues {
-  title: string;
-  description: string;
-  points_deducted: number;
-  dom_points_deducted: number;
-  background_image_url?: string;
-  background_opacity: number;
-  icon_url?: string;
-  icon_name?: string;
-  title_color: string;
-  subtext_color: string;
-  calendar_color: string;
-  icon_color: string;
-  highlight_effect: boolean;
-  focal_point_x: number;
-  focal_point_y: number;
-  image_meta?: any;
-}
+import { RuleFormValues } from '@/data/rules/types';
 
 interface RuleImageSectionProps {
   control: Control<RuleFormValues>;
