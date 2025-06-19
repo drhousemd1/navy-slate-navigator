@@ -6,8 +6,6 @@ export interface Rule {
   id: string;
   title: string;
   description?: string | null;
-  points_deducted?: number;
-  dom_points_deducted?: number;
   priority: 'low' | 'medium' | 'high';
   background_image_url?: string | null;
   background_opacity: number;

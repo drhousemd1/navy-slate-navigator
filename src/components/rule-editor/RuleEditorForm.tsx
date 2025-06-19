@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -7,7 +8,6 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
 import { Rule } from '@/data/interfaces/Rule';
-import NumberField from '../task-editor/NumberField';
 import ColorPickerField from '../task-editor/ColorPickerField';
 import RuleImageSection from './RuleImageSection';
 import IconSelector from '../task-editor/IconSelector';
@@ -21,8 +21,6 @@ import { handleImageUpload } from '@/utils/image/ruleIntegration';
 interface RuleFormValues {
   title: string;
   description: string;
-  points_deducted: number;
-  dom_points_deducted: number;
   background_image_url?: string;
   background_opacity: number;
   icon_url?: string;
@@ -60,8 +58,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     defaultValues: {
       title: '',
       description: '',
-      points_deducted: 5,
-      dom_points_deducted: 0,
       background_image_url: undefined,
       background_opacity: 100,
       icon_url: undefined,
@@ -89,8 +85,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       reset({
         title: ruleData.title || '',
         description: ruleData.description || '',
-        points_deducted: ruleData.points_deducted || 5,
-        dom_points_deducted: ruleData.dom_points_deducted || 0,
         background_image_url: ruleData.background_image_url || undefined,
         background_opacity: ruleData.background_opacity || 100,
         icon_url: ruleData.icon_url || undefined,
@@ -109,7 +103,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setSelectedIconName(ruleData.icon_name || null);
     } else {
       reset({
-        title: '', description: '', points_deducted: 5, dom_points_deducted: 0,
+        title: '', description: '',
         background_image_url: undefined, background_opacity: 100,
         icon_url: undefined, icon_name: undefined,
         title_color: '#FFFFFF', subtext_color: '#8E9196', calendar_color: '#7E69AB',
@@ -226,28 +220,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     setIsDeleteDialogOpen(false);
   };
 
-  const incrementPoints = () => {
-    setValue('points_deducted', (watch('points_deducted') || 0) + 1);
-  };
-
-  const decrementPoints = () => {
-    const currentPoints = watch('points_deducted') || 0;
-    if (currentPoints > 0) {
-      setValue('points_deducted', currentPoints - 1);
-    }
-  };
-  
-  const incrementDomPoints = () => {
-    setValue('dom_points_deducted', (watch('dom_points_deducted') || 0) + 1);
-  };
-
-  const decrementDomPoints = () => {
-    const currentDomPoints = watch('dom_points_deducted') || 0;
-    if (currentDomPoints > 0) {
-      setValue('dom_points_deducted', currentDomPoints - 1);
-    }
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit(onSubmitWrapped)} className="space-y-6">
@@ -285,25 +257,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             </FormItem>
           )}
         />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <NumberField
-            control={control}
-            name="points_deducted"
-            label="Points Deducted (Sub)"
-            onIncrement={incrementPoints}
-            onDecrement={decrementPoints}
-            minValue={0}
-          />
-          <NumberField
-            control={control}
-            name="dom_points_deducted"
-            label="Points Deducted (Dom)"
-            onIncrement={incrementDomPoints}
-            onDecrement={decrementDomPoints}
-            minValue={0}
-          />
-        </div>
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Background Image</FormLabel>

@@ -5,8 +5,6 @@ export interface Rule {
   id: string;
   title: string;
   description?: string;
-  points_deducted: number;
-  dom_points_deducted: number;
   background_image_url?: string;
   background_opacity: number;
   icon_url?: string;
@@ -35,8 +33,6 @@ export interface RuleViolation {
 export interface RuleFormValues {
   title: string;
   description: string;
-  points_deducted: number;
-  dom_points_deducted: number;
   background_image_url?: string;
   background_opacity: number;
   icon_url?: string;
