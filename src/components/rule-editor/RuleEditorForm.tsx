@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -191,8 +192,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
-        // Keep the background image from form values
-        background_image_url: values.background_image_url,
+        // Use imagePreview if available (uploaded image), otherwise use form value (existing image)
+        background_image_url: imagePreview || values.background_image_url,
         // Set icon data separately 
         icon_name: selectedIconName || undefined,
         icon_url: iconPreview || undefined,
