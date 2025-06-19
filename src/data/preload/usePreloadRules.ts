@@ -3,7 +3,7 @@ import { loadRulesFromDB } from "../indexedDB/useIndexedDB";
 import { queryClient } from "../queryClient";
 import { RULES_QUERY_KEY } from "../rules/queries";
 import { logger } from '@/lib/logger';
-import { Rule } from "@/data/rules/types";
+import { Rule } from "@/data/interfaces/Rule";
 import { checkAndPerformRuleResets } from "@/lib/rulesUtils";
 
 export function usePreloadRules() {

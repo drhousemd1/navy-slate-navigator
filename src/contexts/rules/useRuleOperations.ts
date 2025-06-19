@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { Rule } from '@/data/interfaces/Rule'; // This is for the state and return types
-import { RuleFormValues } from '@/data/rules/types'; // This is for input to mutations
+import { RuleFormValues } from '@/components/rule-editor/RuleEditorForm'; // This is for input to mutations
 import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
 import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
 import { useDeleteRule } from '@/data/rules/mutations/useDeleteRule';
