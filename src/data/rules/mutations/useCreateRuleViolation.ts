@@ -49,10 +49,11 @@ export const useCreateRuleViolation = () => {
         queryKey: [...RULES_QUERY_KEY, subUserId, domUserId] 
       });
       
-      toast({
-        title: "Rule Violation Recorded",
-        description: "The rule violation has been recorded successfully.",
-      });
+      // Remove duplicate success toast - optimistic mutations handle this automatically
+      // toast({
+      //   title: "Rule Violation Recorded",
+      //   description: "The rule violation has been recorded successfully.",
+      // });
     },
     onError: (error: Error) => {
       logger.error('Failed to record rule violation:', error);
