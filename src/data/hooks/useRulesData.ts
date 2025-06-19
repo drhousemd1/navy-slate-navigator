@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useRules } from '../rules/queries';
 import { Rule } from '@/data/interfaces/Rule';
@@ -148,7 +147,8 @@ export const useRulesData = () => {
         usage_data: newUsageData as number[] & {toJSON?: () => any},
       });
 
-      toastManager.success("Rule Marked Broken", `${rule.title} marked as broken. Violation recorded and usage updated.`);
+      // Remove duplicate toast - the mutation already handles this
+      // toastManager.success("Rule Marked Broken", `${rule.title} marked as broken. Violation recorded and usage updated.`);
 
     } catch (e: unknown) {
       const errorMessage = getErrorMessage(e);
