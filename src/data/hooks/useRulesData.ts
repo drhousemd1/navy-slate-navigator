@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useRules } from '../rules/queries';
 import { Rule } from '@/data/interfaces/Rule';
@@ -64,7 +65,11 @@ export const useRulesData = () => {
     try {
       if (ruleData.id) {
         const { id, ...updates } = ruleData;
-        return await updateRuleMutation({ id, ...updates } as UpdateRuleVariables);
+        return await updateRuleMutation({ 
+          id, 
+          ...updates,
+          user_id: user?.id // Add user_id to update mutation
+        } as UpdateRuleVariables);
       } else {
         if (!user?.id) {
           throw new Error('User must be authenticated to create rules');
