@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import AppLayout from '@/components/AppLayout';
@@ -257,14 +256,14 @@ const Profile: React.FC = () => {
               <Button 
                 onClick={() => handleRoleChange('sub')} 
                 variant={currentRole === 'sub' ? "default" : "ghost"}
-                className={currentRole === 'sub' ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-600 text-black hover:bg-gray-500"}
+                className={currentRole === 'sub' ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-600 text-white hover:bg-gray-500 hover:text-white"}
               >
                 Set as Submissive
               </Button>
               <Button 
                 onClick={() => handleRoleChange('dom')} 
                 variant={currentRole === 'dom' ? "default" : "ghost"}
-                className={currentRole === 'dom' ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-600 text-black hover:bg-gray-500"}
+                className={currentRole === 'dom' ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-600 text-white hover:bg-gray-500 hover:text-white"}
               >
                 Set as Dominant
               </Button>
