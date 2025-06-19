@@ -22,10 +22,15 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
         throw new Error('User must be authenticated to create rules');
       }
 
+      if (!ruleData.title) {
+        throw new Error('Rule title is required');
+      }
+
       // Assuming createRuleMutation returns the created Rule matching the 'Rule' interface
       const newRule: Rule = await createRuleMutation({
-        ...ruleData,
-        user_id: user.id // Add the required user_id field
+        title: ruleData.title,
+        user_id: user.id,
+        ...ruleData
       }); 
       
       // newRule might be undefined if mutation doesn't return on success or type is different
