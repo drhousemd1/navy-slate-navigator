@@ -16,7 +16,7 @@ import DeleteRuleDialog from './DeleteRuleDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
 import { toastManager } from '@/lib/toastManager';
-import { compressImage } from '@/utils/image/compression';
+import { handleImageUpload } from '@/utils/image/ruleIntegration';
 
 interface RuleFormValues {
   title: string;
@@ -126,29 +126,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       try {
-        logger.debug('[Rule Image] Starting image upload and compression');
-        
-        // Compress the image
-        const { blob, metadata } = await compressImage(file);
-        
-        // Convert to base64
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          setImagePreview(base64String);
-          setValue('background_image_url', base64String);
-          
-          // Store metadata for future use
-          setValue('image_meta', metadata);
-          
-          logger.debug('[Rule Image] Image processed and set', {
-            originalSize: metadata.originalSize,
-            compressedSize: metadata.compressedSize,
-            savings: `${metadata.compressionRatio}%`
-          });
-        };
-        
-        reader.readAsDataURL(blob);
+        await handleImageUpload(file, setValue, setImagePreview);
       } catch (error) {
         console.error('Error handling image upload:', error);
         toastManager.error("Error", "Failed to process image. Please try again.");
