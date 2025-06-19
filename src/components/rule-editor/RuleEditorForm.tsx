@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Save } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 import { Rule } from '@/data/interfaces/Rule';
 import NumberField from '../task-editor/NumberField';
 import ColorPickerField from '../task-editor/ColorPickerField';
@@ -16,7 +15,8 @@ import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
-import { handleImageUpload } from '@/utils/image/ruleIntegration';
+import { toastManager } from '@/lib/toastManager';
+import { compressImage } from '@/utils/image/compression';
 
 interface RuleFormValues {
   title: string;
@@ -126,14 +126,32 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       try {
-        await handleImageUpload(file, setValue, setImagePreview);
+        logger.debug('[Rule Image] Starting image upload and compression');
+        
+        // Compress the image
+        const { blob, metadata } = await compressImage(file);
+        
+        // Convert to base64
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          setImagePreview(base64String);
+          setValue('background_image_url', base64String);
+          
+          // Store metadata for future use
+          setValue('image_meta', metadata);
+          
+          logger.debug('[Rule Image] Image processed and set', {
+            originalSize: metadata.originalSize,
+            compressedSize: metadata.compressedSize,
+            savings: `${metadata.compressionRatio}%`
+          });
+        };
+        
+        reader.readAsDataURL(blob);
       } catch (error) {
         console.error('Error handling image upload:', error);
-        toast({
-          title: "Error",
-          description: "Failed to process image. Please try again.",
-          variant: "destructive",
-        });
+        toastManager.error("Error", "Failed to process image. Please try again.");
       }
     }
   };
@@ -175,20 +193,14 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setValue('icon_url', iconUrl);
       setValue('icon_name', undefined);
       
-      toast({
-        title: "Custom icon selected",
-        description: "Custom icon has been applied to the rule",
-      });
+      toastManager.success("Custom icon selected", "Custom icon has been applied to the rule");
     } else {
       setSelectedIconName(iconName);
       setIconPreview(null);
       setValue('icon_name', iconName);
       setValue('icon_url', undefined);
       
-      toast({
-        title: "Icon selected",
-        description: `${iconName} icon selected`,
-      });
+      toastManager.success("Icon selected", `${iconName} icon selected`);
     }
   };
   
@@ -212,11 +224,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       await clearPersistedState();
     } catch (error) {
       logger.error('Error saving rule:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save rule. Please try again.",
-        variant: "destructive",
-      });
+      toastManager.error("Error", "Failed to save rule. Please try again.");
     } finally {
       setLoading(false);
     }

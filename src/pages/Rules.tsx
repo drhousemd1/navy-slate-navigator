@@ -9,7 +9,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { useRulesData } from '@/data/hooks/useRulesData';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { useAuth } from '@/contexts/auth';
 import { forceResetAllRuleUsageData } from '@/lib/rulesUtils';
 
@@ -87,10 +87,7 @@ const RulesPageContent: React.FC = () => {
       setIsEditorOpen(false);
       setCurrentRule(null);
       
-      toast({
-        title: "Success",
-        description: ruleData.id ? "Rule updated successfully!" : "Rule created successfully!",
-      });
+      toastManager.success("Success", ruleData.id ? "Rule updated successfully!" : "Rule created successfully!");
     } catch (err: unknown) {
       // Error handling is already done in useRulesData
       logger.error('Error in handleSaveRule:', getErrorMessage(err));
