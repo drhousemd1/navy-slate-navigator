@@ -255,15 +255,15 @@ const Profile: React.FC = () => {
             <div className="flex space-x-2">
               <Button 
                 onClick={() => handleRoleChange('sub')} 
-                variant={currentRole === 'sub' ? "default" : "outline"}
-                className={currentRole === 'sub' ? "bg-cyan-600 hover:bg-cyan-700" : "border-cyan-500 text-cyan-400 hover:bg-cyan-900/50"}
+                variant={currentRole === 'sub' ? "default" : "ghost"}
+                className={currentRole === 'sub' ? "bg-cyan-600 hover:bg-cyan-700" : "bg-gray-600 text-black hover:bg-gray-500"}
               >
                 Set as Submissive
               </Button>
               <Button 
                 onClick={() => handleRoleChange('dom')} 
-                variant={currentRole === 'dom' ? "default" : "outline"}
-                className={currentRole === 'dom' ? "bg-purple-600 hover:bg-purple-700" : "border-purple-500 text-purple-400 hover:bg-purple-900/50"}
+                variant={currentRole === 'dom' ? "default" : "ghost"}
+                className={currentRole === 'dom' ? "bg-purple-600 hover:bg-purple-700" : "bg-gray-600 text-black hover:bg-gray-500"}
               >
                 Set as Dominant
               </Button>
