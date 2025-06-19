@@ -1,7 +1,6 @@
 
 import { useState, useCallback } from 'react';
 import { Rule } from '@/data/interfaces/Rule'; // This is for the state and return types
-import { RuleFormValues } from '@/components/rule-editor/RuleEditorForm'; // This is for input to mutations
 import { useCreateRule } from '@/data/rules/mutations/useCreateRule';
 import { useUpdateRule } from '@/data/rules/mutations/useUpdateRule';
 import { useDeleteRule } from '@/data/rules/mutations/useDeleteRule';
@@ -17,7 +16,7 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
   const { user } = useAuth();
   
   // Create a new rule
-  const createRule = useCallback(async (ruleData: RuleFormValues): Promise<Rule | undefined> => {
+  const createRule = useCallback(async (ruleData: Partial<Rule>): Promise<Rule | undefined> => {
     try {
       if (!user?.id) {
         throw new Error('User must be authenticated to create rules');
@@ -46,7 +45,7 @@ export const useRuleOperations = (initialRules: Rule[] = []) => { // Added type 
   }, [createRuleMutation, user]);
   
   // Update an existing rule
-  const updateRule = useCallback(async (ruleId: string, updates: Partial<RuleFormValues>): Promise<Rule | undefined> => {
+  const updateRule = useCallback(async (ruleId: string, updates: Partial<Rule>): Promise<Rule | undefined> => {
     try {
       // Assuming updateRuleMutation returns the updated Rule matching the 'Rule' interface
       const updatedRule: Rule = await updateRuleMutation({ id: ruleId, ...updates });
