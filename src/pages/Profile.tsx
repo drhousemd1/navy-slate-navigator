@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import AppLayout from '@/components/AppLayout';
@@ -194,8 +193,8 @@ const Profile: React.FC = () => {
                   {nickname ? nickname.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U')}
                 </AvatarFallback>
               </Avatar>
-              <label htmlFor="profileImageInput" className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 rounded-full cursor-pointer opacity-60 group-hover:opacity-100 transition-opacity">
-                <Camera className="w-8 h-8 text-white" />
+              <label htmlFor="profileImageInput" className="absolute -bottom-2 -right-2 w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full border-2 border-cyan-500 cursor-pointer hover:bg-gray-700 transition-colors">
+                <Camera className="w-5 h-5 text-white" />
               </label>
               <input
                 id="profileImageInput"
