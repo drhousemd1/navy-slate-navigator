@@ -5,7 +5,6 @@ import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { PostgrestError } from '@supabase/supabase-js';
-import { toastManager } from '@/lib/toastManager';
 
 const REWARDS_QUERY_KEY = ['rewards'];
 
@@ -29,12 +28,6 @@ export const useDeleteReward = () => {
       if (error) throw error;
     },
     entityName: 'Reward',
-    idField: 'id',
-    mutationOptions: {
-      onError: (error) => {
-        // Override the default optimistic error toast with our custom one
-        toastManager.error("Failed to Delete Reward", error.message);
-      }
-    }
+    idField: 'id'
   });
 };

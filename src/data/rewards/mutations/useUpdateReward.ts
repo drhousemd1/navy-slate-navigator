@@ -5,7 +5,6 @@ import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward, UpdateRewardVariables } from '@/data/rewards/types';
 import { processImageForSave } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
-import { toastManager } from '@/lib/toastManager';
 
 const REWARDS_QUERY_KEY = ['rewards'];
 
@@ -41,12 +40,6 @@ export const useUpdateReward = () => {
       return data as Reward;
     },
     entityName: 'Reward',
-    idField: 'id',
-    mutationOptions: {
-      onError: (error) => {
-        // Override the default optimistic error toast with our custom one
-        toastManager.error("Failed to Update Reward", error.message);
-      }
-    }
+    idField: 'id'
   });
 };
