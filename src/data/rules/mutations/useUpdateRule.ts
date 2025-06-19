@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -21,6 +22,7 @@ export const useUpdateRule = () => {
     mutationFn: async (variables: UpdateRuleVariables) => {
       const { id, ...updates } = variables;
       
+      // Process image if present
       const { processedUrl, metadata } = await processImageForSave(updates.background_image_url || null);
       
       const updatedData = {
@@ -42,7 +44,6 @@ export const useUpdateRule = () => {
     },
     entityName: 'Rule',
     idField: 'id',
-    suppressSuccessToast: true,
     onSuccessCallback: async (updatedRuleData) => {
       logger.debug('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB and invalidating cache.', updatedRuleData);
       try {
@@ -51,6 +52,7 @@ export const useUpdateRule = () => {
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
         
+        // Add missing query invalidation to ensure fresh data loads
         await queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
         
         logger.debug('[useUpdateRule onSuccessCallback] IndexedDB updated and cache invalidated.');
@@ -58,6 +60,7 @@ export const useUpdateRule = () => {
         logger.error('[useUpdateRule onSuccessCallback] Error updating IndexedDB:', error);
         toastManager.error("Local Save Error", "Rule updated on server, but failed to save changes locally.");
       }
-    }
+    },
+    mutationOptions: {}
   });
 };

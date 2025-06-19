@@ -1,3 +1,4 @@
+
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
@@ -51,7 +52,6 @@ export const useCreateRule = () => {
       return data as Rule;
     },
     entityName: 'Rule',
-    suppressSuccessToast: true,
     createOptimisticItem: (variables, optimisticId) => {
       const now = new Date().toISOString();
       return {
@@ -83,11 +83,11 @@ export const useCreateRule = () => {
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
         logger.debug('[useCreateRule onSuccessCallback] IndexedDB updated with new rule.');
-        // No success toast here - let optimistic mutation handle it or suppress it
       } catch (error) {
         logger.error('[useCreateRule onSuccessCallback] Error updating IndexedDB:', error);
         toastManager.error("Local Save Error", "Rule created on server, but failed to save locally.");
       }
-    }
+    },
+    mutationOptions: {}
   });
 };

@@ -20,7 +20,6 @@ export interface OptimisticMutationContext<TItem> {
  *                               It should assign a temporary ID (e.g., using uuidv4).
  * @param idField - The name of the ID field in TItem (default: 'id').
  * @param onSuccessCallback - Optional callback after successful creation and cache update.
- * @param suppressSuccessToast - Whether to suppress the success toast (default: false).
  * @param mutationOptions - Additional options for useMutation.
  */
 export function useCreateOptimisticMutation<
@@ -36,7 +35,6 @@ export function useCreateOptimisticMutation<
   createOptimisticItem: (variables: TVariables, optimisticId: string) => TItem;
   idField?: keyof TItem;
   onSuccessCallback?: (data: TItem, variables: TVariables) => void;
-  suppressSuccessToast?: boolean;
   mutationOptions?: Omit<UseMutationOptions<TItem, TError, TVariables, TContext>, 'mutationFn' | 'onMutate' | 'onError' | 'onSuccess' | 'onSettled'>;
 }) {
   const { 
@@ -47,7 +45,6 @@ export function useCreateOptimisticMutation<
     createOptimisticItem, 
     idField = 'id' as keyof TItem, 
     onSuccessCallback,
-    suppressSuccessToast = false,
     mutationOptions
   } = options;
 
@@ -75,9 +72,7 @@ export function useCreateOptimisticMutation<
         const filteredList = old.filter(item => !(context?.optimisticId && item[idField] === context.optimisticId));
         return [data, ...filteredList];
       });
-      if (!suppressSuccessToast) {
-        toastManager.success(`${entityName} created successfully!`);
-      }
+      toastManager.success(`${entityName} created successfully!`);
       if (onSuccessCallback) {
         await onSuccessCallback(data, variables);
       }
@@ -94,7 +89,6 @@ export function useCreateOptimisticMutation<
 /**
  * Hook for updating an item with optimistic updates.
  * @param idField - The name of the ID field in TItem (default: 'id').
- * @param suppressSuccessToast - Whether to suppress the success toast (default: false).
  */
 export function useUpdateOptimisticMutation<
   TItem extends Record<string, any> & { id: string | number },
@@ -108,7 +102,6 @@ export function useUpdateOptimisticMutation<
   entityName: string;
   idField?: keyof TItem; // This is the name of the ID field in TItem objects (e.g., in cache)
   onSuccessCallback?: (data: TItem, variables: TVariables) => void;
-  suppressSuccessToast?: boolean;
   mutationOptions?: Omit<UseMutationOptions<TItem, TError, TVariables, TContext>, 'mutationFn' | 'onMutate' | 'onError' | 'onSuccess' | 'onSettled'>;
 }) {
   const { 
@@ -118,7 +111,6 @@ export function useUpdateOptimisticMutation<
     entityName, 
     idField = 'id' as keyof TItem, 
     onSuccessCallback,
-    suppressSuccessToast = false,
     mutationOptions
   } = options;
 
@@ -147,9 +139,7 @@ export function useUpdateOptimisticMutation<
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) =>
         old.map(item => (item[idField] === data[idField as keyof TItem] ? data : item))
       );
-      if (!suppressSuccessToast) {
-        toastManager.success(`${entityName} updated successfully!`);
-      }
+      toastManager.success(`${entityName} updated successfully!`);
       if (onSuccessCallback) {
         await onSuccessCallback(data, variables);
       }
@@ -166,7 +156,6 @@ export function useUpdateOptimisticMutation<
 /**
  * Hook for deleting an item with optimistic updates.
  * @param idField - The name of the ID field in TItem (default: 'id').
- * @param suppressSuccessToast - Whether to suppress the success toast (default: false).
  * @param relatedQueryKey - Optional query key for related data that also needs optimistic update (e.g., history).
  * @param relatedIdField - Optional ID field name in the related data items to match against the main item's ID.
  */
@@ -182,7 +171,6 @@ export function useDeleteOptimisticMutation<
   entityName: string;
   idField?: keyof TItem;
   onSuccessCallback?: (id: TVariables) => void;
-  suppressSuccessToast?: boolean;
   relatedQueryKey?: unknown[]; 
   relatedIdField?: string; 
   mutationOptions?: Omit<UseMutationOptions<void, TError, TVariables, TContext>, 'mutationFn' | 'onMutate' | 'onError' | 'onSuccess' | 'onSettled'>;
@@ -194,7 +182,6 @@ export function useDeleteOptimisticMutation<
     entityName, 
     idField = 'id' as keyof TItem, 
     onSuccessCallback,
-    suppressSuccessToast = false,
     relatedQueryKey,
     relatedIdField,
     mutationOptions
@@ -231,9 +218,7 @@ export function useDeleteOptimisticMutation<
       toastManager.error(`Error deleting ${entityName}`, err.message);
     },
     onSuccess: async (_data, idDeleted, _context) => {
-      if (!suppressSuccessToast) {
-        toastManager.success(`${entityName} deleted successfully!`);
-      }
+      toastManager.success(`${entityName} deleted successfully!`);
       if (onSuccessCallback) {
         await onSuccessCallback(idDeleted);
       }

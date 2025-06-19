@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { useRules } from '../rules/queries';
 import { Rule } from '@/data/interfaces/Rule';
@@ -34,15 +35,19 @@ export const useRulesData = () => {
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
   const { mutateAsync: createRuleViolationMutation } = useCreateRuleViolation();
 
+  // Fixed rule loading - only update cache if resets were actually performed
   const checkAndReloadRules = useCallback(async () => {
     try {
       logger.debug('[useRulesData] Checking for rule resets');
       
+      // Call checkAndPerformRuleResets and capture the boolean result
       const resetPerformed = await checkAndPerformRuleResets();
       
+      // Only if resetPerformed is true, update cache with fresh IndexedDB data
       if (resetPerformed) {
         logger.debug('[useRulesData] Resets performed, updating cache with fresh IndexedDB data');
         
+        // Load fresh rules from IndexedDB and set them on the cache with correct query key
         const freshData = await loadRulesFromDB();
         if (freshData && Array.isArray(freshData)) {
           queryClient.setQueryData([...RULES_QUERY_KEY, subUserId, domUserId], freshData);
@@ -63,7 +68,7 @@ export const useRulesData = () => {
         return await updateRuleMutation({ 
           id, 
           ...updates,
-          user_id: user?.id
+          user_id: user?.id // Add user_id to update mutation
         } as UpdateRuleVariables);
       } else {
         if (!user?.id) {
@@ -93,6 +98,7 @@ export const useRulesData = () => {
     } catch (e: unknown) {
       const errorMessage = getErrorMessage(e);
       logger.error('[useRulesData] Error saving rule:', errorMessage);
+      // Remove duplicate error toast - let calling component handle it
       throw e;
     }
   };
@@ -104,6 +110,7 @@ export const useRulesData = () => {
     } catch (e: unknown) {
       const errorMessage = getErrorMessage(e);
       logger.error('[useRulesData] Error deleting rule:', errorMessage);
+      // Remove duplicate error toast - let calling component handle it
       return false;
     }
   };
@@ -119,23 +126,29 @@ export const useRulesData = () => {
         userId: user.id 
       });
 
+      // Get current day of week (0=Monday, 6=Sunday)
       const currentDay = getMondayBasedDay();
       
+      // Initialize usage_data as 7-element array if not already
       const currentUsageData = Array.isArray(rule.usage_data) ? rule.usage_data : [];
       const newUsageData = new Array(7).fill(0);
       
+      // Copy existing data if it exists and is properly formatted
       if (currentUsageData.length === 7) {
         for (let i = 0; i < 7; i++) {
           newUsageData[i] = currentUsageData[i] || 0;
         }
       }
       
+      // Mark current day as violated (set to 1)
       newUsageData[currentDay] = 1;
 
       await updateRuleMutation({
         id: rule.id,
         usage_data: newUsageData as number[] & {toJSON?: () => any},
       });
+
+      toastManager.success("Rule Marked Broken", `${rule.title} marked as broken. Violation recorded and usage updated.`);
 
     } catch (e: unknown) {
       const errorMessage = getErrorMessage(e);
@@ -145,6 +158,7 @@ export const useRulesData = () => {
     }
   };
 
+  // Check if we're using cached data
   const isUsingCachedData = 
     (!!error && rules.length > 0) || 
     (isStale && errorUpdateCount > 0 && rules.length > 0);
