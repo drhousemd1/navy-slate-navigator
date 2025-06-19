@@ -127,15 +127,18 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       try {
+        logger.debug('[RuleEditorForm] Starting image upload');
         await handleImageUpload(file, setValue, setImagePreview);
+        logger.debug('[RuleEditorForm] Image upload completed successfully');
       } catch (error) {
-        console.error('Error handling image upload:', error);
+        logger.error('[RuleEditorForm] Error handling image upload:', error);
         toastManager.error("Error", "Failed to process image. Please try again.");
       }
     }
   };
 
   const handleRemoveImage = () => {
+    logger.debug('[RuleEditorForm] Removing image');
     setImagePreview(null);
     setValue('background_image_url', undefined);
     setValue('image_meta', null);
@@ -189,19 +192,28 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const onSubmitWrapped = async (values: RuleFormValues) => {
     setLoading(true);
     try {
+      logger.debug('[RuleEditorForm] Submitting rule with values:', {
+        hasImage: !!values.background_image_url,
+        hasImageMeta: !!values.image_meta,
+        imagePreview: !!imagePreview
+      });
+
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
-        // Use imagePreview if available (uploaded image), otherwise use form value (existing image)
-        background_image_url: imagePreview || values.background_image_url,
+        // Use the form value which was set by handleImageUpload
+        background_image_url: values.background_image_url,
+        image_meta: values.image_meta,
         // Set icon data separately 
         icon_name: selectedIconName || undefined,
         icon_url: iconPreview || undefined,
       };
+      
+      logger.debug('[RuleEditorForm] Saving rule:', ruleToSave);
       await onSave(ruleToSave);
       await clearPersistedState();
     } catch (error) {
-      logger.error('Error saving rule:', error);
+      logger.error('[RuleEditorForm] Error saving rule:', error);
       toastManager.error("Error", "Failed to save rule. Please try again.");
     } finally {
       setLoading(false);

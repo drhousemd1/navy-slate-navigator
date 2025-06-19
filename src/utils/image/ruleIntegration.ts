@@ -17,10 +17,10 @@ export const handleImageUpload = async (
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
+      
+      logger.debug('[Rule Image] Setting image preview and form values');
       setImagePreview(base64String);
       setValue('background_image_url', base64String);
-      
-      // Store metadata for future use
       setValue('image_meta', metadata);
       
       logger.debug('[Rule Image] Image processed and set', {
