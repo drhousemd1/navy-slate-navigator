@@ -22,6 +22,7 @@ export const useDeleteRule = () => {
     },
     entityName: 'Rule',
     idField: 'id',
+    suppressSuccessToast: true,
     onSuccessCallback: async (ruleId: string) => { 
       logger.debug('[useDeleteRule onSuccessCallback] Rule deleted on server, updating IndexedDB only for rule ID:', ruleId);
       try {
@@ -34,9 +35,6 @@ export const useDeleteRule = () => {
         logger.error('[useDeleteRule onSuccessCallback] Error updating IndexedDB:', error);
         toastManager.error("Local Update Error", "Rule deleted on server, but failed to update local data.");
       }
-    },
-    mutationOptions: {
-      onSuccess: () => {} // Override optimistic success toast
     }
   });
 };
