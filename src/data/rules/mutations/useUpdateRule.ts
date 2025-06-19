@@ -45,13 +45,17 @@ export const useUpdateRule = () => {
     entityName: 'Rule',
     idField: 'id',
     onSuccessCallback: async (updatedRuleData) => {
-      logger.debug('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB only.', updatedRuleData);
+      logger.debug('[useUpdateRule onSuccessCallback] Rule updated on server, updating IndexedDB and invalidating cache.', updatedRuleData);
       try {
         const localRules = await loadRulesFromDB() || [];
         const updatedLocalRules = localRules.map(r => r.id === updatedRuleData.id ? updatedRuleData : r);
         await saveRulesToDB(updatedLocalRules);
         await setLastSyncTimeForRules(new Date().toISOString());
-        logger.debug('[useUpdateRule onSuccessCallback] IndexedDB updated with updated rule.');
+        
+        // Add missing query invalidation to ensure fresh data loads
+        await queryClient.invalidateQueries({ queryKey: RULES_QUERY_KEY });
+        
+        logger.debug('[useUpdateRule onSuccessCallback] IndexedDB updated and cache invalidated.');
       } catch (error) {
         logger.error('[useUpdateRule onSuccessCallback] Error updating IndexedDB:', error);
         toastManager.error("Local Save Error", "Rule updated on server, but failed to save changes locally.");
