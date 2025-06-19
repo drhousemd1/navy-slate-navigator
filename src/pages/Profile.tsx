@@ -271,7 +271,7 @@ const Profile: React.FC = () => {
           
           {/* Actions Section */}
           <div className="space-y-4 border-t border-light-navy pt-8 mt-8">
-            <Button onClick={handleLogout} variant="outline" className="w-full border-gray-600 hover:bg-gray-700 flex items-center">
+            <Button onClick={handleLogout} className="w-full bg-gray-600 text-white hover:bg-gray-500 hover:text-white flex items-center">
               <LogOut className="w-4 h-4 mr-2" /> Log Out
             </Button>
             <Button onClick={() => setIsDeleteAccountDialogOpen(true)} variant="destructive" className="w-full flex items-center" disabled={!deleteAccount}>
