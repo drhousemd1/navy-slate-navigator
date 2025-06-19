@@ -164,8 +164,8 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
           </div>
         ) : (
           <div className="relative h-32 flex flex-col items-center justify-center">
-            <Upload className="h-10 w-10 text-light-navy mb-2" />
-            <p className="text-light-navy">Click to upload or drag and drop</p>
+            <Upload className="h-10 w-10 text-white mb-2" />
+            <p className="text-white">Click to upload or drag and drop</p>
             <input
               type="file"
               accept="image/*"
