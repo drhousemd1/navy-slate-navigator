@@ -1,7 +1,7 @@
+
 import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
 import { PunishmentData } from '@/contexts/punishments/types';
-import { toast } from '@/hooks/use-toast';
 import { PunishmentFormValues } from './PunishmentFormProvider';
 import { logger } from '@/lib/logger';
 import { UseFormReturn } from 'react-hook-form';
@@ -67,7 +67,6 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       dom_points: dom_points,
       icon_name: selectedIconName,
       background_image_url: imagePreview,
-      icon_url: iconPreview,
       icon_color: values.icon_color || '#ea384c',
     };
     
@@ -83,28 +82,10 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       
       if (savedPunishment) {
         form.reset(mapPunishmentDataToFormValues(savedPunishment));
-        toast({
-          title: "Punishment Processed",
-          description: punishmentData?.id ? "Punishment updated." : "Punishment created.",
-        });
-      } else {
-        toast({
-          title: "Save Incomplete",
-          description: "Punishment data might not have fully saved. Please check.",
-          variant: "default",
-        });
       }
     } catch (e: unknown) {
-      let errorMessage = "Failed to save punishment. Please try again.";
-      if (e instanceof Error) {
-        errorMessage = e.message;
-      }
-      logger.error("Error saving punishment in form handler:", errorMessage, e);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      logger.error("Error saving punishment in form handler:", e);
+      // Error handling is done by the mutation hooks
     } finally {
       setIsSaving(false);
     }
