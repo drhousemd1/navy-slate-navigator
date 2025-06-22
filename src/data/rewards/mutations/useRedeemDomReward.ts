@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toastManager } from '@/lib/toastManager';
 import { Reward } from '../types';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { DOM_REWARD_TYPES_COUNT_QUERY_KEY } from '../queries/useDomRewardTypesCountQuery';
 
 const REWARDS_QUERY_KEY = ['rewards'];
 
@@ -95,12 +96,11 @@ export const useRedeemDomReward = () => {
       });
       
       queryClient.invalidateQueries({ queryKey: ['reward-usage', variables.rewardId] });
-      
-      toastManager.success("Reward Used!", `You used ${data.title}.`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['reward-usage'] });
+      queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
     },
   });
 };
