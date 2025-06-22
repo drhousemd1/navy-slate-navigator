@@ -109,18 +109,25 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const handleBuyRewardWrapper = async (id: string, cost: number) => {
-    const reward = rewards.find(r => r.id === id);
-    if (!reward) {
-        toast({ title: "Reward not found", description: "Cannot buy a non-existent reward.", variant: "destructive" });
-        return;
-    }
-    
+  const handleBuyRewardWrapper = async (id: string, cost: number, isDomReward?: boolean) => {
     try {
-        logger.debug("RewardsContext - buying reward:", { id, cost, isDom: reward.is_dom_reward });
-        await buyReward({ rewardId: id, cost });
+      logger.debug("RewardsContext - buying reward:", { id, cost, isDomReward });
+      
+      // If isDomReward is passed, use it directly. Otherwise, look up the reward.
+      let finalIsDomReward = isDomReward;
+      if (finalIsDomReward === undefined) {
+        const reward = rewards.find(r => r.id === id);
+        if (!reward) {
+          toast({ title: "Reward not found", description: "Cannot buy a non-existent reward.", variant: "destructive" });
+          return;
+        }
+        finalIsDomReward = reward.is_dom_reward;
+      }
+      
+      logger.debug("RewardsContext - final isDomReward value:", finalIsDomReward);
+      await buyReward({ rewardId: id, cost });
     } catch (error) {
-        logger.error("Error in RewardsContext handleBuyRewardWrapper:", error);
+      logger.error("Error in RewardsContext handleBuyRewardWrapper:", error);
     }
   };
 
