@@ -1,10 +1,10 @@
+
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType, SaveRewardParams } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
 import { Reward } from '@/data/rewards/types';
 import { QueryObserverResult } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 
 const mockQueryResult: QueryObserverResult<Reward[], Error> = {

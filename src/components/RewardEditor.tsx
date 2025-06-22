@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
@@ -10,7 +11,7 @@ import { Reward, RewardFormValues } from '@/data/rewards/types';
 interface RewardEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  rewardData?: Reward; // Changed from Partial<Reward>
+  rewardData?: Reward;
   onSave: (rewardData: RewardFormValues) => Promise<Reward>; 
   onDelete?: (id: string) => void;
 }
@@ -39,39 +40,28 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
     try {
       setIsSaving(true);
       
-      // Show optimistic toast immediately
+      // Wait for the save operation to complete
+      await onSave(formData);
+      
+      logger.debug("Save completed successfully");
+      
+      // Show success toast
       toast({
-        title: "Saving",
-        description: "Your reward is being saved...",
+        title: "Success",
+        description: `Reward ${rewardData ? 'updated' : 'created'} successfully!`,
       });
       
-      // Close the modal immediately to improve perceived performance
+      // Close the modal after successful save
       onClose();
-      
-      // Process the save in the background
-      setTimeout(async () => {
-        try {
-          await onSave(formData);
-          logger.debug("Save completed successfully");
-        } catch (error) {
-          logger.error("Error in RewardEditor save handler:", error);
-          toast({
-            title: "Error",
-            description: "Failed to save reward. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsSaving(false);
-        }
-      }, 0);
     } catch (error) {
       logger.error("Error in RewardEditor save handler:", error);
-      setIsSaving(false);
       toast({
         title: "Error",
         description: "Failed to save reward. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 

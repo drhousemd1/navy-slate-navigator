@@ -6,10 +6,7 @@ import RewardEditor from '../components/RewardEditor';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-import { useRewards as useRewardsQuery, RewardsQueryResult } from '@/data/queries/useRewards';
-import { Reward, RewardFormValues, CreateRewardVariables as RewardCreateVariables, UpdateRewardVariables as RewardUpdateVariables } from '@/data/rewards/types'; 
-import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
-import { useDeleteReward as useDeleteRewardMutation } from '@/data/rewards/mutations/useDeleteReward';
+import { Reward, RewardFormValues } from '@/data/rewards/types'; 
 import { toast } from '@/hooks/use-toast';
 
 import { useRewards } from '@/contexts/RewardsContext';
@@ -19,21 +16,16 @@ const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
   const { 
-    data: rewardsData, 
-    isLoading, 
-    error: queryError,
-  }: RewardsQueryResult = useRewardsQuery();
-  const rewards = Array.isArray(rewardsData) ? rewardsData : [];
+    rewards,
+    isLoading,
+    handleSaveReward,
+    handleDeleteReward,
+    handleBuyReward,
+    handleUseReward
+  } = useRewards();
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);
-  
-  const createRewardMutation = useCreateRewardMutation();
-  const updateRewardMutation = useUpdateRewardMutation();
-  const deleteRewardMutation = useDeleteRewardMutation();
-  
-  // Use context functions instead of direct mutations
-  const { handleBuyReward, handleUseReward } = useRewards();
 
   const handleAddNewReward = () => {
     setRewardBeingEdited(undefined);
@@ -49,7 +41,6 @@ const RewardsContent: React.FC<{
     }
   };
 
-  // Use context functions directly - no more blocking or wrapper logic
   const handleBuyRewardWrapper = async (rewardId: string, cost: number) => {
     try {
       await handleBuyReward(rewardId, cost);
@@ -73,47 +64,28 @@ const RewardsContent: React.FC<{
 
   const handleSaveRewardEditor = async (formData: RewardFormValues): Promise<Reward> => {
     try {
-      if (rewardBeingEdited?.id) {
-        const updateVariables: RewardUpdateVariables = {
-          id: rewardBeingEdited.id,
-          ...formData, 
-        };
-        const updated = await updateRewardMutation.mutateAsync(updateVariables);
-        setIsEditorOpen(false);
-        setRewardBeingEdited(undefined);
-        return updated;
-      } else {
-        if (!formData.title || typeof formData.cost !== 'number' || typeof formData.supply !== 'number' || typeof formData.is_dom_reward !== 'boolean') {
-          toast({ title: "Missing required fields", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
-          throw new Error("Missing required fields for reward creation.");
-        }
-        const createVariables: RewardCreateVariables = {
-          title: formData.title,
-          cost: formData.cost,
-          supply: formData.supply,
-          is_dom_reward: formData.is_dom_reward,
-          description: formData.description || null,
-          background_image_url: formData.background_image_url || null,
-          background_opacity: formData.background_opacity ?? 100,
-          icon_name: formData.icon_name || 'Award',
-          icon_color: formData.icon_color || '#9b87f5',
-          title_color: formData.title_color || '#FFFFFF',
-          subtext_color: formData.subtext_color || '#8E9196',
-          calendar_color: formData.calendar_color || '#7E69AB',
-          highlight_effect: formData.highlight_effect ?? false,
-          focal_point_x: formData.focal_point_x ?? 50,
-          focal_point_y: formData.focal_point_y ?? 50,
-        };
-        const created = await createRewardMutation.mutateAsync(createVariables);
-        setIsEditorOpen(false);
-        setRewardBeingEdited(undefined);
-        return created;
+      const rewardIndex = rewardBeingEdited ? rewards.findIndex(r => r.id === rewardBeingEdited.id) : null;
+      const savedRewardId = await handleSaveReward(formData, rewardIndex);
+      
+      if (!savedRewardId) {
+        throw new Error("Failed to save reward");
       }
+      
+      // Find the saved reward in the list
+      const savedReward = rewards.find(r => r.id === savedRewardId) || {
+        ...formData,
+        id: savedRewardId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_id: '', // This will be set by the backend
+      } as Reward;
+      
+      setIsEditorOpen(false);
+      setRewardBeingEdited(undefined);
+      return savedReward;
     } catch (e) {
       logger.error("Error saving reward from page:", e);
-      if (!(e instanceof Error && e.message.includes("Missing required fields"))) {
-        toast({ title: "Save Error", description: e instanceof Error ? e.message : "Could not save reward.", variant: "destructive" });
-      }
+      toast({ title: "Save Error", description: e instanceof Error ? e.message : "Could not save reward.", variant: "destructive" });
       throw e; 
     }
   };
@@ -124,8 +96,15 @@ const RewardsContent: React.FC<{
       toast({ title: "Error", description: "No reward ID specified for deletion.", variant: "destructive" });
       return;
     }
+    
     try {
-      await deleteRewardMutation.mutateAsync(finalIdToDelete);
+      const rewardIndex = rewards.findIndex(r => r.id === finalIdToDelete);
+      if (rewardIndex === -1) {
+        toast({ title: "Error", description: "Reward not found for deletion.", variant: "destructive" });
+        return;
+      }
+      
+      await handleDeleteReward(rewardIndex);
       setIsEditorOpen(false);
       setRewardBeingEdited(undefined);
     } catch (e) {
@@ -143,7 +122,7 @@ const RewardsContent: React.FC<{
           onEdit={handleEditReward}
           handleBuyReward={handleBuyRewardWrapper}
           handleUseReward={handleUseRewardWrapper}
-          error={queryError}
+          error={null}
         />
       </div>
       <RewardEditor

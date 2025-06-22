@@ -108,7 +108,7 @@ export const useRewardsData = () => {
   const updateRewardMutation = useUpdateRewardMutation();
   const deleteRewardMut = useDeleteRewardMutation();
 
-  const saveReward = async (saveParams: { rewardData: Partial<Reward> & { id?: string } } ) => {
+  const saveReward = async (saveParams: { rewardData: Partial<Reward>; currentIndex: number | null }) => {
     const { rewardData } = saveParams;
     
     let result;
