@@ -30,7 +30,8 @@ export const usePunishmentApply = () => {
         punishmentId: punishment.id,
         pointsDeducted: punishment.points,
         dayOfWeek: new Date().getDay(),
-        currentPoints: currentPoints
+        currentPoints: currentPoints,
+        domPointsAwarded: punishment.dom_points
       });
     } catch (error) {
       logger.error('Error applying punishment:', error);

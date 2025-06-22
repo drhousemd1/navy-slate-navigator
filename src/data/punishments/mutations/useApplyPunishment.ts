@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
 import { PUNISHMENT_HISTORY_QUERY_KEY } from '@/data/punishments/queries';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
+import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
@@ -51,6 +52,7 @@ export const useApplyPunishment = () => {
         throw new Error('Failed to create punishment history entry');
       }
 
+      // Update submissive points
       const { error: pointsError } = await supabase
         .from('profiles')
         .update({ 
@@ -61,6 +63,37 @@ export const useApplyPunishment = () => {
       if (pointsError) {
         logger.error('[useApplyPunishment] Points update error:', pointsError);
         throw pointsError;
+      }
+
+      // Award DOM points to the dominant partner if they exist and DOM points > 0
+      if (domUserId && args.domPointsAwarded > 0) {
+        // Get current DOM points
+        const { data: domProfile, error: domProfileError } = await supabase
+          .from('profiles')
+          .select('dom_points')
+          .eq('id', domUserId)
+          .single();
+
+        if (domProfileError) {
+          logger.error('[useApplyPunishment] DOM profile fetch error:', domProfileError);
+          throw domProfileError;
+        }
+
+        // Update DOM points
+        const currentDomPoints = domProfile?.dom_points || 0;
+        const { error: domPointsError } = await supabase
+          .from('profiles')
+          .update({ 
+            dom_points: currentDomPoints + args.domPointsAwarded
+          })
+          .eq('id', domUserId);
+
+        if (domPointsError) {
+          logger.error('[useApplyPunishment] DOM points update error:', domPointsError);
+          throw domPointsError;
+        }
+
+        logger.debug(`[useApplyPunishment] Awarded ${args.domPointsAwarded} DOM points to ${domUserId}`);
       }
 
       logger.debug('[useApplyPunishment] Successfully applied punishment');
@@ -90,7 +123,11 @@ export const useApplyPunishment = () => {
         return [data, ...filteredList];
       });
       
+      // Invalidate both submissive and dominant points caches
       queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
+      if (domUserId) {
+        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
+      }
       
       toastManager.success("Punishment Applied", "Punishment has been successfully applied.");
     },

@@ -30,7 +30,8 @@ export const useApplyRandomPunishment = (onClose?: () => void) => {
         punishmentId: punishment.id,
         pointsDeducted: punishment.points,
         dayOfWeek: new Date().getDay(),
-        currentPoints: currentPoints
+        currentPoints: currentPoints,
+        domPointsAwarded: punishment.dom_points
       });
 
       if (onClose) {
