@@ -11,12 +11,14 @@ import TasksHeader from '@/components/task/TasksHeader';
 import { useAuth } from '@/contexts/auth';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { toastManager } from '@/lib/toastManager';
+import { useToggleTaskCompletionMutation } from '@/data/tasks/mutations/useToggleTaskCompletionMutation';
 
 const Tasks: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithId | null>(null);
   const { user } = useAuth();
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
+  const toggleTaskCompletionMutation = useToggleTaskCompletionMutation();
   
   const {
     tasks,
@@ -87,8 +89,6 @@ const Tasks: React.FC = () => {
       setIsEditorOpen(false);
       setEditingTask(null);
       
-      // Remove manual success toast - optimistic mutations handle this
-      
     } catch (error: unknown) {
       const descriptiveMessage = getErrorMessage(error);
       logger.error("Error saving task:", descriptiveMessage, error);
@@ -102,8 +102,6 @@ const Tasks: React.FC = () => {
       setIsEditorOpen(false);
       setEditingTask(null);
       
-      // Remove manual success toast - optimistic mutations handle this
-      
     } catch (error: unknown) {
       const descriptiveMessage = getErrorMessage(error);
       logger.error("Error deleting task:", descriptiveMessage, error);
@@ -116,21 +114,15 @@ const Tasks: React.FC = () => {
     if (!task) return;
 
     try {
-      const updatePayload: UpdateTaskVariables = {
-        ...task,
-        id: taskId,
+      await toggleTaskCompletionMutation.mutateAsync({
+        taskId,
         completed,
-        last_completed_date: completed ? new Date().toISOString() : undefined,
-      };
-      
-      await saveTask(updatePayload);
-      
-      // Remove manual success toast - optimistic mutations handle this
-      
+        pointsValue: task.points,
+        task
+      });
     } catch (error: unknown) {
       const descriptiveMessage = getErrorMessage(error);
       logger.error("Error toggling task completion:", descriptiveMessage, error);
-      toastManager.error("Update Error", descriptiveMessage);
     }
   };
 
