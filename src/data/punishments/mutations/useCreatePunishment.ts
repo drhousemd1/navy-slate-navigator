@@ -19,11 +19,13 @@ export type CreatePunishmentVariables = Partial<Omit<PunishmentData, 'id' | 'cre
 
 export const useCreatePunishment = () => {
   const queryClient = useQueryClient();
-  const { subUserId } = useUserIds();
+  const { subUserId, domUserId } = useUserIds();
+
+  const punishmentsQueryKey = [...PUNISHMENTS_QUERY_KEY, subUserId, domUserId];
 
   return useCreateOptimisticMutation<PunishmentWithId, Error, CreatePunishmentVariables>({
     queryClient,
-    queryKey: [...PUNISHMENTS_QUERY_KEY],
+    queryKey: punishmentsQueryKey,
     mutationFn: async (variables: CreatePunishmentVariables) => {
       if (!subUserId) {
         throw new Error("User not authenticated");
@@ -74,7 +76,7 @@ export const useCreatePunishment = () => {
       } as PunishmentWithId;
     },
     onSuccessCallback: async (_data: PunishmentWithId, _variables: CreatePunishmentVariables) => {
-      const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>([...PUNISHMENTS_QUERY_KEY]) || [];
+      const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>(punishmentsQueryKey) || [];
       await savePunishmentsToDB(currentPunishments);
     },
   });

@@ -4,7 +4,7 @@ import { useApplyPunishment } from '@/data/punishments/mutations/useApplyPunishm
 import { PunishmentData } from '@/contexts/punishments/types';
 import { usePoints } from '@/data/points/useUserPointsQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
 
 export const usePunishmentApply = () => {
@@ -15,20 +15,12 @@ export const usePunishmentApply = () => {
 
   const handlePunish = async (punishment: PunishmentData) => {
     if (!subUserId) {
-      toast({
-        title: "Error",
-        description: "User not authenticated",
-        variant: "destructive",
-      });
+      toastManager.error("Error", "User not authenticated");
       return;
     }
 
     if (!punishment.id) {
-      toast({
-        title: "Error",
-        description: "Invalid punishment data",
-        variant: "destructive",
-      });
+      toastManager.error("Error", "Invalid punishment data");
       return;
     }
 
@@ -40,18 +32,9 @@ export const usePunishmentApply = () => {
         dayOfWeek: new Date().getDay(),
         currentPoints: currentPoints
       });
-      
-      toast({
-        title: "Punishment Applied",
-        description: `${punishment.title} has been applied.`
-      });
     } catch (error) {
       logger.error('Error applying punishment:', error);
-      toast({
-        title: "Error",
-        description: "Failed to apply punishment",
-        variant: "destructive",
-      });
+      // Error toast is handled by the mutation
     } finally {
       setIsApplying(false);
     }

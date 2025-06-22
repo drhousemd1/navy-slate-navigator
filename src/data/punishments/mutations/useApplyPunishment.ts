@@ -1,18 +1,26 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 import { PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
 import { PUNISHMENT_HISTORY_QUERY_KEY } from '@/data/punishments/queries';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
+import { v4 as uuidv4 } from 'uuid';
+
+interface OptimisticApplyContext {
+  previousHistoryData?: PunishmentHistoryItem[];
+  optimisticId?: string;
+}
 
 export const useApplyPunishment = () => {
   const queryClient = useQueryClient();
-  const { subUserId } = useUserIds();
+  const { subUserId, domUserId } = useUserIds();
 
-  return useMutation<PunishmentHistoryItem, Error, ApplyPunishmentArgs>({
+  const historyQueryKey = [...PUNISHMENT_HISTORY_QUERY_KEY, subUserId, domUserId];
+
+  return useMutation<PunishmentHistoryItem, Error, ApplyPunishmentArgs, OptimisticApplyContext>({
     mutationFn: async (args: ApplyPunishmentArgs) => {
       if (!subUserId) {
         throw new Error("User not authenticated");
@@ -20,7 +28,6 @@ export const useApplyPunishment = () => {
 
       logger.debug('[useApplyPunishment] Applying punishment with args:', args);
       
-      // Create the history entry data
       const historyEntryData = {
         punishment_id: args.punishmentId,
         points_deducted: args.pointsDeducted,
@@ -29,7 +36,6 @@ export const useApplyPunishment = () => {
         applied_date: new Date().toISOString()
       };
 
-      // Insert the punishment history record
       const { data: historyData, error: historyError } = await supabase
         .from('punishment_history')
         .insert(historyEntryData)
@@ -45,7 +51,6 @@ export const useApplyPunishment = () => {
         throw new Error('Failed to create punishment history entry');
       }
 
-      // Update user points
       const { error: pointsError } = await supabase
         .from('profiles')
         .update({ 
@@ -55,30 +60,51 @@ export const useApplyPunishment = () => {
 
       if (pointsError) {
         logger.error('[useApplyPunishment] Points update error:', pointsError);
-        // Note: In production, you might want to implement a rollback mechanism here
         throw pointsError;
       }
 
       logger.debug('[useApplyPunishment] Successfully applied punishment');
       return historyData as PunishmentHistoryItem;
     },
-    onSuccess: (data, variables) => {
-      // Invalidate relevant queries to refresh data
-      queryClient.invalidateQueries({ queryKey: PUNISHMENT_HISTORY_QUERY_KEY });
+    onMutate: async (args: ApplyPunishmentArgs) => {
+      await queryClient.cancelQueries({ queryKey: historyQueryKey });
+      const previousHistoryData = queryClient.getQueryData<PunishmentHistoryItem[]>(historyQueryKey);
+      
+      const optimisticId = uuidv4();
+      const optimisticEntry: PunishmentHistoryItem = {
+        id: optimisticId,
+        punishment_id: args.punishmentId,
+        points_deducted: args.pointsDeducted,
+        day_of_week: args.dayOfWeek ?? new Date().getDay(),
+        user_id: subUserId!,
+        applied_date: new Date().toISOString()
+      };
+
+      queryClient.setQueryData<PunishmentHistoryItem[]>(historyQueryKey, (old = []) => [optimisticEntry, ...old]);
+      
+      return { previousHistoryData, optimisticId };
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.setQueryData<PunishmentHistoryItem[]>(historyQueryKey, (old = []) => {
+        const filteredList = old.filter(item => !(context?.optimisticId && item.id === context.optimisticId));
+        return [data, ...filteredList];
+      });
+      
       queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
       
-      toast({
-        title: "Punishment Applied",
-        description: "Punishment has been successfully applied.",
-      });
+      toastManager.success("Punishment Applied", "Punishment has been successfully applied.");
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      if (context?.previousHistoryData) {
+        queryClient.setQueryData<PunishmentHistoryItem[]>(historyQueryKey, context.previousHistoryData);
+      }
+      
       logger.error('[useApplyPunishment] Mutation error:', error);
-      toast({
-        title: "Failed to Apply Punishment",
-        description: error.message,
-        variant: "destructive",
-      });
+      toastManager.error("Failed to Apply Punishment", error.message);
+    },
+    onSettled: async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      queryClient.invalidateQueries({ queryKey: historyQueryKey });
     },
   });
 };
