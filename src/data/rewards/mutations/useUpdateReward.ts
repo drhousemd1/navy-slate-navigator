@@ -5,15 +5,18 @@ import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward, UpdateRewardVariables } from '@/data/rewards/types';
 import { processImageForSave } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
-
-const REWARDS_QUERY_KEY = ['rewards'];
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { REWARDS_QUERY_KEY } from '../queries';
 
 export const useUpdateReward = () => {
   const queryClient = useQueryClient();
+  const { subUserId, domUserId } = useUserIds();
+
+  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
   return useUpdateOptimisticMutation<Reward, Error, UpdateRewardVariables>({
     queryClient,
-    queryKey: REWARDS_QUERY_KEY,
+    queryKey: rewardsQueryKey,
     mutationFn: async (variables: UpdateRewardVariables) => {
       const { id, ...updates } = variables;
       

@@ -5,15 +5,18 @@ import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { PostgrestError } from '@supabase/supabase-js';
-
-const REWARDS_QUERY_KEY = ['rewards'];
+import { useUserIds } from '@/contexts/UserIdsContext';
+import { REWARDS_QUERY_KEY } from '../queries';
 
 export const useDeleteReward = () => {
   const queryClient = useQueryClient();
+  const { subUserId, domUserId } = useUserIds();
+
+  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
   return useDeleteOptimisticMutation<Reward, PostgrestError | Error, string>({
     queryClient,
-    queryKey: REWARDS_QUERY_KEY,
+    queryKey: rewardsQueryKey,
     mutationFn: async (rewardId: string) => {
       const { error: usageError } = await supabase
         .from('reward_usage')
@@ -28,6 +31,8 @@ export const useDeleteReward = () => {
       if (error) throw error;
     },
     entityName: 'Reward',
-    idField: 'id'
+    idField: 'id',
+    relatedQueryKey: ['reward-usage'],
+    relatedIdField: 'reward_id'
   });
 };

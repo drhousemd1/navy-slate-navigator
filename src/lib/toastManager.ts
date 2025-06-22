@@ -1,3 +1,5 @@
+// This file is now deprecated. Toast handling is moved to centralized optimistic mutations.
+// Keeping the file for any legacy imports but functionality is handled by optimistic-mutations.ts
 
 import { toast } from '@/hooks/use-toast';
 

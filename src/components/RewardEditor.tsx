@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { RewardEditorForm } from './reward-editor/RewardEditorForm';
-import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { logger } from '@/lib/logger';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
@@ -45,21 +44,11 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
       
       logger.debug("Save completed successfully");
       
-      // Show success toast
-      toast({
-        title: "Success",
-        description: `Reward ${rewardData ? 'updated' : 'created'} successfully!`,
-      });
-      
       // Close the modal after successful save
       onClose();
     } catch (error) {
       logger.error("Error in RewardEditor save handler:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save reward. Please try again.",
-        variant: "destructive",
-      });
+      throw error; // Let the centralized error handling manage the toast
     } finally {
       setIsSaving(false);
     }

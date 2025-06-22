@@ -1,7 +1,7 @@
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toastManager } from '@/lib/toastManager';
+import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward, CreateRewardVariables } from '../types';
 import { REWARDS_QUERY_KEY } from '../queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -10,9 +10,13 @@ import { logger } from '@/lib/logger';
 
 export const useCreateRewardMutation = () => {
   const queryClient = useQueryClient();
-  const { subUserId } = useUserIds();
+  const { subUserId, domUserId } = useUserIds();
 
-  return useMutation<Reward, Error, CreateRewardVariables>({
+  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
+
+  return useCreateOptimisticMutation<Reward, Error, CreateRewardVariables>({
+    queryClient,
+    queryKey: rewardsQueryKey,
     mutationFn: async (variables: CreateRewardVariables) => {
       if (!subUserId) {
         throw new Error("User not authenticated");
@@ -38,19 +42,16 @@ export const useCreateRewardMutation = () => {
 
       return data as Reward;
     },
-    onSuccess: (newReward) => {
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => [
-        newReward,
-        ...oldRewards
-      ]);
-      
-      toastManager.success("Reward Created", `Successfully created ${newReward.title}`);
-      
+    entityName: 'Reward',
+    createOptimisticItem: (variables, optimisticId) => ({
+      ...variables,
+      id: optimisticId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user_id: subUserId || '',
+    } as Reward),
+    onSuccessCallback: (newReward) => {
       logger.debug('[Create Reward] Reward created successfully with image compression');
-    },
-    onError: (error) => {
-      logger.error('[Create Reward] Error creating reward:', error);
-      toastManager.error("Failed to Create Reward", error.message);
     },
   });
 };

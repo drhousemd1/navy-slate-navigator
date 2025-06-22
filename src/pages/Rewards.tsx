@@ -7,7 +7,6 @@ import RewardsHeader from '../components/rewards/RewardsHeader';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 import { Reward, RewardFormValues } from '@/data/rewards/types'; 
-import { toast } from '@/hooks/use-toast';
 
 import { useRewards } from '@/contexts/RewardsContext';
 import { logger } from '@/lib/logger';
@@ -36,8 +35,6 @@ const RewardsContent: React.FC<{
     if (rewardToEdit) {
       setRewardBeingEdited(rewardToEdit);
       setIsEditorOpen(true);
-    } else {
-      toast({ title: "Error", description: "Could not find reward to edit.", variant: "destructive" });
     }
   };
 
@@ -63,53 +60,41 @@ const RewardsContent: React.FC<{
   }, [contentRef]); 
 
   const handleSaveRewardEditor = async (formData: RewardFormValues): Promise<Reward> => {
-    try {
-      const rewardIndex = rewardBeingEdited ? rewards.findIndex(r => r.id === rewardBeingEdited.id) : null;
-      const savedRewardId = await handleSaveReward(formData, rewardIndex);
-      
-      if (!savedRewardId) {
-        throw new Error("Failed to save reward");
-      }
-      
-      // Find the saved reward in the list
-      const savedReward = rewards.find(r => r.id === savedRewardId) || {
-        ...formData,
-        id: savedRewardId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: '', // This will be set by the backend
-      } as Reward;
-      
-      setIsEditorOpen(false);
-      setRewardBeingEdited(undefined);
-      return savedReward;
-    } catch (e) {
-      logger.error("Error saving reward from page:", e);
-      toast({ title: "Save Error", description: e instanceof Error ? e.message : "Could not save reward.", variant: "destructive" });
-      throw e; 
+    const rewardIndex = rewardBeingEdited ? rewards.findIndex(r => r.id === rewardBeingEdited.id) : null;
+    const savedRewardId = await handleSaveReward(formData, rewardIndex);
+    
+    if (!savedRewardId) {
+      throw new Error("Failed to save reward");
     }
+    
+    // Find the saved reward in the list
+    const savedReward = rewards.find(r => r.id === savedRewardId) || {
+      ...formData,
+      id: savedRewardId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user_id: '', // This will be set by the backend
+    } as Reward;
+    
+    setIsEditorOpen(false);
+    setRewardBeingEdited(undefined);
+    return savedReward;
   };
 
   const handleDeleteRewardEditor = async (idToDelete?: string) => {
     const finalIdToDelete = idToDelete || rewardBeingEdited?.id;
     if (!finalIdToDelete) {
-      toast({ title: "Error", description: "No reward ID specified for deletion.", variant: "destructive" });
       return;
     }
     
-    try {
-      const rewardIndex = rewards.findIndex(r => r.id === finalIdToDelete);
-      if (rewardIndex === -1) {
-        toast({ title: "Error", description: "Reward not found for deletion.", variant: "destructive" });
-        return;
-      }
-      
-      await handleDeleteReward(rewardIndex);
-      setIsEditorOpen(false);
-      setRewardBeingEdited(undefined);
-    } catch (e) {
-      logger.error("Error deleting reward from page:", e);
+    const rewardIndex = rewards.findIndex(r => r.id === finalIdToDelete);
+    if (rewardIndex === -1) {
+      return;
     }
+    
+    await handleDeleteReward(rewardIndex);
+    setIsEditorOpen(false);
+    setRewardBeingEdited(undefined);
   };
   
   return (

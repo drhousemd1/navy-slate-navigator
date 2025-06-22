@@ -1,7 +1,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toastManager } from '@/lib/toastManager';
 import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -29,7 +28,6 @@ export const useBuySubReward = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
 
-  // Use the same query key pattern as useRewardsQuery
   const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
   return useMutation<Reward, Error, BuySubRewardVars, BuySubRewardOptimisticContext>({
@@ -117,8 +115,6 @@ export const useBuySubReward = () => {
         queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] }),
         queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
       ]);
-      
-      toastManager.success("Reward Purchased", `You bought ${data.title}!`);
     },
     onError: (error: Error, variables, context) => {
       if (context?.previousRewards) {
@@ -131,8 +127,6 @@ export const useBuySubReward = () => {
       if (context?.previousSubCount !== undefined) {
         queryClient.setQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY], context.previousSubCount);
       }
-
-      toastManager.error("Purchase Failed", `Failed to purchase reward: ${error.message}`);
     },
     onSettled: async (data, error, variables) => {
       await Promise.all([

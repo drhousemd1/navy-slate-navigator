@@ -1,7 +1,6 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toastManager } from '@/lib/toastManager';
 import { Reward } from '../types';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { DOM_REWARD_TYPES_COUNT_QUERY_KEY } from '../queries/useDomRewardTypesCountQuery';
@@ -39,7 +38,6 @@ export const useRedeemDomReward = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
 
-  // Use the same query key pattern as useRewardsQuery
   const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
   return useMutation<Reward, Error, RedeemDomRewardVariables, RedeemDomRewardOptimisticContext>({
@@ -90,7 +88,6 @@ export const useRedeemDomReward = () => {
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(rewardsQueryKey, context.previousRewards);
       }
-      toastManager.error("Failed to Use Reward", err.message);
     },
     onSuccess: (data, variables) => {
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) => {
@@ -98,8 +95,6 @@ export const useRedeemDomReward = () => {
       });
       
       queryClient.invalidateQueries({ queryKey: ['reward-usage', variables.rewardId] });
-      
-      toastManager.success("Reward Used!", `You used ${data.title}.`);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
