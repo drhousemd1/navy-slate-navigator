@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentDayOfWeek } from '@/lib/taskUtils';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { REWARDS_POINTS_QUERY_KEY } from '@/data/rewards/queries';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
@@ -13,9 +13,9 @@ import { logger } from '@/lib/logger';
 
 interface ToggleTaskCompletionVariables {
   taskId: string;
-  completed: boolean; // This 'completed' now means "an instance of completion occurred"
+  completed: boolean;
   pointsValue: number;
-  task: TaskWithId; // Changed to non-optional, as it's crucial and provided by the caller
+  task: TaskWithId;
 }
 
 export function useToggleTaskCompletionMutation() {
@@ -35,7 +35,7 @@ export function useToggleTaskCompletionMutation() {
         const { data: authUser } = await supabase.auth.getUser();
         if (!authUser?.user?.id) {
           logger.error('[useToggleTaskCompletionMutation] User not authenticated');
-          toast({ title: 'Authentication Error', description: "User not authenticated.", variant: 'destructive' });
+          toastManager.error('Authentication Error', "User not authenticated.");
           throw new Error("User not authenticated.");
         }
         const userId = authUser.user.id;
@@ -44,7 +44,7 @@ export function useToggleTaskCompletionMutation() {
 
         if (!taskFromVariables) {
           logger.error('[useToggleTaskCompletionMutation] Task data not provided');
-          toast({ title: 'Internal Error', description: "Task data was not provided to the mutation.", variant: 'destructive' });
+          toastManager.error('Internal Error', "Task data was not provided to the mutation.");
           throw new Error(`Task data for ID ${taskId} not provided.`);
         }
         
@@ -99,7 +99,7 @@ export function useToggleTaskCompletionMutation() {
 
         if (updateError) {
           logger.error('[useToggleTaskCompletionMutation] Error updating task:', updateError);
-          toast({ title: 'Error Updating Task', description: updateError.message, variant: 'destructive' });
+          toastManager.error('Error Updating Task', updateError.message);
           throw updateError;
         }
 
@@ -113,7 +113,7 @@ export function useToggleTaskCompletionMutation() {
 
           if (historyError) {
             logger.error('Error recording task completion history:', historyError);
-            toast({ title: 'History Record Error', description: historyError.message, variant: 'destructive' });
+            toastManager.error('History Record Error', historyError.message);
           }
 
           logger.debug('[useToggleTaskCompletionMutation] Updating user points');
@@ -125,7 +125,7 @@ export function useToggleTaskCompletionMutation() {
 
           if (fetchProfileError) {
             logger.error('Error fetching profile for points update:', fetchProfileError);
-            toast({ title: 'Profile Fetch Error', description: fetchProfileError.message, variant: 'destructive' });
+            toastManager.error('Profile Fetch Error', fetchProfileError.message);
             throw fetchProfileError;
           }
 
@@ -137,7 +137,7 @@ export function useToggleTaskCompletionMutation() {
 
           if (updatePointsError) {
             logger.error('Error updating profile points:', updatePointsError);
-            toast({ title: 'Points Update Error', description: updatePointsError.message, variant: 'destructive' });
+            toastManager.error('Points Update Error', updatePointsError.message);
             throw updatePointsError;
           }
 
@@ -193,10 +193,10 @@ export function useToggleTaskCompletionMutation() {
       },
       onSuccess: async (data, variables) => {
         logger.debug('[useToggleTaskCompletionMutation] onSuccess callback');
-        toast({ 
-          title: `Task ${variables.completed ? 'Activity Logged' : 'Activity Reversed'}`, 
-          description: variables.completed ? 'Points and history have been updated if applicable.' : 'Task status updated.' 
-        });
+        toastManager.success(
+          `Task ${variables.completed ? 'Activity Logged' : 'Activity Reversed'}`, 
+          variables.completed ? 'Points and history have been updated if applicable.' : 'Task status updated.'
+        );
 
         try {
             const localTasks = await loadTasksFromDB() || [];
@@ -236,7 +236,7 @@ export function useToggleTaskCompletionMutation() {
               errorMessage = e.message;
             }
             logger.error('[useToggleTaskCompletionMutation onSuccess] Error updating IndexedDB:', errorMessage, e);
-            toast({ variant: "destructive", title: "Local Sync Error", description: errorMessage });
+            toastManager.error("Local Sync Error", errorMessage);
         }
       },
       onError: (error, variables, context) => {
@@ -250,7 +250,7 @@ export function useToggleTaskCompletionMutation() {
              !error.message.includes('Points Update Error') &&
              !error.message.includes('User not authenticated') &&
              !error.message.includes('Task data was not provided')) { 
-             toast({ title: 'Task Status Update Failed', description: error.message, variant: 'destructive' });
+             toastManager.error('Task Status Update Failed', error.message);
         }
       },
       onSettled: (data, error, variables) => {

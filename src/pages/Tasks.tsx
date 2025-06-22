@@ -10,6 +10,7 @@ import { logger } from '@/lib/logger';
 import TasksHeader from '@/components/task/TasksHeader';
 import { useAuth } from '@/contexts/auth';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { toastManager } from '@/lib/toastManager';
 
 const Tasks: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -60,11 +61,7 @@ const Tasks: React.FC = () => {
   const handleSaveTask = async (taskData: TaskFormValues) => {
     try {
       if (!user?.id) {
-        toast({
-          title: "Authentication Error",
-          description: "You must be logged in to save tasks.",
-          variant: "destructive",
-        });
+        toastManager.error("Authentication Error", "You must be logged in to save tasks.");
         return;
       }
 
@@ -90,19 +87,12 @@ const Tasks: React.FC = () => {
       setIsEditorOpen(false);
       setEditingTask(null);
       
-      toast({
-        title: "Success",
-        description: editingTask ? "Task updated successfully!" : "Task created successfully!",
-        variant: "default",
-      });
+      // Remove manual success toast - optimistic mutations handle this
+      
     } catch (error: unknown) {
       const descriptiveMessage = getErrorMessage(error);
       logger.error("Error saving task:", descriptiveMessage, error);
-      toast({
-        title: "Save Error",
-        description: descriptiveMessage,
-        variant: "destructive",
-      });
+      toastManager.error("Save Error", descriptiveMessage);
     }
   };
 
@@ -112,19 +102,12 @@ const Tasks: React.FC = () => {
       setIsEditorOpen(false);
       setEditingTask(null);
       
-      toast({
-        title: "Success",
-        description: "Task deleted successfully!",
-        variant: "default",
-      });
+      // Remove manual success toast - optimistic mutations handle this
+      
     } catch (error: unknown) {
       const descriptiveMessage = getErrorMessage(error);
       logger.error("Error deleting task:", descriptiveMessage, error);
-      toast({
-        title: "Delete Error", 
-        description: descriptiveMessage,
-        variant: "destructive",
-      });
+      toastManager.error("Delete Error", descriptiveMessage);
     }
   };
 
@@ -142,19 +125,12 @@ const Tasks: React.FC = () => {
       
       await saveTask(updatePayload);
       
-      toast({
-        title: completed ? "Task Completed!" : "Task Marked Incomplete",
-        description: completed ? `You earned ${task.points} points!` : "Task status updated.",
-        variant: "default",
-      });
+      // Remove manual success toast - optimistic mutations handle this
+      
     } catch (error: unknown) {
       const descriptiveMessage = getErrorMessage(error);
       logger.error("Error toggling task completion:", descriptiveMessage, error);
-      toast({
-        title: "Update Error",
-        description: descriptiveMessage,
-        variant: "destructive",
-      });
+      toastManager.error("Update Error", descriptiveMessage);
     }
   };
 

@@ -5,9 +5,9 @@ import { useDeleteOptimisticMutation } from '@/lib/optimistic-mutations';
 import { TaskWithId } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries'; 
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { getErrorMessage } from '@/lib/errors';
 
 export const useDeleteTask = () => {
   const queryClient = useQueryClient();
@@ -46,13 +46,8 @@ export const useDeleteTask = () => {
       } catch (e: unknown) {
         const descriptiveMessage = getErrorMessage(e);
         logger.error('[useDeleteTask onSuccessCallback] Error updating IndexedDB:', descriptiveMessage, e);
-        toast({ 
-            variant: "destructive", 
-            title: "Local Update Error", 
-            description: `Failed to update local data after deletion: ${descriptiveMessage}` 
-        });
+        toastManager.error("Local Update Error", `Failed to update local data after deletion: ${descriptiveMessage}`);
       }
     },
   });
 };
-

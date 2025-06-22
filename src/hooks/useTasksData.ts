@@ -4,7 +4,7 @@ import { useTasksQuery, TasksQueryResult } from '@/data/tasks/queries';
 import { TaskWithId, TaskFormValues, CreateTaskVariables, UpdateTaskVariables, Json } from '@/data/tasks/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { saveTasksToDB, loadTasksFromDB } from '@/data/indexedDB/useIndexedDB';
 import { useDeleteTask } from '@/data/tasks/mutations/useDeleteTask'; 
 import { logger } from '@/lib/logger';
@@ -85,7 +85,7 @@ export const useTasksData = () => {
     } catch (e: unknown) {
       const descriptiveMessage = getErrorMessage(e);
       logger.error("Error in saveTask (useTasksData):", descriptiveMessage, e);
-      toast({ title: "Save Error", description: descriptiveMessage, variant: "destructive" });
+      toastManager.error("Save Error", descriptiveMessage);
       throw e; 
     }
   };

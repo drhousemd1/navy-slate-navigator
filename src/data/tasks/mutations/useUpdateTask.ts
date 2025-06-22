@@ -5,19 +5,19 @@ import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { TaskWithId, UpdateTaskVariables, Json } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { processImageForSave } from '@/utils/image/taskIntegration';
 
-export type { UpdateTaskVariables }; // Changed to export type
+export type { UpdateTaskVariables };
 
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
 
   return useUpdateOptimisticMutation<TaskWithId, Error, UpdateTaskVariables>({
     queryClient,
-    queryKey: TASKS_QUERY_KEY, // Use the constant
+    queryKey: TASKS_QUERY_KEY,
     mutationFn: async (variables: UpdateTaskVariables) => {
       const { id, ...updatesFromVariables } = variables;
 
@@ -61,11 +61,7 @@ export const useUpdateTask = () => {
       } catch (e: unknown) {
         const descriptiveMessage = getErrorMessage(e);
         logger.error('[useUpdateTask onSuccessCallback] Error updating IndexedDB or invalidating query:', descriptiveMessage, e);
-        toast({ 
-            variant: "destructive", 
-            title: "Local Save Error", 
-            description: `Failed to save updated task locally or refresh list: ${descriptiveMessage}` 
-        });
+        toastManager.error("Local Save Error", `Failed to save updated task locally or refresh list: ${descriptiveMessage}`);
       }
     },
   });

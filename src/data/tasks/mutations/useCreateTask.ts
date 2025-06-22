@@ -5,7 +5,7 @@ import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { TaskWithId, CreateTaskVariables, Json } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries';
 import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
-import { toast } from '@/hooks/use-toast';
+import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useAuth } from '@/contexts/auth';
@@ -113,11 +113,7 @@ export const useCreateTask = () => {
       } catch (e: unknown) {
         const descriptiveMessage = getErrorMessage(e);
         logger.error('[useCreateTask onSuccessCallback] Error updating IndexedDB:', descriptiveMessage, e);
-        toast({ 
-            variant: "destructive", 
-            title: "Local Save Error", 
-            description: `Task created on server, but failed to save locally: ${descriptiveMessage}` 
-        });
+        toastManager.error("Local Save Error", `Task created on server, but failed to save locally: ${descriptiveMessage}`);
       }
     },
   });
