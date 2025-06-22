@@ -10,8 +10,7 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
 import { SUB_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
 import { DOM_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
-
-const REWARDS_QUERY_KEY = ['rewards'];
+import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 
 interface BuyDomRewardVars { 
   rewardId: string; 
@@ -28,7 +27,10 @@ interface BuyDomRewardOptimisticContext {
 
 export const useBuyDomReward = () => {
   const queryClient = useQueryClient();
-  const { domUserId } = useUserIds();
+  const { subUserId, domUserId } = useUserIds();
+
+  // Use the same query key pattern as useRewardsQuery
+  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
   return useMutation<Reward, Error, BuyDomRewardVars, BuyDomRewardOptimisticContext>({
     mutationFn: async ({ rewardId, cost, currentSupply, currentDomPoints }) => {
@@ -80,16 +82,16 @@ export const useBuyDomReward = () => {
       }
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: rewardsQueryKey });
       const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId];
       await queryClient.cancelQueries({ queryKey: userDomPointsQueryKey });
       await queryClient.cancelQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
 
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
+      const previousRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey);
       const previousDomPoints = queryClient.getQueryData<number>(userDomPointsQueryKey);
       const previousDomCount = queryClient.getQueryData<number>([DOM_REWARD_TYPES_COUNT_QUERY_KEY]);
 
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
+      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
             ? { ...reward, supply: reward.supply === -1 ? -1 : reward.supply + 1 }
@@ -106,7 +108,7 @@ export const useBuyDomReward = () => {
       return { previousRewards, previousDomPoints, previousDomCount };
     },
     onSuccess: async (data, variables) => {
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => 
+      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
 
@@ -120,7 +122,7 @@ export const useBuyDomReward = () => {
     },
     onError: (error: Error, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
+        queryClient.setQueryData<Reward[]>(rewardsQueryKey, context.previousRewards);
       }
       if (context?.previousDomPoints !== undefined) {
         const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId];

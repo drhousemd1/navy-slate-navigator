@@ -10,8 +10,7 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { SUB_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
 import { DOM_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
-
-const REWARDS_QUERY_KEY = ['rewards'];
+import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 
 interface BuySubRewardVars { 
   rewardId: string; 
@@ -28,7 +27,10 @@ interface BuySubRewardOptimisticContext {
 
 export const useBuySubReward = () => {
   const queryClient = useQueryClient();
-  const { subUserId } = useUserIds();
+  const { subUserId, domUserId } = useUserIds();
+
+  // Use the same query key pattern as useRewardsQuery
+  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
   return useMutation<Reward, Error, BuySubRewardVars, BuySubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, cost, currentSupply, currentPoints }) => {
@@ -80,16 +82,16 @@ export const useBuySubReward = () => {
       }
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey: rewardsQueryKey });
       const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, subUserId];
       await queryClient.cancelQueries({ queryKey: userPointsQueryKey });
       await queryClient.cancelQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
 
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
+      const previousRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey);
       const previousPoints = queryClient.getQueryData<number>(userPointsQueryKey);
       const previousSubCount = queryClient.getQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY]);
 
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
+      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
             ? { ...reward, supply: reward.supply === -1 ? -1 : reward.supply + 1 }
@@ -106,7 +108,7 @@ export const useBuySubReward = () => {
       return { previousRewards, previousPoints, previousSubCount };
     },
     onSuccess: async (data, variables) => {
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => 
+      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
       
@@ -120,7 +122,7 @@ export const useBuySubReward = () => {
     },
     onError: (error: Error, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
+        queryClient.setQueryData<Reward[]>(rewardsQueryKey, context.previousRewards);
       }
       if (context?.previousPoints !== undefined) {
         const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, subUserId];
