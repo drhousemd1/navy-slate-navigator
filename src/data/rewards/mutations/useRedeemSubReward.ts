@@ -97,6 +97,8 @@ export const useRedeemSubReward = () => {
       });
       
       queryClient.invalidateQueries({ queryKey: ['reward-usage', variables.rewardId] });
+      
+      toastManager.success("Reward Used!", `You used ${data.title}.`);
     },
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
