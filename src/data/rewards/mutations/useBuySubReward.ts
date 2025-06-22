@@ -89,7 +89,6 @@ export const useBuySubReward = () => {
       const previousPoints = queryClient.getQueryData<number>(userPointsQueryKey);
       const previousSubCount = queryClient.getQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY]);
 
-      // Optimistically update rewards with increased supply
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
@@ -98,7 +97,6 @@ export const useBuySubReward = () => {
         )
       );
 
-      // Optimistically update points
       queryClient.setQueryData<number>(userPointsQueryKey, (oldUserPoints = 0) =>
         (oldUserPoints || 0) - variables.cost
       );
@@ -108,23 +106,19 @@ export const useBuySubReward = () => {
       return { previousRewards, previousPoints, previousSubCount };
     },
     onSuccess: async (data, variables) => {
-      // Update with the actual data from the server
       queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
       
-      // Invalidate related queries to ensure fresh data
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] }),
         queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] }),
-        queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] }),
-        queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY })
+        queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
       ]);
       
       toastManager.success("Reward Purchased", `You bought ${data.title}!`);
     },
     onError: (error: Error, variables, context) => {
-      // Revert optimistic updates on error
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
       }
@@ -139,11 +133,9 @@ export const useBuySubReward = () => {
       toastManager.error("Purchase Failed", `Failed to purchase reward: ${error.message}`);
     },
     onSettled: async (data, error, variables) => {
-      // Always invalidate to ensure consistency
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] }),
-        queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] }),
-        queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY })
+        queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] })
       ]);
     }
   });
