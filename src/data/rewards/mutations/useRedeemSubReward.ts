@@ -5,8 +5,7 @@ import { toastManager } from '@/lib/toastManager';
 import { Reward } from '../types';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { SUB_REWARD_TYPES_COUNT_QUERY_KEY } from '../queries/useSubRewardTypesCountQuery';
-
-const REWARDS_QUERY_KEY = ['rewards'];
+import { REWARDS_QUERY_KEY } from '../queries';
 
 interface RedeemSubRewardVariables {
   rewardId: string;
@@ -38,7 +37,10 @@ const recordRewardUsage = async (rewardId: string, userId: string) => {
 
 export const useRedeemSubReward = () => {
   const queryClient = useQueryClient();
-  const { subUserId } = useUserIds();
+  const { subUserId, domUserId } = useUserIds();
+
+  // Use the same query key pattern as useRewardsQuery
+  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
   return useMutation<Reward, Error, RedeemSubRewardVariables, RedeemSubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, currentSupply }) => {
@@ -73,10 +75,10 @@ export const useRedeemSubReward = () => {
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: REWARDS_QUERY_KEY });
-      const previousRewards = queryClient.getQueryData<Reward[]>(REWARDS_QUERY_KEY);
+      await queryClient.cancelQueries({ queryKey: rewardsQueryKey });
+      const previousRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey);
 
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (old = []) =>
+      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
             ? { ...reward, supply: reward.supply === -1 ? -1 : reward.supply - 1 }
@@ -87,12 +89,12 @@ export const useRedeemSubReward = () => {
     },
     onError: (err, variables, context) => {
       if (context?.previousRewards) {
-        queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, context.previousRewards);
+        queryClient.setQueryData<Reward[]>(rewardsQueryKey, context.previousRewards);
       }
       toastManager.error("Failed to Use Reward", err.message);
     },
     onSuccess: (data, variables) => {
-      queryClient.setQueryData<Reward[]>(REWARDS_QUERY_KEY, (oldRewards = []) => {
+      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
       
@@ -101,7 +103,7 @@ export const useRedeemSubReward = () => {
       toastManager.success("Reward Used!", `You used ${data.title}.`);
     },
     onSettled: (_data, _error, variables) => {
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
       queryClient.invalidateQueries({ queryKey: ['reward-usage'] });
       queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
     },
