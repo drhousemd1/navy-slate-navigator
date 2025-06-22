@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType, SaveRewardParams } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -125,7 +124,7 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       
       logger.debug("RewardsContext - final isDomReward value:", finalIsDomReward);
-      await buyReward({ rewardId: id, cost });
+      await buyReward({ rewardId: id, cost, isDomReward: finalIsDomReward });
     } catch (error) {
       logger.error("Error in RewardsContext handleBuyRewardWrapper:", error);
     }
