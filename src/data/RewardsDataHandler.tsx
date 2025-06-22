@@ -7,6 +7,8 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 // Import specific mutation hooks directly
 import { useCreateRewardMutation, useUpdateRewardMutation, CreateRewardVariables } from './rewards/mutations/useSaveReward';
 import { useDeleteReward as useDeleteRewardMutation } from './rewards/mutations/useDeleteReward';
+import { useBuySubReward } from './rewards/mutations/useBuySubReward';
+import { useBuyDomReward } from './rewards/mutations/useBuyDomReward';
 
 import { fetchRewards, fetchUserPoints, fetchUserDomPoints, fetchTotalRewardsSupply } from './rewards/queries';
 import { REWARDS_QUERY_KEY, REWARDS_POINTS_QUERY_KEY, REWARDS_DOM_POINTS_QUERY_KEY, REWARDS_SUPPLY_QUERY_KEY } from './rewards/queries';
@@ -65,6 +67,8 @@ export const useRewardsData = () => {
   const createRewardMutation = useCreateRewardMutation();
   const updateRewardMutation = useUpdateRewardMutation();
   const deleteRewardMutation = useDeleteRewardMutation();
+  const buySubRewardMutation = useBuySubReward();
+  const buyDomRewardMutation = useBuyDomReward();
 
   // Calculate total dom rewards supply
   const totalDomRewardsSupply = Array.isArray(rewards) ? rewards
@@ -133,7 +137,7 @@ export const useRewardsData = () => {
     }
   };
 
-  // Buy reward function
+  // Buy reward function - FIXED TO USE PROPER MUTATIONS
   const buyReward = async ({ rewardId, cost }: { rewardId: string; cost: number }): Promise<boolean> => {
     try {
       const reward = Array.isArray(rewards) ? rewards.find(r => r.id === rewardId) : undefined;
@@ -142,14 +146,10 @@ export const useRewardsData = () => {
         return false;
       }
       
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) {
-        toast({ title: "Error", description: "User not authenticated", variant: "destructive" });
-        return false;
-      }
-      
       const isDomReward = reward.is_dom_reward;
       const currentPoints = isDomReward ? domPoints : totalPoints;
+      
+      logger.debug("Buying reward:", { rewardId, cost, isDomReward, currentPoints, currentSupply: reward.supply });
       
       if (currentPoints < cost) {
         toast({
@@ -160,52 +160,27 @@ export const useRewardsData = () => {
         return false;
       }
       
-      const { error: supplyError } = await supabase
-        .from('rewards')
-        .update({ supply: reward.supply + 1 }) 
-        .eq('id', rewardId);
-        
-      if (supplyError) {
-        toast({ title: "Error", description: "Failed to update reward supply", variant: "destructive" });
-        return false;
-      }
-      
-      const newPoints = currentPoints - cost;
-      const pointsField = isDomReward ? 'dom_points' : 'points';
-      
-      const { error: pointsError } = await supabase
-        .from('profiles')
-        .update({ [pointsField]: newPoints })
-        .eq('id', userData.user.id);
-        
-      if (pointsError) {
-        await supabase.from('rewards').update({ supply: reward.supply }).eq('id', rewardId);
-        toast({ title: "Error", description: "Failed to update points", variant: "destructive" });
-        return false;
-      }
-      
+      // Use the proper mutation based on reward type
       if (isDomReward) {
-        queryClient.setQueryData(REWARDS_DOM_POINTS_QUERY_KEY, newPoints);
-        await saveDomPointsToDB(newPoints);
+        await buyDomRewardMutation.mutateAsync({
+          rewardId,
+          cost,
+          currentSupply: reward.supply,
+          currentDomPoints: domPoints
+        });
       } else {
-        queryClient.setQueryData(REWARDS_POINTS_QUERY_KEY, newPoints);
-        await savePointsToDB(newPoints);
+        await buySubRewardMutation.mutateAsync({
+          rewardId,
+          cost,
+          currentSupply: reward.supply,
+          currentPoints: totalPoints
+        });
       }
-      
-      queryClient.setQueryData<Reward[]>([...REWARDS_QUERY_KEY, subUserId, domUserId], (oldRewards = []) => {
-        const updatedRewards = oldRewards.map(r => 
-          r.id === rewardId ? { ...r, supply: r.supply + 1 } : r 
-        );
-        saveRewardsToDB(updatedRewards);
-        return updatedRewards;
-      });
-      
-      queryClient.invalidateQueries({ queryKey: REWARDS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: isDomReward ? REWARDS_DOM_POINTS_QUERY_KEY : REWARDS_POINTS_QUERY_KEY });
       
       return true;
     } catch (error) {
       logger.error("Error in buyReward:", error);
+      toast({ title: "Error", description: "Failed to buy reward", variant: "destructive" });
       return false;
     }
   };
@@ -373,12 +348,12 @@ export const useRewardsData = () => {
     deleteReward,
     buyReward,
     useReward,
-    // updatePoints,
-    // updateDomPoints,
+    updatePoints,
+    updateDomPoints,
     refetchRewards,
-    // refreshPointsFromDatabase,
-    // setRewardsOptimistically,
-    // setPointsOptimistically,
-    // setDomPointsOptimistically
+    refreshPointsFromDatabase,
+    setRewardsOptimistically,
+    setPointsOptimistically,
+    setDomPointsOptimistically
   };
 };
