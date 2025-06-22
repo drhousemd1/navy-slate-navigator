@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { PunishmentHistoryItem, ApplyPunishmentArgs } from '@/contexts/punishments/types';
 import { PUNISHMENT_HISTORY_QUERY_KEY } from '@/data/punishments/queries';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
+import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { toastManager } from '@/lib/toastManager';
+import { useOptimisticMutation } from '@/lib/optimistic-mutations';
 import { logger } from '@/lib/logger';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -20,9 +21,10 @@ export const useApplyPunishment = () => {
 
   const historyQueryKey = [...PUNISHMENT_HISTORY_QUERY_KEY, subUserId, domUserId];
 
-  return useMutation<PunishmentHistoryItem, Error, ApplyPunishmentArgs, OptimisticApplyContext>({
+  return useOptimisticMutation<PunishmentHistoryItem, Error, ApplyPunishmentArgs, OptimisticApplyContext>({
+    queryClient,
     mutationFn: async (args: ApplyPunishmentArgs) => {
-      if (!subUserId) {
+      if (!subUserId || !domUserId) {
         throw new Error("User not authenticated");
       }
 
@@ -51,6 +53,7 @@ export const useApplyPunishment = () => {
         throw new Error('Failed to create punishment history entry');
       }
 
+      // Update submissive points
       const { error: pointsError } = await supabase
         .from('profiles')
         .update({ 
@@ -61,6 +64,31 @@ export const useApplyPunishment = () => {
       if (pointsError) {
         logger.error('[useApplyPunishment] Points update error:', pointsError);
         throw pointsError;
+      }
+
+      // Update dominant partner's DOM points
+      const { data: domProfile, error: domFetchError } = await supabase
+        .from('profiles')
+        .select('dom_points')
+        .eq('id', domUserId)
+        .single();
+
+      if (domFetchError) {
+        logger.error('[useApplyPunishment] DOM profile fetch error:', domFetchError);
+        throw domFetchError;
+      }
+
+      const currentDomPoints = domProfile?.dom_points || 0;
+      const { error: domPointsError } = await supabase
+        .from('profiles')
+        .update({ 
+          dom_points: currentDomPoints + args.domPointsAwarded
+        })
+        .eq('id', domUserId);
+
+      if (domPointsError) {
+        logger.error('[useApplyPunishment] DOM points update error:', domPointsError);
+        throw domPointsError;
       }
 
       logger.debug('[useApplyPunishment] Successfully applied punishment');
@@ -90,9 +118,9 @@ export const useApplyPunishment = () => {
         return [data, ...filteredList];
       });
       
+      // Invalidate both user points caches
       queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
-      
-      toastManager.success("Punishment Applied", "Punishment has been successfully applied.");
+      queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
     },
     onError: (error: Error, variables, context) => {
       if (context?.previousHistoryData) {
@@ -100,11 +128,13 @@ export const useApplyPunishment = () => {
       }
       
       logger.error('[useApplyPunishment] Mutation error:', error);
-      toastManager.error("Failed to Apply Punishment", error.message);
     },
     onSettled: async () => {
       await new Promise(resolve => setTimeout(resolve, 100));
       queryClient.invalidateQueries({ queryKey: historyQueryKey });
     },
+    entityName: 'Punishment',
+    successMessage: 'Punishment has been successfully applied',
+    errorMessage: 'Failed to apply punishment',
   });
 };

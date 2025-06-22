@@ -38,6 +38,7 @@ export interface PunishmentHistoryItem {
 export interface ApplyPunishmentArgs {
   punishmentId: string;
   pointsDeducted: number;
+  domPointsAwarded: number;
   dayOfWeek?: number;
   currentPoints?: number;
 }
