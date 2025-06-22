@@ -29,7 +29,6 @@ export const useApplyRandomPunishment = (onClose?: () => void) => {
       await applyPunishmentMutation.mutateAsync({
         punishmentId: punishment.id,
         pointsDeducted: punishment.points,
-        domPointsAwarded: punishment.dom_points,
         dayOfWeek: new Date().getDay(),
         currentPoints: currentPoints
       });
