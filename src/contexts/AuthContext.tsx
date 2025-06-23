@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,6 +31,7 @@ export interface AuthContextType extends AuthState {
   getNickname: ReturnType<typeof useUserProfile>['getNickname'];
   getProfileImage: ReturnType<typeof useUserProfile>['getProfileImage'];
   getUserRole: ReturnType<typeof useUserProfile>['getUserRole'];
+  getUserRoleSync: ReturnType<typeof useUserProfile>['getUserRoleSync']; // Add this line
   updateNickname: ReturnType<typeof useUserProfile>['updateNickname'];
   uploadProfileImageAndUpdateState: ReturnType<typeof useUserProfile>['uploadProfileImageAndUpdateState'];
   deleteUserProfileImage: ReturnType<typeof useUserProfile>['deleteUserProfileImage'];
@@ -226,6 +228,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     getNickname: userProfileUtils.getNickname,
     getProfileImage: userProfileUtils.getProfileImage,
     getUserRole: userProfileUtils.getUserRole,
+    getUserRoleSync: userProfileUtils.getUserRoleSync, // Add this line
     updateNickname: userProfileUtils.updateNickname,
     uploadProfileImageAndUpdateState: userProfileUtils.uploadProfileImageAndUpdateState,
     deleteUserProfileImage: userProfileUtils.deleteUserProfileImage,
