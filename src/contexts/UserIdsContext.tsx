@@ -90,25 +90,57 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
           linked_partner_id: profile.linked_partner_id 
         });
         
-        // FIXED: Proper role-based assignment based on ProfileRole
         const userRole = profile.role as ProfileRole;
         
         if (profile.linked_partner_id) {
-          // For linked partners, assign roles based on their ProfileRole
-          if (userRole === 'sub') {
-            const linkedIds = {
-              subUserId: profile.id,
-              domUserId: profile.linked_partner_id,
-            };
-            logger.debug('[UserIdsProvider] Setting sub user with linked dom:', linkedIds);
-            setUserIds(linkedIds);
-          } else if (userRole === 'dom') {
-            const linkedIds = {
-              subUserId: profile.linked_partner_id,
-              domUserId: profile.id,
-            };
-            logger.debug('[UserIdsProvider] Setting dom user with linked sub:', linkedIds);
-            setUserIds(linkedIds);
+          // CRITICAL FIX: Fetch BOTH profiles to get their actual roles
+          logger.debug('[UserIdsProvider] Fetching both linked profiles...');
+          
+          const { data: partnerProfile, error: partnerError } = await supabase
+            .from('profiles')
+            .select('id, role')
+            .eq('id', profile.linked_partner_id)
+            .single();
+
+          if (partnerError || !partnerProfile) {
+            logger.error('[UserIdsProvider] Error fetching partner profile:', partnerError);
+            // Fallback to solo user behavior
+            const soloIds = { subUserId: profile.id, domUserId: profile.id };
+            logger.debug('[UserIdsProvider] Partner fetch failed, using solo IDs:', soloIds);
+            setUserIds(soloIds);
+          } else {
+            // Successfully got both profiles - assign based on stored roles
+            const partnerRole = partnerProfile.role as ProfileRole;
+            
+            logger.debug('[UserIdsProvider] Both profiles fetched:', {
+              currentUser: { id: profile.id, role: userRole },
+              partner: { id: partnerProfile.id, role: partnerRole }
+            });
+
+            // Assign roles based on stored profile.role values (not who is logged in)
+            let finalIds: UserIds;
+            
+            if (userRole === 'sub') {
+              finalIds = {
+                subUserId: profile.id,
+                domUserId: partnerProfile.id,
+              };
+            } else if (userRole === 'dom') {
+              finalIds = {
+                subUserId: partnerProfile.id,
+                domUserId: profile.id,
+              };
+            } else {
+              // Defensive fallback if roles are unclear
+              logger.warn('[UserIdsProvider] Unclear roles, using fallback assignment');
+              finalIds = {
+                subUserId: profile.id,
+                domUserId: partnerProfile.id,
+              };
+            }
+            
+            logger.debug('[UserIdsProvider] Final role assignment:', finalIds);
+            setUserIds(finalIds);
           }
         } else {
           // Solo user - they are both sub and dom for their own data
