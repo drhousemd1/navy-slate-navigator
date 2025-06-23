@@ -16,6 +16,7 @@ import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
 import { toastManager } from '@/lib/toastManager';
 import { handleImageUpload } from '@/utils/image/ruleIntegration';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RuleFormValues {
   title: string;
@@ -52,8 +53,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const form = useForm<RuleFormValues>({
+    shouldFocusError: false, // Prevent auto-focus on validation errors
     defaultValues: {
       title: '',
       description: '',
@@ -78,6 +81,18 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
     exclude: ['background_image_url', 'icon_url', 'image_meta'] 
   });
+
+  // Defensive blur for mobile to prevent auto-focus
+  useEffect(() => {
+    if (isMobile) {
+      const timer = setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     if (ruleData) {
@@ -232,7 +247,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
                 <Input
                   placeholder="Rule title (e.g., No swearing)"
                   className="bg-dark-navy border-light-navy text-white"
-                  autoFocus={false}
                   {...field}
                 />
               </FormControl>
