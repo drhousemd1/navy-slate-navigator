@@ -15,6 +15,7 @@ import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export interface ThroneRoomCardData {
   id: string;
@@ -55,6 +56,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   localStorageKey = 'throneRoomCards',
   pageTitle = 'Throne Room'
 }) => {
+  const isMobile = useIsMobile();
   const [isSaving, setIsSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(cardData?.background_image_url || null);
   const [iconPreview, setIconPreview] = useState<string | null>(cardData?.icon_url || null);
@@ -67,6 +69,7 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null);
   
   const form = useForm<ThroneRoomCardData>({
+    shouldFocusError: false, // Prevent auto-focus on validation errors
     defaultValues: {
       id: cardData?.id || '',
       title: cardData?.title || '',
@@ -86,6 +89,18 @@ const ThroneRoomEditModal: React.FC<ThroneRoomEditModalProps> = ({
       usage_data: cardData?.usage_data || []
     }
   });
+
+  // Defensive blur for mobile to prevent auto-focus
+  useEffect(() => {
+    if (isMobile) {
+      const timer = setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
   
   useEffect(() => {
     if (isOpen && cardData) {
