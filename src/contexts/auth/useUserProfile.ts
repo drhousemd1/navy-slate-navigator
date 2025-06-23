@@ -2,8 +2,9 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { uploadFile, deleteFiles } from '@/data/storageService';
-import { logger } from '@/lib/logger'; // Ensure logger is imported
-import { getErrorMessage } from '@/lib/errors'; // Import getErrorMessage
+import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/errors';
+import { ProfileRole } from '@/types/profile';
 
 export function useUserProfile(user: User | null, setUser: (user: User | null) => void) {
   // Update user nickname
@@ -57,58 +58,79 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     return user.user_metadata?.avatar_url || '';
   };
 
-  // Get user role
-  const getUserRole = (): string => {
-    if (!user) return 'Submissive'; // Default role with proper capitalization
+  // Get user role from profiles table
+  const getUserRole = async (): Promise<ProfileRole | null> => {
+    if (!user) return null;
     
-    // Get the role from metadata and ensure it's properly capitalized
-    const role = user.user_metadata?.role || 'Submissive';
-    
-    // Ensure first letter is capitalized (in case it's stored lowercase in the database)
-    return role.charAt(0).toUpperCase() + role.slice(1);
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        logger.error('Error fetching user role from profiles:', error);
+        return null;
+      }
+
+      return profile?.role as ProfileRole || null;
+    } catch (error) {
+      logger.error('Exception fetching user role:', error);
+      return null;
+    }
   };
 
-  // Update user role
-  const updateUserRole = async (role: string) => {
-    if (user) {
-      try {
-        const { error } = await supabase.auth.updateUser({
-          data: { 
-            role 
-          }
-        });
+  // Update user role in profiles table (not user metadata)
+  const updateUserRole = async (role: ProfileRole) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', user.id);
         
-        if (error) {
-          logger.error('Error updating user role:', error);
-          toast({
-            title: 'Error updating role',
-            description: error.message, // Supabase error has a message
-            variant: 'destructive',
-          });
-          return;
-        }
-        
-        const updatedUser = {
-          ...user,
-          user_metadata: {
-            ...(user.user_metadata || {}),
-            role
-          }
-        };
-        setUser(updatedUser);
-        
-        toast({
-          title: 'Role updated',
-          description: `Your role has been updated to ${role}`,
-        });
-      } catch (error: unknown) { // Changed from any to unknown
-        logger.error('Exception during user role update:', error);
+      if (error) {
+        logger.error('Error updating user role in profiles:', error);
         toast({
           title: 'Error updating role',
-          description: getErrorMessage(error), // Use getErrorMessage
+          description: error.message,
           variant: 'destructive',
         });
+        return;
       }
+      
+      // Also update user metadata for immediate UI feedback
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { role }
+      });
+      
+      if (authError) {
+        logger.warn('Error updating auth metadata (non-critical):', authError);
+      }
+      
+      // Update local user state
+      const updatedUser = {
+        ...user,
+        user_metadata: {
+          ...(user.user_metadata || {}),
+          role
+        }
+      };
+      setUser(updatedUser);
+      
+      toast({
+        title: 'Role updated',
+        description: `Your role has been updated to ${role}`,
+      });
+    } catch (error: unknown) {
+      logger.error('Exception during user role update:', error);
+      toast({
+        title: 'Error updating role',
+        description: getErrorMessage(error),
+        variant: 'destructive',
+      });
     }
   };
 
