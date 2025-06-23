@@ -12,16 +12,13 @@ import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { logger } from '@/lib/logger';
-// import { useQueryClient } from '@tanstack/react-query'; // No longer needed for purge
-// import { purgeQueryCache } from '@/lib/react-query-config'; // No longer needed here
 
 const AccountSheet = () => {
   const navigate = useNavigate();
-  const { user, getNickname, getProfileImage, getUserRole, signOut, isAdmin } = useAuth();
+  const { user, getNickname, getProfileImage, getUserRoleSync, signOut, isAdmin } = useAuth();
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  // const queryClient = useQueryClient(); // No longer needed
 
   const toggleProfileOptions = () => {
     setShowProfileOptions(!showProfileOptions);
@@ -34,9 +31,8 @@ const AccountSheet = () => {
 
   const handleLogout = async () => {
     await signOut();
-    // await purgeQueryCache(queryClient); // Removed: Cache clearing is handled by AuthContext on SIGNED_OUT
     logger.debug('AccountSheet: User signed out. Cache purging handled by AuthContext.');
-    navigate('/auth'); // Navigate to auth page after sign out
+    navigate('/auth');
     setSheetOpen(false);
   };
   
@@ -46,17 +42,16 @@ const AccountSheet = () => {
   };
 
   const handleAdminPanelClick = () => {
-    navigate('/admin-panel'); // Example route, adjust as needed
+    navigate('/admin-panel');
     setSheetOpen(false);
   };
   
   const nickname = getNickname();
-  const userRole = getUserRole();
+  const userRole = getUserRoleSync(); // Use synchronous version for UI
   
   useEffect(() => {
     if (user) {
       logger.debug('AccountSheet: Current user email:', user.email);
-      // logger.debug('AccountSheet: Is admin check result via email (example):', user.email?.toLowerCase() === 'towenhall@gmail.com'.toLowerCase());
       logger.debug('AccountSheet: isAdmin from AuthContext:', isAdmin);
     }
   }, [user, isAdmin]);
@@ -69,11 +64,7 @@ const AccountSheet = () => {
     } else {
       setProfileImage(null); 
     }
-  }, [getProfileImage, user]); // Added user dependency, as getProfileImage might change behavior based on user
-  
-  // const isAdminUser = () => { // This function is unused and was incorrect
-  //   return true;
-  // };
+  }, [getProfileImage, user]);
   
   return (
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -82,7 +73,7 @@ const AccountSheet = () => {
       </SheetTrigger>
       <SheetContent 
         side="left" 
-        className="w-[75vw] sm:w-[300px] bg-navy border-r border-light-navy text-white" // Added sm breakpoint for width
+        className="w-[75vw] sm:w-[300px] bg-navy border-r border-light-navy text-white"
       >
         <SheetHeader>
           <SheetTitle className="text-white">Account</SheetTitle>
@@ -105,7 +96,7 @@ const AccountSheet = () => {
                 {user && nickname ? (
                   nickname.charAt(0).toUpperCase()
                 ) : (
-                  <UserCircle2 className="w-3/4 h-3/4" /> // Use UserCircle2 icon as fallback
+                  <UserCircle2 className="w-3/4 h-3/4" />
                 )}
               </AvatarFallback>
             </Avatar>
@@ -113,7 +104,7 @@ const AccountSheet = () => {
               {user ? (
                 <>
                   <p className="text-lg font-medium">
-                    {nickname} {/* nickname will be 'User', actual name, or email prefix if user exists */}
+                    {nickname}
                   </p>
                   <p className="text-sm text-gray-400">
                     {userRole} {isAdmin && <span className="text-cyan-400">(Admin)</span>}

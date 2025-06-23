@@ -17,7 +17,7 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { getNickname, getProfileImage, getUserRole } = useAuth();
+  const { getNickname, getProfileImage, getUserRoleSync } = useAuth();
 
   // Only show "Add" button for specific routes
   const shouldShowAddButton = 
@@ -37,7 +37,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   
   // Get profile image and nickname for the avatar directly from context
   const nickname = getNickname();
-  const userRole = getUserRole();
+  const userRole = getUserRoleSync(); // Use synchronous version for UI
   const profileImage = getProfileImage();
 
   // Determine if we're on the rewards page, tasks page, punishments page, or rules page for special styling

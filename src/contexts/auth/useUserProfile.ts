@@ -1,3 +1,4 @@
+
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -58,7 +59,13 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     return user.user_metadata?.avatar_url || '';
   };
 
-  // Get user role from profiles table
+  // Synchronous role getter for UI display only (NEVER use for business logic)
+  const getUserRoleSync = (): string => {
+    if (!user) return '';
+    return user.user_metadata?.role || '';
+  };
+
+  // Get user role from profiles table (async - source of truth)
   const getUserRole = async (): Promise<ProfileRole | null> => {
     if (!user) return null;
     
@@ -230,6 +237,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     setProfileImageState,
     getProfileImage,
     getUserRole,
+    getUserRoleSync, // Add the sync version
     updateUserRole,
     uploadProfileImageAndUpdateState,
     deleteUserProfileImage
