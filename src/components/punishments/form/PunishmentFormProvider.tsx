@@ -45,6 +45,7 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
 }) => {
   const form = useForm<PunishmentFormValues>({
     resolver: zodResolver(punishmentFormSchema),
+    shouldFocusError: false, // Prevent auto-focus on validation errors
     defaultValues: {
       title: punishmentData?.title || '',
       description: punishmentData?.description ?? '', // Use ?? for existing data, schema handles new

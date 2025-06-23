@@ -14,6 +14,7 @@ import { useDeleteDialog } from './hooks/useDeleteDialog';
 import { UseFormReturn } from 'react-hook-form';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
@@ -28,6 +29,8 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   onCancel,
   onDelete
 }) => {
+  const isMobile = useIsMobile();
+  
   const { 
     isDeleteDialogOpen, 
     setIsDeleteDialogOpen 
@@ -49,6 +52,18 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
     handleRemoveImage,
     setImagePreview
   } = usePunishmentBackground(punishmentData?.background_image_url);
+
+  // Defensive blur for mobile to prevent auto-focus
+  useEffect(() => {
+    if (isMobile) {
+      const timer = setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     if (punishmentData) {
