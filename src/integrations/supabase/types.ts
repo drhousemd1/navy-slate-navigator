@@ -150,6 +150,7 @@ export type Database = {
           linked_partner_id: string | null
           partner_link_code: string | null
           points: number
+          role: string
           updated_at: string
         }
         Insert: {
@@ -160,6 +161,7 @@ export type Database = {
           linked_partner_id?: string | null
           partner_link_code?: string | null
           points?: number
+          role: string
           updated_at?: string
         }
         Update: {
@@ -170,6 +172,7 @@ export type Database = {
           linked_partner_id?: string | null
           partner_link_code?: string | null
           points?: number
+          role?: string
           updated_at?: string
         }
         Relationships: [

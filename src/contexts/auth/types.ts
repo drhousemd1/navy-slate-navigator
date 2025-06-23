@@ -2,7 +2,7 @@
 import { SupabaseAuthError, AppError } from '@/lib/errors'; // Import new error types
 import type { User, Session, AuthResponse } from '@supabase/supabase-js'; // Import User and Session
 
-export type UserRole = 'admin' | 'submissive' | 'user';
+export type UserRole = 'sub' | 'dom'; // Strict role typing for database validation
 
 export interface AuthUser {
   id: string;
