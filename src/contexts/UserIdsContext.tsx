@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/auth';
 import { logger } from '@/lib/logger';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearUserDataFromDB } from '@/data/indexedDB/useIndexedDB';
+import { ProfileRole } from '@/types/profile';
 
 interface UserIds {
   subUserId: string | null;
@@ -68,7 +69,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
       
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, linked_partner_id')
+        .select('id, role, linked_partner_id')
         .eq('id', user.id)
         .single();
 
@@ -85,21 +86,30 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
       if (profile) {
         logger.debug('[UserIdsProvider] Profile found:', { 
           id: profile.id, 
+          role: profile.role,
           linked_partner_id: profile.linked_partner_id 
         });
         
-        // For data isolation: current user is always the primary user
-        // If they have a linked partner, both users share the same data pool
-        // The subUserId and domUserId represent the data ownership perspective
+        // FIXED: Proper role-based assignment based on ProfileRole
+        const userRole = profile.role as ProfileRole;
+        
         if (profile.linked_partner_id) {
-          // Both users in a linked pair can access the same data
-          // The data is owned by either user in the pair
-          const linkedIds = {
-            subUserId: profile.id,
-            domUserId: profile.linked_partner_id,
-          };
-          logger.debug('[UserIdsProvider] Setting linked partner IDs:', linkedIds);
-          setUserIds(linkedIds);
+          // For linked partners, assign roles based on their ProfileRole
+          if (userRole === 'sub') {
+            const linkedIds = {
+              subUserId: profile.id,
+              domUserId: profile.linked_partner_id,
+            };
+            logger.debug('[UserIdsProvider] Setting sub user with linked dom:', linkedIds);
+            setUserIds(linkedIds);
+          } else if (userRole === 'dom') {
+            const linkedIds = {
+              subUserId: profile.linked_partner_id,
+              domUserId: profile.id,
+            };
+            logger.debug('[UserIdsProvider] Setting dom user with linked sub:', linkedIds);
+            setUserIds(linkedIds);
+          }
         } else {
           // Solo user - they are both sub and dom for their own data
           const soloIds = {

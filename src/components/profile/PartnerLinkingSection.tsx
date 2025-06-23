@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth';
 import { Copy, Users, Unlink, RefreshCw } from 'lucide-react';
 import { toastManager } from '@/lib/toastManager';
+import { ProfileRole } from '@/types/profile';
 
 const PartnerLinkingSection: React.FC = () => {
   const { 
@@ -19,7 +21,7 @@ const PartnerLinkingSection: React.FC = () => {
   
   const [linkCode, setLinkCode] = useState<string | null>(null);
   const [partnerCode, setPartnerCode] = useState('');
-  const [linkedPartner, setLinkedPartner] = useState<{ email?: string } | null>(null);
+  const [linkedPartner, setLinkedPartner] = useState<{ email?: string; role?: ProfileRole } | null>(null);
   const [isLinked, setIsLinked] = useState(false);
 
   useEffect(() => {
