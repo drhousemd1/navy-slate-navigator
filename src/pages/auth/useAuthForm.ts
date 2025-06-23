@@ -15,6 +15,7 @@ export function useAuthForm() {
   const [formState, setFormState] = useState<AuthFormState>({
     email: '', 
     password: '', 
+    role: undefined,
     loading: false,
     loginError: null
   });
@@ -96,6 +97,14 @@ export function useAuthForm() {
         });
         return null;
       }
+
+      if (!formState.role) {
+        updateFormState({
+          loginError: "Please select your role",
+          loading: false
+        });
+        return null;
+      }
       
       if (formState.password.length < 6) {
         updateFormState({
@@ -105,8 +114,10 @@ export function useAuthForm() {
         return null;
       }
       
-      logger.debug("Attempting to sign up with email:", formState.email);
-      const { error } = await signUp(formState.email, formState.password) as AuthResponse;
+      logger.debug("Attempting to sign up with email:", formState.email, "and role:", formState.role);
+      
+      // Pass role to signUp function - it will be handled in useAuthOperations
+      const { error } = await signUp(formState.email, formState.password, formState.role) as AuthResponse;
       
       if (error) {
         logger.error("Signup error:", error);
@@ -117,8 +128,8 @@ export function useAuthForm() {
         return null;
       } else {
         toast({
-          title: "Account created",
-          description: "Please check your email for verification instructions.",
+          title: "Account created successfully",
+          description: "Please check your email for verification instructions, or you may already be logged in.",
         });
         updateFormState({ loading: false });
         return "login";

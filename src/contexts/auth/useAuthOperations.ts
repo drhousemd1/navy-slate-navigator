@@ -1,9 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError, CaughtError, PostgrestError, isPostgrestError, isAppError } from '@/lib/errors';
-import type { User, Session, AuthResponse } from '@supabase/supabase-js'; // Import User and Session
+import type { User, Session, AuthResponse } from '@supabase/supabase-js';
 
 export function useAuthOperations() {
   // Sign in with email and password
@@ -61,8 +60,8 @@ export function useAuthOperations() {
     }
   };
 
-  // Sign up with email and password - with improved error handling
-  const signUp = async (email: string, password: string): Promise<{ error?: SupabaseAuthError | AppError | null, data?: AuthResponse['data'] | null }> => {
+  // Sign up with email and password - with improved error handling and role support
+  const signUp = async (email: string, password: string, role?: 'dominant' | 'submissive'): Promise<{ error?: SupabaseAuthError | AppError | null, data?: AuthResponse['data'] | null }> => {
     try {
       const trimmedEmail = email.trim().toLowerCase();
       const trimmedPassword = password.trim();
@@ -75,28 +74,33 @@ export function useAuthOperations() {
         return { error: createAppError('Password must be at least 6 characters long', 'VALIDATION_ERROR'), data: null };
       }
       
+      // Prepare user metadata with role
+      const userMetadata: Record<string, any> = {};
+      if (role) {
+        userMetadata.role = role;
+      }
+      
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password: trimmedPassword,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth`
+          emailRedirectTo: `${window.location.origin}/auth`,
+          data: userMetadata // Store role in user metadata
         }
       });
       
       if (error) {
         logger.error('Sign up error:', error);
-        // Check if it's already a SupabaseAuthError, otherwise, it might need wrapping or specific handling.
-        // For now, returning it directly as Supabase errors are part of the expected return type.
         return { error, data: null };
       }
       
-      logger.debug('Sign up successful:', data.user?.email);
+      logger.debug('Sign up successful:', data.user?.email, 'with role:', role);
       toast({
         title: 'Registration successful',
         description: data.session ? 'You are now logged in.' : 'Please check your email to verify your account.',
       });
       
-      return { error: null, data: data }; // data is AuthResponse['data']
+      return { error: null, data: data };
     } catch (error: unknown) {
       logger.error('Exception during sign up:', error);
       if (isSupabaseAuthError(error)) {
@@ -240,4 +244,3 @@ export function useAuthOperations() {
     deleteAccount
   };
 }
-

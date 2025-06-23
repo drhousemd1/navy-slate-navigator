@@ -8,6 +8,7 @@ export interface AuthError {
 export interface AuthFormState {
   email: string;
   password: string;
+  role?: 'dominant' | 'submissive'; // Add role for signup
   loading: boolean;
   loginError: string | null;
 }

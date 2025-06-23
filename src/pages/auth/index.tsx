@@ -17,6 +17,8 @@ const Auth: React.FC = () => {
       setAuthView(location.state.view as AuthView);
     } else if (location.pathname === '/forgot-password') {
       setAuthView('forgot-password');
+    } else if (location.pathname === '/signup') {
+      setAuthView('signup');
     } else {
       setAuthView('login');
     }

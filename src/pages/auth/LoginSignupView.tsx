@@ -2,14 +2,15 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogIn, AlertCircle, RefreshCw } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LogIn, AlertCircle, RefreshCw, UserPlus } from 'lucide-react';
 import { AuthViewProps } from './types';
 import { useAuthForm } from './useAuthForm';
 import { useDebugMode } from './useDebugMode';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors'; // Added import
+import { getErrorMessage } from '@/lib/errors';
 
 export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewChange }) => {
   const { formState, updateFormState, handleLoginSubmit, handleSignupSubmit } = useAuthForm();
@@ -55,10 +56,10 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           loginError: "Login succeeded but no user data returned."
         });
       }
-    } catch (error: unknown) { // Changed from any to unknown
+    } catch (error: unknown) {
       logger.error("Exception during login:", error);
       updateFormState({ 
-        loginError: getErrorMessage(error) || "An unexpected error occurred. Please try again." // Used getErrorMessage
+        loginError: getErrorMessage(error) || "An unexpected error occurred. Please try again."
       });
     } finally {
       setIsLoggingIn(false);
@@ -71,12 +72,20 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
     if (currentView === "login") {
       directLogin();
     } else {
+      // Validate role selection for signup
+      if (!formState.role) {
+        updateFormState({ loginError: "Please select your role to continue." });
+        return;
+      }
+      
       const result = await handleSignupSubmit(e);
       if (result === "login") {
         onViewChange("login");
       }
     }
   };
+
+  const isSignup = currentView === "signup";
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
@@ -85,7 +94,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           className="text-2xl font-bold text-center text-white cursor-default"
           onClick={handleTitleClick}
         >
-          Welcome to the Rewards System
+          Welcome to Playful Obedience
         </h1>
         
         <form onSubmit={handleFormSubmit} className="space-y-4">
@@ -125,17 +134,37 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 {showPassword ? "Hide" : "Show"}
               </Button>
             </div>
-            <div className="text-right">
-              <Button 
-                type="button" 
-                variant="link" 
-                className="text-sm text-blue-400 hover:text-blue-300 p-0"
-                onClick={() => onViewChange("forgot-password")}
-              >
-                Forgot Password?
-              </Button>
-            </div>
+            {!isSignup && (
+              <div className="text-right">
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="text-sm text-blue-400 hover:text-blue-300 p-0"
+                  onClick={() => onViewChange("forgot-password")}
+                >
+                  Forgot Password?
+                </Button>
+              </div>
+            )}
           </div>
+
+          {isSignup && (
+            <div className="space-y-2">
+              <label className="text-white text-sm">Select Role</label>
+              <Select 
+                value={formState.role || ""} 
+                onValueChange={(value: 'dominant' | 'submissive') => updateFormState({ role: value })}
+              >
+                <SelectTrigger className="bg-navy border-light-navy text-white">
+                  <SelectValue placeholder="Choose your role" />
+                </SelectTrigger>
+                <SelectContent className="bg-navy border-light-navy">
+                  <SelectItem value="dominant" className="text-white hover:bg-light-navy">Dominant</SelectItem>
+                  <SelectItem value="submissive" className="text-white hover:bg-light-navy">Submissive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           {formState.loginError && (
             <div className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded flex items-start gap-2">
@@ -150,6 +179,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
               <p>Email: {formState.email}</p>
               <p>Password length: {formState.password?.length || 0}</p>
               <p>Auth view: {currentView}</p>
+              {isSignup && <p>Selected role: {formState.role || 'none'}</p>}
               <Button
                 type="button"
                 variant="outline"
@@ -170,26 +200,42 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center" 
             disabled={isLoggingIn || formState.loading}
           >
-            <LogIn className="w-4 h-4 mr-2" />
-            {isLoggingIn || formState.loading ? 'Signing In...' : 'Sign In'}
+            {isSignup ? <UserPlus className="w-4 h-4 mr-2" /> : <LogIn className="w-4 h-4 mr-2" />}
+            {isLoggingIn || formState.loading ? 
+              (isSignup ? 'Creating Account...' : 'Signing In...') : 
+              (isSignup ? 'Create Account' : 'Sign In')
+            }
           </Button>
           
-          {currentView === "login" && (
-            <p className="text-center text-sm text-gray-400 pt-2">
-              Don't have an account?{" "}
-              <Button 
-                type="button" 
-                variant="link" 
-                className="text-blue-400 hover:text-blue-300 p-0"
-                onClick={() => onViewChange("signup")}
-              >
-                Sign up
-              </Button>
-            </p>
-          )}
+          <p className="text-center text-sm text-gray-400 pt-2">
+            {isSignup ? (
+              <>
+                Already have an account?{" "}
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="text-blue-400 hover:text-blue-300 p-0"
+                  onClick={() => onViewChange("login")}
+                >
+                  Sign in
+                </Button>
+              </>
+            ) : (
+              <>
+                Don't have an account?{" "}
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="text-blue-400 hover:text-blue-300 p-0"
+                  onClick={() => onViewChange("signup")}
+                >
+                  Sign up
+                </Button>
+              </>
+            )}
+          </p>
         </form>
       </div>
     </div>
   );
 }
-
