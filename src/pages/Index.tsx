@@ -9,7 +9,7 @@ const Index: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className="overflow-x-hidden w-full max-w-full min-h-full">
+      <div className="overflow-x-hidden w-full max-w-full h-full">
         <div className="flex flex-col items-center justify-center h-full overflow-x-hidden">
           <div className="text-center p-6 animate-slide-up flex flex-col items-center w-full max-w-full">
             {/* App Logo */}
