@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { APP_CONFIG } from '../config/constants';
-import { logger } from '@/lib/logger'; // Added logger import
+import { logger } from '@/lib/logger';
 
 const Index: React.FC = () => {
   const [imageError, setImageError] = useState(false);
@@ -10,7 +10,7 @@ const Index: React.FC = () => {
   return (
     <AppLayout>
       <div className="overflow-x-hidden w-full max-w-full">
-        <div className="flex flex-col items-center justify-center h-screen overflow-x-hidden">
+        <div className="flex flex-col items-center justify-center h-full overflow-x-hidden">
           <div className="text-center p-6 animate-slide-up flex flex-col items-center w-full max-w-full">
             {/* App Logo */}
             {!imageError && (
