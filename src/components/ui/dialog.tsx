@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
@@ -56,6 +55,8 @@ const DialogContent = React.forwardRef<
           WebkitOverflowScrolling: "touch",
           boxSizing: "border-box",
         }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
         {...props}
       >
         <div className="modal-content w-full box-border px-4 md:px-0">
