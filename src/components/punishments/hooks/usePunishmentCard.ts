@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { usePunishmentApply } from './usePunishmentApply';
+import { usePunishmentHistory } from './usePunishmentHistory';
 import { PunishmentData } from '@/contexts/punishments/types'; 
 import { toast } from '@/hooks/use-toast';
 import { useUpdatePunishment, useDeletePunishment } from '@/data/punishments/mutations';
@@ -19,8 +20,12 @@ export const usePunishmentCard = ({ punishment }: UsePunishmentCardProps) => {
   const updatePunishmentMutation = useUpdatePunishment();
   const deletePunishmentMutation = useDeletePunishment();
   
-  const weekData = punishment?.usage_data || []; 
-  const frequencyCount = punishment?.frequency_count || 1;
+  // Use punishment history hook to get dynamic data
+  const { getWeekData, getFrequencyCount } = usePunishmentHistory({ id: punishment.id });
+  
+  // Get dynamic data from actual punishment history
+  const weekData = getWeekData();
+  const frequencyCount = getFrequencyCount();
 
   const handleEdit = () => {
     setIsEditorOpen(true);
