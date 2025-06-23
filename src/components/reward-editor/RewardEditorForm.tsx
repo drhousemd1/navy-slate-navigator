@@ -11,6 +11,7 @@ import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { handleImageUpload } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RewardEditorFormProps {
   rewardData?: Reward; // Changed from Partial<Reward>
@@ -29,8 +30,10 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const form = useForm<RewardFormValues>({
+    shouldFocusError: false, // Prevent auto-focus on validation errors
     defaultValues: {
       title: '',
       description: '',
@@ -57,6 +60,18 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
     exclude: ['background_image_url', 'image_meta']
   });
+
+  // Defensive blur for mobile to prevent auto-focus
+  useEffect(() => {
+    if (isMobile) {
+      const timer = setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     if (rewardData) {
