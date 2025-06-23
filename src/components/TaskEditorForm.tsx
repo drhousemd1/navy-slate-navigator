@@ -20,6 +20,7 @@ import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { handleImageUpload } from '@/utils/image/taskIntegration';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskFormValues {
   title: string;
@@ -59,8 +60,10 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
   
   const form = useForm<TaskFormValues>({
+    shouldFocusError: false, // Prevent auto-focus on validation errors
     defaultValues: {
       title: '',
       description: '',
@@ -89,6 +92,18 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
     exclude: ['background_image_url', 'icon_url', 'image_meta'] 
   });
+
+  // Defensive blur for mobile to prevent auto-focus
+  useEffect(() => {
+    if (isMobile) {
+      const timer = setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     if (taskData) {
@@ -266,7 +281,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                 <Input 
                   placeholder="Task title" 
                   className="bg-dark-navy border-light-navy text-white" 
-                  autoFocus={false}
                   {...field} 
                 />
               </FormControl>
