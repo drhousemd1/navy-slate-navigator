@@ -44,6 +44,59 @@
 	- Spend DOM points on Dominant Rewards
 
 ================================
+# USER ROLE DATA FLOW ARCHITECTURE:
+================================
+
+- Core Principle: Dual Role Access Pattern
+	- The application implements a dual role access pattern to handle user roles safely in both synchronous UI contexts and asynchronous business logic contexts.
+
+- Data Sources and Authority: 
+	- Single Source of Truth: The profiles.role column in the Supabase database is the authoritative source for all user roles
+	- UI Fallback Cache: User metadata (auth.user.user_metadata.role) serves as a local cache for immediate UI display only
+	- Business Logic: All functional operations (partner linking, points calculations, etc.) must use the database value
+
+- Role Function Architecture: 
+	- getUserRole() - Async Database Authority
+	- Purpose: Authoritative role retrieval for business logic
+	- Source: Queries profiles.role column directly
+	- Usage: Partner linking, role updates, admin checks, any decision-making logic
+	- Return Type: Promise<ProfileRole | null>
+	- Never Used In: Direct JSX rendering (would cause Promise rendering crashes)
+	- getUserRoleSync() - Synchronous UI Display
+
+- Purpose: Immediate role display in UI components: 
+	- Source: Reads from auth.user.user_metadata.role
+	- Usage: AppLayout header, AccountSheet display, any JSX that needs immediate rendering
+	- Return Type: string (safe for JSX)
+	- Never Used For: Business logic decisions or data operations
+	- Data Flow During Role Changes
+
+- User updates role via updateUserRole(newRole):
+	- Database profiles.role is updated (source of truth)
+	- User metadata is simultaneously updated for UI consistency
+	- Local user state is updated for immediate UI feedback
+	- All subsequent business logic uses the database value
+	- All UI continues to display from the updated metadata
+
+- Context Integration:
+	- AuthContext Interface: Exposes both getUserRole and getUserRoleSync
+	- Component Access: Components use useAuth() hook to access both functions
+	- Type Safety: TypeScript enforces correct usage patterns
+
+- Critical Rules:
+	- NEVER use getUserRoleSync() for business logic or partner linking
+	- NEVER render getUserRole() directly in JSX (it returns a Promise)
+	- ALWAYS use getUserRole() for database operations and decision-making
+	- ALWAYS use getUserRoleSync() for immediate UI display needs
+	- MAINTAIN metadata as a display cache only, not a business logic source
+
+- Error Prevention:
+	- Promise rendering crashes in React components
+	- Role inconsistencies between UI and business logic
+	- Race conditions during role updates
+	- Authentication state conflicts
+
+================================
 # UNIVERSAL PAGE HEADER  
 ================================
 
