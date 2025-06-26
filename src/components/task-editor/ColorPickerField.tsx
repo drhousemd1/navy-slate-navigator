@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Control, Controller, FieldValues, Path } from 'react-hook-form';
 import { FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,8 @@ const ColorPickerField = <T extends FieldValues>({
   label, 
   defaultColor = '#FFFFFF' 
 }: ColorPickerFieldProps<T>) => {
+  const colorInputRef = useRef<HTMLInputElement>(null);
+
   return (
     <Controller
       control={control}
@@ -31,23 +33,22 @@ const ColorPickerField = <T extends FieldValues>({
             <FormLabel className="text-white">{label}</FormLabel>
             <FormControl>
               <div className="flex items-center gap-2">
+                {/* Hidden color input that's always in the DOM */}
+                <input
+                  ref={colorInputRef}
+                  type="color"
+                  value={currentColor}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className="sr-only"
+                />
+                
                 {/* Color preview button */}
                 <Button
                   type="button"
                   variant="outline"
                   className="w-12 h-10 p-0 border-light-navy hover:bg-light-navy"
                   style={{ backgroundColor: currentColor }}
-                  onClick={() => {
-                    // Create a hidden color input and trigger it
-                    const colorInput = document.createElement('input');
-                    colorInput.type = 'color';
-                    colorInput.value = currentColor;
-                    colorInput.onchange = (e) => {
-                      const target = e.target as HTMLInputElement;
-                      field.onChange(target.value);
-                    };
-                    colorInput.click();
-                  }}
+                  onClick={() => colorInputRef.current?.click()}
                 >
                   {/* Empty button with color background */}
                 </Button>
