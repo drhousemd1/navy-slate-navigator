@@ -14,8 +14,10 @@ import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { toastManager } from '@/lib/toastManager';
+import { getErrorMessage } from '@/lib/errors';
 import { handleImageUpload } from '@/utils/image/ruleIntegration';
 
 interface RuleFormValues {
@@ -52,6 +54,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const form = useForm<RuleFormValues>({
     shouldFocusError: false,
@@ -73,12 +76,24 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     },
   });
 
-  const { reset, watch, setValue, control, handleSubmit } = form;
+  const { reset, watch, setValue, control, handleSubmit: formHandleSubmit, getValues } = form;
 
   const persisterFormId = `rule-editor-${ruleData?.id || 'new'}`;
   const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
     exclude: ['background_image_url', 'icon_url', 'image_meta'] 
   });
+
+  // Defensive blur for mobile to prevent input conflicts
+  useEffect(() => {
+    if (isMobile) {
+      const timer = setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     if (ruleData) {
@@ -123,7 +138,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         logger.debug('[RuleEditorForm] Image upload completed successfully');
       } catch (error) {
         logger.error('[RuleEditorForm] Error handling image upload:', error);
-        toastManager.error("Error", "Failed to process image. Please try again.");
+        toast({ title: "Error", description: "Failed to process image. Please try again.", variant: "destructive" });
       }
     }
   };
@@ -149,6 +164,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             setIconPreview(base64String);
             setValue('icon_url', base64String);
             setValue('icon_name', undefined);
+            toast({ title: "Icon uploaded successfully" });
           };
           reader.readAsDataURL(file);
         }
@@ -168,12 +184,14 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setValue('icon_url', undefined);
       setIconPreview(null);
     }
+    toast({ title: "Icon selected" });
   };
   
   const handleRemoveIcon = () => {
     setIconPreview(null);
     setValue('icon_url', undefined);
     setValue('icon_name', undefined);
+    toast({ title: "Icon removed" });
   };
 
   const onSubmitWrapped = async (values: RuleFormValues) => {
@@ -193,9 +211,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       logger.debug('[RuleEditorForm] Saving rule:', ruleToSave);
       await onSave(ruleToSave);
       await clearPersistedState();
+      onCancel(); // Close modal after successful save
     } catch (error) {
       logger.error('[RuleEditorForm] Error saving rule:', error);
-      toastManager.error("Error", "Failed to save rule. Please try again.");
+      toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -216,7 +235,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmitWrapped)} className="space-y-6">
+      <form onSubmit={formHandleSubmit(onSubmitWrapped)} className="space-y-6">
         <FormField
           control={control}
           name="title"
@@ -244,6 +263,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
                 <Textarea 
                   placeholder="Detailed description of the rule" 
                   className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
+                  value={field.value || ''}
                   {...field} 
                 />
               </FormControl>
