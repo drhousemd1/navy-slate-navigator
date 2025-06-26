@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -16,7 +17,6 @@ import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { logger } from '@/lib/logger';
 import { toastManager } from '@/lib/toastManager';
 import { handleImageUpload } from '@/utils/image/ruleIntegration';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RuleFormValues {
   title: string;
@@ -50,13 +50,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
-  const [selectedIconName, setSelectedIconName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   const form = useForm<RuleFormValues>({
-    shouldFocusError: false, // Prevent auto-focus on validation errors
+    shouldFocusError: false,
     defaultValues: {
       title: '',
       description: '',
@@ -82,18 +80,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     exclude: ['background_image_url', 'icon_url', 'image_meta'] 
   });
 
-  // Defensive blur for mobile to prevent auto-focus
-  useEffect(() => {
-    if (isMobile) {
-      const timer = setTimeout(() => {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isMobile]);
-
   useEffect(() => {
     if (ruleData) {
       reset({
@@ -114,7 +100,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       });
       setImagePreview(ruleData.background_image_url || null);
       setIconPreview(ruleData.icon_url || null);
-      setSelectedIconName(ruleData.icon_name || null);
     } else {
       reset({
         title: '', description: '',
@@ -126,7 +111,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       });
       setImagePreview(null);
       setIconPreview(null);
-      setSelectedIconName(null);
     }
   }, [ruleData, reset]);
 
@@ -163,7 +147,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           reader.onloadend = () => {
             const base64String = reader.result as string;
             setIconPreview(base64String);
-            setSelectedIconName(null);
             setValue('icon_url', base64String);
             setValue('icon_name', undefined);
           };
@@ -178,20 +161,17 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     if (iconName.startsWith('custom:')) {
       const iconUrl = iconName.substring(7);
       setIconPreview(iconUrl);
-      setSelectedIconName(null);
       setValue('icon_url', iconUrl);
       setValue('icon_name', undefined);
     } else {
-      setSelectedIconName(iconName);
-      setIconPreview(null);
       setValue('icon_name', iconName);
       setValue('icon_url', undefined);
+      setIconPreview(null);
     }
   };
   
   const handleRemoveIcon = () => {
     setIconPreview(null);
-    setSelectedIconName(null);
     setValue('icon_url', undefined);
     setValue('icon_name', undefined);
   };
@@ -202,11 +182,11 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
-        // EXACT SAME PATTERN AS TASKS PAGE - use imagePreview if available, otherwise form value
+        // Use imagePreview if available, otherwise form value
         background_image_url: imagePreview || values.background_image_url,
         image_meta: values.image_meta,
         // Set icon data separately 
-        icon_name: selectedIconName || undefined,
+        icon_name: watch('icon_name') || undefined,
         icon_url: iconPreview || undefined,
       };
       
@@ -291,7 +271,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
               <IconSelector
-                selectedIconName={selectedIconName}
+                selectedIconName={watch('icon_name')}
                 iconPreview={iconPreview}
                 iconColor={watch('icon_color')}
                 onSelectIcon={handleSelectIcon}
@@ -300,7 +280,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
               />
             </div>
             <PredefinedIconsGrid
-              selectedIconName={selectedIconName}
+              selectedIconName={watch('icon_name')}
               iconColor={watch('icon_color')}
               onSelectIcon={handleSelectIcon}
             />
