@@ -9,8 +9,8 @@ import { Rule } from '@/data/interfaces/Rule';
 interface RuleEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  ruleData?: Rule | Partial<Rule>;  // Allow both full Rule and partial Rule
-  onSave: (ruleData: Partial<Rule>) => void;
+  ruleData?: Rule | Partial<Rule>;
+  onSave: (ruleData: Partial<Rule>) => Promise<void>;
   onDelete?: (ruleId: string) => void;
 }
 
@@ -25,13 +25,11 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   
   const handleSave = async (formData: Partial<Rule>) => {
     await onSave(formData);
-    // Removed onClose() - let parent handle closing after save completes
   };
 
   const handleDelete = (ruleId: string) => {
     if (onDelete) {
       onDelete(ruleId);
-      // Removed onClose() - let parent handle closing after delete completes
     }
   };
 
