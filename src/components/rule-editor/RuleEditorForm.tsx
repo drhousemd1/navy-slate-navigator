@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -250,8 +249,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
                 <Textarea 
                   placeholder="Detailed description of the rule" 
                   className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
-                  value={field.value || ''}
                   {...field} 
+                  value={field.value || ''}
                 />
               </FormControl>
             </FormItem>
