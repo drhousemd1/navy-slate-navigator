@@ -25,13 +25,13 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   
   const handleSave = async (formData: Partial<Rule>) => {
     await onSave(formData);
-    onClose();
+    // Removed onClose() - let parent handle closing after save completes
   };
 
   const handleDelete = (ruleId: string) => {
     if (onDelete) {
       onDelete(ruleId);
-      onClose();
+      // Removed onClose() - let parent handle closing after delete completes
     }
   };
 
