@@ -33,13 +33,13 @@ const ColorPickerField = <T extends FieldValues>({
             <FormLabel className="text-white">{label}</FormLabel>
             <FormControl>
               <div className="flex items-center gap-2">
-                {/* Hidden color input that's always in the DOM */}
+                {/* Hidden color input that's clickable */}
                 <input
                   ref={colorInputRef}
                   type="color"
                   value={currentColor}
                   onChange={(e) => field.onChange(e.target.value)}
-                  className="sr-only"
+                  className="opacity-0 pointer-events-none absolute w-0 h-0"
                 />
                 
                 {/* Color preview button */}
