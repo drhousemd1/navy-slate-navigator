@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -12,7 +13,6 @@ import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
 import DeleteRuleDialog from './DeleteRuleDialog';
-import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -73,12 +73,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     },
   });
 
-  const { reset, watch, setValue, control, handleSubmit: formHandleSubmit, getValues } = form;
-
-  const persisterFormId = `rule-editor-${ruleData?.id || 'new'}`;
-  const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
-    exclude: ['background_image_url', 'icon_url', 'image_meta'] 
-  });
+  const { reset, setValue, control, handleSubmit: formHandleSubmit, getValues } = form;
 
   useEffect(() => {
     if (ruleData) {
@@ -100,17 +95,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       });
       setImagePreview(ruleData.background_image_url || null);
       setIconPreview(ruleData.icon_url || null);
-    } else {
-      reset({
-        title: '', description: '',
-        background_image_url: undefined, background_opacity: 100,
-        icon_url: undefined, icon_name: undefined,
-        title_color: '#FFFFFF', subtext_color: '#8E9196', calendar_color: '#7E69AB',
-        icon_color: '#FF6B6B', highlight_effect: false,
-        focal_point_x: 50, focal_point_y: 50, image_meta: null,
-      });
-      setImagePreview(null);
-      setIconPreview(null);
     }
   }, [ruleData, reset]);
 
@@ -184,18 +168,18 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const onSubmitWrapped = async (values: RuleFormValues) => {
     setLoading(true);
     try {
+      const currentValues = getValues();
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
         background_image_url: imagePreview || values.background_image_url,
         image_meta: values.image_meta,
-        icon_name: watch('icon_name') || undefined,
+        icon_name: currentValues.icon_name || undefined,
         icon_url: iconPreview || undefined,
       };
       
       logger.debug('[RuleEditorForm] Saving rule:', ruleToSave);
       await onSave(ruleToSave);
-      await clearPersistedState();
       onCancel();
     } catch (error) {
       logger.error('[RuleEditorForm] Error saving rule:', error);
@@ -204,16 +188,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setLoading(false);
     }
   };
-  
-  const handleCancelWrapped = () => {
-    clearPersistedState();
-    onCancel();
-  };
 
   const handleDeleteWrapped = () => {
     if (ruleData?.id && onDelete) {
       onDelete(ruleData.id);
-      clearPersistedState();
     }
     setIsDeleteDialogOpen(false);
     onCancel();
@@ -250,7 +228,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
                   placeholder="Detailed description of the rule" 
                   className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
                   {...field} 
-                  value={field.value || ''}
                 />
               </FormControl>
             </FormItem>
@@ -263,8 +240,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             control={control}
             imagePreview={imagePreview}
             initialPosition={{ 
-              x: watch('focal_point_x') || 50, 
-              y: watch('focal_point_y') || 50 
+              x: getValues('focal_point_x') || 50, 
+              y: getValues('focal_point_y') || 50 
             }}
             onRemoveImage={() => {
               setImagePreview(null);
@@ -280,17 +257,17 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
               <IconSelector
-                selectedIconName={watch('icon_name')}
+                selectedIconName={getValues('icon_name')}
                 iconPreview={iconPreview}
-                iconColor={watch('icon_color')}
+                iconColor={getValues('icon_color')}
                 onSelectIcon={handleIconSelect}
                 onUploadIcon={handleIconUpload}
                 onRemoveIcon={handleRemoveIcon}
               />
             </div>
             <PredefinedIconsGrid
-              selectedIconName={watch('icon_name')}
-              iconColor={watch('icon_color')}
+              selectedIconName={getValues('icon_name')}
+              iconColor={getValues('icon_color')}
               onSelectIcon={handleIconSelect}
             />
           </div>
@@ -331,7 +308,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <Button
             type="button"
             variant="destructive"
-            onClick={handleCancelWrapped}
+            onClick={onCancel}
             className="bg-red-700 border-light-navy text-white hover:bg-red-600"
           >
             Cancel
