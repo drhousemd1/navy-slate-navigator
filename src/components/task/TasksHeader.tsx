@@ -19,7 +19,7 @@ const TasksHeader: React.FC<TasksHeaderProps> = ({ onCreateTask }) => {
   const { subUserId, domUserId } = useUserIds();
 
   const { data: subPoints } = useUserPointsQuery(subUserId);
-  const { data: domPoints } = useUserDomPointsQuery(domUserId);
+  const { data: domPoints } = useUserDomPointsQuery(subUserId);
   const { data: subRewardTypesCount } = useSubRewardTypesCountQuery(subUserId);
   const { data: domRewardTypesCount } = useDomRewardTypesCountQuery(domUserId);
   
