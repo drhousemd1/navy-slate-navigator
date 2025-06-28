@@ -131,7 +131,6 @@ export const useRewardsData = () => {
         background_image_url: rewardData.background_image_url || null,
         background_opacity: rewardData.background_opacity ?? 100,
         icon_name: rewardData.icon_name || 'Award',
-        icon_url: rewardData.icon_url || null,
         icon_color: rewardData.icon_color || '#9b87f5',
         title_color: rewardData.title_color || '#FFFFFF',
         subtext_color: rewardData.subtext_color || '#8E9196',

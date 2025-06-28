@@ -35,7 +35,6 @@ const RewardCard: React.FC<RewardCardProps> = ({
     supply,
     is_dom_reward = false,
     icon_name = 'Gift',
-    icon_url,
     icon_color = '#9b87f5',
     background_image_url: backgroundImage,
     background_opacity = 100,
