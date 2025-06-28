@@ -15,12 +15,13 @@ interface RewardsHeaderProps {
 }
 
 const RewardsHeader: React.FC<RewardsHeaderProps> = ({ onAddNewReward }) => {
-  const { subUserId, domUserId } = useUserIds();
+  const { subUserId } = useUserIds();
 
+  // Use the current logged-in user's ID (subUserId) for all queries
   const { data: subPoints, refetch: refetchSubPoints } = useUserPointsQuery(subUserId);
-  const { data: domPoints, refetch: refetchDomPoints } = useUserDomPointsQuery(domUserId);
+  const { data: domPoints, refetch: refetchDomPoints } = useUserDomPointsQuery(subUserId);
   const { data: subRewardTypesCount, refetch: refetchSubCount } = useSubRewardTypesCountQuery(subUserId);
-  const { data: domRewardTypesCount, refetch: refetchDomCount } = useDomRewardTypesCountQuery(domUserId);
+  const { data: domRewardTypesCount, refetch: refetchDomCount } = useDomRewardTypesCountQuery(subUserId);
 
   // Refetch all data when component mounts or when badges are clicked
   React.useEffect(() => {
