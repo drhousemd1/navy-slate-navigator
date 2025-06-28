@@ -33,10 +33,17 @@ const RewardsList: React.FC<RewardsListProps> = ({
   if (!isLoading && rewards.length === 0 && !error) {
     return <StandardEmpty />;
   }
+
+  // Separate rewards into DOM and SUB groups
+  const domRewards = rewards.filter(reward => reward.is_dom_reward);
+  const subRewards = rewards.filter(reward => !reward.is_dom_reward);
+  
+  // Combine them with DOM rewards first, then SUB rewards
+  const groupedRewards = [...domRewards, ...subRewards];
   
   return (
     <div className="space-y-4 mt-4">
-      {rewards.map((reward) => (
+      {groupedRewards.map((reward) => (
         <RewardCard
           key={reward.id}
           reward={reward}
