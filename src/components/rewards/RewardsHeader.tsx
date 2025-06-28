@@ -18,22 +18,10 @@ const RewardsHeader: React.FC<RewardsHeaderProps> = ({ onAddNewReward }) => {
   const { subUserId } = useUserIds();
 
   // Use the current logged-in user's ID (subUserId) for all queries
-  const { data: subPoints, refetch: refetchSubPoints } = useUserPointsQuery(subUserId);
-  const { data: domPoints, refetch: refetchDomPoints } = useUserDomPointsQuery(subUserId);
-  const { data: subRewardTypesCount, refetch: refetchSubCount } = useSubRewardTypesCountQuery(subUserId);
-  const { data: domRewardTypesCount, refetch: refetchDomCount } = useDomRewardTypesCountQuery(subUserId);
-
-  // Refetch all data when component mounts or when badges are clicked
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      refetchSubPoints();
-      refetchDomPoints();
-      refetchSubCount();
-      refetchDomCount();
-    }, 1000); // Refresh every second to catch updates quickly
-
-    return () => clearInterval(interval);
-  }, [refetchSubPoints, refetchDomPoints, refetchSubCount, refetchDomCount]);
+  const { data: subPoints } = useUserPointsQuery(subUserId);
+  const { data: domPoints } = useUserDomPointsQuery(subUserId);
+  const { data: subRewardTypesCount } = useSubRewardTypesCountQuery(subUserId);
+  const { data: domRewardTypesCount } = useDomRewardTypesCountQuery(subUserId);
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
 
