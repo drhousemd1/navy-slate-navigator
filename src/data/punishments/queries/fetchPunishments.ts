@@ -69,7 +69,7 @@ export const fetchPunishments = async (subUserId: string | null, domUserId: stri
     if (error) {
       logger.error('[fetchPunishments] Supabase error fetching punishments:', error);
       if (localData) {
-        logger.warn('[fetchPunishments] Server fetch failed, returning stale data from IndexedDB');
+        logger.warn('[fetchPunishments] Server fetch failed, returning cached data from IndexedDB');
         return localData.map(p => ({
           ...p,
           dom_supply: p.dom_supply ?? 0,
@@ -101,12 +101,14 @@ export const fetchPunishments = async (subUserId: string | null, domUserId: stri
         calendar_color: p.calendar_color ?? '#ea384c',
       })) as PunishmentData[];
       
+      // Only save to IndexedDB if we successfully fetched from server
       await savePunishmentsToDB(punishmentsFromServer);
       await setLastSyncTimeForPunishments(new Date().toISOString());
       logger.debug('[fetchPunishments] Punishments fetched from server and saved to IndexedDB');
       return punishmentsFromServer;
     }
 
+    // If no server data but have local data, return local data
     return localData ? localData.map(p => ({
       ...p,
       dom_supply: p.dom_supply ?? 0,
@@ -122,7 +124,7 @@ export const fetchPunishments = async (subUserId: string | null, domUserId: stri
   } catch (error) {
     logger.error('[fetchPunishments] Error fetching punishments:', error);
     if (localData) {
-      logger.warn('[fetchPunishments] Error fetching punishments, using cached data:', error);
+      logger.warn('[fetchPunishments] Using cached data due to server error');
       return localData.map(p => ({
         ...p,
         dom_supply: p.dom_supply ?? 0,

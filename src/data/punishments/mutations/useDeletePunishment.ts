@@ -27,11 +27,18 @@ export const useDeletePunishment = () => {
     idField: 'id',
     relatedQueryKey: historyQueryKey,
     relatedIdField: 'punishment_id',
-    onSuccessCallback: async (_punishmentId: string) => {
+    onSuccessCallback: async (punishmentId: string) => {
+      // Get current data from cache and remove the deleted item
       const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>(punishmentsQueryKey) || [];
-      await savePunishmentsToDB(currentPunishments);
+      const updatedPunishments = currentPunishments.filter(p => p.id !== punishmentId);
+      
+      // Update IndexedDB with the filtered list to ensure deleted item is removed
+      await savePunishmentsToDB(updatedPunishments);
+      
+      // Also clean up history from IndexedDB
       const currentHistory = queryClient.getQueryData<PunishmentHistoryItem[]>(historyQueryKey) || [];
-      await savePunishmentHistoryToDB(currentHistory);
+      const updatedHistory = currentHistory.filter(h => h.punishment_id !== punishmentId);
+      await savePunishmentHistoryToDB(updatedHistory);
     },
   });
 };
