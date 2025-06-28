@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form } from "@/components/ui/form";
@@ -38,7 +39,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       title: '',
       description: '',
       cost: 10,
-      supply: 1, // Added supply default
+      supply: 0, // Changed from 1 to 0
       is_dom_reward: false,
       icon_name: null,
       icon_color: '#9b87f5',
@@ -82,7 +83,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         title: rewardData.title || '',
         description: rewardData.description || '',
         cost: rewardData.cost || 10,
-        supply: rewardData.supply || 1, // Added supply
+        supply: rewardData.supply || 0, // Changed from 1 to 0
         is_dom_reward: isDomRewardValue,
         icon_name: rewardData.icon_name || null,
         icon_color: rewardData.icon_color || '#9b87f5',
@@ -100,7 +101,7 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
       setImagePreview(rewardData.background_image_url || null);
     } else {
       reset({
-        title: '', description: '', cost: 10, supply: 1, is_dom_reward: false, icon_name: null,
+        title: '', description: '', cost: 10, supply: 0, is_dom_reward: false, icon_name: null, // Changed supply from 1 to 0
         icon_color: '#9b87f5', title_color: '#FFFFFF', subtext_color: '#8E9196',
         calendar_color: '#7E69AB', highlight_effect: false, background_image_url: null,
         background_opacity: 100, focal_point_x: 50, focal_point_y: 50, image_meta: null,
