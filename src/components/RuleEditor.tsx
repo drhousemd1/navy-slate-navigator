@@ -11,7 +11,7 @@ interface RuleEditorProps {
   onClose: () => void;
   ruleData?: Rule | Partial<Rule>;
   onSave: (ruleData: Partial<Rule>) => Promise<void>;
-  onDelete?: (ruleId: string) => void;
+  onDelete?: (ruleId: string) => Promise<void>;
 }
 
 const RuleEditor: React.FC<RuleEditorProps> = ({ 
@@ -27,9 +27,9 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
     await onSave(formData);
   };
 
-  const handleDelete = (ruleId: string) => {
+  const handleDelete = async (ruleId: string) => {
     if (onDelete) {
-      onDelete(ruleId);
+      await onDelete(ruleId);
     }
   };
 
