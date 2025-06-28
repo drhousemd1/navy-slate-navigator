@@ -9,7 +9,7 @@ import { Reward } from '@/data/rewards/types';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { usePoints } from '@/data/points/useUserPointsQuery';
 import { useDomPoints } from '@/data/points/useUserDomPointsQuery';
-import { RewardsContext } from './RewardsContext';
+import { useRewards } from '@/contexts/RewardsContext';
 
 export const useRewardOperations = () => {
   const { data: rewards = [] } = useRewardsQuery();
@@ -20,7 +20,7 @@ export const useRewardOperations = () => {
   const buyDomRewardMutation = useBuyDomReward();
   const redeemSubRewardMutation = useRedeemSubReward();
   const redeemDomRewardMutation = useRedeemDomReward();
-  const { setRewards } = useContext(RewardsContext);
+  const { handleSaveReward } = useRewards();
 
   const buyDomReward = useCallback(async (rewardId: string, cost: number) => {
     if (!domUserId) {
@@ -87,8 +87,9 @@ export const useRewardOperations = () => {
   }, [rewards, subUserId, domUserId, redeemSubRewardMutation, redeemDomRewardMutation]);
 
   const refreshRewards = useCallback(async (newRewards: Reward[]) => {
-    setRewards(newRewards);
-  }, [setRewards]);
+    // This function is no longer needed since we're using the main context
+    console.log('refreshRewards called but using main context now');
+  }, []);
 
   return {
     buyDomReward,
