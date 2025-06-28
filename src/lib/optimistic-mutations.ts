@@ -1,4 +1,3 @@
-
 import { useMutation, UseMutationOptions, QueryClient } from '@tanstack/react-query';
 import { toastManager } from '@/lib/toastManager';
 import { v4 as uuidv4 } from 'uuid';
@@ -67,18 +66,21 @@ export function useCreateOptimisticMutation<
       }
       toastManager.error(`Error creating ${entityName}`, err.message);
     },
-    onSuccess: async (data, variables, context) => { // data is the actual item from server
+    onSuccess: async (data, variables, context) => {
+      // Replace the optimistic item with the real one from the server
       queryClient.setQueryData<TItem[]>(queryKey, (old = []) => {
-        const filteredList = old.filter(item => !(context?.optimisticId && item[idField] === context.optimisticId));
-        return [data, ...filteredList];
+        const withoutOptimistic = old.filter(item => !(context?.optimisticId && item[idField] === context.optimisticId));
+        return [data, ...withoutOptimistic];
       });
+      
       toastManager.success(`${entityName} created successfully!`);
+      
       if (onSuccessCallback) {
         await onSuccessCallback(data, variables);
       }
     },
     onSettled: async () => {
-      // Add a small delay to ensure IndexedDB operations complete
+      // Small delay to ensure all operations complete
       await new Promise(resolve => setTimeout(resolve, 100));
       queryClient.invalidateQueries({ queryKey });
     },

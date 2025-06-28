@@ -7,6 +7,7 @@ import { REWARDS_QUERY_KEY } from '../queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { processImageForSave } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
+import { saveRewardsToDB } from '@/data/indexedDB/useIndexedDB';
 
 export const useCreateRewardMutation = () => {
   const queryClient = useQueryClient();
@@ -24,7 +25,6 @@ export const useCreateRewardMutation = () => {
 
       const { processedUrl, metadata } = await processImageForSave(variables.background_image_url || null);
 
-      // Only include fields that actually exist in the database
       const rewardData = {
         title: variables.title,
         description: variables.description,
@@ -69,8 +69,21 @@ export const useCreateRewardMutation = () => {
       updated_at: new Date().toISOString(),
       user_id: subUserId || '',
     } as Reward),
-    onSuccessCallback: (newReward) => {
-      logger.debug('[Create Reward] Reward created successfully with image compression');
+    onSuccessCallback: async (newReward) => {
+      logger.debug('[Create Reward] Reward created successfully');
+      
+      // Force update the cache with the new reward at the top
+      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldData = []) => {
+        const filteredData = oldData.filter(reward => reward.id !== newReward.id);
+        return [newReward, ...filteredData];
+      });
+      
+      // Update IndexedDB cache
+      const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
+      await saveRewardsToDB(updatedRewards);
+      
+      // Force refetch to ensure consistency
+      await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
     },
   });
 };

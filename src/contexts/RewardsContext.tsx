@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { RewardsContextType, SaveRewardParams } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
@@ -79,14 +80,17 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     logger.debug("RewardsContext - handleSaveReward called with data:", rewardData, "index:", index);
     try {
       const params: SaveRewardParams = { rewardData, currentIndex: index };
-      if (rewardData.id && index !== null) {
-         params.rewardData = { ...rewardData, id: rewardData.id };
-      } else if (!rewardData.id && index === null) {
-        // ID is not needed for creation
-      }
-
+      
       const savedReward = await saveReward(params);
-      return savedReward?.id || null;
+      
+      if (savedReward?.id) {
+        // Force refetch to ensure the new reward appears in the list
+        await refetchRewards();
+        logger.debug("RewardsContext - reward saved and list refreshed:", savedReward.id);
+        return savedReward.id;
+      }
+      
+      return null;
     } catch (error) {
       logger.error("Error in RewardsContext handleSaveReward:", error);
       return null;
@@ -112,7 +116,6 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       logger.debug("RewardsContext - buying reward:", { id, cost, isDomReward });
       
-      // If isDomReward is passed, use it directly. Otherwise, look up the reward.
       let finalIsDomReward = isDomReward;
       if (finalIsDomReward === undefined) {
         const reward = rewards.find(r => r.id === id);
