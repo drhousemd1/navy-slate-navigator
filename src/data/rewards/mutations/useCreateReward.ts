@@ -24,12 +24,28 @@ export const useCreateRewardMutation = () => {
 
       const { processedUrl, metadata } = await processImageForSave(variables.background_image_url || null);
 
+      // Only include fields that actually exist in the database
       const rewardData = {
-        ...variables,
+        title: variables.title,
+        description: variables.description,
+        cost: variables.cost,
+        supply: variables.supply,
+        is_dom_reward: variables.is_dom_reward,
         background_image_url: processedUrl,
+        background_opacity: variables.background_opacity,
+        icon_name: variables.icon_name,
+        icon_color: variables.icon_color,
+        title_color: variables.title_color,
+        subtext_color: variables.subtext_color,
+        calendar_color: variables.calendar_color,
+        highlight_effect: variables.highlight_effect,
+        focal_point_x: variables.focal_point_x,
+        focal_point_y: variables.focal_point_y,
         image_meta: variables.image_meta || metadata,
         user_id: subUserId
       };
+
+      logger.debug('Creating reward with data:', rewardData);
 
       const { data, error } = await supabase
         .from('rewards')
@@ -37,7 +53,10 @@ export const useCreateRewardMutation = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        logger.error('Error creating reward:', error);
+        throw error;
+      }
       if (!data) throw new Error('Failed to create reward');
 
       return data as Reward;
