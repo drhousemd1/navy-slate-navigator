@@ -98,6 +98,7 @@ const RulesPageContent: React.FC = () => {
     try {
       const success = await deleteRule(ruleId);
       if (success) {
+        // Close the modal and clear current rule only after successful deletion
         setCurrentRule(null);
         setIsEditorOpen(false);
         // Toast is now handled by the optimistic mutation - no duplicate toast here

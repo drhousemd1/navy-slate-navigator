@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -194,7 +193,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       onDelete(ruleData.id);
     }
     setIsDeleteDialogOpen(false);
-    onCancel();
+    // DON'T call onCancel() here - let the parent component close the modal after successful deletion
   };
 
   return (
