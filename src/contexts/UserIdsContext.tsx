@@ -90,8 +90,6 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
           linked_partner_id: profile.linked_partner_id 
         });
         
-        const userRole = profile.role as ProfileRole;
-        
         if (profile.linked_partner_id) {
           // CRITICAL FIX: Fetch BOTH profiles to get their actual roles
           logger.debug('[UserIdsProvider] Fetching both linked profiles...');
@@ -109,37 +107,48 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ childre
             logger.debug('[UserIdsProvider] Partner fetch failed, using solo IDs:', soloIds);
             setUserIds(soloIds);
           } else {
-            // Successfully got both profiles - assign based on stored roles
+            // FIXED: Always assign roles consistently regardless of who is logged in
+            const currentUserRole = profile.role as ProfileRole;
             const partnerRole = partnerProfile.role as ProfileRole;
             
             logger.debug('[UserIdsProvider] Both profiles fetched:', {
-              currentUser: { id: profile.id, role: userRole },
+              currentUser: { id: profile.id, role: currentUserRole },
               partner: { id: partnerProfile.id, role: partnerRole }
             });
 
-            // Assign roles based on stored profile.role values (not who is logged in)
+            // CRITICAL FIX: Assign roles based on stored profile.role values consistently
+            // Always assign the same user to subUserId/domUserId regardless of who is logged in
             let finalIds: UserIds;
             
-            if (userRole === 'sub') {
+            if (currentUserRole === 'sub' && partnerRole === 'dom') {
+              // Current user is sub, partner is dom
               finalIds = {
                 subUserId: profile.id,
                 domUserId: partnerProfile.id,
               };
-            } else if (userRole === 'dom') {
+            } else if (currentUserRole === 'dom' && partnerRole === 'sub') {
+              // Current user is dom, partner is sub
               finalIds = {
                 subUserId: partnerProfile.id,
                 domUserId: profile.id,
               };
             } else {
-              // Defensive fallback if roles are unclear
-              logger.warn('[UserIdsProvider] Unclear roles, using fallback assignment');
+              // Both have same role or unclear roles - use consistent assignment
+              // Always put the user with lexicographically smaller ID as sub for consistency
+              const userIds = [
+                { id: profile.id, role: currentUserRole },
+                { id: partnerProfile.id, role: partnerRole }
+              ].sort((a, b) => a.id.localeCompare(b.id));
+              
               finalIds = {
-                subUserId: profile.id,
-                domUserId: partnerProfile.id,
+                subUserId: userIds[0].id,
+                domUserId: userIds[1].id,
               };
+              
+              logger.debug('[UserIdsProvider] Same roles detected, using consistent assignment based on ID order');
             }
             
-            logger.debug('[UserIdsProvider] Final role assignment:', finalIds);
+            logger.debug('[UserIdsProvider] Final role assignment (CONSISTENT FOR BOTH USERS):', finalIds);
             setUserIds(finalIds);
           }
         } else {
