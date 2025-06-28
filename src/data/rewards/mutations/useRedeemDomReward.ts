@@ -5,6 +5,7 @@ import { Reward } from '../types';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { DOM_REWARD_TYPES_COUNT_QUERY_KEY } from '../queries/useDomRewardTypesCountQuery';
 import { REWARDS_QUERY_KEY } from '../queries';
+import { getISOWeekString } from '@/lib/dateUtils';
 
 interface RedeemDomRewardVariables {
   rewardId: string;
@@ -18,10 +19,8 @@ interface RedeemDomRewardOptimisticContext {
 
 const recordRewardUsage = async (rewardId: string, userId: string) => {
   const now = new Date();
-  const dayOfWeek = (now.getDay() + 6) % 7;
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay() + 1);
-  const weekNumber = `${startOfWeek.getFullYear()}-W${Math.ceil(startOfWeek.getDate() / 7)}`;
+  const dayOfWeek = (now.getDay() + 6) % 7; // Convert to Monday=0 format
+  const weekNumber = getISOWeekString(now);
 
   await supabase
     .from('reward_usage')

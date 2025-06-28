@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { getISOWeekString } from '@/lib/dateUtils';
 
 interface RewardUsageData {
   day_of_week: number;
@@ -10,11 +11,9 @@ interface RewardUsageData {
 }
 
 const fetchRewardUsage = async (rewardId: string): Promise<boolean[]> => {
-  // Get current week number
+  // Get current week number using ISO week calculation
   const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Start of current week (Monday)
-  const weekNumber = `${startOfWeek.getFullYear()}-W${Math.ceil(startOfWeek.getDate() / 7)}`;
+  const weekNumber = getISOWeekString(now);
 
   const { data, error } = await supabase
     .from('reward_usage')
