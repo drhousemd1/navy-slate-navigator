@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -81,20 +80,36 @@ const RewardsContent: React.FC<{
     return savedReward;
   };
 
-  const handleDeleteRewardEditor = async (idToDelete?: string) => {
+  const handleDeleteRewardEditor = async (idToDelete?: string): Promise<void> => {
     const finalIdToDelete = idToDelete || rewardBeingEdited?.id;
     if (!finalIdToDelete) {
       return;
     }
     
+    // Find the reward index from the ID
     const rewardIndex = rewards.findIndex(r => r.id === finalIdToDelete);
     if (rewardIndex === -1) {
+      logger.error("Reward not found for deletion:", finalIdToDelete);
       return;
     }
     
-    await handleDeleteReward(rewardIndex);
-    setIsEditorOpen(false);
-    setRewardBeingEdited(undefined);
+    try {
+      // Wait for the deletion to complete
+      const success = await handleDeleteReward(rewardIndex);
+      
+      if (success) {
+        // Only close the editor after successful deletion
+        setIsEditorOpen(false);
+        setRewardBeingEdited(undefined);
+        logger.debug("Reward deleted successfully");
+      } else {
+        logger.error("Failed to delete reward");
+        throw new Error("Failed to delete reward");
+      }
+    } catch (error) {
+      logger.error("Error in handleDeleteRewardEditor:", error);
+      throw error; // Re-throw to let the RewardEditor handle the error
+    }
   };
   
   return (

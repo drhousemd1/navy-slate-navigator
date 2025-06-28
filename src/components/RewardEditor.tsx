@@ -12,7 +12,7 @@ interface RewardEditorProps {
   onClose: () => void;
   rewardData?: Reward;
   onSave: (rewardData: RewardFormValues) => Promise<Reward>; 
-  onDelete?: (id: string) => void;
+  onDelete?: () => Promise<void>; // Updated to return Promise<void>
 }
 
 const RewardEditor: React.FC<RewardEditorProps> = ({ 
@@ -54,6 +54,20 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (onDelete) {
+      try {
+        // Wait for the deletion to complete
+        await onDelete();
+        logger.debug("Delete completed successfully");
+        // Modal will be closed by the parent component after successful deletion
+      } catch (error) {
+        logger.error("Error in RewardEditor delete handler:", error);
+        throw error; // Re-throw to let the form handle the error
+      }
+    }
+  };
+
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
@@ -72,7 +86,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
               rewardData={rewardData}
               onSave={handleSave}
               onCancel={onClose}
-              onDelete={onDelete}
+              onDelete={rewardData?.id ? () => handleDelete(rewardData.id) : undefined}
               isSaving={isSaving}
             />
           </div>
@@ -97,7 +111,7 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
           rewardData={rewardData}
           onSave={handleSave}
           onCancel={onClose}
-          onDelete={onDelete}
+          onDelete={rewardData?.id ? () => handleDelete(rewardData.id) : undefined}
           isSaving={isSaving}
         />
       </DialogContent>
