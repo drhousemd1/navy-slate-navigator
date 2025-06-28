@@ -17,19 +17,23 @@ interface DeleteRuleDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onDelete: () => void;
-  ruleName?: string; // Added ruleName prop
+  ruleName?: string;
 }
 
 const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
   isOpen,
   onOpenChange,
   onDelete,
-  ruleName, // Destructure ruleName
+  ruleName,
 }) => {
   return (
     <>
       <Button 
-        onClick={() => onOpenChange(true)} 
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onOpenChange(true);
+        }} 
         variant="destructive"
         className="bg-red-700 border-light-navy text-white hover:bg-red-600 flex items-center gap-2"
       >
@@ -37,7 +41,10 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
       </Button>
       
       <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-        <AlertDialogContent className="bg-navy border-light-navy">
+        <AlertDialogContent 
+          className="bg-navy border-light-navy"
+          onClick={(e) => e.stopPropagation()}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete Rule</AlertDialogTitle>
             <AlertDialogDescription>
@@ -45,11 +52,22 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-dark-navy text-white border-light-navy hover:bg-light-navy">
+            <AlertDialogCancel 
+              className="bg-dark-navy text-white border-light-navy hover:bg-light-navy"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenChange(false);
+              }}
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction 
-              onClick={onDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete();
+              }}
               className="bg-red-700 text-white hover:bg-red-600"
             >
               Delete

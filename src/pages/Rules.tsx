@@ -83,29 +83,25 @@ const RulesPageContent: React.FC = () => {
   const handleSaveRule = async (ruleData: Partial<Rule>) => {
     try {
       await saveRule(ruleData);
-      
       setIsEditorOpen(false);
       setCurrentRule(null);
-      
-      // Remove duplicate success toast - let optimistic mutations handle it
     } catch (err: unknown) {
-      // Error handling is already done in useRulesData
       logger.error('Error in handleSaveRule:', getErrorMessage(err));
     }
   };
 
-  const handleDeleteRule = async (ruleId: string) => {
+  const handleDeleteRule = async (ruleId: string): Promise<void> => {
     try {
       const success = await deleteRule(ruleId);
       if (success) {
-        // Close the modal and clear current rule only after successful deletion
-        setCurrentRule(null);
-        setIsEditorOpen(false);
-        // Toast is now handled by the optimistic mutation - no duplicate toast here
+        // Force immediate UI update by refetching
+        await refetchRules();
+      } else {
+        throw new Error('Deletion failed');
       }
     } catch (err: unknown) {
-      // Error handling is already done in useRulesData
       logger.error('Error in handleDeleteRule:', getErrorMessage(err));
+      throw err; // Re-throw so the form can handle the error
     }
   };
 
@@ -114,7 +110,6 @@ const RulesPageContent: React.FC = () => {
       await markRuleBroken(rule);
       navigate('/punishments');
     } catch (err: unknown) {
-      // Error handling is already done in useRulesData
       logger.error('Error in handleRuleBroken:', getErrorMessage(err));
     }
   };

@@ -37,7 +37,7 @@ interface RuleFormValues {
 interface RuleEditorFormProps {
   ruleData?: Rule;
   onSave: (ruleData: Partial<Rule>) => Promise<void>;
-  onDelete?: (ruleId: string) => void;
+  onDelete?: (ruleId: string) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -51,6 +51,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const form = useForm<RuleFormValues>({
     shouldFocusError: false,
@@ -188,12 +189,20 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
-  const handleDeleteWrapped = () => {
+  const handleDeleteWrapped = async () => {
     if (ruleData?.id && onDelete) {
-      onDelete(ruleData.id);
+      setIsDeleting(true);
+      try {
+        await onDelete(ruleData.id);
+        setIsDeleteDialogOpen(false);
+        onCancel();
+      } catch (error) {
+        logger.error('[RuleEditorForm] Error deleting rule:', error);
+        toast({ title: "Error", description: "Failed to delete rule. Please try again.", variant: "destructive" });
+      } finally {
+        setIsDeleting(false);
+      }
     }
-    setIsDeleteDialogOpen(false);
-    // DON'T call onCancel() here - let the parent component close the modal after successful deletion
   };
 
   return (
