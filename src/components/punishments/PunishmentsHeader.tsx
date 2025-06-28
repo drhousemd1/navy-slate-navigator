@@ -20,7 +20,7 @@ const PunishmentsHeader: React.FC = () => {
   const { data: subPoints } = useUserPointsQuery(subUserId);
   const { data: domPoints } = useUserDomPointsQuery(subUserId);
   const { data: subRewardTypesCount } = useSubRewardTypesCountQuery(subUserId);
-  const { data: domRewardTypesCount } = useDomRewardTypesCountQuery(domUserId);
+  const { data: domRewardTypesCount } = useDomRewardTypesCountQuery(subUserId);
   
   const [isRandomSelectorOpen, setIsRandomSelectorOpen] = React.useState(false);
 

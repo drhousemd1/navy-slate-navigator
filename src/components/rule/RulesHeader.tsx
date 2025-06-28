@@ -16,7 +16,7 @@ const RulesHeader: React.FC = () => {
   const { data: subPoints } = useUserPointsQuery(subUserId);
   const { data: domPoints } = useUserDomPointsQuery(subUserId);
   const { data: subRewardTypesCount } = useSubRewardTypesCountQuery(subUserId);
-  const { data: domRewardTypesCount } = useDomRewardTypesCountQuery(domUserId);
+  const { data: domRewardTypesCount } = useDomRewardTypesCountQuery(subUserId);
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
   // isLoadingDisplay logic removed
