@@ -30,7 +30,7 @@ export const useRewardsData = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   
-  // Use the standardized query key function - this is the key fix!
+  // Use the standardized query key function consistently
   const rewardsQueryKey = getRewardsQueryKey(subUserId, domUserId);
   
   // Use the new usePointsManager hook
@@ -155,9 +155,14 @@ export const useRewardsData = () => {
   };
 
   const deleteReward = async (rewardId: string) => {
+    logger.debug('[useRewardsData] Deleting reward:', rewardId);
     const result = await deleteRewardMut.mutateAsync(rewardId);
     
-    // Update IndexedDB cache after successful delete - use the standardized query key
+    // Force refresh the cache after deletion
+    await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
+    logger.debug('[useRewardsData] Cache invalidated after deletion');
+    
+    // Update IndexedDB cache after successful delete
     const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
     await saveRewardsToDB(updatedRewards);
     

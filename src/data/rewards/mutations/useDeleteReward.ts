@@ -12,7 +12,7 @@ export const useDeleteReward = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
 
-  // Use the standardized query key function
+  // Use the standardized query key function - ensure it matches the rewards query
   const rewardsQueryKey = getRewardsQueryKey(subUserId, domUserId);
 
   return useDeleteOptimisticMutation<Reward, PostgrestError | Error, string>({
@@ -34,6 +34,11 @@ export const useDeleteReward = () => {
     entityName: 'Reward',
     idField: 'id',
     relatedQueryKey: ['reward-usage'],
-    relatedIdField: 'reward_id'
+    relatedIdField: 'reward_id',
+    onSuccessCallback: async () => {
+      // Force invalidate the exact same query key that useRewardsQuery uses
+      await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
+      logger.debug('[Delete Reward] Cache invalidated for query key:', rewardsQueryKey);
+    }
   });
 };
