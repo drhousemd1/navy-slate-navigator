@@ -1,14 +1,13 @@
-
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward, CreateRewardVariables } from '@/data/rewards/types';
 import { 
-  REWARDS_QUERY_KEY, 
   REWARDS_POINTS_QUERY_KEY,
   REWARDS_DOM_POINTS_QUERY_KEY,
   REWARDS_SUPPLY_QUERY_KEY,
   useRewardsQuery, 
-  fetchTotalRewardsSupply
+  fetchTotalRewardsSupply,
+  getRewardsQueryKey
 } from './queries'; 
 
 // Import types from the central types file
@@ -31,8 +30,8 @@ export const useRewardsData = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   
-  // Use the same query key structure as the mutations - this is the key fix!
-  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
+  // Use the standardized query key function - this is the key fix!
+  const rewardsQueryKey = getRewardsQueryKey(subUserId, domUserId);
   
   // Use the new usePointsManager hook
   const { 
@@ -148,7 +147,7 @@ export const useRewardsData = () => {
       result = await createRewardMutation.mutateAsync(createVariables);
     }
     
-    // Update IndexedDB cache after successful save - use the correct query key
+    // Update IndexedDB cache after successful save - use the standardized query key
     const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
     await saveRewardsToDB(updatedRewards);
     
@@ -158,7 +157,7 @@ export const useRewardsData = () => {
   const deleteReward = async (rewardId: string) => {
     const result = await deleteRewardMut.mutateAsync(rewardId);
     
-    // Update IndexedDB cache after successful delete - use the correct query key
+    // Update IndexedDB cache after successful delete - use the standardized query key
     const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
     await saveRewardsToDB(updatedRewards);
     
@@ -189,7 +188,7 @@ export const useRewardsData = () => {
       result = await buySub({ rewardId, cost, currentSupply: reward.supply, currentPoints });
     }
     
-    // Update IndexedDB cache after successful purchase - use the correct query key
+    // Update IndexedDB cache after successful purchase - use the standardized query key
     const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
     await saveRewardsToDB(updatedRewards);
     
@@ -213,7 +212,7 @@ export const useRewardsData = () => {
       result = await redeemSub({ rewardId, currentSupply: reward.supply, profileId });
     }
     
-    // Update IndexedDB cache after successful redemption - use the correct query key
+    // Update IndexedDB cache after successful redemption - use the standardized query key
     const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
     await saveRewardsToDB(updatedRewards);
     

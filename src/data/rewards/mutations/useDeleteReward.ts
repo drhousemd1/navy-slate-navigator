@@ -6,13 +6,14 @@ import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { PostgrestError } from '@supabase/supabase-js';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { REWARDS_QUERY_KEY } from '../queries';
+import { getRewardsQueryKey } from '../queries';
 
 export const useDeleteReward = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
 
-  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
+  // Use the standardized query key function
+  const rewardsQueryKey = getRewardsQueryKey(subUserId, domUserId);
 
   return useDeleteOptimisticMutation<Reward, PostgrestError | Error, string>({
     queryClient,

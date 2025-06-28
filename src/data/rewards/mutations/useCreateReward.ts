@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { Reward, CreateRewardVariables } from '../types';
-import { REWARDS_QUERY_KEY } from '../queries';
+import { getRewardsQueryKey } from '../queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { processImageForSave } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
@@ -13,7 +13,8 @@ export const useCreateRewardMutation = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
 
-  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
+  // Use the standardized query key function
+  const rewardsQueryKey = getRewardsQueryKey(subUserId, domUserId);
 
   return useCreateOptimisticMutation<Reward, Error, CreateRewardVariables>({
     queryClient,

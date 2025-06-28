@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -19,6 +18,11 @@ export const REWARDS_DOM_POINTS_QUERY_KEY = ['rewards', 'dom-points'];
 export const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
 
 export { fetchRewards };
+
+// Centralized function to generate consistent query keys
+export const getRewardsQueryKey = (subUserId: string | null, domUserId: string | null) => {
+  return [...REWARDS_QUERY_KEY, subUserId, domUserId];
+};
 
 export const fetchUserPoints = async (): Promise<number> => {
   const { data: userData } = await supabase.auth.getUser();
@@ -86,7 +90,7 @@ export function useRewardsQuery() {
   const { subUserId, domUserId } = useUserIds();
   
   return useQuery<Reward[], Error>({
-    queryKey: [...REWARDS_QUERY_KEY, subUserId, domUserId],
+    queryKey: getRewardsQueryKey(subUserId, domUserId),
     queryFn: () => fetchRewards(subUserId, domUserId),
     ...STANDARD_QUERY_CONFIG,
     // Use proper caching strategy as per APP CODE GUIDE
