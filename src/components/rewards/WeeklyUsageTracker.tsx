@@ -50,7 +50,7 @@ const WeeklyUsageTracker: React.FC<WeeklyUsageTrackerProps> = ({
     // Always render 7 circles
     for (let i = 0; i < 7; i++) {
       // Get usage status from data or default to false
-      const used = i < trackerData.length ? Boolean(trackerData[i]) : false;
+      const used = Boolean(trackerData[i]);
       
       circles.push(
         <div 
