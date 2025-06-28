@@ -46,7 +46,7 @@ interface TaskFormValues {
 interface TaskEditorFormProps {
   taskData?: Partial<Task>;
   onSave: (taskData: TaskFormValues) => Promise<void>; 
-  onDelete?: (taskId: string) => void;
+  onDelete?: (taskId: string) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -60,6 +60,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isMobile = useIsMobile();
   
   const form = useForm<TaskFormValues>({
@@ -237,13 +238,20 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     onCancel();
   };
 
-  const handleDeleteWrapped = () => {
+  const handleDeleteWrapped = async () => {
     if (taskData?.id && onDelete) {
-      onDelete(taskData.id);
-      clearPersistedState(); 
+      setIsDeleting(true);
+      try {
+        await onDelete(taskData.id);
+        setIsDeleteDialogOpen(false);
+        onCancel();
+      } catch (error) {
+        logger.error('[TaskEditorForm] Error deleting task:', error);
+        toast({ title: "Error", description: "Failed to delete task. Please try again.", variant: "destructive" });
+      } finally {
+        setIsDeleting(false);
+      }
     }
-    setIsDeleteDialogOpen(false); 
-    onCancel();
   };
 
   const incrementPoints = () => {

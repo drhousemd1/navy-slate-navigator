@@ -27,7 +27,8 @@ const Tasks: React.FC = () => {
     isUsingCachedData,
     saveTask,
     deleteTask,
-    checkAndReloadTasks
+    checkAndReloadTasks,
+    refetch: refetchTasks
   } = useTasksData();
 
   // Debug logging for development
@@ -96,9 +97,11 @@ const Tasks: React.FC = () => {
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = async (taskId: string): Promise<void> => {
     try {
       await deleteTask(taskId);
+      // Force immediate UI update by refetching
+      await refetchTasks();
       setIsEditorOpen(false);
       setEditingTask(null);
       
@@ -106,6 +109,7 @@ const Tasks: React.FC = () => {
       const descriptiveMessage = getErrorMessage(error);
       logger.error("Error deleting task:", descriptiveMessage, error);
       toastManager.error("Delete Error", descriptiveMessage);
+      throw error; // Re-throw so the form can handle the error
     }
   };
 

@@ -21,15 +21,14 @@ interface DeleteTaskDialogProps {
 }
 
 const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ isOpen, onOpenChange, onDelete, taskName }) => {
-  const handleDelete = () => {
-    onDelete();
-    onOpenChange(false);
-  };
-
   return (
     <>
       <Button 
-        onClick={() => onOpenChange(true)} 
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onOpenChange(true);
+        }} 
         variant="destructive"
         className="bg-red-700 border-light-navy text-white hover:bg-red-600 flex items-center gap-2"
       >
@@ -37,7 +36,10 @@ const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ isOpen, onOpenChang
       </Button>
       
       <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-        <AlertDialogContent className="bg-navy border-light-navy">
+        <AlertDialogContent 
+          className="bg-navy border-light-navy"
+          onClick={(e) => e.stopPropagation()}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
@@ -45,11 +47,22 @@ const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ isOpen, onOpenChang
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-dark-navy text-white border-light-navy hover:bg-light-navy">
+            <AlertDialogCancel 
+              className="bg-dark-navy text-white border-light-navy hover:bg-light-navy"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenChange(false);
+              }}
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete();
+              }}
               className="bg-red-700 text-white hover:bg-red-600"
             >
               Delete
