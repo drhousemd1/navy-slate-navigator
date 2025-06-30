@@ -299,18 +299,21 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         <FormField
           control={control}
           name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-white">Description</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Task description" 
-                  className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
-                  {...field}
-                />
-              </FormControl>
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const { formattedPreview, editorRef, ...fieldProps } = field;
+            return (
+              <FormItem>
+                <FormLabel className="text-white">Description</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Task description" 
+                    className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
+                    {...fieldProps}
+                  />
+                </FormControl>
+              </FormItem>
+            );
+          }}
         />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
