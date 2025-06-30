@@ -3,6 +3,7 @@ import React from 'react';
 import RuleCard from './RuleCard';
 import { Rule } from '@/data/interfaces/Rule';
 import { StandardLoading, StandardError, StandardEmpty } from '@/components/common/StandardizedStates';
+import { sortRulesByPriorityAndDate } from '@/lib/ruleSorting';
 
 interface RulesListProps {
   rules: Rule[];
@@ -32,9 +33,12 @@ const RulesList: React.FC<RulesListProps> = ({
     return <StandardEmpty />;
   }
 
+  // Sort rules by priority and date
+  const sortedRules = sortRulesByPriorityAndDate(rules);
+
   return (
     <div className="space-y-4 mt-4">
-      {rules.map((rule) => (
+      {sortedRules.map((rule) => (
         <RuleCard
           key={rule.id}
           rule={rule}

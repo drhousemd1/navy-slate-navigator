@@ -49,8 +49,8 @@ export const fetchRules = async (subUserId: string | null, domUserId: string | n
       const { data, error } = await supabase
         .from('rules')
         .select('*')
-        .in('user_id', userIds)
-        .order('created_at', { ascending: false });
+        .in('user_id', userIds);
+        // Removed .order('created_at', { ascending: false }) since sorting is now handled in frontend
 
       if (error) {
         logger.error('[fetchRules] Supabase error fetching rules:', error);
