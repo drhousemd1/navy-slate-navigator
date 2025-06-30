@@ -1,55 +1,99 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
-import { UseFormReturn } from 'react-hook-form';
+import { Reward } from '@/data/rewards/types';
 import { RewardFormValues } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
+import { UseFormReturn } from 'react-hook-form';
 
 interface RewardFormSubmitHandlerProps {
-  children: React.ReactNode;
+  rewardData?: Reward;
   form: UseFormReturn<RewardFormValues>;
-  clearPersistedState: () => Promise<boolean>;
-  onSave: (formData: RewardFormValues) => Promise<void>;
+  selectedIconName: string | null;
+  imagePreview: string | null;
+  iconPreview: string | null;
+  onSave: (data: RewardFormValues) => Promise<Reward>;
   onCancel: () => void;
+  children: React.ReactNode;
 }
 
-export const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
-  children,
+const mapRewardDataToFormValues = (reward: Reward): RewardFormValues => {
+  return {
+    title: reward.title,
+    description: reward.description || '',
+    cost: reward.cost,
+    supply: reward.supply,
+    is_dom_reward: reward.is_dom_reward ?? false,
+    icon_name: reward.icon_name,
+    icon_color: reward.icon_color || '#9b87f5',
+    title_color: reward.title_color || '#FFFFFF',
+    subtext_color: reward.subtext_color || '#8E9196',
+    calendar_color: reward.calendar_color || '#7E69AB',
+    highlight_effect: reward.highlight_effect || false,
+    background_image_url: reward.background_image_url,
+    background_opacity: reward.background_opacity || 100,
+    focal_point_x: reward.focal_point_x || 50,
+    focal_point_y: reward.focal_point_y || 50,
+    image_meta: reward.image_meta,
+  };
+};
+
+const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
+  rewardData,
   form,
-  clearPersistedState,
+  selectedIconName,
+  imagePreview,
+  iconPreview,
   onSave,
   onCancel,
+  children
 }) => {
-  const onSubmitWrapped = async (data: RewardFormValues) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const onSubmit = async (values: RewardFormValues) => {
+    if (isSaving) {
+      logger.debug("Form submission prevented - already saving");
+      return;
+    }
+    logger.debug("Form submitted with values:", values);
+    
+    const dataToSave: RewardFormValues = {
+      ...values,
+      icon_name: selectedIconName,
+      background_image_url: imagePreview,
+    };
+    
+    logger.debug("Attempting to save reward data:", dataToSave);
+    
     try {
-      logger.debug("RewardFormSubmitHandler handling save with data:", data);
-      await onSave(data);
-      const cleared = await clearPersistedState();
-      logger.debug("Persisted state cleared:", cleared);
-    } catch (error) {
-      logger.error("Error during onSave callback:", error);
-      throw error;
+      setIsSaving(true);
+      const savedReward = await onSave(dataToSave);
+      
+      if (savedReward) {
+        form.reset(mapRewardDataToFormValues(savedReward));
+      }
+    } catch (e: unknown) {
+      logger.error("Error saving reward in form handler:", e);
+      // Error handling is done by the mutation hooks
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleCancelWrapped = async () => {
-    const cleared = await clearPersistedState();
-    logger.debug("Persisted state cleared on cancel:", cleared);
-    onCancel();
-  };
+  const childrenWithProps = React.Children.map(children, child => {
+    if (React.isValidElement(child)) {
+      return React.cloneElement(child as React.ReactElement<any>, { isSaving });
+    }
+    return child;
+  });
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmitWrapped)} className="space-y-6">
-        {React.Children.map(children, (child) => {
-          if (React.isValidElement(child)) {
-            return React.cloneElement(child, {
-              onCancel: handleCancelWrapped,
-            } as any);
-          }
-          return child;
-        })}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {childrenWithProps}
       </form>
     </Form>
   );
 };
+
+export default RewardFormSubmitHandler;

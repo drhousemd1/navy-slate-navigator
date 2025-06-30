@@ -12,7 +12,7 @@ interface RewardEditorProps {
   onClose: () => void;
   rewardData?: Reward;
   onSave: (rewardData: RewardFormValues) => Promise<Reward>; 
-  onDelete?: () => Promise<void>; // Updated to return Promise<void>
+  onDelete?: () => Promise<void>;
 }
 
 const RewardEditor: React.FC<RewardEditorProps> = ({ 
@@ -23,7 +23,6 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onDelete
 }) => {
   const isMobile = useIsMobile();
-  const [isSaving, setIsSaving] = useState(false);
   
   useEffect(() => {
     if (rewardData) {
@@ -32,25 +31,23 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
     }
   }, [rewardData, isOpen]);
   
-  const handleSave = async (formData: RewardFormValues) => {
+  const handleSave = async (formData: RewardFormValues): Promise<Reward> => {
     logger.debug("RewardEditor handling save with form data:", formData);
     logger.debug("is_dom_reward value in handleSave:", formData.is_dom_reward);
     
     try {
-      setIsSaving(true);
-      
       // Wait for the save operation to complete
-      await onSave(formData);
+      const savedReward = await onSave(formData);
       
       logger.debug("Save completed successfully");
       
       // Close the modal after successful save
       onClose();
+      
+      return savedReward;
     } catch (error) {
       logger.error("Error in RewardEditor save handler:", error);
       throw error; // Let the centralized error handling manage the toast
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -87,7 +84,6 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
               onSave={handleSave}
               onCancel={onClose}
               onDelete={rewardData?.id ? () => handleDelete(rewardData.id) : undefined}
-              isSaving={isSaving}
             />
           </div>
         </SheetContent>
@@ -112,7 +108,6 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
           onSave={handleSave}
           onCancel={onClose}
           onDelete={rewardData?.id ? () => handleDelete(rewardData.id) : undefined}
-          isSaving={isSaving}
         />
       </DialogContent>
     </Dialog>
