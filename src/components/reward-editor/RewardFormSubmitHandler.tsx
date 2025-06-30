@@ -21,15 +21,17 @@ export const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = (
     try {
       logger.debug("RewardFormSubmitHandler handling save with data:", data);
       await onSave(data);
-      await clearPersistedState();
+      const cleared = await clearPersistedState();
+      logger.debug("Persisted state cleared:", cleared);
     } catch (error) {
       logger.error("Error during onSave callback:", error);
       throw error;
     }
   };
 
-  const handleCancelWrapped = () => {
-    clearPersistedState();
+  const handleCancelWrapped = async () => {
+    const cleared = await clearPersistedState();
+    logger.debug("Persisted state cleared on cancel:", cleared);
     onCancel();
   };
 

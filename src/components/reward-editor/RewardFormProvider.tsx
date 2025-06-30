@@ -29,7 +29,7 @@ const rewardFormSchema = z.object({
 
 type RewardFormContextType = {
   form: UseFormReturn<RewardFormValues>;
-  clearPersistedState: () => Promise<void>;
+  clearPersistedState: () => Promise<boolean>;
 };
 
 const RewardFormContext = createContext<RewardFormContextType | undefined>(undefined);
