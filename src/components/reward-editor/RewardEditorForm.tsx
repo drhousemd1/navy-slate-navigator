@@ -8,6 +8,7 @@ import RewardColorSettings from './RewardColorSettings';
 import RewardFormActions from './RewardFormActions';
 import RewardFormProvider from './RewardFormProvider';
 import RewardFormSubmitHandler from './RewardFormSubmitHandler';
+import DeleteRewardDialog from './DeleteRewardDialog';
 import { useRewardIcon } from './hooks/useRewardIcon';
 import { useRewardBackground } from './hooks/useRewardBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
@@ -119,32 +120,41 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         };
 
         return (
-          <RewardFormSubmitHandler
-            rewardData={rewardData}
-            form={form}
-            selectedIconName={selectedIconName}
-            imagePreview={imagePreview}
-            iconPreview={iconPreview}
-            onSave={handleSaveWithClear} 
-            onCancel={handleCancelWithClear} 
-          >
-            <RewardFormContent 
+          <>
+            <RewardFormSubmitHandler
+              rewardData={rewardData}
               form={form}
               selectedIconName={selectedIconName}
-              iconPreview={iconPreview}
               imagePreview={imagePreview}
-              isDeleteDialogOpen={isDeleteDialogOpen}
-              setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-              rewardData={rewardData}
-              handleSelectIcon={handleSelectIcon}
-              handleUploadIcon={handleUploadIcon}
-              handleRemoveIcon={handleRemoveIcon}
-              handleImageUpload={handleImageUploadWrapper}
-              handleRemoveImage={handleRemoveImageWrapper}
+              iconPreview={iconPreview}
+              onSave={handleSaveWithClear} 
               onCancel={handleCancelWithClear} 
-              onDelete={handleDeleteWithClear} 
+            >
+              <RewardFormContent 
+                form={form}
+                selectedIconName={selectedIconName}
+                iconPreview={iconPreview}
+                imagePreview={imagePreview}
+                isDeleteDialogOpen={isDeleteDialogOpen}
+                setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+                rewardData={rewardData}
+                handleSelectIcon={handleSelectIcon}
+                handleUploadIcon={handleUploadIcon}
+                handleRemoveIcon={handleRemoveIcon}
+                handleImageUpload={handleImageUploadWrapper}
+                handleRemoveImage={handleRemoveImageWrapper}
+                onCancel={handleCancelWithClear} 
+                onDelete={handleDeleteWithClear} 
+              />
+            </RewardFormSubmitHandler>
+            
+            <DeleteRewardDialog
+              isOpen={isDeleteDialogOpen}
+              onOpenChange={setIsDeleteDialogOpen}
+              onConfirm={handleDeleteWithClear}
+              rewardName={rewardData?.title}
             />
-          </RewardFormSubmitHandler>
+          </>
         );
       }}
     </RewardFormProvider>
