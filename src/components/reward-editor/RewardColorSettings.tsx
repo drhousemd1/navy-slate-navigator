@@ -1,15 +1,17 @@
 
 import React from 'react';
+import { Control } from 'react-hook-form';
 import { FormLabel } from '@/components/ui/form';
 import ColorPickerField from '@/components/task-editor/ColorPickerField';
 import { Switch } from '@/components/ui/switch';
 import { FormField, FormItem, FormControl } from '@/components/ui/form';
-import { useRewardForm } from './RewardFormProvider';
+import { RewardFormValues } from '@/data/rewards/types';
 
-const RewardColorSettings: React.FC = () => {
-  const { form } = useRewardForm();
-  const { control } = form;
+interface RewardColorSettingsProps {
+  control: Control<RewardFormValues>;
+}
 
+const RewardColorSettings: React.FC<RewardColorSettingsProps> = ({ control }) => {
   return (
     <div className="space-y-4">
       <FormLabel className="text-white text-lg">Color Settings</FormLabel>

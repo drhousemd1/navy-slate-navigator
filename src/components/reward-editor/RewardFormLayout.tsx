@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { useRewardForm } from './RewardFormProvider';
+import { UseFormReturn } from 'react-hook-form';
+import { RewardFormValues, Reward } from '@/data/rewards/types';
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
 import RewardImageSection from './RewardImageSection';
@@ -9,9 +10,9 @@ import RewardFormActions from './RewardFormActions';
 import DeleteRewardDialog from './DeleteRewardDialog';
 import { handleImageUpload } from '@/utils/image/rewardIntegration';
 import { logger } from '@/lib/logger';
-import { Reward } from '@/data/rewards/types';
 
 interface RewardFormLayoutProps {
+  form: UseFormReturn<RewardFormValues>;
   rewardData?: Reward;
   onDelete?: (id: string) => void;
   isSaving?: boolean;
@@ -19,12 +20,12 @@ interface RewardFormLayoutProps {
 }
 
 export const RewardFormLayout: React.FC<RewardFormLayoutProps> = ({
+  form,
   rewardData,
   onDelete,
   isSaving = false,
   onCancel,
 }) => {
-  const { form } = useRewardForm();
   const { setValue, watch } = form;
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(
@@ -92,6 +93,7 @@ export const RewardFormLayout: React.FC<RewardFormLayoutProps> = ({
   return (
     <>
       <RewardBasicDetails 
+        control={form.control}
         incrementCost={incrementCost}
         decrementCost={decrementCost}
         incrementSupply={incrementSupply}
@@ -108,13 +110,15 @@ export const RewardFormLayout: React.FC<RewardFormLayoutProps> = ({
       />
       
       <RewardImageSection 
+        control={form.control}
+        setValue={form.setValue}
         imagePreview={imagePreview}
         initialPosition={{ x: watch('focal_point_x'), y: watch('focal_point_y') }}
         onRemoveImage={handleRemoveImage}
         onImageUpload={handleImageUploadWrapper}
       />
       
-      <RewardColorSettings />
+      <RewardColorSettings control={form.control} />
       
       <RewardFormActions 
         rewardData={rewardData}

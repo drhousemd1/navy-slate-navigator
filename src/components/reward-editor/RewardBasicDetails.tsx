@@ -1,14 +1,16 @@
 
 import React from 'react';
+import { Control } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Plus, Minus } from 'lucide-react';
-import { useRewardForm } from './RewardFormProvider';
+import { RewardFormValues } from '@/data/rewards/types';
 
 interface RewardBasicDetailsProps {
+  control: Control<RewardFormValues>;
   incrementCost: () => void;
   decrementCost: () => void;
   incrementSupply: () => void;
@@ -16,14 +18,12 @@ interface RewardBasicDetailsProps {
 }
 
 const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
+  control,
   incrementCost,
   decrementCost,
   incrementSupply,
   decrementSupply,
 }) => {
-  const { form } = useRewardForm();
-  const { control, watch } = form;
-
   return (
     <div className="space-y-4">
       <FormField

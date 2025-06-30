@@ -1,9 +1,8 @@
 
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Form } from '@/components/ui/form';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
@@ -27,23 +26,11 @@ const rewardFormSchema = z.object({
   image_meta: z.any().nullable(),
 });
 
-type RewardFormContextType = {
-  form: UseFormReturn<RewardFormValues>;
-  clearPersistedState: () => Promise<boolean>;
-};
-
-const RewardFormContext = createContext<RewardFormContextType | undefined>(undefined);
-
-export const useRewardForm = () => {
-  const context = useContext(RewardFormContext);
-  if (!context) {
-    throw new Error('useRewardForm must be used within RewardFormProvider');
-  }
-  return context;
-};
-
 interface RewardFormProviderProps {
-  children: React.ReactNode;
+  children: (props: {
+    form: UseFormReturn<RewardFormValues>;
+    clearPersistedState: () => Promise<boolean>;
+  }) => React.ReactNode;
   rewardData?: Reward;
 }
 
@@ -113,16 +100,9 @@ export const RewardFormProvider: React.FC<RewardFormProviderProps> = ({
     }
   }, [rewardData, form]);
 
-  const contextValue: RewardFormContextType = {
-    form,
-    clearPersistedState,
-  };
-
   return (
-    <RewardFormContext.Provider value={contextValue}>
-      <Form {...form}>
-        {children}
-      </Form>
-    </RewardFormContext.Provider>
+    <>
+      {children({ form, clearPersistedState })}
+    </>
   );
 };

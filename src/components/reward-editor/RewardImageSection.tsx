@@ -1,9 +1,12 @@
 
 import React from 'react';
-import { useRewardForm } from './RewardFormProvider';
+import { Control, UseFormSetValue } from 'react-hook-form';
+import { RewardFormValues } from '@/data/rewards/types';
 import BackgroundImageSelectorComponent from '@/components/task-editor/BackgroundImageSelector';
 
 interface RewardImageSectionProps {
+  control: Control<RewardFormValues>;
+  setValue: UseFormSetValue<RewardFormValues>;
   imagePreview: string | null;
   initialPosition?: { x: number; y: number };
   onRemoveImage: () => void;
@@ -11,12 +14,8 @@ interface RewardImageSectionProps {
 }
 
 const RewardImageSection: React.FC<RewardImageSectionProps> = (props) => {
-  const { form } = useRewardForm();
-  
   return (
     <BackgroundImageSelectorComponent 
-      control={form.control}
-      setValue={form.setValue}
       {...props}
     />
   );

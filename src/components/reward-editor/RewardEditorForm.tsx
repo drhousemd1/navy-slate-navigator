@@ -22,13 +22,21 @@ export const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
 }) => {
   return (
     <RewardFormProvider rewardData={rewardData}>
-      <RewardFormSubmitHandler onSave={onSave} onCancel={onCancel}>
-        <RewardFormLayout
-          rewardData={rewardData}
-          onDelete={onDelete}
-          isSaving={isSaving}
-        />
-      </RewardFormSubmitHandler>
+      {({ form, clearPersistedState }) => (
+        <RewardFormSubmitHandler 
+          form={form}
+          clearPersistedState={clearPersistedState}
+          onSave={onSave} 
+          onCancel={onCancel}
+        >
+          <RewardFormLayout
+            form={form}
+            rewardData={rewardData}
+            onDelete={onDelete}
+            isSaving={isSaving}
+          />
+        </RewardFormSubmitHandler>
+      )}
     </RewardFormProvider>
   );
 };
