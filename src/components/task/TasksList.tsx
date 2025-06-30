@@ -3,6 +3,7 @@ import React from 'react';
 import TaskCard from '../TaskCard';
 import { TaskWithId } from '@/data/tasks/types';
 import { StandardLoading, StandardError, StandardEmpty } from '@/components/common/StandardizedStates';
+import { sortTasksByPriorityAndDate } from '@/lib/taskSorting';
 
 interface TasksListProps {
   tasks: TaskWithId[];
@@ -34,9 +35,12 @@ const TasksList: React.FC<TasksListProps> = ({
     return <StandardEmpty />;
   }
 
+  // Sort tasks by priority and date
+  const sortedTasks = sortTasksByPriorityAndDate(tasks);
+
   return (
     <div className="space-y-4 overflow-x-hidden w-full max-w-full">
-      {tasks.map((task) => {
+      {sortedTasks.map((task) => {
         const frequency = task.frequency as 'daily' | 'weekly';
         const usageDataArray = Array.isArray(task.usage_data) ? task.usage_data : Array(7).fill(0);
         return (

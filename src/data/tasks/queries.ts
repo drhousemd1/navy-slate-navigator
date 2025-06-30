@@ -63,8 +63,8 @@ export const fetchTasks = async (subUserId: string | null, domUserId: string | n
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
-      .in('user_id', userIds)
-      .order('created_at', { ascending: false });
+      .in('user_id', userIds);
+      // Removed .order('created_at', { ascending: false }) since sorting is now handled in frontend
 
     if (error) {
       logger.error('[fetchTasks] Supabase error fetching tasks:', error);
