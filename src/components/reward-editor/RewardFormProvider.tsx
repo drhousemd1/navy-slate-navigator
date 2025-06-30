@@ -3,7 +3,6 @@ import React from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Form } from '@/components/ui/form';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
@@ -26,6 +25,8 @@ const rewardFormSchema = z.object({
   focal_point_y: z.number().min(0).max(100),
   image_meta: z.any().nullable(),
 });
+
+export type RewardFormValues = z.infer<typeof rewardFormSchema>;
 
 interface RewardFormProviderProps {
   rewardData?: Reward;
@@ -79,11 +80,7 @@ const RewardFormProvider: React.FC<RewardFormProviderProps> = ({
     await originalClearPersistedState();
   };
 
-  return (
-    <Form {...form}>
-      {children(form, clearPersistedStateForChild)}
-    </Form>
-  );
+  return children(form, clearPersistedStateForChild);
 };
 
 export default RewardFormProvider;

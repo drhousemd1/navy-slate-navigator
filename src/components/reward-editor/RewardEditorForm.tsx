@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
-import { Reward, RewardFormValues } from '@/data/rewards/types';
+import { Reward } from '@/data/rewards/types';
+import { RewardFormValues } from './RewardFormProvider';
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
 import RewardImageSection from './RewardImageSection';
@@ -68,11 +69,7 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   useEffect(() => {
     if (rewardData) {
       setSelectedIconName(rewardData.icon_name || null);
-      if (rewardData.icon_url) {
-        setIconPreview(rewardData.icon_url);
-      } else {
-        setIconPreview(null);
-      }
+      setIconPreview(null); // Rewards don't have icon_url property
       setImagePreview(rewardData.background_image_url || null);
     } else {
       setSelectedIconName(null);

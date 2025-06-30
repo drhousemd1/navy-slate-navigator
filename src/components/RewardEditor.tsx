@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
-import { RewardEditorForm } from './reward-editor/RewardEditorForm';
+import RewardEditorForm from './reward-editor/RewardEditorForm';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { logger } from '@/lib/logger';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
