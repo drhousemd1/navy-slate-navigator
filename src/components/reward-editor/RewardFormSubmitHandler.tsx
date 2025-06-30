@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
-import { Reward } from '@/data/rewards/types';
-import { RewardFormValues } from './RewardFormProvider';
+import { Reward, RewardFormValues } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { UseFormReturn } from 'react-hook-form';
 

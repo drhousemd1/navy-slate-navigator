@@ -1,7 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Reward } from '@/data/rewards/types';
-import { RewardFormValues } from './RewardFormProvider';
+import { Reward, RewardFormValues } from '@/data/rewards/types';
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
 import RewardImageSection from './RewardImageSection';

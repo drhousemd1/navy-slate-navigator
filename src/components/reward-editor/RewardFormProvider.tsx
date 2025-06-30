@@ -26,8 +26,6 @@ const rewardFormSchema = z.object({
   image_meta: z.any().nullable(),
 });
 
-export type RewardFormValues = z.infer<typeof rewardFormSchema>;
-
 interface RewardFormProviderProps {
   rewardData?: Reward;
   children: (
