@@ -307,7 +307,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                   placeholder="Task description" 
                   className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
                   {...field}
-                  value={field.value || ''}
                 />
               </FormControl>
             </FormItem>
