@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
 import RewardsList from '../components/rewards/RewardsList';
@@ -6,21 +7,23 @@ import RewardsHeader from '../components/rewards/RewardsHeader';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 import { Reward, RewardFormValues } from '@/data/rewards/types'; 
-
-import { useRewards } from '@/contexts/RewardsContext';
+import { useRewards } from '@/data/queries/useRewards';
+import { useCreateReward, useUpdateReward, useDeleteReward } from '@/data/rewards/mutations';
+import { useBuySubReward, useBuyDomReward, useRedeemSubReward, useRedeemDomReward } from '@/data/rewards/mutations';
 import { logger } from '@/lib/logger';
+import { toast } from '@/hooks/use-toast';
 
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
-  const { 
-    rewards,
-    isLoading,
-    handleSaveReward,
-    handleDeleteReward,
-    handleBuyReward,
-    handleUseReward
-  } = useRewards();
+  const { data: rewards = [], isLoading, error } = useRewards();
+  const createRewardMutation = useCreateReward();
+  const updateRewardMutation = useUpdateReward();
+  const deleteRewardMutation = useDeleteReward();
+  const buySubRewardMutation = useBuySubReward();
+  const buyDomRewardMutation = useBuyDomReward();
+  const redeemSubRewardMutation = useRedeemSubReward();
+  const redeemDomRewardMutation = useRedeemDomReward();
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [rewardBeingEdited, setRewardBeingEdited] = useState<Reward | undefined>(undefined);
@@ -37,19 +40,39 @@ const RewardsContent: React.FC<{
     }
   };
 
-  const handleBuyRewardWrapper = async (rewardId: string, cost: number) => {
+  const handleBuyReward = async (rewardId: string, cost: number) => {
     try {
-      await handleBuyReward(rewardId, cost);
-    } catch (e) {
-      logger.error("Error buying reward from page:", e);
+      const reward = rewards.find(r => r.id === rewardId);
+      if (!reward) {
+        toast({ title: "Error", description: "Reward not found", variant: "destructive" });
+        return;
+      }
+
+      if (reward.is_dom_reward) {
+        await buyDomRewardMutation.mutateAsync({ rewardId, cost });
+      } else {
+        await buySubRewardMutation.mutateAsync({ rewardId, cost });
+      }
+    } catch (error) {
+      logger.error("Error buying reward:", error);
     }
   };
 
-  const handleUseRewardWrapper = async (rewardId: string) => {
+  const handleUseReward = async (rewardId: string) => {
     try {
-      await handleUseReward(rewardId);
-    } catch (e) {
-      logger.error("Error using reward from page:", e);
+      const reward = rewards.find(r => r.id === rewardId);
+      if (!reward) {
+        toast({ title: "Error", description: "Reward not found", variant: "destructive" });
+        return;
+      }
+
+      if (reward.is_dom_reward) {
+        await redeemDomRewardMutation.mutateAsync({ rewardId });
+      } else {
+        await redeemSubRewardMutation.mutateAsync({ rewardId });
+      }
+    } catch (error) {
+      logger.error("Error using reward:", error);
     }
   };
   
@@ -59,56 +82,42 @@ const RewardsContent: React.FC<{
   }, [contentRef]); 
 
   const handleSaveRewardEditor = async (formData: RewardFormValues): Promise<Reward> => {
-    const rewardIndex = rewardBeingEdited ? rewards.findIndex(r => r.id === rewardBeingEdited.id) : null;
-    const savedRewardId = await handleSaveReward(formData, rewardIndex);
-    
-    if (!savedRewardId) {
-      throw new Error("Failed to save reward");
+    try {
+      let savedReward: Reward;
+      
+      if (rewardBeingEdited) {
+        // Update existing reward
+        savedReward = await updateRewardMutation.mutateAsync({
+          id: rewardBeingEdited.id,
+          ...formData
+        });
+      } else {
+        // Create new reward
+        savedReward = await createRewardMutation.mutateAsync(formData);
+      }
+      
+      setIsEditorOpen(false);
+      setRewardBeingEdited(undefined);
+      return savedReward;
+    } catch (error) {
+      logger.error("Error saving reward:", error);
+      throw error;
     }
-    
-    // Find the saved reward in the list
-    const savedReward = rewards.find(r => r.id === savedRewardId) || {
-      ...formData,
-      id: savedRewardId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: '', // This will be set by the backend
-    } as Reward;
-    
-    setIsEditorOpen(false);
-    setRewardBeingEdited(undefined);
-    return savedReward;
   };
 
-  const handleDeleteRewardEditor = async (idToDelete?: string): Promise<void> => {
-    const finalIdToDelete = idToDelete || rewardBeingEdited?.id;
-    if (!finalIdToDelete) {
-      return;
-    }
-    
-    // Find the reward index from the ID
-    const rewardIndex = rewards.findIndex(r => r.id === finalIdToDelete);
-    if (rewardIndex === -1) {
-      logger.error("Reward not found for deletion:", finalIdToDelete);
+  const handleDeleteRewardEditor = async (): Promise<void> => {
+    if (!rewardBeingEdited?.id) {
       return;
     }
     
     try {
-      // Wait for the deletion to complete
-      const success = await handleDeleteReward(rewardIndex);
-      
-      if (success) {
-        // Only close the editor after successful deletion
-        setIsEditorOpen(false);
-        setRewardBeingEdited(undefined);
-        logger.debug("Reward deleted successfully");
-      } else {
-        logger.error("Failed to delete reward");
-        throw new Error("Failed to delete reward");
-      }
+      await deleteRewardMutation.mutateAsync(rewardBeingEdited.id);
+      setIsEditorOpen(false);
+      setRewardBeingEdited(undefined);
+      logger.debug("Reward deleted successfully");
     } catch (error) {
-      logger.error("Error in handleDeleteRewardEditor:", error);
-      throw error; // Re-throw to let the RewardEditor handle the error
+      logger.error("Error deleting reward:", error);
+      throw error;
     }
   };
   
@@ -120,9 +129,9 @@ const RewardsContent: React.FC<{
           rewards={rewards}
           isLoading={isLoading}
           onEdit={handleEditReward}
-          handleBuyReward={handleBuyRewardWrapper}
-          handleUseReward={handleUseRewardWrapper}
-          error={null}
+          handleBuyReward={handleBuyReward}
+          handleUseReward={handleUseReward}
+          error={error}
         />
       </div>
       <RewardEditor
@@ -133,7 +142,7 @@ const RewardsContent: React.FC<{
         }}
         rewardData={rewardBeingEdited}
         onSave={handleSaveRewardEditor} 
-        onDelete={rewardBeingEdited?.id ? () => handleDeleteRewardEditor(rewardBeingEdited.id) : undefined}
+        onDelete={rewardBeingEdited?.id ? handleDeleteRewardEditor : undefined}
       />
     </div>
   );
