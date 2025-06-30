@@ -11,6 +11,7 @@ import ColorPickerField from '../task-editor/ColorPickerField';
 import BackgroundImageSelector from '../task-editor/BackgroundImageSelector';
 import IconSelector from '../task-editor/IconSelector';
 import PredefinedIconsGrid from '../task-editor/PredefinedIconsGrid';
+import PrioritySelector from '../task-editor/PrioritySelector';
 import DeleteRuleDialog from './DeleteRuleDialog';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -20,6 +21,7 @@ import { handleImageUpload } from '@/utils/image/ruleIntegration';
 interface RuleFormValues {
   title: string;
   description: string;
+  priority: 'low' | 'medium' | 'high';
   background_image_url?: string;
   background_opacity: number;
   icon_url?: string;
@@ -58,6 +60,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     defaultValues: {
       title: '',
       description: '',
+      priority: 'medium',
       background_image_url: undefined,
       background_opacity: 100,
       icon_url: undefined,
@@ -80,6 +83,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       reset({
         title: ruleData.title || '',
         description: ruleData.description || '',
+        priority: ruleData.priority || 'medium',
         background_image_url: ruleData.background_image_url || undefined,
         background_opacity: ruleData.background_opacity || 100,
         icon_url: ruleData.icon_url || undefined,
@@ -172,6 +176,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       const ruleToSave: Partial<Rule> = {
         ...values,
         id: ruleData?.id,
+        priority: values.priority,
         background_image_url: imagePreview || values.background_image_url,
         image_meta: values.image_meta,
         icon_name: currentValues.icon_name || undefined,
@@ -241,6 +246,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             </FormItem>
           )}
         />
+
+        <PrioritySelector control={control} name="priority" />
         
         <div className="space-y-4">
           <FormLabel className="text-white text-lg">Background Image</FormLabel>
