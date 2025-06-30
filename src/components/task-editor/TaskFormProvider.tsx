@@ -67,13 +67,18 @@ const TaskFormProvider: React.FC<TaskFormProviderProps> = ({
   });
 
   const persisterFormId = `${formBaseId}-${taskData?.id || 'new'}`;
-  const { clearPersistedState } = useFormStatePersister(persisterFormId, form, {
+  const { clearPersistedState: originalClearPersistedState } = useFormStatePersister(persisterFormId, form, {
     exclude: persisterExclude
   });
 
+  // Create wrapper function that returns Promise<void>
+  const clearPersistedStateForChild = async (): Promise<void> => {
+    await originalClearPersistedState();
+  };
+
   return (
     <Form {...form}>
-      {children(form, clearPersistedState)}
+      {children(form, clearPersistedStateForChild)}
     </Form>
   );
 };
