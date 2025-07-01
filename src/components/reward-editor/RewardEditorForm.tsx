@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
 import RewardBasicDetails from './RewardBasicDetails';
@@ -12,6 +11,7 @@ import DeleteRewardDialog from './DeleteRewardDialog';
 import { useRewardIcon } from './hooks/useRewardIcon';
 import { useRewardBackground } from './hooks/useRewardBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
+import { useDeleteReward } from '@/data/rewards/mutations/useDeleteReward';
 import { UseFormReturn } from 'react-hook-form';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -31,6 +31,7 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   onDelete
 }) => {
   const isMobile = useIsMobile();
+  const deleteRewardMutation = useDeleteReward();
   
   const { 
     isDeleteDialogOpen, 
@@ -101,12 +102,17 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           onCancel();
         };
 
-        const handleDeleteWithClear = () => {
-          if (onDelete && rewardData?.id) {
-            onDelete(rewardData.id);
+        const handleDeleteWithClear = async () => {
+          if (rewardData?.id) {
+            try {
+              await deleteRewardMutation.mutateAsync(rewardData.id);
+              await clearPersistedState();
+              setIsDeleteDialogOpen(false);
+            } catch (error) {
+              logger.error("Error deleting reward:", error);
+              // Error will be handled by the mutation's error handling
+            }
           }
-          clearPersistedState(); 
-          setIsDeleteDialogOpen(false);
         };
 
         const handleImageUploadWrapper = (e: React.ChangeEvent<HTMLInputElement>) => {
