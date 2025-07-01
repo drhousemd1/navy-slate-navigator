@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { PostgrestError } from '@supabase/supabase-js';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { getRewardsQueryKey } from '../queries';
+import { saveRewardsToDB } from '@/data/indexedDB/useIndexedDB';
 
 export const useDeleteReward = () => {
   const queryClient = useQueryClient();
@@ -19,6 +20,7 @@ export const useDeleteReward = () => {
     queryClient,
     queryKey: rewardsQueryKey,
     mutationFn: async (rewardId: string) => {
+      // Delete related usage records first
       const { error: usageError } = await supabase
         .from('reward_usage')
         .delete()
@@ -28,6 +30,7 @@ export const useDeleteReward = () => {
         logger.warn(`Failed to delete reward usage history for reward ${rewardId}:`, usageError.message);
       }
       
+      // Delete the reward
       const { error } = await supabase.from('rewards').delete().eq('id', rewardId);
       if (error) throw error;
     },
@@ -35,10 +38,20 @@ export const useDeleteReward = () => {
     idField: 'id',
     relatedQueryKey: ['reward-usage'],
     relatedIdField: 'reward_id',
-    onSuccessCallback: async () => {
-      // Force invalidate the exact same query key that useRewardsQuery uses
+    onSuccessCallback: async (deletedId: string) => {
+      // Update the cache immediately after successful deletion
+      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (old = []) => {
+        const updatedRewards = old.filter(reward => reward.id !== deletedId);
+        // Also update IndexedDB cache
+        saveRewardsToDB(updatedRewards).catch(err => 
+          logger.warn('Failed to update IndexedDB after reward deletion:', err)
+        );
+        return updatedRewards;
+      });
+      
+      // Force invalidate to ensure consistency
       await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
-      logger.debug('[Delete Reward] Cache invalidated for query key:', rewardsQueryKey);
+      logger.debug('[Delete Reward] Cache updated and invalidated for query key:', rewardsQueryKey);
     }
   });
 };
