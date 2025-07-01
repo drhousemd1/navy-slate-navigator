@@ -108,6 +108,7 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
               await deleteRewardMutation.mutateAsync(rewardData.id);
               await clearPersistedState();
               setIsDeleteDialogOpen(false);
+              onCancel(); // Close the main editor modal
             } catch (error) {
               logger.error("Error deleting reward:", error);
               // Error will be handled by the mutation's error handling
