@@ -11,8 +11,8 @@ interface PartnerProfile {
 }
 
 export const usePartnerProfile = () => {
-  const { user } = useAuth();
-  const linkedPartnerId = user?.user_metadata?.linked_partner_id;
+  const { getLinkedPartnerId } = useAuth();
+  const linkedPartnerId = getLinkedPartnerId();
 
   return useQuery({
     queryKey: ['partner-profile', linkedPartnerId],
@@ -35,6 +35,11 @@ export const usePartnerProfile = () => {
       return data;
     },
     enabled: !!linkedPartnerId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    gcTime: 1 * 60 * 60 * 1000, // 1 hour
+    retry: 3,
   });
 };

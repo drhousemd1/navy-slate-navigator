@@ -6,9 +6,9 @@ import { usePartnerProfile } from '@/hooks/usePartnerProfile';
 import { logger } from '@/lib/logger';
 
 const PartnerDisplay: React.FC = () => {
-  const { data: partnerProfile, isLoading } = usePartnerProfile();
+  const { data: partnerProfile } = usePartnerProfile();
 
-  if (isLoading || !partnerProfile) {
+  if (!partnerProfile) {
     return null;
   }
 
