@@ -11,20 +11,33 @@ interface PartnerProfile {
 }
 
 export const usePartnerProfile = () => {
-  const { getLinkedPartnerId } = useAuth();
-  const linkedPartnerId = getLinkedPartnerId();
+  const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['partner-profile', linkedPartnerId],
+    queryKey: ['partner-profile', user?.id],
     queryFn: async (): Promise<PartnerProfile | null> => {
-      if (!linkedPartnerId) {
+      if (!user?.id) {
         return null;
       }
 
+      // First, get the linked partner ID using the database function
+      const { data: linkedPartnerData, error: linkedPartnerError } = await supabase
+        .rpc('get_linked_partner_id', { user_id_param: user.id });
+
+      if (linkedPartnerError) {
+        logger.error('Error fetching linked partner ID:', linkedPartnerError);
+        return null;
+      }
+
+      if (!linkedPartnerData) {
+        return null;
+      }
+
+      // Then fetch the partner's profile
       const { data, error } = await supabase
         .from('profiles')
         .select('id, avatar_url, role')
-        .eq('id', linkedPartnerId)
+        .eq('id', linkedPartnerData)
         .maybeSingle();
 
       if (error) {
@@ -34,7 +47,7 @@ export const usePartnerProfile = () => {
 
       return data;
     },
-    enabled: !!linkedPartnerId,
+    enabled: !!user?.id,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
