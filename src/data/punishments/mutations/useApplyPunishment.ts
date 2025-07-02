@@ -8,6 +8,7 @@ import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPoints
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
+import { getMondayBasedDay } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 
 interface OptimisticApplyContext {
@@ -32,7 +33,7 @@ export const useApplyPunishment = () => {
       const historyEntryData = {
         punishment_id: args.punishmentId,
         points_deducted: args.pointsDeducted,
-        day_of_week: args.dayOfWeek ?? new Date().getDay(),
+        day_of_week: args.dayOfWeek ?? getMondayBasedDay(),
         user_id: subUserId,
         applied_date: new Date().toISOString()
       };
@@ -108,7 +109,7 @@ export const useApplyPunishment = () => {
         id: optimisticId,
         punishment_id: args.punishmentId,
         points_deducted: args.pointsDeducted,
-        day_of_week: args.dayOfWeek ?? new Date().getDay(),
+        day_of_week: args.dayOfWeek ?? getMondayBasedDay(),
         user_id: subUserId!,
         applied_date: new Date().toISOString()
       };

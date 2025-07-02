@@ -1,7 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { usePunishments } from '@/contexts/punishments/PunishmentsProvider';
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
-import { convertToMondayBasedIndex } from '@/lib/utils';
 
 interface UsePunishmentHistoryProps {
   id?: string;
@@ -20,8 +20,8 @@ export const usePunishmentHistory = ({ id }: UsePunishmentHistoryProps) => {
     const weekData = [0, 0, 0, 0, 0, 0, 0]; 
     
     history.forEach(item => {
-      const mondayBasedDayIndex = convertToMondayBasedIndex(item.day_of_week);
-      // Ensure index is within bounds, though convertToMondayBasedIndex should handle this
+      const mondayBasedDayIndex = item.day_of_week; // Already Monday-based
+      // Ensure index is within bounds
       if (mondayBasedDayIndex >= 0 && mondayBasedDayIndex < 7) {
         weekData[mondayBasedDayIndex] = 1; 
       }
