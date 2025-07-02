@@ -31,7 +31,7 @@ const mapPunishmentDataToFormValues = (punishment: PunishmentData): PunishmentFo
     subtext_color: punishment.subtext_color || '#8E9196',
     calendar_color: punishment.calendar_color || '#ea384c',
     highlight_effect: punishment.highlight_effect || false,
-    background_opacity: punishment.background_opacity || 50,
+    background_opacity: punishment.background_opacity || 100,
     focal_point_x: punishment.focal_point_x || 50,
     focal_point_y: punishment.focal_point_y || 50,
   };

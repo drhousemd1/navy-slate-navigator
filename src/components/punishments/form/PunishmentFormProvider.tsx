@@ -18,7 +18,7 @@ export const punishmentFormSchema = z.object({
   subtext_color: z.string().default('#8E9196'),
   calendar_color: z.string().default('#ea384c'),
   highlight_effect: z.boolean().default(false),
-  background_opacity: z.number().min(0).max(100).default(50),
+  background_opacity: z.number().min(0).max(100).default(100),
   focal_point_x: z.number().min(0).max(100).default(50),
   focal_point_y: z.number().min(0).max(100).default(50),
   background_image_url: z.string().optional(),
@@ -57,7 +57,7 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
       subtext_color: punishmentData?.subtext_color ?? '#8E9196', // Use ??
       calendar_color: punishmentData?.calendar_color ?? '#ea384c', // Use ??
       highlight_effect: punishmentData?.highlight_effect ?? false, // Use ??
-      background_opacity: punishmentData?.background_opacity ?? 50, // Use ??
+      background_opacity: punishmentData?.background_opacity ?? 100, // Use ??
       focal_point_x: punishmentData?.focal_point_x ?? 50, // Use ??
       focal_point_y: punishmentData?.focal_point_y ?? 50, // Use ??
       background_image_url: punishmentData?.background_image_url || undefined,

@@ -17,7 +17,7 @@ const RandomPunishmentCard: React.FC<PunishmentCardProps> = ({ punishment }) => 
       {punishment.background_image_url && (
         <PunishmentBackground
           background_image_url={punishment.background_image_url}
-          background_opacity={punishment.background_opacity || 50}
+          background_opacity={punishment.background_opacity || 100}
           focal_point_x={punishment.focal_point_x || 50}
           focal_point_y={punishment.focal_point_y || 50}
         />
