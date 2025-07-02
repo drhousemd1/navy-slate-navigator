@@ -107,14 +107,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       </div>
       
       {/* Main content with adjusted padding to account for safe area header */}
-      <main className={`flex-1 pt-[calc(4rem+env(safe-area-inset-top))] ${isMessagesPage ? 'pb-0' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full`}>
+      <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-0 overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full">
         <div className="w-full max-w-full overflow-x-hidden h-full">
           {children}
         </div>
       </main>
       
       {shouldShowAddButton && !isMessagesPage && (
-        <div className={`fixed left-0 right-0 flex justify-center z-40`} style={{bottom: `calc(3rem + env(safe-area-inset-bottom))`}}>
+        <div className={`fixed left-0 right-0 flex justify-center z-40`} style={{bottom: `calc(4rem + env(safe-area-inset-bottom))`}}>
           <Button 
             className={`${useCircleButton 
               ? 'bg-green-500 hover:bg-green-600 w-10 h-10 rounded-full shadow-xl p-0 flex items-center justify-center' 
