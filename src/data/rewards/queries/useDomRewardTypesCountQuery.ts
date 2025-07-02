@@ -23,9 +23,9 @@ const fetchDomRewardTypesCount = async (userId: string | null): Promise<number> 
     return 0;
   }
   
-  // Calculate total supply of all dom rewards for this user
+  // Only count positive supply values
   const totalSupply = data?.reduce((total, reward) => {
-    return total + (reward.supply === -1 ? 0 : reward.supply); // Handle infinite supply
+    return total + (reward.supply > 0 ? reward.supply : 0);
   }, 0) || 0;
   
   return totalSupply;
