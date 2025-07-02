@@ -6,11 +6,37 @@ import { uploadFile, deleteFiles } from '@/data/storageService';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { ProfileRole } from '@/types/profile';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function useUserProfile(user: User | null, setUser: (user: User | null) => void) {
-  // Update user nickname
-  const updateNickname = (nickname: string) => {
-    if (user) {
+  const queryClient = useQueryClient();
+
+  // Update user nickname in both user_metadata and profiles table
+  const updateNickname = async (nickname: string) => {
+    if (!user) return;
+    
+    try {
+      // Update user metadata (for current user display)
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { nickname }
+      });
+      
+      if (authError) {
+        throw authError;
+      }
+      
+      // Update profiles table (for partner display)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ nickname })
+        .eq('id', user.id);
+        
+      if (profileError) {
+        logger.warn('Error updating nickname in profiles table:', profileError);
+        // Don't throw here as auth update succeeded
+      }
+      
+      // Update local user state
       const updatedUser = {
         ...user,
         user_metadata: {
@@ -19,6 +45,22 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
         }
       };
       setUser(updatedUser);
+      
+      // Invalidate partner profile cache so partner sees the updated nickname
+      queryClient.invalidateQueries({ queryKey: ['partner-profile'] });
+      
+      toast({
+        title: 'Nickname updated',
+        description: 'Your nickname has been updated successfully',
+      });
+    } catch (error: unknown) {
+      logger.error('Error updating nickname:', error);
+      toast({
+        title: 'Error updating nickname',
+        description: getErrorMessage(error),
+        variant: 'destructive',
+      });
+      throw error;
     }
   };
 
@@ -126,6 +168,9 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
         }
       };
       setUser(updatedUser);
+      
+      // Invalidate partner profile cache so partner sees the role update
+      queryClient.invalidateQueries({ queryKey: ['partner-profile'] });
       
       toast({
         title: 'Role updated',

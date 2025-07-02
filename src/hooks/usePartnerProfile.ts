@@ -8,6 +8,7 @@ interface PartnerProfile {
   id: string;
   avatar_url: string | null;
   role: string;
+  nickname: string | null;
 }
 
 export const usePartnerProfile = () => {
@@ -33,10 +34,10 @@ export const usePartnerProfile = () => {
         return null;
       }
 
-      // Then fetch the partner's profile
+      // Then fetch the partner's profile including nickname
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, avatar_url, role')
+        .select('id, avatar_url, role, nickname')
         .eq('id', linkedPartnerData)
         .maybeSingle();
 

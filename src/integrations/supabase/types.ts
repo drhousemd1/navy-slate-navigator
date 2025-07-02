@@ -148,6 +148,7 @@ export type Database = {
           dom_points: number | null
           id: string
           linked_partner_id: string | null
+          nickname: string | null
           partner_link_code: string | null
           points: number
           role: string
@@ -159,6 +160,7 @@ export type Database = {
           dom_points?: number | null
           id: string
           linked_partner_id?: string | null
+          nickname?: string | null
           partner_link_code?: string | null
           points?: number
           role: string
@@ -170,6 +172,7 @@ export type Database = {
           dom_points?: number | null
           id?: string
           linked_partner_id?: string | null
+          nickname?: string | null
           partner_link_code?: string | null
           points?: number
           role?: string

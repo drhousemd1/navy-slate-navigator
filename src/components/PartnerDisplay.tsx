@@ -12,14 +12,8 @@ const PartnerDisplay: React.FC = () => {
     return null;
   }
 
-  // Get partner's nickname from email (similar to how it's done for the main user)
-  const getPartnerNickname = () => {
-    // For now, we'll use "Partner" as the display name since we don't have email in the profile
-    // This can be enhanced later when we add a nickname field to profiles
-    return "Partner";
-  };
-
-  const partnerNickname = getPartnerNickname();
+  // Use the actual nickname from the partner's profile, fallback to "Partner" if not set
+  const partnerNickname = partnerProfile.nickname || "Partner";
 
   return (
     <div className="flex items-center gap-2">
