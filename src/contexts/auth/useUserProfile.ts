@@ -2,11 +2,11 @@
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { uploadFile, deleteFiles } from '@/data/storageService';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { ProfileRole } from '@/types/profile';
 import { useQueryClient } from '@tanstack/react-query';
+import { handleAvatarImageUpload } from '@/utils/image/avatarIntegration';
 
 export function useUserProfile(user: User | null, setUser: (user: User | null) => void) {
   const queryClient = useQueryClient();
@@ -186,30 +186,24 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     }
   };
 
-  // Upload profile image and update user metadata
+  // Upload profile image and update user metadata (now using base64)
   const uploadProfileImageAndUpdateState = async (file: File): Promise<string | null> => {
     if (!user) return null;
     
     try {
-      const userId = user.id;
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      // Compress image and convert to base64
+      const result = await handleAvatarImageUpload(file);
       
-      // Upload the file to storage
-      const { publicUrl } = await uploadFile('avatars', filePath, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
-      
-      if (!publicUrl) {
-        throw new Error('Failed to get public URL after upload');
+      if (!result) {
+        throw new Error('Failed to process image');
       }
       
-      // Update user metadata with the new avatar URL
+      const { base64String } = result;
+      
+      // Update user metadata with the base64 string
       const { error: updateUserError } = await supabase.auth.updateUser({
         data: { 
-          avatar_url: publicUrl 
+          avatar_url: base64String 
         }
       });
       
@@ -217,10 +211,10 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
         throw updateUserError;
       }
       
-      // Update profiles table with the new avatar URL (for partner display)
+      // Update profiles table with the base64 string (for partner display)
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: base64String })
         .eq('id', user.id);
         
       if (profileError) {
@@ -229,12 +223,12 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
       }
       
       // Update local state
-      setProfileImageState(publicUrl);
+      setProfileImageState(base64String);
       
       // Invalidate partner profile cache so partner sees the updated avatar
       queryClient.invalidateQueries({ queryKey: ['partner-profile'] });
       
-      return publicUrl;
+      return base64String;
     } catch (error: unknown) {
       logger.error('Error uploading profile image:', error);
       toast({
@@ -246,27 +240,12 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     }
   };
   
-  // Delete user profile image
+  // Delete user profile image (now just removes the base64 data)
   const deleteUserProfileImage = async (): Promise<void> => {
     if (!user) return;
     
     try {
-      const currentAvatarUrl = getProfileImage();
-      
-      if (!currentAvatarUrl) {
-        logger.debug('No avatar to delete');
-        return;
-      }
-      
-      // Extract the file path from the URL
-      const urlParts = currentAvatarUrl.split('/');
-      // Assuming the path is always the last two parts like "avatars/filename.ext"
-      const filePath = urlParts.slice(-2).join('/');
-      
-      // Delete the file from storage
-      await deleteFiles('avatars', [filePath]);
-      
-      // Update user metadata to remove the avatar URL
+      // Update user metadata to remove the avatar
       const { error: updateUserError } = await supabase.auth.updateUser({
         data: { 
           avatar_url: null 
@@ -277,7 +256,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
         throw updateUserError;
       }
       
-      // Update profiles table to remove the avatar URL (for partner display)
+      // Update profiles table to remove the avatar (for partner display)
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ avatar_url: null })
