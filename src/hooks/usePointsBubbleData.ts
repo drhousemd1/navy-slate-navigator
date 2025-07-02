@@ -1,22 +1,22 @@
 
-import { useUserIds } from '@/contexts/UserIdsContext';
-import { useUserPointsQuery } from '@/data/points/useUserPointsQuery';
-import { useUserDomPointsQuery } from '@/data/points/useUserDomPointsQuery';
-import { useSubRewardTypesCountQuery } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
-import { useDomRewardTypesCountQuery } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
+import { useRewards } from '@/contexts/RewardsContext';
 
 export const usePointsBubbleData = () => {
-  const { subUserId } = useUserIds();
+  const { rewards, totalPoints, domPoints } = useRewards();
 
-  const { data: subPoints } = useUserPointsQuery(subUserId);
-  const { data: domPoints } = useUserDomPointsQuery(subUserId);
-  const { data: subRewardTypesCount } = useSubRewardTypesCountQuery(subUserId);
-  const { data: domRewardTypesCount } = useDomRewardTypesCountQuery(subUserId);
+  // Calculate reward type counts from existing rewards data
+  const subRewardTypesCount = rewards.reduce((total, reward) => {
+    return total + (!reward.is_dom_reward && reward.supply > 0 ? reward.supply : 0);
+  }, 0);
+
+  const domRewardTypesCount = rewards.reduce((total, reward) => {
+    return total + (reward.is_dom_reward && reward.supply > 0 ? reward.supply : 0);
+  }, 0);
 
   return {
-    subPoints: subPoints ?? 0,
+    subPoints: totalPoints ?? 0,
     domPoints: domPoints ?? 0,
-    subRewardTypesCount: subRewardTypesCount ?? 0,
-    domRewardTypesCount: domRewardTypesCount ?? 0,
+    subRewardTypesCount,
+    domRewardTypesCount,
   };
 };
