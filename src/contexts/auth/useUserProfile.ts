@@ -207,25 +207,39 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
       }
       
       // Update user metadata with the new avatar URL
-      const { error: updateUserError } = await supabase.auth.updateUser({ // Renamed error to avoid conflict
+      const { error: updateUserError } = await supabase.auth.updateUser({
         data: { 
           avatar_url: publicUrl 
         }
       });
       
-      if (updateUserError) { // Check renamed error
+      if (updateUserError) {
         throw updateUserError;
+      }
+      
+      // Update profiles table with the new avatar URL (for partner display)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+        
+      if (profileError) {
+        logger.warn('Error updating avatar_url in profiles table:', profileError);
+        // Don't throw here as auth update succeeded
       }
       
       // Update local state
       setProfileImageState(publicUrl);
       
+      // Invalidate partner profile cache so partner sees the updated avatar
+      queryClient.invalidateQueries({ queryKey: ['partner-profile'] });
+      
       return publicUrl;
-    } catch (error: unknown) { // Changed from any to unknown
+    } catch (error: unknown) {
       logger.error('Error uploading profile image:', error);
       toast({
         title: 'Error updating profile image',
-        description: getErrorMessage(error), // Use getErrorMessage
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
       return null;
@@ -253,24 +267,38 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
       await deleteFiles('avatars', [filePath]);
       
       // Update user metadata to remove the avatar URL
-      const { error: updateUserError } = await supabase.auth.updateUser({ // Renamed error
+      const { error: updateUserError } = await supabase.auth.updateUser({
         data: { 
           avatar_url: null 
         }
       });
       
-      if (updateUserError) { // Check renamed error
+      if (updateUserError) {
         throw updateUserError;
+      }
+      
+      // Update profiles table to remove the avatar URL (for partner display)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', user.id);
+        
+      if (profileError) {
+        logger.warn('Error removing avatar_url from profiles table:', profileError);
+        // Don't throw here as auth update succeeded
       }
       
       // Update local state
       setProfileImageState(null);
       
-    } catch (error: unknown) { // Changed from any to unknown
+      // Invalidate partner profile cache so partner sees the avatar removal
+      queryClient.invalidateQueries({ queryKey: ['partner-profile'] });
+      
+    } catch (error: unknown) {
       logger.error('Error deleting profile image:', error);
       toast({
         title: 'Error deleting profile image',
-        description: getErrorMessage(error), // Use getErrorMessage
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     }
@@ -282,7 +310,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
     setProfileImageState,
     getProfileImage,
     getUserRole,
-    getUserRoleSync, // Add the sync version
+    getUserRoleSync,
     updateUserRole,
     uploadProfileImageAndUpdateState,
     deleteUserProfileImage
