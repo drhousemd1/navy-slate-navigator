@@ -7,8 +7,6 @@ import { getErrorMessage } from '@/lib/errors';
 import { useUserIds } from '@/contexts/UserIdsContext';
 
 import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
-import { SUB_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
-import { DOM_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
 import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 
 interface BuyDomRewardVars { 
@@ -21,7 +19,6 @@ interface BuyDomRewardVars {
 interface BuyDomRewardOptimisticContext {
   previousRewards?: Reward[];
   previousDomPoints?: number;
-  previousDomCount?: number;
 }
 
 export const useBuyDomReward = () => {
@@ -41,7 +38,7 @@ export const useBuyDomReward = () => {
           throw new Error("Not enough DOM points to purchase this reward.");
         }
 
-        const newSupply = currentSupply === -1 ? currentSupply : currentSupply + 1;
+        const newSupply = currentSupply + 1;
 
         const { error: supplyError } = await supabase
           .from('rewards')
@@ -83,16 +80,14 @@ export const useBuyDomReward = () => {
       await queryClient.cancelQueries({ queryKey: rewardsQueryKey });
       const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId];
       await queryClient.cancelQueries({ queryKey: userDomPointsQueryKey });
-      await queryClient.cancelQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
 
       const previousRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey);
       const previousDomPoints = queryClient.getQueryData<number>(userDomPointsQueryKey);
-      const previousDomCount = queryClient.getQueryData<number>([DOM_REWARD_TYPES_COUNT_QUERY_KEY]);
 
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
-            ? { ...reward, supply: reward.supply === -1 ? -1 : reward.supply + 1 }
+            ? { ...reward, supply: reward.supply + 1 }
             : reward
         )
       );
@@ -100,21 +95,15 @@ export const useBuyDomReward = () => {
       queryClient.setQueryData<number>(userDomPointsQueryKey, (oldUserDomPoints = 0) =>
         (oldUserDomPoints || 0) - variables.cost
       );
-
-      queryClient.setQueryData<number>([DOM_REWARD_TYPES_COUNT_QUERY_KEY], (old = 0) => old + 1);
       
-      return { previousRewards, previousDomPoints, previousDomCount };
+      return { previousRewards, previousDomPoints };
     },
     onSuccess: async (data, variables) => {
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] }),
-        queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] }),
-        queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] })
-      ]);
+      await queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
     },
     onError: (error: Error, variables, context) => {
       if (context?.previousRewards) {
@@ -124,15 +113,10 @@ export const useBuyDomReward = () => {
         const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId];
         queryClient.setQueryData<number>(userDomPointsQueryKey, context.previousDomPoints);
       }
-      if (context?.previousDomCount !== undefined) {
-        queryClient.setQueryData<number>([DOM_REWARD_TYPES_COUNT_QUERY_KEY], context.previousDomCount);
-      }
     },
     onSettled: async (data, error, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] }),
-        queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
-      ]);
+      await queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
+      await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
     }
   });
 };

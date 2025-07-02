@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '../types';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { SUB_REWARD_TYPES_COUNT_QUERY_KEY } from '../queries/useSubRewardTypesCountQuery';
 import { REWARDS_QUERY_KEY } from '../queries';
 import { getISOWeekString } from '@/lib/dateUtils';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
@@ -46,11 +45,11 @@ export const useRedeemSubReward = () => {
         throw new Error("User not authenticated");
       }
 
-      if (currentSupply <= 0 && currentSupply !== -1) {
+      if (currentSupply <= 0) {
         throw new Error("Reward is out of stock, cannot use.");
       }
       
-      const newSupply = currentSupply === -1 ? -1 : currentSupply - 1;
+      const newSupply = currentSupply - 1;
 
       const { error: supplyError } = await supabase
         .from('rewards')
@@ -79,7 +78,7 @@ export const useRedeemSubReward = () => {
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
-            ? { ...reward, supply: reward.supply === -1 ? -1 : reward.supply - 1 }
+            ? { ...reward, supply: reward.supply - 1 }
             : reward
         )
       );
@@ -100,8 +99,6 @@ export const useRedeemSubReward = () => {
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
       queryClient.invalidateQueries({ queryKey: ['reward-usage'] });
-      queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
-      // Add points cache invalidation for sub rewards
       queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
     },
   });

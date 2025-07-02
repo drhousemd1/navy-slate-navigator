@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '../types';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { DOM_REWARD_TYPES_COUNT_QUERY_KEY } from '../queries/useDomRewardTypesCountQuery';
 import { REWARDS_QUERY_KEY } from '../queries';
 import { getISOWeekString } from '@/lib/dateUtils';
 import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
@@ -99,8 +98,6 @@ export const useRedeemDomReward = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
       queryClient.invalidateQueries({ queryKey: ['reward-usage'] });
-      queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] });
-      // Add DOM points cache invalidation for dom rewards
       queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
     },
   });

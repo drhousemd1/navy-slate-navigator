@@ -7,8 +7,6 @@ import { getErrorMessage } from '@/lib/errors';
 import { useUserIds } from '@/contexts/UserIdsContext';
 
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
-import { SUB_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useSubRewardTypesCountQuery';
-import { DOM_REWARD_TYPES_COUNT_QUERY_KEY } from '@/data/rewards/queries/useDomRewardTypesCountQuery';
 import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 
 interface BuySubRewardVars { 
@@ -21,7 +19,6 @@ interface BuySubRewardVars {
 interface BuySubRewardOptimisticContext {
   previousRewards?: Reward[];
   previousPoints?: number;
-  previousSubCount?: number;
 }
 
 export const useBuySubReward = () => {
@@ -41,7 +38,7 @@ export const useBuySubReward = () => {
           throw new Error("Not enough points to purchase this reward.");
         }
 
-        const newSupply = currentSupply === -1 ? currentSupply : currentSupply + 1;
+        const newSupply = currentSupply + 1;
 
         const { error: supplyError } = await supabase
           .from('rewards')
@@ -83,16 +80,14 @@ export const useBuySubReward = () => {
       await queryClient.cancelQueries({ queryKey: rewardsQueryKey });
       const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, subUserId];
       await queryClient.cancelQueries({ queryKey: userPointsQueryKey });
-      await queryClient.cancelQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] });
 
       const previousRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey);
       const previousPoints = queryClient.getQueryData<number>(userPointsQueryKey);
-      const previousSubCount = queryClient.getQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY]);
 
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (old = []) =>
         old.map(reward =>
           reward.id === variables.rewardId
-            ? { ...reward, supply: reward.supply === -1 ? -1 : reward.supply + 1 }
+            ? { ...reward, supply: reward.supply + 1 }
             : reward
         )
       );
@@ -100,21 +95,15 @@ export const useBuySubReward = () => {
       queryClient.setQueryData<number>(userPointsQueryKey, (oldUserPoints = 0) =>
         (oldUserPoints || 0) - variables.cost
       );
-
-      queryClient.setQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY], (old = 0) => old + 1);
       
-      return { previousRewards, previousPoints, previousSubCount };
+      return { previousRewards, previousPoints };
     },
     onSuccess: async (data, variables) => {
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
       
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] }),
-        queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] }),
-        queryClient.invalidateQueries({ queryKey: [DOM_REWARD_TYPES_COUNT_QUERY_KEY] })
-      ]);
+      await queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
     },
     onError: (error: Error, variables, context) => {
       if (context?.previousRewards) {
@@ -124,15 +113,10 @@ export const useBuySubReward = () => {
         const userPointsQueryKey = [USER_POINTS_QUERY_KEY_PREFIX, subUserId];
         queryClient.setQueryData<number>(userPointsQueryKey, context.previousPoints);
       }
-      if (context?.previousSubCount !== undefined) {
-        queryClient.setQueryData<number>([SUB_REWARD_TYPES_COUNT_QUERY_KEY], context.previousSubCount);
-      }
     },
     onSettled: async (data, error, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] }),
-        queryClient.invalidateQueries({ queryKey: [SUB_REWARD_TYPES_COUNT_QUERY_KEY] })
-      ]);
+      await queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
+      await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
     }
   });
 };
