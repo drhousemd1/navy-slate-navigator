@@ -29,6 +29,7 @@ export const useUpdateTask = () => {
         ...updatesFromVariables,
         background_image_url: processedUrl,
         image_meta: updatesFromVariables.image_meta || metadata,
+        is_dom_task: updatesFromVariables.is_dom_task,
       };
       if (updatesFromVariables.background_images !== undefined) {
         updatesForSupabase.background_images = updatesFromVariables.background_images as Json | null;
