@@ -10,7 +10,8 @@ import ThroneRoom from './pages/ThroneRoom';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Encyclopedia from './pages/Encyclopedia';
-import Auth from './pages/auth'; 
+import Wellbeing from './pages/Wellbeing';
+import Auth from './pages/auth';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -60,6 +61,10 @@ const AppRoutes = () => {
       <Route 
         path="/encyclopedia" 
         element={<ProtectedRoute><ErrorBoundary><Encyclopedia /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/wellbeing" 
+        element={<ProtectedRoute><ErrorBoundary><Wellbeing /></ErrorBoundary></ProtectedRoute>} 
       />
       
       {/* Catch-all for not found routes */}
