@@ -4,10 +4,10 @@ import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/for
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Control } from 'react-hook-form';
-import { TaskFormValues } from '@/data/tasks/types';
+import { SimpleTaskFormValues } from './TaskFormProvider';
 
 interface TaskBasicDetailsProps {
-  control: Control<TaskFormValues>;
+  control: Control<SimpleTaskFormValues>;
   isSaving?: boolean;
 }
 

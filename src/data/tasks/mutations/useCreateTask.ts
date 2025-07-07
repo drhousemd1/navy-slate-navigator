@@ -48,6 +48,7 @@ export const useCreateTask = () => {
         background_images: variables.background_images as Json,
         icon_url: variables.icon_url,
         image_meta: variables.image_meta || metadata,
+        is_dom_task: variables.is_dom_task || false,
         user_id: user.id, // Always use current authenticated user
       };
 

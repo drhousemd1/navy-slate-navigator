@@ -103,7 +103,7 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
       });
       
       // Save back to IndexedDB
-      await saveTasksToDB(updatedLocalTasks);
+      await saveTasksToDB(updatedLocalTasks as TaskType[]);
       logger.debug(`[resetTaskCompletions] Successfully synced reset data to IndexedDB`);
     }
     

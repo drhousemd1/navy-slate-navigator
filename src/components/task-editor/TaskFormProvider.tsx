@@ -1,37 +1,37 @@
 import React from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
-import { Task } from '@/lib/taskUtils';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 
-export interface TaskFormValues {
+export interface SimpleTaskFormValues {
   title: string;
   description: string;
-  points: number;
   frequency: 'daily' | 'weekly';
   frequency_count: number;
-  background_image_url?: string;
-  background_opacity: number;
-  icon_url?: string;
+  points: number;
+  priority: 'low' | 'medium' | 'high';
   icon_name?: string;
+  icon_color: string;
+  icon_url?: string;
   title_color: string;
   subtext_color: string;
   calendar_color: string;
-  icon_color: string;
-  highlight_effect: boolean;
+  background_image_url?: string;
+  background_images?: any;
+  background_opacity: number;
   focal_point_x: number;
   focal_point_y: number;
-  priority: 'low' | 'medium' | 'high';
+  highlight_effect: boolean;
   image_meta?: any;
   is_dom_task: boolean;
 }
 
 interface TaskFormProviderProps {
-  taskData?: Partial<Task>;
+  taskData?: any;
   formBaseId: string;
   persisterExclude?: string[];
   children: (
-    form: UseFormReturn<TaskFormValues>,
+    form: UseFormReturn<SimpleTaskFormValues>,
     clearPersistedState: () => Promise<void>
   ) => React.ReactNode;
 }
@@ -42,7 +42,7 @@ const TaskFormProvider: React.FC<TaskFormProviderProps> = ({
   persisterExclude = [],
   children
 }) => {
-  const form = useForm<TaskFormValues>({
+  const form = useForm<SimpleTaskFormValues>({
     shouldFocusError: false,
     defaultValues: {
       title: taskData?.title || '',

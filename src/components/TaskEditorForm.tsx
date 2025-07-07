@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Task } from '@/lib/taskUtils';
-import TaskFormProvider, { TaskFormValues } from './task-editor/TaskFormProvider';
+import TaskFormProvider, { SimpleTaskFormValues } from './task-editor/TaskFormProvider';
 import TaskBasicDetails from './task-editor/TaskBasicDetails';
 import NumberField from './task-editor/NumberField';
 import ColorPickerField from './task-editor/ColorPickerField';
@@ -22,7 +22,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskEditorFormProps {
   taskData?: Partial<Task>;
-  onSave: (taskData: TaskFormValues) => Promise<void>; 
+  onSave: (taskData: SimpleTaskFormValues) => Promise<void>; 
   onDelete?: (taskId: string) => Promise<void>;
   onCancel: () => void;
 }
@@ -68,10 +68,10 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
       persisterExclude={['background_image_url', 'icon_url', 'image_meta']}
     >
       {(form, clearPersistedState) => {
-        const handleSaveWithClear = async (formData: TaskFormValues) => {
+        const handleSaveWithClear = async (formData: SimpleTaskFormValues) => {
           setLoading(true);
           try {
-            const taskToSave: TaskFormValues = {
+            const taskToSave: SimpleTaskFormValues = {
               ...formData,
               background_image_url: imagePreview || formData.background_image_url,
               icon_url: iconPreview || formData.icon_url,
