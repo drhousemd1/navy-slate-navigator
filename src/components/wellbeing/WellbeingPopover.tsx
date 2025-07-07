@@ -18,6 +18,7 @@ const WellbeingPopover: React.FC<WellbeingPopoverProps> = ({
   partnerNickname,
   isLoading = false
 }) => {
+  console.log('[WellbeingPopover] Received props:', { wellbeingData, partnerNickname, isLoading });
   if (isLoading) {
     return (
       <Popover>
