@@ -68,7 +68,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const isFullyCompleted = currentCompletions >= maxCompletions;
 
   return (
-    <Card className={`relative overflow-hidden border-2 ${is_dom_task ? 'border-[#ea384c]' : 'border-[#00f0ff]'} ${!backgroundImage ? 'bg-navy' : ''}`}>
+    <Card className={`relative overflow-hidden border-2 ${is_dom_task ? 'border-red-500' : 'border-cyan-400'} ${!backgroundImage ? 'bg-card' : ''}`}>
       {backgroundImage && (
         <div 
           className="absolute inset-0 w-full h-full z-0"
@@ -104,7 +104,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         
         <div className="flex items-start mb-auto">
           <div className="mr-4 flex-shrink-0">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00f0ff' }}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${is_dom_task ? 'bg-red-500' : 'bg-cyan-400'}`}>
               <TaskIcon 
                 icon_url={icon_url} 
                 icon_name={icon_name} 

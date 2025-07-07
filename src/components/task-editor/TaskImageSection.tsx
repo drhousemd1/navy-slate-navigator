@@ -2,15 +2,15 @@
 import React from 'react';
 import { Control, UseFormSetValue } from 'react-hook-form';
 import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSelector';
-import { TaskFormValues } from '@/data/tasks/types';
+import { LocalTaskFormValues } from './TaskFormProvider';
 
 interface TaskImageSectionProps {
-  control: Control<TaskFormValues>;
+  control: Control<LocalTaskFormValues>;
   imagePreview: string | null;
   initialPosition?: { x: number; y: number };
   onRemoveImage: () => void;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setValue: UseFormSetValue<TaskFormValues>;
+  setValue: UseFormSetValue<LocalTaskFormValues>;
 }
 
 const TaskImageSection: React.FC<TaskImageSectionProps> = ({
