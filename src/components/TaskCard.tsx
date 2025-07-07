@@ -35,6 +35,7 @@ interface TaskCardProps {
   subtext_color?: string;
   calendar_color?: string;
   icon_color?: string;
+  is_dom_task?: boolean;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -58,7 +59,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   title_color = '#FFFFFF',
   subtext_color = '#8E9196',
   calendar_color = '#7E69AB',
-  icon_color = '#9b87f5'
+  icon_color = '#9b87f5',
+  is_dom_task = false
 }) => {
   const currentDayOfWeek = getCurrentDayOfWeek();
   const currentCompletions = usage_data[currentDayOfWeek] || 0;
@@ -66,7 +68,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const isFullyCompleted = currentCompletions >= maxCompletions;
 
   return (
-    <Card className={`relative overflow-hidden border-2 border-[#00f0ff] ${!backgroundImage ? 'bg-navy' : ''}`}>
+    <Card className={`relative overflow-hidden border-2 ${is_dom_task ? 'border-[#ea384c]' : 'border-[#00f0ff]'} ${!backgroundImage ? 'bg-navy' : ''}`}>
       {backgroundImage && (
         <div 
           className="absolute inset-0 w-full h-full z-0"
@@ -85,7 +87,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           
           {onToggleCompletion && (
             <div className="flex items-center gap-2">
-              <PointsBadge points={points} />
+              <PointsBadge points={points} isDomTask={is_dom_task} />
               <CompletionCounter 
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}

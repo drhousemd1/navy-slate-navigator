@@ -308,6 +308,25 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="is_dom_task"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-white">Dominant Task</FormLabel>
+                    <p className="text-sm text-white">Red border and credits Dom points when completed</p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
             
             <TaskFormActions 
               taskData={taskData}

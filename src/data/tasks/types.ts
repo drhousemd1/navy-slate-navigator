@@ -31,6 +31,7 @@ export interface Task {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
+  is_dom_task: boolean;
 }
 
 export interface TaskWithId extends Task {
@@ -44,8 +45,8 @@ export interface RawSupabaseTask extends Omit<Task, 'priority'> {
 
 export interface TaskFormValues {
   title: string;
-  description?: string;
-  frequency: string;
+  description: string;
+  frequency: 'daily' | 'weekly';
   frequency_count: number;
   points: number;
   priority: 'low' | 'medium' | 'high';
@@ -62,6 +63,7 @@ export interface TaskFormValues {
   focal_point_y: number;
   highlight_effect: boolean;
   image_meta?: Json | null;
+  is_dom_task: boolean;
 }
 
 export interface CreateTaskVariables extends TaskFormValues {

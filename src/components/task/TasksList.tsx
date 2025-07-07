@@ -65,6 +65,7 @@ const TasksList: React.FC<TasksListProps> = ({
               subtext_color={task.subtext_color}
               calendar_color={task.calendar_color}
               icon_color={task.icon_color}
+              is_dom_task={task.is_dom_task}
               onEdit={() => onEditTask(task)}
               onToggleCompletion={(completed) => onToggleCompletion(task.id, completed)}
             />

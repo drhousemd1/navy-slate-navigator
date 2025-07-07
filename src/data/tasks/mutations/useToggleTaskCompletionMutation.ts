@@ -117,9 +117,13 @@ export function useToggleTaskCompletionMutation() {
           }
 
           logger.debug('[useToggleTaskCompletionMutation] Updating user points');
+          
+          // Determine which points column to update based on task type
+          const pointsColumn = taskFromVariables.is_dom_task ? 'dom_points' : 'points';
+          
           const { data: currentProfile, error: fetchProfileError } = await supabase
             .from('profiles')
-            .select('points')
+            .select(`${pointsColumn}`)
             .eq('id', userId)
             .single();
 
@@ -129,10 +133,16 @@ export function useToggleTaskCompletionMutation() {
             throw fetchProfileError;
           }
 
-          const newPoints = (currentProfile?.points || 0) + pointsValue;
+          const currentPoints = currentProfile?.[pointsColumn] || 0;
+          const newPoints = currentPoints + pointsValue;
+          const updateData = { 
+            [pointsColumn]: newPoints, 
+            updated_at: new Date().toISOString() 
+          };
+          
           const { error: updatePointsError } = await supabase
             .from('profiles')
-            .update({ points: newPoints, updated_at: new Date().toISOString() })
+            .update(updateData)
             .eq('id', userId);
 
           if (updatePointsError) {

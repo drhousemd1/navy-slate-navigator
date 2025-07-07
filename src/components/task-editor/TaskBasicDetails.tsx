@@ -4,7 +4,7 @@ import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/for
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Control } from 'react-hook-form';
-import { TaskFormValues } from './TaskFormProvider';
+import { TaskFormValues } from '@/data/tasks/types';
 
 interface TaskBasicDetailsProps {
   control: Control<TaskFormValues>;

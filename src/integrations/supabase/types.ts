@@ -603,6 +603,7 @@ export type Database = {
           icon_url: string | null
           id: string
           image_meta: Json | null
+          is_dom_task: boolean
           last_completed_date: string | null
           points: number
           priority: string
@@ -632,6 +633,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           image_meta?: Json | null
+          is_dom_task?: boolean
           last_completed_date?: string | null
           points?: number
           priority?: string
@@ -661,6 +663,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           image_meta?: Json | null
+          is_dom_task?: boolean
           last_completed_date?: string | null
           points?: number
           priority?: string

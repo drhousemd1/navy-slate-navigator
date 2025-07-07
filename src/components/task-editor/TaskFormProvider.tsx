@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
@@ -24,6 +23,7 @@ export interface TaskFormValues {
   focal_point_y: number;
   priority: 'low' | 'medium' | 'high';
   image_meta?: any;
+  is_dom_task: boolean;
 }
 
 interface TaskFormProviderProps {
@@ -63,6 +63,7 @@ const TaskFormProvider: React.FC<TaskFormProviderProps> = ({
       focal_point_y: taskData?.focal_point_y || 50,
       priority: taskData?.priority || 'medium',
       image_meta: taskData?.image_meta || undefined,
+      is_dom_task: taskData?.is_dom_task || false,
     },
   });
 
@@ -71,7 +72,6 @@ const TaskFormProvider: React.FC<TaskFormProviderProps> = ({
     exclude: persisterExclude
   });
 
-  // Create wrapper function that returns Promise<void>
   const clearPersistedStateForChild = async (): Promise<void> => {
     await originalClearPersistedState();
   };
