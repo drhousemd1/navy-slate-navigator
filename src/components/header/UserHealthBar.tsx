@@ -23,7 +23,7 @@ const UserHealthBar: React.FC = () => {
     >
       <MoodHealthBar 
         score={currentScore}
-        className="ml-2"
+        className="mr-2"
       />
     </WellbeingPopover>
   );

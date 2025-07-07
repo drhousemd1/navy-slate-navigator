@@ -21,9 +21,9 @@ const PartnerDisplay: React.FC = () => {
   const partnerWellbeingScore = partnerWellbeingQuery.data?.overall_score || 50; // Default to neutral if no data
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center">
       {/* Link icon */}
-      <Link2 className="w-4 h-4 text-gray-400" />
+      <Link2 className="w-4 h-4 text-gray-400 mr-2" />
       
       {/* Partner's wellbeing health bar - positioned to the left of avatar */}
       <WellbeingPopover
