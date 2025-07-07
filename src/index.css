@@ -51,6 +51,16 @@
     --wellbeing-good: 199 89% 48%;       /* Sky 500 */
     --wellbeing-fair: 45 93% 47%;        /* Amber 500 */
     --wellbeing-attention: 0 84% 60%;    /* Rose 500 */
+    
+    /* Dynamic slider colors */
+    --wellbeing-green: 142 76% 36%;      /* Emerald 600 - Good */
+    --wellbeing-green-light: 142 76% 85%; /* Emerald 200 - Light background */
+    --wellbeing-blue: 199 89% 48%;       /* Sky 500 - Fair */
+    --wellbeing-blue-light: 199 89% 85%; /* Sky 200 - Light background */
+    --wellbeing-orange: 45 93% 47%;      /* Amber 500 - Warning */
+    --wellbeing-orange-light: 45 93% 85%; /* Amber 200 - Light background */
+    --wellbeing-red: 0 84% 60%;          /* Rose 500 - Attention */
+    --wellbeing-red-light: 0 84% 85%;    /* Rose 200 - Light background */
   }
 
   .dark {
@@ -95,6 +105,16 @@
     --wellbeing-good: 199 89% 48%;       /* Sky 500 */
     --wellbeing-fair: 45 93% 47%;        /* Amber 500 */
     --wellbeing-attention: 0 84% 60%;    /* Rose 500 */
+    
+    /* Dynamic slider colors - same values for dark mode */
+    --wellbeing-green: 142 76% 36%;      /* Emerald 600 - Good */
+    --wellbeing-green-light: 142 76% 25%; /* Emerald 800 - Dark background */
+    --wellbeing-blue: 199 89% 48%;       /* Sky 500 - Fair */
+    --wellbeing-blue-light: 199 89% 25%; /* Sky 800 - Dark background */
+    --wellbeing-orange: 45 93% 47%;      /* Amber 500 - Warning */
+    --wellbeing-orange-light: 45 93% 25%; /* Amber 800 - Dark background */
+    --wellbeing-red: 0 84% 60%;          /* Rose 500 - Attention */
+    --wellbeing-red-light: 0 84% 25%;    /* Rose 800 - Dark background */
   }
 }
 

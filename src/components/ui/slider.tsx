@@ -10,10 +10,12 @@ interface SliderProps {
   onValueChange: (value: number[]) => void
   className?: string
   disabled?: boolean
+  fillColor?: string
+  backgroundColor?: string
 }
 
 const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
-  ({ className, min = 0, max = 100, step = 1, value, onValueChange, disabled = false, ...props }, ref) => {
+  ({ className, min = 0, max = 100, step = 1, value, onValueChange, disabled = false, fillColor, backgroundColor, ...props }, ref) => {
     const trackRef = React.useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = React.useState(false);
     
@@ -78,14 +80,18 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
         {...props}
       >
         <div
-          className="w-full h-2 bg-light-navy rounded-full relative cursor-pointer"
+          className="w-full h-2 rounded-full relative cursor-pointer"
           ref={trackRef}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
+          style={{ backgroundColor: backgroundColor || 'hsl(var(--light-navy))' }}
         >
           <div 
-            className="absolute h-full bg-nav-active rounded-full" 
-            style={{ width: `${percentage}%` }} 
+            className="absolute h-full rounded-full" 
+            style={{ 
+              width: `${percentage}%`,
+              backgroundColor: fillColor || 'hsl(var(--nav-active))'
+            }} 
           />
           <div
             className="absolute w-5 h-5 bg-white rounded-full shadow-md transform -translate-y-1/2 -translate-x-1/2 cursor-grab active:cursor-grabbing"

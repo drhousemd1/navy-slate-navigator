@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { WellbeingMetrics, DEFAULT_METRICS } from '@/data/wellbeing/types';
-import { METRIC_DEFINITIONS } from '@/lib/wellbeingUtils';
+import { METRIC_DEFINITIONS, getSliderColors } from '@/lib/wellbeingUtils';
 import { Badge } from '@/components/ui/badge';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -105,6 +105,7 @@ const WellbeingForm: React.FC<WellbeingFormProps> = ({
                           value={[field.value]}
                           onValueChange={(value) => field.onChange(value[0])}
                           className="w-full"
+                          {...getSliderColors(field.value, metric.key)}
                         />
                       </FormControl>
                     </FormItem>

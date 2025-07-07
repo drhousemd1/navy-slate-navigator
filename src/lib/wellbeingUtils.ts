@@ -7,9 +7,9 @@ export const METRIC_DEFINITIONS = {
   irritability: { weight: 1, higherIsGood: false, label: 'Irritability' },
   overwhelm: { weight: 1, higherIsGood: false, label: 'Overwhelm' },
   energy: { weight: 1, higherIsGood: true, label: 'Energy Level' },
-  intimacy: { weight: 1, higherIsGood: true, label: 'Intimacy Desire' },
-  physical_touch: { weight: 1, higherIsGood: true, label: 'Physical Touch Need' },
-  emotional_support: { weight: 1, higherIsGood: true, label: 'Emotional Support Need' },
+  intimacy: { weight: 1, higherIsGood: false, label: 'Intimacy Needs' },
+  physical_touch: { weight: 1, higherIsGood: false, label: 'Physical Touch Need' },
+  emotional_support: { weight: 1, higherIsGood: false, label: 'Emotional Support Need' },
 } as const;
 
 // Compute overall wellbeing score from metrics (0-100)
@@ -80,6 +80,30 @@ export const transformMetricsForDisplay = (metrics: Partial<WellbeingMetrics>) =
     description: getMetricDescription(key as keyof WellbeingMetrics, metrics[key as keyof WellbeingMetrics] ?? 50),
     isPositive: def.higherIsGood
   }));
+};
+
+// Get slider colors based on value and metric type
+export const getSliderColors = (value: number, metricKey: keyof WellbeingMetrics): { fillColor: string; backgroundColor: string } => {
+  let colorName: string;
+  
+  // Special handling for Energy Level (inverted scale)
+  if (metricKey === 'energy') {
+    if (value >= 70) colorName = 'green';
+    else if (value >= 50) colorName = 'blue';
+    else if (value >= 40) colorName = 'orange';
+    else colorName = 'red';
+  } else {
+    // Standard scale for all other metrics
+    if (value < 40) colorName = 'green';
+    else if (value < 50) colorName = 'blue';
+    else if (value < 70) colorName = 'orange';
+    else colorName = 'red';
+  }
+  
+  return {
+    fillColor: `hsl(var(--wellbeing-${colorName}))`,
+    backgroundColor: `hsl(var(--wellbeing-${colorName}-light))`
+  };
 };
 
 // Memoized score calculation to avoid recalculation
