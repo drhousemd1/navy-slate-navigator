@@ -25,6 +25,18 @@ const PartnerDisplay: React.FC = () => {
       {/* Link icon */}
       <Link2 className="w-4 h-4 text-gray-400" />
       
+      {/* Partner's wellbeing health bar - positioned to the left of avatar */}
+      <WellbeingPopover
+        wellbeingData={partnerWellbeingQuery.data}
+        partnerNickname={partnerNickname}
+        isLoading={partnerWellbeingQuery.isLoading}
+      >
+        <MoodHealthBar 
+          score={partnerWellbeingScore}
+          className="mr-2"
+        />
+      </WellbeingPopover>
+      
       {/* Avatar */}
       <Avatar className="h-7 w-7">
         {partnerProfile.avatar_url ? (
@@ -47,18 +59,6 @@ const PartnerDisplay: React.FC = () => {
         <p className="text-white text-sm font-medium leading-tight break-words">{partnerNickname}</p>
         <p className="text-gray-400 text-xs leading-tight break-words">{partnerProfile.role}</p>
       </div>
-
-      {/* Partner's wellbeing health bar */}
-      <WellbeingPopover
-        wellbeingData={partnerWellbeingQuery.data}
-        partnerNickname={partnerNickname}
-        isLoading={partnerWellbeingQuery.isLoading}
-      >
-        <MoodHealthBar 
-          score={partnerWellbeingScore}
-          className="ml-2"
-        />
-      </WellbeingPopover>
     </div>
   );
 };

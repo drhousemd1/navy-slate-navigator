@@ -17,7 +17,7 @@ const MoodHealthBar: React.FC<MoodHealthBarProps> = ({
 
   return (
     <div 
-      className={`w-2 h-6 bg-light-navy rounded-full cursor-pointer transition-all duration-200 hover:w-3 hover:opacity-90 overflow-hidden ${className}`}
+      className={`w-2 h-7 bg-light-navy rounded-full cursor-pointer transition-all duration-200 hover:w-3 hover:opacity-90 overflow-hidden ${className}`}
       onClick={onClick}
       title={`Wellbeing: ${score}/100`}
     >

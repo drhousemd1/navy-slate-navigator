@@ -56,6 +56,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       <div className="fixed top-0 left-0 right-0 w-full bg-navy border-b border-light-navy pt-safe-top py-2 px-4 z-50 prevent-mobile-scroll overflow-x-hidden">
         <div className="max-w-screen-lg mx-auto flex justify-between items-center w-full">
           <div className="flex items-center flex-1 min-w-0">
+            {/* User's own wellbeing health bar - positioned to the left of avatar */}
+            <UserHealthBar />
+            
             {/* Left side user avatar and info */}
             <Avatar 
               className="h-7 w-7 cursor-pointer flex-shrink-0" 
@@ -81,9 +84,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               <p className="text-white text-sm font-medium leading-tight break-words truncate">{nickname}</p>
               <p className="text-gray-400 text-xs leading-tight break-words truncate">{userRole}</p>
             </div>
-
-            {/* User's own wellbeing health bar */}
-            <UserHealthBar />
 
             {/* Partner display - shows when user has a linked partner - now inline */}
             <PartnerDisplay />
