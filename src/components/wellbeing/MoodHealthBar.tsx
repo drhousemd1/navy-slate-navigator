@@ -17,17 +17,16 @@ const MoodHealthBar: React.FC<MoodHealthBarProps> = ({
 
   return (
     <div 
-      className={`w-2 h-7 bg-light-navy rounded-full cursor-pointer transition-all duration-200 hover:w-3 hover:opacity-90 overflow-hidden ${className}`}
+      className={`w-2 h-7 bg-white rounded-full cursor-pointer transition-all duration-200 hover:w-3 hover:opacity-90 overflow-hidden relative ${className}`}
       onClick={onClick}
       title={`Wellbeing: ${score}/100`}
     >
       {/* Fill level indicator */}
       <div 
-        className="w-full rounded-full transition-all duration-300 ease-out"
+        className="w-full rounded-full transition-all duration-300 ease-out absolute bottom-0"
         style={{ 
           backgroundColor: color,
-          height: `${fillPercentage}%`,
-          transform: `translateY(${100 - fillPercentage}%)`
+          height: `${fillPercentage}%`
         }}
       />
     </div>
