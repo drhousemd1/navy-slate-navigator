@@ -85,10 +85,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             {/* User's own wellbeing health bar */}
             <UserHealthBar />
 
-            {/* Partner display - shows when user has a linked partner */}
-            <div className="hidden sm:block">
-              <PartnerDisplay />
-            </div>
+            {/* Partner display - shows when user has a linked partner - now inline */}
+            <PartnerDisplay />
           </div>
           
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -110,15 +108,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             />
           </div>
         </div>
-        
-        {/* Partner display on mobile - condensed version */}
-        <div className="sm:hidden bg-navy/50 border-t border-light-navy px-4 py-1">
-          <PartnerDisplay />
-        </div>
       </div>
       
-      {/* Main content with adjusted padding to account for safe area header and mobile partner display */}
-      <main className="flex-1 sm:pt-[calc(4rem+env(safe-area-inset-top))] pt-[calc(5.5rem+env(safe-area-inset-top))] pb-16 overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full">
+      {/* Main content with adjusted padding to account for safe area header */}
+      <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-16 overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full">
         <div className="w-full max-w-full overflow-x-hidden h-full">
           {children}
         </div>
