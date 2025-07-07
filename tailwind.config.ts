@@ -75,6 +75,13 @@ export default {
 				"light-navy": "#233554",
 				"nav-active": "#00B8D9",
 				"nav-inactive": "#8892B0",
+				// Wellbeing status colors
+				wellbeing: {
+					great: 'hsl(var(--wellbeing-great))',
+					good: 'hsl(var(--wellbeing-good))',
+					fair: 'hsl(var(--wellbeing-fair))',
+					attention: 'hsl(var(--wellbeing-attention))',
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

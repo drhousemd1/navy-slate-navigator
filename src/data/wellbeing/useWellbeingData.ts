@@ -2,12 +2,20 @@ import { useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useWellbeingQuery } from './queries';
 import { useUpsertWellbeing } from './mutations';
-import { WellbeingSnapshot, CreateWellbeingData, DEFAULT_METRICS } from './types';
+import { WellbeingSnapshot, CreateWellbeingData, DEFAULT_METRICS, WellbeingMetrics } from './types';
 import { loadWellbeingFromDB, saveWellbeingToDB, getLastSyncTimeForWellbeing, setLastSyncTimeForWellbeing } from '@/data/indexedDB/useIndexedDB';
 import { fetchWellbeingSnapshot } from './queries/fetchWellbeingSnapshot';
 import { logger } from '@/lib/logger';
 import { useQueryClient } from '@tanstack/react-query';
 import { WELLBEING_QUERY_KEY } from './queries';
+import { 
+  computeWellbeingScore, 
+  getMemoizedWellbeingScore, 
+  getWellbeingColor, 
+  getWellbeingColorClass, 
+  getWellbeingStatus,
+  transformMetricsForDisplay 
+} from '@/lib/wellbeingUtils';
 
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
@@ -79,13 +87,37 @@ export const useWellbeingData = () => {
   }, [wellbeingQuery.data]);
 
   // Helper function to save wellbeing data
-  const saveWellbeingData = useCallback(async (data: CreateWellbeingData) => {
+  const saveWellbeingData = useCallback(async (metrics: WellbeingMetrics) => {
     if (!userId) {
       throw new Error('User must be logged in to save wellbeing data');
     }
     
+    const overallScore = computeWellbeingScore(metrics);
+    const data: CreateWellbeingData = {
+      metrics,
+      overall_score: overallScore
+    };
+    
     return upsertWellbeing.mutateAsync(data);
   }, [userId, upsertWellbeing]);
+
+  // Get current wellbeing score
+  const getCurrentScore = useCallback(() => {
+    const currentMetrics = getCurrentMetrics();
+    return getMemoizedWellbeingScore(currentMetrics);
+  }, [getCurrentMetrics]);
+
+  // Get wellbeing display information
+  const getWellbeingInfo = useCallback(() => {
+    const score = getCurrentScore();
+    return {
+      score,
+      color: getWellbeingColor(score),
+      colorClass: getWellbeingColorClass(score),
+      status: getWellbeingStatus(score),
+      metrics: transformMetricsForDisplay(getCurrentMetrics())
+    };
+  }, [getCurrentScore, getCurrentMetrics]);
 
   return {
     // Data
@@ -95,6 +127,8 @@ export const useWellbeingData = () => {
     
     // Helper methods
     getCurrentMetrics,
+    getCurrentScore,
+    getWellbeingInfo,
     saveWellbeingData,
     
     // Mutation states

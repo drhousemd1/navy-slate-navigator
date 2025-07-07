@@ -45,6 +45,12 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
     
     --neon-glow: #00FFF7;
+    
+    /* Wellbeing color tokens */
+    --wellbeing-great: 142 76% 36%;      /* Emerald 600 */
+    --wellbeing-good: 199 89% 48%;       /* Sky 500 */
+    --wellbeing-fair: 45 93% 47%;        /* Amber 500 */
+    --wellbeing-attention: 0 84% 60%;    /* Rose 500 */
   }
 
   .dark {
@@ -83,6 +89,12 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Wellbeing color tokens - same values for dark mode */
+    --wellbeing-great: 142 76% 36%;      /* Emerald 600 */
+    --wellbeing-good: 199 89% 48%;       /* Sky 500 */
+    --wellbeing-fair: 45 93% 47%;        /* Amber 500 */
+    --wellbeing-attention: 0 84% 60%;    /* Rose 500 */
   }
 }
 
