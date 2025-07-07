@@ -5,14 +5,17 @@ import { Badge } from '../ui/badge';
 interface CompletionCounterProps {
   currentCompletions: number;
   maxCompletions: number;
+  isDomTask?: boolean;
 }
 
 const CompletionCounter: React.FC<CompletionCounterProps> = ({ 
   currentCompletions = 0,
-  maxCompletions = 1
+  maxCompletions = 1,
+  isDomTask = false
 }) => {
-  // Style for badge - black background with cyan border to match other elements
-  const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
+  // Style for badge - black background with conditional border color
+  const borderColor = isDomTask ? "#ff0000" : "#00f0ff";
+  const badgeStyle = { backgroundColor: "#000000", borderColor, borderWidth: "1px" };
 
   return (
     <Badge 

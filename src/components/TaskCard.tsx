@@ -91,6 +91,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               <CompletionCounter 
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}
+                isDomTask={is_dom_task}
               />
               <CompletionButton 
                 completed={completed} 
