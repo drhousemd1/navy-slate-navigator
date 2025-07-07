@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/contexts/auth';
 import AccountSheet from './AccountSheet';
 import PartnerDisplay from './PartnerDisplay';
+import UserHealthBar from './header/UserHealthBar';
 import { logger } from '@/lib/logger';
 
 interface AppLayoutProps {
@@ -54,10 +55,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       {/* Top header section with account and settings icons - NOW WITH SAFE AREA */}
       <div className="fixed top-0 left-0 right-0 w-full bg-navy border-b border-light-navy pt-safe-top py-2 px-4 z-50 prevent-mobile-scroll overflow-x-hidden">
         <div className="max-w-screen-lg mx-auto flex justify-between items-center w-full">
-          <div className="flex items-center">
+          <div className="flex items-center flex-1 min-w-0">
             {/* Left side user avatar and info */}
             <Avatar 
-              className="h-7 w-7 cursor-pointer" 
+              className="h-7 w-7 cursor-pointer flex-shrink-0" 
               onClick={() => navigate('/profile')}
             >
               {profileImage ? (
@@ -76,16 +77,21 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             </Avatar>
             
             {/* Username and role display */}
-            <div className="ml-2">
-              <p className="text-white text-sm font-medium leading-tight break-words">{nickname}</p>
-              <p className="text-gray-400 text-xs leading-tight break-words">{userRole}</p>
+            <div className="ml-2 min-w-0 flex-shrink">
+              <p className="text-white text-sm font-medium leading-tight break-words truncate">{nickname}</p>
+              <p className="text-gray-400 text-xs leading-tight break-words truncate">{userRole}</p>
             </div>
 
+            {/* User's own wellbeing health bar */}
+            <UserHealthBar />
+
             {/* Partner display - shows when user has a linked partner */}
-            <PartnerDisplay />
+            <div className="hidden sm:block">
+              <PartnerDisplay />
+            </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {/* Character icon for account/login using our new AccountSheet component */}
             <AccountSheet />
             
@@ -104,10 +110,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             />
           </div>
         </div>
+        
+        {/* Partner display on mobile - condensed version */}
+        <div className="sm:hidden bg-navy/50 border-t border-light-navy px-4 py-1">
+          <PartnerDisplay />
+        </div>
       </div>
       
-      {/* Main content with adjusted padding to account for safe area header */}
-      <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-16 overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full">
+      {/* Main content with adjusted padding to account for safe area header and mobile partner display */}
+      <main className="flex-1 sm:pt-[calc(4rem+env(safe-area-inset-top))] pt-[calc(5.5rem+env(safe-area-inset-top))] pb-16 overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full">
         <div className="w-full max-w-full overflow-x-hidden h-full">
           {children}
         </div>
