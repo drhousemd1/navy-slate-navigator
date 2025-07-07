@@ -1,0 +1,107 @@
+import { useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth';
+import { useWellbeingQuery } from './queries';
+import { useUpsertWellbeing } from './mutations';
+import { WellbeingSnapshot, CreateWellbeingData, DEFAULT_METRICS } from './types';
+import { loadWellbeingFromDB, saveWellbeingToDB, getLastSyncTimeForWellbeing, setLastSyncTimeForWellbeing } from '@/data/indexedDB/useIndexedDB';
+import { fetchWellbeingSnapshot } from './queries/fetchWellbeingSnapshot';
+import { logger } from '@/lib/logger';
+import { useQueryClient } from '@tanstack/react-query';
+import { WELLBEING_QUERY_KEY } from './queries';
+
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+export const useWellbeingData = () => {
+  const { user } = useAuth();
+  const userId = user?.id || null;
+  const queryClient = useQueryClient();
+
+  // Get cached data immediately from React Query
+  const wellbeingQuery = useWellbeingQuery(userId);
+  const upsertWellbeing = useUpsertWellbeing(userId);
+
+  // Check and load from cache
+  const checkAndLoadFromCache = useCallback(async () => {
+    if (!userId) return;
+
+    try {
+      logger.debug('[useWellbeingData] Checking cache for wellbeing data...');
+      
+      const localData = await loadWellbeingFromDB(userId);
+      const lastSyncTime = await getLastSyncTimeForWellbeing(userId);
+      
+      const now = Date.now();
+      const isRecentSync = lastSyncTime && (now - new Date(lastSyncTime).getTime()) < CACHE_DURATION;
+      
+      if (localData && isRecentSync) {
+        logger.debug('[useWellbeingData] Using cached wellbeing data');
+        queryClient.setQueryData([...WELLBEING_QUERY_KEY, userId], localData);
+        return;
+      }
+
+      // Need to fetch from server
+      logger.debug('[useWellbeingData] Cache miss or stale, fetching from server...');
+      
+      try {
+        const serverData = await fetchWellbeingSnapshot(userId);
+        
+        if (serverData) {
+          await saveWellbeingToDB(serverData, userId);
+          await setLastSyncTimeForWellbeing(new Date().toISOString(), userId);
+          queryClient.setQueryData([...WELLBEING_QUERY_KEY, userId], serverData);
+          logger.debug('[useWellbeingData] Successfully fetched and cached wellbeing data');
+        } else {
+          logger.debug('[useWellbeingData] No wellbeing data found on server');
+          queryClient.setQueryData([...WELLBEING_QUERY_KEY, userId], null);
+        }
+      } catch (error) {
+        logger.error('[useWellbeingData] Error fetching from server, using local fallback:', error);
+        if (localData) {
+          queryClient.setQueryData([...WELLBEING_QUERY_KEY, userId], localData);
+        }
+      }
+    } catch (error) {
+      logger.error('[useWellbeingData] Error in checkAndLoadFromCache:', error);
+    }
+  }, [userId, queryClient]);
+
+  // Load data on mount
+  useEffect(() => {
+    if (userId) {
+      checkAndLoadFromCache();
+    }
+  }, [userId, checkAndLoadFromCache]);
+
+  // Helper function to get current metrics with defaults
+  const getCurrentMetrics = useCallback(() => {
+    const currentSnapshot = wellbeingQuery.data;
+    return currentSnapshot?.metrics ? { ...DEFAULT_METRICS, ...currentSnapshot.metrics } : DEFAULT_METRICS;
+  }, [wellbeingQuery.data]);
+
+  // Helper function to save wellbeing data
+  const saveWellbeingData = useCallback(async (data: CreateWellbeingData) => {
+    if (!userId) {
+      throw new Error('User must be logged in to save wellbeing data');
+    }
+    
+    return upsertWellbeing.mutateAsync(data);
+  }, [userId, upsertWellbeing]);
+
+  return {
+    // Data
+    wellbeingSnapshot: wellbeingQuery.data,
+    isLoading: wellbeingQuery.isLoading,
+    error: wellbeingQuery.error,
+    
+    // Helper methods
+    getCurrentMetrics,
+    saveWellbeingData,
+    
+    // Mutation states
+    isSaving: upsertWellbeing.isPending,
+    saveError: upsertWellbeing.error,
+    
+    // Cache management
+    refetch: checkAndLoadFromCache,
+  };
+};

@@ -7,6 +7,7 @@ import { RULES_QUERY_KEY } from '@/data/rules/queries';
 import { fetchRules } from '@/data/rules/fetchRules'; 
 import { fetchTasks, TASKS_QUERY_KEY } from '@/data/tasks/queries';
 import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
+import { fetchWellbeingSnapshot, WELLBEING_QUERY_KEY } from '@/data/wellbeing/queries';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
 
@@ -54,6 +55,23 @@ export const usePreloadAppCoreData = () => {
         queryFn: () => fetchPunishments(subUserId, domUserId),
       });
       logger.debug('[PreloadAppCoreData] Punishments pre-fetched.');
+
+      // Wellbeing data for both users
+      if (subUserId) {
+        await queryClient.prefetchQuery({
+          queryKey: [...WELLBEING_QUERY_KEY, subUserId],
+          queryFn: () => fetchWellbeingSnapshot(subUserId),
+        });
+        logger.debug('[PreloadAppCoreData] Sub user wellbeing pre-fetched.');
+      }
+
+      if (domUserId) {
+        await queryClient.prefetchQuery({
+          queryKey: [...WELLBEING_QUERY_KEY, domUserId],
+          queryFn: () => fetchWellbeingSnapshot(domUserId),
+        });
+        logger.debug('[PreloadAppCoreData] Dom user wellbeing pre-fetched.');
+      }
 
       logger.debug('[PreloadAppCoreData] Core data pre-fetching complete.');
     };
