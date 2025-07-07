@@ -27,10 +27,14 @@ export const computeWellbeingScore = (metrics: Partial<WellbeingMetrics>): numbe
 
 // Get color for wellbeing score based on thresholds
 export const getWellbeingColor = (score: number): string => {
-  if (score >= 70) return 'hsl(var(--wellbeing-great))';
-  if (score >= 50) return 'hsl(var(--wellbeing-good))';  
-  if (score >= 40) return 'hsl(var(--wellbeing-fair))';
-  return 'hsl(var(--wellbeing-attention))';
+  let color: string;
+  if (score >= 70) color = 'hsl(var(--wellbeing-great))';
+  else if (score >= 50) color = 'hsl(var(--wellbeing-good))';  
+  else if (score >= 40) color = 'hsl(var(--wellbeing-fair))';
+  else color = 'hsl(var(--wellbeing-attention))';
+  
+  console.log(`[getWellbeingColor] Score: ${score}, Color: ${color}`);
+  return color;
 };
 
 // Get CSS class for wellbeing score

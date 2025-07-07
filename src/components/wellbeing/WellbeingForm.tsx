@@ -52,13 +52,8 @@ const WellbeingForm: React.FC<WellbeingFormProps> = ({
     }
   };
 
-  // Group metrics by type for better organization
-  const negativeMetrics = Object.entries(METRIC_DEFINITIONS)
-    .filter(([_, def]) => !def.higherIsGood)
-    .map(([key, def]) => ({ key: key as keyof WellbeingMetrics, ...def }));
-
-  const positiveMetrics = Object.entries(METRIC_DEFINITIONS)
-    .filter(([_, def]) => def.higherIsGood)
+  // Get all metrics as a single unified list (no grouping)
+  const allMetrics = Object.entries(METRIC_DEFINITIONS)
     .map(([key, def]) => ({ key: key as keyof WellbeingMetrics, ...def }));
 
   return (
@@ -86,51 +81,10 @@ const WellbeingForm: React.FC<WellbeingFormProps> = ({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          {/* Negative Metrics */}
+          {/* Single Unified Metrics Card */}
           <Card className="bg-navy border-light-navy">
-            <CardHeader>
-              <CardTitle className="text-white">Current Stress Levels</CardTitle>
-              <p className="text-gray-400 text-sm">Lower values are better for these metrics</p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {negativeMetrics.map((metric) => (
-                <FormField
-                  key={metric.key}
-                  control={form.control}
-                  name={metric.key}
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center justify-between mb-2">
-                        <FormLabel className="text-white">{metric.label}</FormLabel>
-                        <Badge variant="outline" className="text-white border-gray-400">
-                          {field.value}%
-                        </Badge>
-                      </div>
-                      <FormControl>
-                        <Slider
-                          min={0}
-                          max={100}
-                          step={5}
-                          value={[field.value]}
-                          onValueChange={(value) => field.onChange(value[0])}
-                          className="w-full"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Positive Metrics */}
-          <Card className="bg-navy border-light-navy">
-            <CardHeader>
-              <CardTitle className="text-white">Current Needs & Energy</CardTitle>
-              <p className="text-gray-400 text-sm">Higher values are better for these metrics</p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {positiveMetrics.map((metric) => (
+            <CardContent className="pt-6 space-y-6">
+              {allMetrics.map((metric) => (
                 <FormField
                   key={metric.key}
                   control={form.control}
