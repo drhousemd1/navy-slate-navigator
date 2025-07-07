@@ -24,7 +24,7 @@ const WellbeingPopover: React.FC<WellbeingPopoverProps> = ({
         <PopoverTrigger asChild>
           {children}
         </PopoverTrigger>
-        <PopoverContent className="w-80 bg-navy border-light-navy text-white z-[60] shadow-lg">
+        <PopoverContent className="w-80 bg-navy border-light-navy text-white z-[9999] shadow-lg" side="bottom" align="start">
           <div className="text-center py-4">
             <p className="text-gray-400">Loading wellbeing data...</p>
           </div>
@@ -39,7 +39,7 @@ const WellbeingPopover: React.FC<WellbeingPopoverProps> = ({
         <PopoverTrigger asChild>
           {children}
         </PopoverTrigger>
-        <PopoverContent className="w-80 bg-navy border-light-navy text-white z-[60] shadow-lg">
+        <PopoverContent className="w-80 bg-navy border-light-navy text-white z-[9999] shadow-lg" side="bottom" align="start">
           <div className="text-center py-4">
             <p className="text-gray-400">No wellbeing data available for {partnerNickname}</p>
           </div>
@@ -56,7 +56,7 @@ const WellbeingPopover: React.FC<WellbeingPopoverProps> = ({
       <PopoverTrigger asChild>
         {children}
       </PopoverTrigger>
-      <PopoverContent className="w-80 bg-navy border-light-navy text-white z-[60] shadow-lg">
+      <PopoverContent className="w-80 bg-navy border-light-navy text-white z-[9999] shadow-lg" side="bottom" align="start">
         <CardHeader className="pb-4">
           <CardTitle className="text-white text-lg">
             {partnerNickname}'s Wellbeing

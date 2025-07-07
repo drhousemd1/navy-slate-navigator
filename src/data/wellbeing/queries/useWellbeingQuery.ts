@@ -21,7 +21,7 @@ export const useWellbeingQuery = (userId: string | null) => {
     refetchOnReconnect: false,
     refetchOnMount: false,
     gcTime: 1000 * 60 * 60, // 1 hour
-    retry: 3,
+    retry: false,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
