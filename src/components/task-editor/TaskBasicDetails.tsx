@@ -61,7 +61,7 @@ const TaskBasicDetails: React.FC<TaskBasicDetailsProps> = ({
           <FormItem className="flex flex-row items-center justify-between">
             <div className="space-y-0.5">
               <FormLabel className="text-white">Dominant Task</FormLabel>
-              <p className="text-sm text-white">Red border and credits Dom points when completed</p>
+              <p className="text-sm text-white">Switch to dominant task</p>
             </div>
             <FormControl>
               <Switch
