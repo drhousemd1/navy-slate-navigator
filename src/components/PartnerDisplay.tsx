@@ -6,6 +6,7 @@ import { usePartnerProfile } from '@/hooks/usePartnerProfile';
 import { useWellbeingQuery } from '@/data/wellbeing/queries';
 import MoodHealthBar from './wellbeing/MoodHealthBar';
 import WellbeingPopover from './wellbeing/WellbeingPopover';
+import AvatarPreviewPopover from './AvatarPreviewPopover';
 import { logger } from '@/lib/logger';
 
 const PartnerDisplay: React.FC = () => {
@@ -38,21 +39,27 @@ const PartnerDisplay: React.FC = () => {
       </WellbeingPopover>
       
       {/* Avatar */}
-      <Avatar className="h-7 w-7">
-        {partnerProfile.avatar_url ? (
-          <AvatarImage 
-            src={partnerProfile.avatar_url} 
-            alt={`${partnerNickname} Avatar`}
-            onError={(e) => {
-              logger.error('Failed to load partner avatar image:', partnerProfile.avatar_url);
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
-        ) : null}
-        <AvatarFallback className="bg-light-navy text-nav-active text-xs">
-          {partnerNickname ? partnerNickname.charAt(0).toUpperCase() : 'P'}
-        </AvatarFallback>
-      </Avatar>
+      <AvatarPreviewPopover
+        avatarUrl={partnerProfile.avatar_url}
+        nickname={partnerNickname}
+        fallbackLetter={partnerNickname ? partnerNickname.charAt(0).toUpperCase() : 'P'}
+      >
+        <Avatar className="h-7 w-7 cursor-pointer">
+          {partnerProfile.avatar_url ? (
+            <AvatarImage 
+              src={partnerProfile.avatar_url} 
+              alt={`${partnerNickname} Avatar`}
+              onError={(e) => {
+                logger.error('Failed to load partner avatar image:', partnerProfile.avatar_url);
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          ) : null}
+          <AvatarFallback className="bg-light-navy text-nav-active text-xs">
+            {partnerNickname ? partnerNickname.charAt(0).toUpperCase() : 'P'}
+          </AvatarFallback>
+        </Avatar>
+      </AvatarPreviewPopover>
       
       {/* Partner name and role */}
       <div className="ml-2">

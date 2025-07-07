@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/auth';
 import AccountSheet from './AccountSheet';
 import PartnerDisplay from './PartnerDisplay';
 import UserHealthBar from './header/UserHealthBar';
+import AvatarPreviewPopover from './AvatarPreviewPopover';
 import { logger } from '@/lib/logger';
 
 interface AppLayoutProps {
@@ -60,24 +61,27 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             <UserHealthBar />
             
             {/* Left side user avatar and info */}
-            <Avatar 
-              className="h-7 w-7 cursor-pointer flex-shrink-0" 
-              onClick={() => navigate('/profile')}
+            <AvatarPreviewPopover
+              avatarUrl={profileImage}
+              nickname={nickname || 'Guest'}
+              fallbackLetter={nickname ? nickname.charAt(0).toUpperCase() : 'G'}
             >
-              {profileImage ? (
-                <AvatarImage 
-                  src={profileImage} 
-                  alt={nickname ?? "User Avatar"}
-                  onError={(e) => {
-                    logger.error('Failed to load avatar image:', profileImage);
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              ) : null}
-              <AvatarFallback className="bg-light-navy text-nav-active text-xs">
-                {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
-              </AvatarFallback>
-            </Avatar>
+              <Avatar className="h-7 w-7 cursor-pointer flex-shrink-0">
+                {profileImage ? (
+                  <AvatarImage 
+                    src={profileImage} 
+                    alt={nickname ?? "User Avatar"}
+                    onError={(e) => {
+                      logger.error('Failed to load avatar image:', profileImage);
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : null}
+                <AvatarFallback className="bg-light-navy text-nav-active text-xs">
+                  {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
+                </AvatarFallback>
+              </Avatar>
+            </AvatarPreviewPopover>
             
             {/* Username and role display */}
             <div className="ml-2 min-w-0 flex-shrink">
