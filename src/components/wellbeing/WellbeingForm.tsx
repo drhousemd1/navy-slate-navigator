@@ -137,8 +137,7 @@ const WellbeingForm: React.FC<WellbeingFormProps> = ({
             <Button
               type="button"
               onClick={handleClose}
-              variant="outline"
-              className="px-8 py-2 text-white border-white/20 hover:bg-white/10"
+              className="bg-gray-600 hover:bg-gray-700 text-white px-8 py-2"
             >
               Close
             </Button>
