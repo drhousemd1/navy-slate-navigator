@@ -3,6 +3,7 @@ import React from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Control } from 'react-hook-form';
 import { LocalTaskFormValues } from './TaskFormProvider';
 
@@ -46,6 +47,26 @@ const TaskBasicDetails: React.FC<TaskBasicDetailsProps> = ({
                 placeholder="Task description" 
                 className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
                 {...field}
+                disabled={isSaving}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      
+      <FormField
+        control={control}
+        name="is_dom_task"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center justify-between">
+            <div className="space-y-0.5">
+              <FormLabel className="text-white">Dominant Task</FormLabel>
+              <p className="text-sm text-white">Red border and credits Dom points when completed</p>
+            </div>
+            <FormControl>
+              <Switch
+                checked={field.value}
+                onCheckedChange={field.onChange}
                 disabled={isSaving}
               />
             </FormControl>
