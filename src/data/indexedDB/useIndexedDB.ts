@@ -6,6 +6,16 @@ import { Rule } from '@/data/interfaces/Rule';
 import { Task } from '@/data/tasks/types';
 import { logger } from '@/lib/logger';
 
+// Wellbeing snapshot type
+export interface WellbeingSnapshot {
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  metrics: Record<string, number>;
+  overall_score: number;
+}
+
 // Use imported types for consistency
 export type PunishmentData = ContextPunishmentData;
 export type PunishmentHistory = ContextPunishmentHistoryItem;
@@ -19,6 +29,7 @@ const PUNISHMENT_HISTORY_STORE_NAME = 'punishmentHistory';
 const LAST_SYNC_STORE_NAME = 'lastSyncTimes';
 const POINTS_STORE_NAME = 'points';
 const DOM_POINTS_STORE_NAME = 'domPoints';
+const WELLBEING_STORE_NAME = 'wellbeingSnapshots';
 
 // Configure localforage instance
 localforage.config({
@@ -34,6 +45,7 @@ const punishmentHistoryStore = localforage.createInstance({ name: DB_NAME, store
 const lastSyncStore = localforage.createInstance({ name: DB_NAME, storeName: LAST_SYNC_STORE_NAME });
 const pointsStore = localforage.createInstance({ name: DB_NAME, storeName: POINTS_STORE_NAME });
 const domPointsStore = localforage.createInstance({ name: DB_NAME, storeName: DOM_POINTS_STORE_NAME });
+const wellbeingStore = localforage.createInstance({ name: DB_NAME, storeName: WELLBEING_STORE_NAME });
 
 // Helper function to create user-specific keys
 const getUserKey = (baseKey: string, userId: string | null): string => {
@@ -259,6 +271,46 @@ export const loadDomPointsFromDB = async (userId?: string | null): Promise<numbe
   }
 };
 
+// Wellbeing specific functions
+export const loadWellbeingFromDB = async (userId?: string | null): Promise<WellbeingSnapshot | null> => {
+  try {
+    const key = getUserKey('latestWellbeing', userId || null);
+    const wellbeing = await wellbeingStore.getItem<WellbeingSnapshot>(key);
+    return wellbeing;
+  } catch (error) {
+    logger.error('Error loading wellbeing from IndexedDB:', error);
+    return null;
+  }
+};
+
+export const saveWellbeingToDB = async (wellbeing: WellbeingSnapshot, userId?: string | null): Promise<void> => {
+  try {
+    const key = getUserKey('latestWellbeing', userId || null);
+    await wellbeingStore.setItem(key, wellbeing);
+  } catch (error) {
+    logger.error('Error saving wellbeing to IndexedDB:', error);
+  }
+};
+
+export const getLastSyncTimeForWellbeing = async (userId?: string | null): Promise<string | null> => {
+  try {
+    const key = getUserKey('wellbeingLastSync', userId || null);
+    return await lastSyncStore.getItem<string>(key);
+  } catch (error) {
+    logger.error('Error getting last sync time for wellbeing:', error);
+    return null;
+  }
+};
+
+export const setLastSyncTimeForWellbeing = async (time: string, userId?: string | null): Promise<void> => {
+  try {
+    const key = getUserKey('wellbeingLastSync', userId || null);
+    await lastSyncStore.setItem(key, time);
+  } catch (error) {
+    logger.error('Error setting last sync time for wellbeing:', error);
+  }
+};
+
 // Function to clear all data for a specific user
 export const clearUserDataFromDB = async (userId: string): Promise<void> => {
   try {
@@ -270,10 +322,12 @@ export const clearUserDataFromDB = async (userId: string): Promise<void> => {
       getUserKey('allPunishmentHistory', userId),
       getUserKey('userPoints', userId),
       getUserKey('userDomPoints', userId),
+      getUserKey('latestWellbeing', userId),
       getUserKey('rewardsLastSync', userId),
       getUserKey('tasksLastSync', userId),
       getUserKey('rulesLastSync', userId),
       getUserKey('punishmentsLastSync', userId),
+      getUserKey('wellbeingLastSync', userId),
     ];
 
     await Promise.all([
@@ -284,6 +338,7 @@ export const clearUserDataFromDB = async (userId: string): Promise<void> => {
       ...userKeys.map(key => punishmentHistoryStore.removeItem(key).catch(() => {})),
       ...userKeys.map(key => pointsStore.removeItem(key).catch(() => {})),
       ...userKeys.map(key => domPointsStore.removeItem(key).catch(() => {})),
+      ...userKeys.map(key => wellbeingStore.removeItem(key).catch(() => {})),
       ...userKeys.map(key => lastSyncStore.removeItem(key).catch(() => {})),
     ]);
 
