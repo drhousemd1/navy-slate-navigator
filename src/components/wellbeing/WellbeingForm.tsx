@@ -1,5 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -37,10 +38,15 @@ const WellbeingForm: React.FC<WellbeingFormProps> = ({
   isSaving,
   saveError
 }) => {
+  const navigate = useNavigate();
   const form = useForm<WellbeingMetrics>({
     defaultValues: currentMetrics,
     values: currentMetrics, // Keep form in sync with current metrics
   });
+
+  const handleClose = () => {
+    navigate('/');
+  };
 
   const handleSubmit = async (data: WellbeingMetrics) => {
     try {
@@ -126,14 +132,22 @@ const WellbeingForm: React.FC<WellbeingFormProps> = ({
             </Card>
           )}
 
-          {/* Save Button */}
-          <div className="flex justify-center">
+          {/* Action Buttons */}
+          <div className="flex justify-center gap-4">
+            <Button
+              type="button"
+              onClick={handleClose}
+              variant="outline"
+              className="px-8 py-2 text-white border-white/20 hover:bg-white/10"
+            >
+              Close
+            </Button>
             <Button
               type="submit"
               disabled={isSaving}
               className="bg-nav-active hover:bg-nav-active/80 text-white px-8 py-2"
             >
-              {isSaving ? 'Saving...' : 'Update Wellbeing Status'}
+              {isSaving ? 'Saving...' : 'Update Status'}
             </Button>
           </div>
         </form>
