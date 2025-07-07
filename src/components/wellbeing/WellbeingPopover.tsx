@@ -3,7 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WellbeingSnapshot } from '@/data/wellbeing/types';
-import { transformMetricsForDisplay, getWellbeingStatus } from '@/lib/wellbeingUtils';
+import { transformMetricsForDisplay, getWellbeingStatus, getSliderColors } from '@/lib/wellbeingUtils';
 
 interface WellbeingPopoverProps {
   children: React.ReactNode;
@@ -70,22 +70,29 @@ const WellbeingPopover: React.FC<WellbeingPopoverProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-3 max-h-60 overflow-y-auto">
-            {metricsDisplay.map((metric) => (
-              <div key={metric.key} className="flex justify-between items-center">
-                <span className="text-sm text-gray-300">{metric.label}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">{metric.value}%</span>
-                  <div className="w-12 h-2 bg-gray-700 rounded-full overflow-hidden">
+            {metricsDisplay.map((metric) => {
+              const colors = getSliderColors(metric.value, metric.key);
+              return (
+                <div key={metric.key} className="flex justify-between items-center">
+                  <span className="text-sm text-gray-300">{metric.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{metric.value}%</span>
                     <div 
-                      className={`h-full transition-all duration-300 ${
-                        metric.isPositive ? 'bg-green-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${metric.value}%` }}
-                    />
+                      className="w-12 h-2 rounded-full overflow-hidden"
+                      style={{ backgroundColor: colors.backgroundColor }}
+                    >
+                      <div 
+                        className="h-full transition-all duration-300"
+                        style={{ 
+                          width: `${metric.value}%`,
+                          backgroundColor: colors.fillColor
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="mt-4 text-xs text-gray-400 text-center border-t border-gray-600 pt-3">
             Last updated: {new Date(wellbeingData.updated_at).toLocaleString()}
