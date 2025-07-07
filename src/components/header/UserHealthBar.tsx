@@ -8,9 +8,6 @@ const UserHealthBar: React.FC = () => {
   const { user, getNickname } = useAuth();
   const { wellbeingSnapshot, getCurrentScore } = useWellbeingData();
   
-  console.log('[UserHealthBar] wellbeingSnapshot:', wellbeingSnapshot);
-  console.log('[UserHealthBar] getCurrentScore():', getCurrentScore());
-  
   if (!user) {
     return null;
   }

@@ -19,6 +19,7 @@ const MoodHealthBar: React.FC<MoodHealthBarProps> = ({
     <div 
       className={`w-2 h-7 bg-white rounded-full cursor-pointer transition-all duration-200 hover:opacity-90 overflow-hidden relative ${className}`}
       title={`Wellbeing: ${score}/100`}
+      onClick={onClick}
     >
       {/* Fill level indicator */}
       <div 

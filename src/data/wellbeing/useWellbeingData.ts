@@ -33,7 +33,6 @@ export const useWellbeingData = () => {
     if (!userId) return;
 
     try {
-      console.log('[useWellbeingData] Checking cache for wellbeing data...');
       logger.debug('[useWellbeingData] Checking cache for wellbeing data...');
       
       const localData = await loadWellbeingFromDB(userId);
@@ -43,7 +42,6 @@ export const useWellbeingData = () => {
       const isRecentSync = lastSyncTime && (now - new Date(lastSyncTime).getTime()) < CACHE_DURATION;
       
       if (localData && isRecentSync) {
-        console.log('[useWellbeingData] Using cached wellbeing data:', localData);
         logger.debug('[useWellbeingData] Using cached wellbeing data');
         queryClient.setQueryData([...WELLBEING_QUERY_KEY, userId], localData);
         return;
@@ -56,13 +54,11 @@ export const useWellbeingData = () => {
         const serverData = await fetchWellbeingSnapshot(userId);
         
         if (serverData) {
-          console.log('[useWellbeingData] Server data fetched:', serverData);
           await saveWellbeingToDB(serverData, userId);
           await setLastSyncTimeForWellbeing(new Date().toISOString(), userId);
           queryClient.setQueryData([...WELLBEING_QUERY_KEY, userId], serverData);
           logger.debug('[useWellbeingData] Successfully fetched and cached wellbeing data');
         } else {
-          console.log('[useWellbeingData] No wellbeing data found on server');
           logger.debug('[useWellbeingData] No wellbeing data found on server');
           queryClient.setQueryData([...WELLBEING_QUERY_KEY, userId], null);
         }
