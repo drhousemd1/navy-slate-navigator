@@ -25,44 +25,40 @@ const PartnerDisplay: React.FC = () => {
       {/* Link icon */}
       <Link2 className="w-4 h-4 text-gray-400" />
       
-      {/* Partner info */}
-      <div className="flex items-center gap-2">
-        <Avatar 
-          className="h-7 w-7" 
-        >
-          {partnerProfile.avatar_url ? (
-            <AvatarImage 
-              src={partnerProfile.avatar_url} 
-              alt={`${partnerNickname} Avatar`}
-              onError={(e) => {
-                logger.error('Failed to load partner avatar image:', partnerProfile.avatar_url);
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          ) : null}
-          <AvatarFallback className="bg-light-navy text-nav-active text-xs">
-            {partnerNickname ? partnerNickname.charAt(0).toUpperCase() : 'P'}
-          </AvatarFallback>
-        </Avatar>
-        
-        {/* Partner name and role */}
-        <div className="ml-2">
-          <p className="text-white text-sm font-medium leading-tight break-words">{partnerNickname}</p>
-          <p className="text-gray-400 text-xs leading-tight break-words">{partnerProfile.role}</p>
-        </div>
-
-        {/* Partner's wellbeing health bar */}
-        <WellbeingPopover
-          wellbeingData={partnerWellbeingQuery.data}
-          partnerNickname={partnerNickname}
-          isLoading={partnerWellbeingQuery.isLoading}
-        >
-          <MoodHealthBar 
-            score={partnerWellbeingScore}
-            className="ml-2"
+      {/* Avatar */}
+      <Avatar className="h-7 w-7">
+        {partnerProfile.avatar_url ? (
+          <AvatarImage 
+            src={partnerProfile.avatar_url} 
+            alt={`${partnerNickname} Avatar`}
+            onError={(e) => {
+              logger.error('Failed to load partner avatar image:', partnerProfile.avatar_url);
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
-        </WellbeingPopover>
+        ) : null}
+        <AvatarFallback className="bg-light-navy text-nav-active text-xs">
+          {partnerNickname ? partnerNickname.charAt(0).toUpperCase() : 'P'}
+        </AvatarFallback>
+      </Avatar>
+      
+      {/* Partner name and role */}
+      <div className="ml-2">
+        <p className="text-white text-sm font-medium leading-tight break-words">{partnerNickname}</p>
+        <p className="text-gray-400 text-xs leading-tight break-words">{partnerProfile.role}</p>
       </div>
+
+      {/* Partner's wellbeing health bar */}
+      <WellbeingPopover
+        wellbeingData={partnerWellbeingQuery.data}
+        partnerNickname={partnerNickname}
+        isLoading={partnerWellbeingQuery.isLoading}
+      >
+        <MoodHealthBar 
+          score={partnerWellbeingScore}
+          className="ml-2"
+        />
+      </WellbeingPopover>
     </div>
   );
 };

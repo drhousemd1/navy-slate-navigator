@@ -13,18 +13,22 @@ const MoodHealthBar: React.FC<MoodHealthBarProps> = ({
   className = "" 
 }) => {
   const color = getWellbeingColor(score);
+  const fillPercentage = Math.max(0, Math.min(100, score));
 
   return (
     <div 
-      className={`w-2 h-6 rounded-full cursor-pointer transition-all duration-200 hover:w-3 hover:opacity-90 ${className}`}
-      style={{ backgroundColor: color }}
+      className={`w-2 h-6 bg-light-navy rounded-full cursor-pointer transition-all duration-200 hover:w-3 hover:opacity-90 overflow-hidden ${className}`}
       onClick={onClick}
       title={`Wellbeing: ${score}/100`}
     >
-      {/* Inner bar for visual depth */}
+      {/* Fill level indicator */}
       <div 
-        className="w-full h-full rounded-full" 
-        style={{ backgroundColor: color, opacity: 0.8 }}
+        className="w-full rounded-full transition-all duration-300 ease-out"
+        style={{ 
+          backgroundColor: color,
+          height: `${fillPercentage}%`,
+          transform: `translateY(${100 - fillPercentage}%)`
+        }}
       />
     </div>
   );
