@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation } from '@tanstack/react-query';
 import { WellbeingSnapshot, CreateWellbeingData } from '../types';
-import { WELLBEING_QUERY_KEY } from '../queries';
+import { WELLBEING_QUERY_KEY, WEEKLY_WELLBEING_QUERY_KEY, MONTHLY_WELLBEING_QUERY_KEY } from '../queries';
 import { loadWellbeingFromDB, saveWellbeingToDB, setLastSyncTimeForWellbeing } from '@/data/indexedDB/useIndexedDB';
 import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
@@ -82,7 +82,12 @@ export const useUpsertWellbeing = (userId: string | null) => {
         
         // Update query cache
         queryClient.setQueryData([...WELLBEING_QUERY_KEY, userId], wellbeingData);
-        logger.debug('[useUpsertWellbeing onSuccess] Query cache updated.');
+        
+        // Invalidate weekly and monthly wellbeing chart queries to update throne room
+        queryClient.invalidateQueries({ queryKey: WEEKLY_WELLBEING_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: MONTHLY_WELLBEING_QUERY_KEY });
+        
+        logger.debug('[useUpsertWellbeing onSuccess] Query cache updated and chart queries invalidated.');
         
         // Send push notification to partner
         try {
