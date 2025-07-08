@@ -24,12 +24,16 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
   const isGrayedOut = !selectedDate || !metrics;
 
   // Debug logging for metrics display
-  if (selectedDate) {
-    console.log('[CompactWellbeingMetrics] Selected date:', selectedDate);
-    console.log('[CompactWellbeingMetrics] Received metrics:', metrics);
-    console.log('[CompactWellbeingMetrics] Display metrics:', displayMetrics);
-    console.log('[CompactWellbeingMetrics] Is grayed out:', isGrayedOut);
-  }
+  console.log('[CompactWellbeingMetrics] Debug info:', {
+    selectedDate,
+    hasMetrics: !!metrics,
+    metricsKeys: metrics ? Object.keys(metrics) : null,
+    firstFewMetrics: metrics ? Object.fromEntries(Object.entries(metrics).slice(0, 3)) : null,
+    displayMetricsKeys: Object.keys(displayMetrics),
+    firstFewDisplayMetrics: Object.fromEntries(Object.entries(displayMetrics).slice(0, 3)),
+    isGrayedOut,
+    isLoading
+  });
 
   return (
     <Card className="bg-navy border-light-navy">
