@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWeeklyWellbeingQuery, WeeklyWellbeingDataItem } from '@/data/wellbeing/queries/useWeeklyWellbeingQuery';
 import { useMonthlyWellbeingQuery, MonthlyWellbeingDataItem } from '@/data/wellbeing/queries/useMonthlyWellbeingQuery';
+import { useWellbeingSnapshotForDate } from '@/data/wellbeing/queries/useWellbeingSnapshotForDate';
 
 import { useUserIds } from '@/contexts/UserIdsContext';
-import WellbeingMetricsDisplay from '@/components/wellbeing/WellbeingMetricsDisplay';
+import WellbeingMetricsSliders from '@/components/wellbeing/WellbeingMetricsSliders';
 import { getWellbeingColor } from '@/lib/wellbeingUtils';
 import { logger } from '@/lib/logger';
 
@@ -68,24 +69,11 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
   
   const data = currentView ? monthlyData : weeklyData;
   
-  // Get wellbeing data for the selected date from existing chart data
-  const selectedWellbeingData = React.useMemo(() => {
-    if (!selectedDate || !data) return null;
-    
-    const selectedItem = data.find(item => item.date === selectedDate);
-    if (!selectedItem || !selectedItem.hasData) return null;
-    
-    // Create a wellbeing snapshot object from the chart data
-    return {
-      id: 'temp-id',
-      user_id: subUserId || domUserId || '',
-      overall_score: selectedItem.overall_score || 50,
-      created_at: selectedDate,
-      updated_at: selectedDate,
-      // We don't have detailed metrics in chart data, so show empty metrics
-      metrics: {}
-    };
-  }, [selectedDate, data, subUserId, domUserId]);
+  // Fetch detailed wellbeing data for the selected date
+  const { data: selectedWellbeingData, isLoading: wellbeingLoading } = useWellbeingSnapshotForDate(
+    subUserId || domUserId,
+    selectedDate
+  );
   
   const handleToggle = (value: boolean) => {
     setLocalIsMonthlyView(value);
@@ -213,19 +201,15 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
             </ResponsiveContainer>
           )}
         </div>
-        <div className="mt-2 text-center">
-          <span className="text-xs text-nav-inactive">
-            Click dots to view detailed wellness breakdown
-          </span>
-        </div>
       </div>
       
-      <WellbeingMetricsDisplay
-        selectedDate={selectedDate}
-        wellbeingData={selectedWellbeingData}
-        isLoading={false}
-        onClear={handleClearSelection}
-      />
+      <div className="mt-4">
+        <WellbeingMetricsSliders
+          metrics={selectedWellbeingData?.metrics || null}
+          selectedDate={selectedDate}
+          isLoading={wellbeingLoading}
+        />
+      </div>
     </Card>
   );
 };
