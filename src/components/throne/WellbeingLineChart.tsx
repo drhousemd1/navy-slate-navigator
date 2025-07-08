@@ -11,7 +11,7 @@ import { useWeeklyWellbeingQuery, WeeklyWellbeingDataItem } from '@/data/wellbei
 import { useMonthlyWellbeingQuery, MonthlyWellbeingDataItem } from '@/data/wellbeing/queries/useMonthlyWellbeingQuery';
 import { useWellbeingQuery } from '@/data/wellbeing/queries/useWellbeingQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import WellbeingPopover from '@/components/wellbeing/WellbeingPopover';
+import WellbeingMetricsDisplay from '@/components/wellbeing/WellbeingMetricsDisplay';
 import { getWellbeingColor } from '@/lib/wellbeingUtils';
 import { logger } from '@/lib/logger';
 
@@ -79,6 +79,10 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
   const handleDotClick = (date: string) => {
     logger.debug('Wellbeing dot clicked for date:', date);
     setSelectedDate(date);
+  };
+  
+  const handleClearSelection = () => {
+    setSelectedDate(null);
   };
   
   const data = currentView ? monthlyData : weeklyData;
@@ -202,18 +206,12 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
         </div>
       </div>
       
-      {selectedDate && (
-        <WellbeingPopover
-          wellbeingData={selectedWellbeingData}
-          partnerNickname="Your"
-          isLoading={wellbeingLoading}
-        >
-          <div 
-            className="fixed inset-0 bg-black/50 z-40"
-            onClick={() => setSelectedDate(null)}
-          />
-        </WellbeingPopover>
-      )}
+      <WellbeingMetricsDisplay
+        selectedDate={selectedDate}
+        wellbeingData={selectedWellbeingData}
+        isLoading={wellbeingLoading}
+        onClear={handleClearSelection}
+      />
     </Card>
   );
 };
