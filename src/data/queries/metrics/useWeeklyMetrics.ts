@@ -11,10 +11,12 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 
 export interface WeeklyDataItem {
   date: string;
-  tasksCompleted: number;
+  subTasksCompleted: number;
+  domTasksCompleted: number;
   rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
+  subRewardsRedeemed: number;
+  domRewardsRedeemed: number;
+  punishmentsPerformed: number;
 }
 
 export const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
@@ -27,10 +29,12 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
     weekDays.forEach(date => {
       metricsMap.set(date, {
         date,
-        tasksCompleted: 0,
+        subTasksCompleted: 0,
+        domTasksCompleted: 0,
         rulesBroken: 0,
-        rewardsRedeemed: 0,
-        punishments: 0
+        subRewardsRedeemed: 0,
+        domRewardsRedeemed: 0,
+        punishmentsPerformed: 0
       });
     });
 
@@ -45,10 +49,15 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
 
     logger.debug('Weekly chart date range:', { start: start.toISOString(), end: end.toISOString() });
 
-    // Fetch task completions
+    // Fetch task completions with task info to separate Dom/Sub
     const { data: taskCompletions, error: taskError } = await supabase
       .from('task_completion_history')
-      .select('task_id, completed_at')
+      .select(`
+        task_id, 
+        completed_at, 
+        user_id,
+        tasks!inner(is_dom_task)
+      `)
       .in('user_id', [subUserId, domUserId])
       .gte('completed_at', start.toISOString())
       .lt('completed_at', end.toISOString());
@@ -60,7 +69,12 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
         const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
         logger.debug('Processing task completion for date:', date);
         if (metricsMap.has(date)) {
-          metricsMap.get(date)!.tasksCompleted++;
+          const metrics = metricsMap.get(date)!;
+          if (entry.tasks?.is_dom_task) {
+            metrics.domTasksCompleted++;
+          } else {
+            metrics.subTasksCompleted++;
+          }
         }
       });
     }
@@ -81,10 +95,14 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       });
     }
 
-    // Fetch reward usages
+    // Fetch reward usages with reward info to separate Dom/Sub
     const { data: rewardUsages, error: rewardError } = await supabase
       .from('reward_usage')
-      .select('created_at')
+      .select(`
+        created_at, 
+        user_id,
+        rewards!inner(is_dom_reward)
+      `)
       .in('user_id', [subUserId, domUserId])
       .gte('created_at', start.toISOString())
       .lt('created_at', end.toISOString());
@@ -93,7 +111,14 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
     else if (rewardUsages) {
       rewardUsages.forEach(entry => {
         const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
-        if (metricsMap.has(date)) metricsMap.get(date)!.rewardsRedeemed++;
+        if (metricsMap.has(date)) {
+          const metrics = metricsMap.get(date)!;
+          if (entry.rewards?.is_dom_reward) {
+            metrics.domRewardsRedeemed++;
+          } else {
+            metrics.subRewardsRedeemed++;
+          }
+        }
       });
     }
 
@@ -109,7 +134,7 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
     else if (punishmentsData) {
       punishmentsData.forEach(entry => {
         const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-        if (metricsMap.has(date)) metricsMap.get(date)!.punishments++;
+        if (metricsMap.has(date)) metricsMap.get(date)!.punishmentsPerformed++;
       });
     }
 

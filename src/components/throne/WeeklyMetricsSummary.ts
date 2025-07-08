@@ -1,7 +1,9 @@
 
 export interface WeeklyMetricsSummary {
-  tasksCompleted: number;
+  subTasksCompleted: number;
+  domTasksCompleted: number;
   rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
+  subRewardsRedeemed: number;
+  domRewardsRedeemed: number;
+  punishmentsPerformed: number;
 }

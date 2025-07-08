@@ -28,16 +28,32 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
 
     logger.debug('Fetching weekly summary from', start.toISOString(), 'to', end.toISOString(), 'for users:', subUserId, domUserId);
 
-    // Fetch task completions - count total completions, not unique per day
+    // Fetch task completions with task info to separate Dom/Sub
     const { data: taskCompletions, error: taskError } = await supabase
       .from('task_completion_history')
-      .select('task_id, completed_at')
+      .select(`
+        task_id, 
+        completed_at, 
+        user_id,
+        tasks!inner(is_dom_task)
+      `)
       .in('user_id', [subUserId, domUserId])
       .gte('completed_at', start.toISOString())
       .lt('completed_at', end.toISOString());
     if (taskError) throw new Error(`Error fetching tasks: ${taskError.message}`);
 
     logger.debug('Task completions found:', taskCompletions?.length || 0);
+
+    // Separate Dom and Sub task completions
+    let subTasksCompleted = 0;
+    let domTasksCompleted = 0;
+    taskCompletions?.forEach(entry => {
+      if (entry.tasks?.is_dom_task) {
+        domTasksCompleted++;
+      } else {
+        subTasksCompleted++;
+      }
+    });
 
     const { data: ruleViolations, error: ruleError } = await supabase
       .from('rule_violations')
@@ -49,15 +65,31 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
 
     logger.debug('Rule violations found:', ruleViolations?.length || 0);
 
+    // Fetch reward usages with reward info to separate Dom/Sub
     const { data: rewardUsages, error: rewardError } = await supabase
       .from('reward_usage')
-      .select('*')
+      .select(`
+        created_at, 
+        user_id,
+        rewards!inner(is_dom_reward)
+      `)
       .in('user_id', [subUserId, domUserId])
       .gte('created_at', start.toISOString())
       .lt('created_at', end.toISOString());
     if (rewardError) throw new Error(`Error fetching rewards: ${rewardError.message}`);
 
     logger.debug('Reward usages found:', rewardUsages?.length || 0);
+
+    // Separate Dom and Sub reward usages
+    let subRewardsRedeemed = 0;
+    let domRewardsRedeemed = 0;
+    rewardUsages?.forEach(entry => {
+      if (entry.rewards?.is_dom_reward) {
+        domRewardsRedeemed++;
+      } else {
+        subRewardsRedeemed++;
+      }
+    });
 
     const { data: punishments, error: punishmentError } = await supabase
       .from('punishment_history')
@@ -70,10 +102,12 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
     logger.debug('Punishments found:', punishments?.length || 0);
 
     const result = {
-      tasksCompleted: taskCompletions?.length || 0,
+      subTasksCompleted,
+      domTasksCompleted,
       rulesBroken: ruleViolations?.length || 0,
-      rewardsRedeemed: rewardUsages?.length || 0,
-      punishments: punishments?.length || 0
+      subRewardsRedeemed,
+      domRewardsRedeemed,
+      punishmentsPerformed: punishments?.length || 0
     };
 
     logger.debug('Weekly summary result:', result);
@@ -81,10 +115,12 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
   } catch (err) {
     logger.error('Error fetching metrics summary data:', err);
     return {
-      tasksCompleted: 0,
+      subTasksCompleted: 0,
+      domTasksCompleted: 0,
       rulesBroken: 0,
-      rewardsRedeemed: 0,
-      punishments: 0
+      subRewardsRedeemed: 0,
+      domRewardsRedeemed: 0,
+      punishmentsPerformed: 0
     };
   }
 };

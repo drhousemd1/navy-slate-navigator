@@ -9,17 +9,21 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 
 export interface MonthlyDataItem {
   date: string;
-  tasksCompleted: number;
+  subTasksCompleted: number;
+  domTasksCompleted: number;
   rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
+  subRewardsRedeemed: number;
+  domRewardsRedeemed: number;
+  punishmentsPerformed: number;
 }
 
 export interface MonthlyMetricsSummary {
-  tasksCompleted: number;
+  subTasksCompleted: number;
+  domTasksCompleted: number;
   rulesBroken: number;
-  rewardsRedeemed: number;
-  punishments: number;
+  subRewardsRedeemed: number;
+  domRewardsRedeemed: number;
+  punishmentsPerformed: number;
 }
 
 export interface MonthlyMetricsData {
@@ -40,14 +44,14 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
   logger.debug('Fetching monthly chart data via useMonthlyMetrics hook at', new Date().toISOString(), 'for users:', subUserId, domUserId);
   const defaultResponse: MonthlyMetricsData = {
     dataArray: [],
-    monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 }
+    monthlyTotals: { subTasksCompleted: 0, domTasksCompleted: 0, rulesBroken: 0, subRewardsRedeemed: 0, domRewardsRedeemed: 0, punishmentsPerformed: 0 }
   };
 
   try {
     const monthDates = generateMonthDays();
     const metrics = new Map<string, MonthlyDataItem>();
     monthDates.forEach(date => metrics.set(date, {
-      date, tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0
+      date, subTasksCompleted: 0, domTasksCompleted: 0, rulesBroken: 0, subRewardsRedeemed: 0, domRewardsRedeemed: 0, punishmentsPerformed: 0
     }));
 
     const today = new Date();
@@ -56,10 +60,15 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
 
     logger.debug('Monthly chart date range:', { start, end });
 
-    // Fetch task completions - simplified counting
+    // Fetch task completions with task info to separate Dom/Sub
     const { data: taskEntries, error: taskError } = await supabase
       .from('task_completion_history')
-      .select('task_id, completed_at')
+      .select(`
+        task_id, 
+        completed_at, 
+        user_id,
+        tasks!inner(is_dom_task)
+      `)
       .in('user_id', [subUserId, domUserId])
       .gte('completed_at', start)
       .lt('completed_at', end);
@@ -69,7 +78,12 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
       taskEntries.forEach(entry => {
         const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
         if (metrics.has(date)) {
-          metrics.get(date)!.tasksCompleted++;
+          const dayMetrics = metrics.get(date)!;
+          if (entry.tasks?.is_dom_task) {
+            dayMetrics.domTasksCompleted++;
+          } else {
+            dayMetrics.subTasksCompleted++;
+          }
         }
       });
     }
@@ -89,10 +103,14 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
       });
     }
 
-    // Fetch reward usages
+    // Fetch reward usages with reward info to separate Dom/Sub
     const { data: rewardEntries, error: rewardError } = await supabase
       .from('reward_usage')
-      .select('created_at')
+      .select(`
+        created_at, 
+        user_id,
+        rewards!inner(is_dom_reward)
+      `)
       .in('user_id', [subUserId, domUserId])
       .gte('created_at', start)
       .lt('created_at', end);
@@ -100,7 +118,14 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
     else if (rewardEntries) {
       rewardEntries.forEach(entry => {
         const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
-        if (metrics.has(date)) metrics.get(date)!.rewardsRedeemed++;
+        if (metrics.has(date)) {
+          const dayMetrics = metrics.get(date)!;
+          if (entry.rewards?.is_dom_reward) {
+            dayMetrics.domRewardsRedeemed++;
+          } else {
+            dayMetrics.subRewardsRedeemed++;
+          }
+        }
       });
     }
 
@@ -115,17 +140,19 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
     else if (punishmentEntries) {
       punishmentEntries.forEach(entry => {
         const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
-        if (metrics.has(date)) metrics.get(date)!.punishments++;
+        if (metrics.has(date)) metrics.get(date)!.punishmentsPerformed++;
       });
     }
 
     const dataArray = Array.from(metrics.values());
     const monthlyTotals = dataArray.reduce((acc, item) => ({
-      tasksCompleted: acc.tasksCompleted + item.tasksCompleted,
+      subTasksCompleted: acc.subTasksCompleted + item.subTasksCompleted,
+      domTasksCompleted: acc.domTasksCompleted + item.domTasksCompleted,
       rulesBroken: acc.rulesBroken + item.rulesBroken,
-      rewardsRedeemed: acc.rewardsRedeemed + item.rewardsRedeemed,
-      punishments: acc.punishments + item.punishments
-    }), { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 });
+      subRewardsRedeemed: acc.subRewardsRedeemed + item.subRewardsRedeemed,
+      domRewardsRedeemed: acc.domRewardsRedeemed + item.domRewardsRedeemed,
+      punishmentsPerformed: acc.punishmentsPerformed + item.punishmentsPerformed
+    }), { subTasksCompleted: 0, domTasksCompleted: 0, rulesBroken: 0, subRewardsRedeemed: 0, domRewardsRedeemed: 0, punishmentsPerformed: 0 });
     
     logger.debug('Monthly chart data prepared via hook. Monthly totals:', monthlyTotals);
     return { dataArray, monthlyTotals };

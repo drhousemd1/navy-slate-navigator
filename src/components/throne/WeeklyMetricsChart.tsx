@@ -23,10 +23,12 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   currentView = false 
 }) => {
   const chartConfig = {
-    tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
+    subTasksCompleted: { color: '#0EA5E9', label: 'Sub Tasks Completed' },
+    domTasksCompleted: { color: '#DC2626', label: 'Dom Tasks Completed' },
     rulesBroken: { color: '#F97316', label: 'Rules Broken' },
-    rewardsRedeemed: { color: '#9b87f5', label: 'Rewards Redeemed' },
-    punishments: { color: '#ea384c', label: 'Punishments' }
+    subRewardsRedeemed: { color: '#9b87f5', label: 'Sub Rewards Redeemed' },
+    domRewardsRedeemed: { color: '#EC4899', label: 'Dom Rewards Redeemed' },
+    punishmentsPerformed: { color: '#ea384c', label: 'Punishments Performed' }
   };
 
   const { data = [], isLoading, error } = useWeeklyMetrics();
@@ -36,7 +38,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   }
   
   const hasData = data.some(d => 
-    d.tasksCompleted > 0 || d.rulesBroken > 0 || d.rewardsRedeemed > 0 || d.punishments > 0
+    d.subTasksCompleted > 0 || d.domTasksCompleted > 0 || d.rulesBroken > 0 || d.subRewardsRedeemed > 0 || d.domRewardsRedeemed > 0 || d.punishmentsPerformed > 0
   );
 
   if (isLoading) {
@@ -107,9 +109,15 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                   }}
                 />
                 <Bar 
-                  dataKey="tasksCompleted" 
-                  name="Tasks Completed" 
-                  fill={chartConfig.tasksCompleted.color} 
+                  dataKey="subTasksCompleted" 
+                  name="Sub Tasks Completed" 
+                  fill={chartConfig.subTasksCompleted.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Bar 
+                  dataKey="domTasksCompleted" 
+                  name="Dom Tasks Completed" 
+                  fill={chartConfig.domTasksCompleted.color} 
                   radius={[4, 4, 0, 0]} 
                 />
                 <Bar 
@@ -119,32 +127,44 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                   radius={[4, 4, 0, 0]} 
                 />
                 <Bar 
-                  dataKey="rewardsRedeemed" 
-                  name="Rewards Redeemed" 
-                  fill={chartConfig.rewardsRedeemed.color} 
+                  dataKey="subRewardsRedeemed" 
+                  name="Sub Rewards Redeemed" 
+                  fill={chartConfig.subRewardsRedeemed.color} 
                   radius={[4, 4, 0, 0]} 
                 />
                 <Bar 
-                  dataKey="punishments" 
-                  name="Punishments" 
-                  fill={chartConfig.punishments.color} 
+                  dataKey="domRewardsRedeemed" 
+                  name="Dom Rewards Redeemed" 
+                  fill={chartConfig.domRewardsRedeemed.color} 
+                  radius={[4, 4, 0, 0]} 
+                />
+                <Bar 
+                  dataKey="punishmentsPerformed" 
+                  name="Punishments Performed" 
+                  fill={chartConfig.punishmentsPerformed.color} 
                   radius={[4, 4, 0, 0]} 
                 />
               </BarChart>
             </ResponsiveContainer>
           )}
         </div>
-        <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
-            Tasks Completed
+        <div className="flex justify-between items-center flex-wrap mt-2 gap-1">
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.subTasksCompleted.color }}>
+            Sub Tasks
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.domTasksCompleted.color }}>
+            Dom Tasks
           </span>
           <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
             Rules Broken
           </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
-            Rewards Redeemed
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.subRewardsRedeemed.color }}>
+            Sub Rewards
           </span>
-          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.domRewardsRedeemed.color }}>
+            Dom Rewards
+          </span>
+          <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishmentsPerformed.color }}>
             Punishments
           </span>
         </div>

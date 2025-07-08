@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ChartContainer } from '@/components/ui/chart';
-import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
+
 import MonthlyMetricsChartSkeleton from './MonthlyMetricsChartSkeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMonthlyMetrics, MonthlyMetricsData, MonthlyDataItem, MonthlyMetricsSummary } from '@/data/queries/metrics/useMonthlyMetrics';
@@ -32,16 +32,18 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
   const [scrollLeft, setScrollLeft] = useState(0);
 
   const chartConfig = {
-    tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
+    subTasksCompleted: { color: '#0EA5E9', label: 'Sub Tasks Completed' },
+    domTasksCompleted: { color: '#DC2626', label: 'Dom Tasks Completed' },
     rulesBroken: { color: '#F97316', label: 'Rules Broken' },
-    rewardsRedeemed: { color: '#9b87f5', label: 'Rewards Redeemed' },
-    punishments: { color: '#ea384c', label: 'Punishments' }
+    subRewardsRedeemed: { color: '#9b87f5', label: 'Sub Rewards Redeemed' },
+    domRewardsRedeemed: { color: '#EC4899', label: 'Dom Rewards Redeemed' },
+    punishmentsPerformed: { color: '#ea384c', label: 'Punishments Performed' }
   };
 
   const { 
     data = { 
       dataArray: [], 
-      monthlyTotals: { tasksCompleted: 0, rulesBroken: 0, rewardsRedeemed: 0, punishments: 0 } 
+      monthlyTotals: { subTasksCompleted: 0, domTasksCompleted: 0, rulesBroken: 0, subRewardsRedeemed: 0, domRewardsRedeemed: 0, punishmentsPerformed: 0 } 
     }, 
     isLoading, 
     error, 
@@ -51,7 +53,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
   const monthDates = useMemo(() => data.dataArray.map(d => d.date), [data.dataArray]);
   
   const BAR_WIDTH = 6;
-  const BAR_COUNT = 4;
+  const BAR_COUNT = 6;
   const BAR_GAP = 2;
   const GROUP_PADDING = 10;
   const CHART_PADDING = 20;
@@ -66,13 +68,13 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
   }
 
   const hasContent = data.dataArray.some(d =>
-    d.tasksCompleted || d.rulesBroken || d.rewardsRedeemed || d.punishments
+    d.subTasksCompleted || d.domTasksCompleted || d.rulesBroken || d.subRewardsRedeemed || d.domRewardsRedeemed || d.punishmentsPerformed
   );
 
   const getYAxisDomain = useMemo(() => {
     if (!data.dataArray.length) return ['auto', 'auto'];
     const max = Math.max(...data.dataArray.flatMap(d => [
-      d.tasksCompleted, d.rulesBroken, d.rewardsRedeemed, d.punishments
+      d.subTasksCompleted, d.domTasksCompleted, d.rulesBroken, d.subRewardsRedeemed, d.domRewardsRedeemed, d.punishmentsPerformed
     ]));
     return [0, Math.max(5, Math.ceil(max))];
   }, [data.dataArray]);
@@ -161,10 +163,12 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
                     }
                   }}
                 />
-                <Bar dataKey="tasksCompleted" name="Tasks Completed" fill={chartConfig.tasksCompleted.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="subTasksCompleted" name="Sub Tasks Completed" fill={chartConfig.subTasksCompleted.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="domTasksCompleted" name="Dom Tasks Completed" fill={chartConfig.domTasksCompleted.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
                 <Bar dataKey="rulesBroken" name="Rules Broken" fill={chartConfig.rulesBroken.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
-                <Bar dataKey="rewardsRedeemed" name="Rewards Redeemed" fill={chartConfig.rewardsRedeemed.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
-                <Bar dataKey="punishments" name="Punishments" fill={chartConfig.punishments.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="subRewardsRedeemed" name="Sub Rewards Redeemed" fill={chartConfig.subRewardsRedeemed.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="domRewardsRedeemed" name="Dom Rewards Redeemed" fill={chartConfig.domRewardsRedeemed.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
+                <Bar dataKey="punishmentsPerformed" name="Punishments Performed" fill={chartConfig.punishmentsPerformed.color} radius={[4, 4, 0, 0]} onClick={handleBarClick} isAnimationActive={false} barSize={BAR_WIDTH} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -178,7 +182,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
       <div className="space-y-2">
         <MonthlyMetricsChartSkeleton />
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
+          {[...Array(6)].map((_, i) => (
             <Card key={i} className="p-4 bg-light-navy border-light-navy">
               <Skeleton className="h-5 w-3/4 mb-2 bg-navy/50" />
               <Skeleton className="h-8 w-1/2 bg-navy/50" />
@@ -226,24 +230,28 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
               )}
             </div>
           </div>
-          <div className="flex justify-between items-center flex-wrap mt-2 gap-2">
-            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.tasksCompleted.color }}>
-              Tasks Completed
+          <div className="flex justify-between items-center flex-wrap mt-2 gap-1">
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.subTasksCompleted.color }}>
+              Sub Tasks
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.domTasksCompleted.color }}>
+              Dom Tasks
             </span>
             <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rulesBroken.color }}>
               Rules Broken
             </span>
-            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.rewardsRedeemed.color }}>
-              Rewards Redeemed
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.subRewardsRedeemed.color }}>
+              Sub Rewards
             </span>
-            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishments.color }}>
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.domRewardsRedeemed.color }}>
+              Dom Rewards
+            </span>
+            <span className="text-xs whitespace-nowrap" style={{ color: chartConfig.punishmentsPerformed.color }}>
               Punishments
             </span>
           </div>
         </div>
       </Card>
-      
-      {!showToggle && <MonthlyMetricsSummaryTiles {...data.monthlyTotals} />}
     </div>
   );
 };
