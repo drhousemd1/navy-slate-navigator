@@ -21,22 +21,17 @@ const ThroneRoom: React.FC = () => {
   const queryClient = useQueryClient();
   const { isLoadingUserIds } = useUserIds();
   
-  // Enable hooks only when user IDs are available
-  const weeklyMetricsEnabled = !isLoadingUserIds;
-  const monthlyMetricsEnabled = !isLoadingUserIds;
-  
   // Debug logging for user IDs
   const { subUserId, domUserId } = useUserIds();
   logger.debug('[ThroneRoom] User IDs debug:', { 
     subUserId, 
     domUserId, 
-    isLoadingUserIds, 
-    weeklyMetricsEnabled, 
-    monthlyMetricsEnabled 
+    isLoadingUserIds
   });
   
-  useWeeklyMetrics({ enabled: weeklyMetricsEnabled });
-  useMonthlyMetrics({ enabled: monthlyMetricsEnabled });
+  // Let hooks manage their own enablement logic
+  useWeeklyMetrics();
+  useMonthlyMetrics();
   
   const { data: metricsSummaryData, isLoading, error } = useWeeklyMetricsSummary();
 
@@ -60,11 +55,28 @@ const ThroneRoom: React.FC = () => {
   }, [location.pathname, queryClient]);
 
   if (isLoading || isLoadingUserIds) {
-    // Placeholder for loading state
+    return (
+      <AppLayout>
+        <div className="p-6 space-y-6 animate-fade-in overflow-x-hidden w-full max-w-full">
+          <div className="flex items-center justify-center h-60 text-white">
+            Loading your command center...
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
 
   if (error) {
     logger.error("Error fetching weekly metrics summary:", error);
+    return (
+      <AppLayout>
+        <div className="p-6 space-y-6 animate-fade-in overflow-x-hidden w-full max-w-full">
+          <div className="flex items-center justify-center h-60 text-white">
+            Error loading data: {error.message}
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
 
   return (
