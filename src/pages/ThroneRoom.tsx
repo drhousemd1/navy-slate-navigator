@@ -23,6 +23,12 @@ const ThroneRoom: React.FC = () => {
   
   // Debug logging for user IDs
   const { subUserId, domUserId } = useUserIds();
+  console.log('[ThroneRoom] CONSOLE LOG - User IDs debug:', { 
+    subUserId, 
+    domUserId, 
+    isLoadingUserIds
+  });
+  
   logger.debug('[ThroneRoom] User IDs debug:', { 
     subUserId, 
     domUserId, 
@@ -30,8 +36,17 @@ const ThroneRoom: React.FC = () => {
   });
   
   // Let hooks manage their own enablement logic
-  useWeeklyMetrics();
-  useMonthlyMetrics();
+  const weeklyMetricsResult = useWeeklyMetrics();
+  const monthlyMetricsResult = useMonthlyMetrics();
+  
+  console.log('[ThroneRoom] CONSOLE LOG - Hook results:', {
+    weeklyLoading: weeklyMetricsResult.isLoading,
+    weeklyError: weeklyMetricsResult.error,
+    weeklyData: weeklyMetricsResult.data,
+    monthlyLoading: monthlyMetricsResult.isLoading,
+    monthlyError: monthlyMetricsResult.error,
+    monthlyData: monthlyMetricsResult.data
+  });
   
   const { data: metricsSummaryData, isLoading, error } = useWeeklyMetricsSummary();
 
