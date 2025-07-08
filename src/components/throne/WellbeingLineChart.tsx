@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Dot
+  LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Dot, Legend
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
@@ -27,13 +27,18 @@ interface CustomDotProps {
   cy?: number;
   payload?: WeeklyWellbeingDataItem | MonthlyWellbeingDataItem;
   isSelected?: boolean;
+  userType?: 'sub' | 'dom';
 }
 
-const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, isSelected }) => {
-  if (!payload?.hasData || cx === undefined || cy === undefined) return null;
+const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, isSelected, userType }) => {
+  if (!payload || cx === undefined || cy === undefined) return null;
   
-  const score = payload.overall_score || 50;
-  const color = getWellbeingColor(score);
+  // Check if this user type has data
+  const hasData = userType === 'sub' ? payload.subHasData : payload.domHasData;
+  if (!hasData) return null;
+  
+  // Use role-based colors instead of score-based colors
+  const color = userType === 'sub' ? '#3B82F6' : '#EF4444'; // Blue for sub, red for dom
   
   return (
     <Dot
@@ -55,6 +60,7 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
 }) => {
   const { subUserId, domUserId } = useUserIds();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedUserType, setSelectedUserType] = useState<'sub' | 'dom' | null>(null);
   const [localIsMonthlyView, setLocalIsMonthlyView] = useState(isMonthlyView);
   
   const currentView = onToggleView ? isMonthlyView : localIsMonthlyView;
@@ -68,9 +74,10 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
   
   const data = currentView ? monthlyData : weeklyData;
   
-  // Fetch detailed wellbeing data for the selected date
+  // Fetch detailed wellbeing data for the selected date and user
+  const selectedUserId = selectedUserType === 'sub' ? subUserId : selectedUserType === 'dom' ? domUserId : null;
   const { data: selectedWellbeingData, isLoading: wellbeingLoading } = useWellbeingSnapshotForDate(
-    subUserId || domUserId,
+    selectedUserId,
     selectedDate
   );
   
@@ -82,25 +89,30 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
   const handleChartClick = (data: any) => {
     if (data && data.activePayload && data.activePayload[0] && data.activePayload[0].payload) {
       const clickedDate = data.activePayload[0].payload.date;
-      logger.debug('Chart clicked for date:', clickedDate);
-      logger.debug('Current user ID:', subUserId || domUserId);
-      logger.debug('Chart payload:', data.activePayload[0].payload);
+      const payload = data.activePayload[0].payload;
+      
+      // Determine which user's data was clicked based on the dataKey
+      const dataKey = data.activePayload[0].dataKey;
+      const userType = dataKey === 'subScore' ? 'sub' : 'dom';
+      
+      logger.debug('Chart clicked for date:', clickedDate, 'userType:', userType);
+      logger.debug('Chart payload:', payload);
+      
       setSelectedDate(clickedDate);
+      setSelectedUserType(userType);
     }
   };
   
   const handleClearSelection = () => {
     setSelectedDate(null);
+    setSelectedUserType(null);
   };
   const isLoading = currentView ? monthlyLoading : weeklyLoading;
   
-  // Filter data to only show points with wellbeing data
-  const chartData = data.map(item => ({
-    ...item,
-    displayScore: item.hasData ? item.overall_score : null
-  }));
+  // Prepare chart data with separate user scores
+  const chartData = data;
   
-  const hasData = data.some(item => item.hasData);
+  const hasData = data.some(item => item.subHasData || item.domHasData);
   
   if (isLoading) {
     return (
@@ -177,19 +189,41 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
                   tick={{ fill: '#D1D5DB' }} 
                   stroke="#8E9196"
                 />
-                <Line 
+                 <Line 
                   type="monotone" 
-                  dataKey="displayScore" 
-                  stroke="hsl(var(--wellbeing-good))"
+                  dataKey="subScore" 
+                  stroke="#3B82F6"
                   strokeWidth={2}
                   connectNulls={false}
+                  name="Submissive"
                   dot={(props) => (
                     <CustomDot 
                       {...props} 
-                      isSelected={props.payload?.date === selectedDate}
+                      userType="sub"
+                      isSelected={props.payload?.date === selectedDate && selectedUserType === 'sub'}
                     />
                   )}
-                  activeDot={{ r: 6, stroke: '#FFFFFF', strokeWidth: 2 }}
+                  activeDot={{ r: 6, stroke: '#FFFFFF', strokeWidth: 2, fill: '#3B82F6' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="domScore" 
+                  stroke="#EF4444"
+                  strokeWidth={2}
+                  connectNulls={false}
+                  name="Dominant"
+                  dot={(props) => (
+                    <CustomDot 
+                      {...props} 
+                      userType="dom"
+                      isSelected={props.payload?.date === selectedDate && selectedUserType === 'dom'}
+                    />
+                  )}
+                  activeDot={{ r: 6, stroke: '#FFFFFF', strokeWidth: 2, fill: '#EF4444' }}
+                />
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  iconType="line"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -201,6 +235,7 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
         <CompactWellbeingMetrics
           metrics={selectedWellbeingData?.metrics || null}
           selectedDate={selectedDate}
+          selectedUserType={selectedUserType}
           isLoading={wellbeingLoading}
         />
       </div>

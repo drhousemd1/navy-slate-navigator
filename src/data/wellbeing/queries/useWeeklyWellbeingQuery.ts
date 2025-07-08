@@ -7,8 +7,10 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 
 export interface WeeklyWellbeingDataItem {
   date: string;
-  overall_score: number | null;
-  hasData: boolean;
+  subScore: number | null;
+  domScore: number | null;
+  subHasData: boolean;
+  domHasData: boolean;
 }
 
 export const WEEKLY_WELLBEING_QUERY_KEY = ['weekly-wellbeing'];
@@ -31,8 +33,10 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
     const weekDays = eachDayOfInterval({ start, end: new Date(end.getTime() - 1) });
     const weekData: WeeklyWellbeingDataItem[] = weekDays.map(date => ({
       date: format(date, 'yyyy-MM-dd'),
-      overall_score: null,
-      hasData: false
+      subScore: null,
+      domScore: null,
+      subHasData: false,
+      domHasData: false
     }));
 
     // Fetch wellbeing snapshots for the week
@@ -49,17 +53,19 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
       return weekData;
     }
 
-    // Map wellbeing data to corresponding days (use latest score for each day)
+    // Map wellbeing data to corresponding days, separating by user
     if (wellbeingData) {
       wellbeingData.forEach(entry => {
         const entryDate = format(new Date(entry.updated_at), 'yyyy-MM-dd');
         const dayIndex = weekData.findIndex(day => day.date === entryDate);
         if (dayIndex !== -1) {
-          weekData[dayIndex] = {
-            date: entryDate,
-            overall_score: entry.overall_score,
-            hasData: true
-          };
+          if (entry.user_id === subUserId) {
+            weekData[dayIndex].subScore = entry.overall_score;
+            weekData[dayIndex].subHasData = true;
+          } else if (entry.user_id === domUserId) {
+            weekData[dayIndex].domScore = entry.overall_score;
+            weekData[dayIndex].domHasData = true;
+          }
         }
       });
     }

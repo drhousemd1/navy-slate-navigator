@@ -7,8 +7,10 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 
 export interface MonthlyWellbeingDataItem {
   date: string;
-  overall_score: number | null;
-  hasData: boolean;
+  subScore: number | null;
+  domScore: number | null;
+  subHasData: boolean;
+  domHasData: boolean;
 }
 
 export const MONTHLY_WELLBEING_QUERY_KEY = ['monthly-wellbeing'];
@@ -26,8 +28,10 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
     const monthDays = eachDayOfInterval({ start, end });
     const monthData: MonthlyWellbeingDataItem[] = monthDays.map(date => ({
       date: format(date, 'yyyy-MM-dd'),
-      overall_score: null,
-      hasData: false
+      subScore: null,
+      domScore: null,
+      subHasData: false,
+      domHasData: false
     }));
 
     // Fetch wellbeing snapshots for the month
@@ -44,17 +48,19 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
       return monthData;
     }
 
-    // Map wellbeing data to corresponding days (use latest score for each day)
+    // Map wellbeing data to corresponding days, separating by user
     if (wellbeingData) {
       wellbeingData.forEach(entry => {
         const entryDate = format(new Date(entry.updated_at), 'yyyy-MM-dd');
         const dayIndex = monthData.findIndex(day => day.date === entryDate);
         if (dayIndex !== -1) {
-          monthData[dayIndex] = {
-            date: entryDate,
-            overall_score: entry.overall_score,
-            hasData: true
-          };
+          if (entry.user_id === subUserId) {
+            monthData[dayIndex].subScore = entry.overall_score;
+            monthData[dayIndex].subHasData = true;
+          } else if (entry.user_id === domUserId) {
+            monthData[dayIndex].domScore = entry.overall_score;
+            monthData[dayIndex].domHasData = true;
+          }
         }
       });
     }
