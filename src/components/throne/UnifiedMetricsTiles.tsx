@@ -11,9 +11,19 @@ const UnifiedMetricsTiles: React.FC<UnifiedMetricsTilesProps> = ({ isMonthlyView
   const { data: weeklyData } = useWeeklyMetricsSummary();
   const { data: monthlyData } = useMonthlyMetrics();
 
+  // Default values to ensure we always have numbers
+  const defaultMetrics = {
+    subTasksCompleted: 0,
+    domTasksCompleted: 0,
+    rulesBroken: 0,
+    subRewardsRedeemed: 0,
+    domRewardsRedeemed: 0,
+    punishmentsPerformed: 0
+  };
+
   const displayData = isMonthlyView 
-    ? monthlyData?.monthlyTotals || { subTasksCompleted: 0, domTasksCompleted: 0, rulesBroken: 0, subRewardsRedeemed: 0, domRewardsRedeemed: 0, punishmentsPerformed: 0 }
-    : weeklyData || { subTasksCompleted: 0, domTasksCompleted: 0, rulesBroken: 0, subRewardsRedeemed: 0, domRewardsRedeemed: 0, punishmentsPerformed: 0 };
+    ? { ...defaultMetrics, ...(monthlyData?.monthlyTotals || {}) }
+    : { ...defaultMetrics, ...(weeklyData || {}) };
 
   return (
     <Card className="bg-navy border border-light-navy">

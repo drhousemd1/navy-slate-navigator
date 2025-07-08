@@ -102,11 +102,11 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
     logger.debug('Punishments found:', punishments?.length || 0);
 
     const result = {
-      subTasksCompleted,
-      domTasksCompleted,
+      subTasksCompleted: subTasksCompleted || 0,
+      domTasksCompleted: domTasksCompleted || 0,
       rulesBroken: ruleViolations?.length || 0,
-      subRewardsRedeemed,
-      domRewardsRedeemed,
+      subRewardsRedeemed: subRewardsRedeemed || 0,
+      domRewardsRedeemed: domRewardsRedeemed || 0,
       punishmentsPerformed: punishments?.length || 0
     };
 

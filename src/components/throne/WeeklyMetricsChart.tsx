@@ -37,9 +37,8 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     logger.error("Error in WeeklyMetricsChart:", error);
   }
   
-  const hasData = data.some(d => 
-    d.subTasksCompleted > 0 || d.domTasksCompleted > 0 || d.rulesBroken > 0 || d.subRewardsRedeemed > 0 || d.domRewardsRedeemed > 0 || d.punishmentsPerformed > 0
-  );
+  // Always show chart data, even if it's all zeros
+  const hasData = data && data.length > 0;
 
   if (isLoading) {
     return <WeeklyMetricsChartSkeleton />;
