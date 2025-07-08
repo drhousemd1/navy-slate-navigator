@@ -70,7 +70,55 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
       });
     }
 
-    logger.debug('Weekly wellbeing data prepared:', weekData);
+    // Implement carry-forward logic for continuous chart lines
+    let lastSubScore: number | null = null;
+    let lastDomScore: number | null = null;
+
+    // Look for most recent data before the week if first day has no data
+    if ((!weekData[0].subHasData || !weekData[0].domHasData) && wellbeingData) {
+      const preWeekData = wellbeingData.filter(entry => 
+        new Date(entry.updated_at) < start
+      ).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      
+      if (!weekData[0].subHasData) {
+        const lastSubEntry = preWeekData.find(entry => entry.user_id === subUserId);
+        if (lastSubEntry) lastSubScore = lastSubEntry.overall_score;
+      }
+      
+      if (!weekData[0].domHasData) {
+        const lastDomEntry = preWeekData.find(entry => entry.user_id === domUserId);
+        if (lastDomEntry) lastDomScore = lastDomEntry.overall_score;
+      }
+    }
+
+    // Apply carry-forward logic day by day
+    weekData.forEach((day, index) => {
+      // Update last known scores when we have actual data
+      if (day.subHasData && day.subScore !== null) {
+        lastSubScore = day.subScore;
+      }
+      if (day.domHasData && day.domScore !== null) {
+        lastDomScore = day.domScore;
+      }
+
+      // Carry forward previous scores when no data exists
+      if (!day.subHasData && lastSubScore !== null) {
+        day.subScore = lastSubScore;
+      }
+      if (!day.domHasData && lastDomScore !== null) {
+        day.domScore = lastDomScore;
+      }
+
+      // Use default score if no prior data exists
+      if (day.subScore === null) {
+        day.subScore = 50; // Default wellness score
+      }
+      if (day.domScore === null) {
+        day.domScore = 50; // Default wellness score
+      }
+    });
+
+    logger.debug('Weekly wellbeing data prepared with carry-forward:', weekData);
     return weekData;
   } catch (err) {
     logger.error('Error in fetchWeeklyWellbeingData:', err);

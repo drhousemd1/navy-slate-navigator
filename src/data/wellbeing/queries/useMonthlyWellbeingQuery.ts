@@ -65,7 +65,55 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
       });
     }
 
-    logger.debug('Monthly wellbeing data prepared:', monthData);
+    // Implement carry-forward logic for continuous chart lines
+    let lastSubScore: number | null = null;
+    let lastDomScore: number | null = null;
+
+    // Look for most recent data before the month if first day has no data
+    if ((!monthData[0].subHasData || !monthData[0].domHasData) && wellbeingData) {
+      const preMonthData = wellbeingData.filter(entry => 
+        new Date(entry.updated_at) < start
+      ).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      
+      if (!monthData[0].subHasData) {
+        const lastSubEntry = preMonthData.find(entry => entry.user_id === subUserId);
+        if (lastSubEntry) lastSubScore = lastSubEntry.overall_score;
+      }
+      
+      if (!monthData[0].domHasData) {
+        const lastDomEntry = preMonthData.find(entry => entry.user_id === domUserId);
+        if (lastDomEntry) lastDomScore = lastDomEntry.overall_score;
+      }
+    }
+
+    // Apply carry-forward logic day by day
+    monthData.forEach((day, index) => {
+      // Update last known scores when we have actual data
+      if (day.subHasData && day.subScore !== null) {
+        lastSubScore = day.subScore;
+      }
+      if (day.domHasData && day.domScore !== null) {
+        lastDomScore = day.domScore;
+      }
+
+      // Carry forward previous scores when no data exists
+      if (!day.subHasData && lastSubScore !== null) {
+        day.subScore = lastSubScore;
+      }
+      if (!day.domHasData && lastDomScore !== null) {
+        day.domScore = lastDomScore;
+      }
+
+      // Use default score if no prior data exists
+      if (day.subScore === null) {
+        day.subScore = 50; // Default wellness score
+      }
+      if (day.domScore === null) {
+        day.domScore = 50; // Default wellness score
+      }
+    });
+
+    logger.debug('Monthly wellbeing data prepared with carry-forward:', monthData);
     return monthData;
   } catch (err) {
     logger.error('Error in fetchMonthlyWellbeingData:', err);
