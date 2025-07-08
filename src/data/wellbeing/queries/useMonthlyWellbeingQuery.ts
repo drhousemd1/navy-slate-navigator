@@ -21,13 +21,10 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
   try {
     const today = new Date();
     const start = startOfMonth(today);
-    const monthEnd = endOfMonth(today);
-    
-    // Only generate days up to today, don't include future days
-    const end = today < monthEnd ? today : monthEnd;
+    const end = endOfMonth(today);
     end.setHours(23, 59, 59, 999);
 
-    // Generate days for the month up to today only
+    // Generate all days for the month
     const monthDays = eachDayOfInterval({ start, end });
     const monthData: MonthlyWellbeingDataItem[] = monthDays.map(date => ({
       date: format(date, 'yyyy-MM-dd'),
@@ -89,8 +86,11 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
       }
     }
 
-    // Apply carry-forward logic day by day
+    // Apply carry-forward logic day by day, but only up to today
     monthData.forEach((day, index) => {
+      const dayDate = new Date(day.date);
+      const isToday = dayDate <= today;
+      
       // Update last known scores when we have actual data
       if (day.subHasData && day.subScore !== null) {
         lastSubScore = day.subScore;
@@ -99,21 +99,25 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
         lastDomScore = day.domScore;
       }
 
-      // Carry forward previous scores when no data exists
-      if (!day.subHasData && lastSubScore !== null) {
-        day.subScore = lastSubScore;
-      }
-      if (!day.domHasData && lastDomScore !== null) {
-        day.domScore = lastDomScore;
-      }
+      // Only apply carry-forward and defaults for days up to today
+      if (isToday) {
+        // Carry forward previous scores when no data exists
+        if (!day.subHasData && lastSubScore !== null) {
+          day.subScore = lastSubScore;
+        }
+        if (!day.domHasData && lastDomScore !== null) {
+          day.domScore = lastDomScore;
+        }
 
-      // Use default score if no prior data exists
-      if (day.subScore === null) {
-        day.subScore = 50; // Default wellness score
+        // Use default score if no prior data exists
+        if (day.subScore === null) {
+          day.subScore = 50; // Default wellness score
+        }
+        if (day.domScore === null) {
+          day.domScore = 50; // Default wellness score
+        }
       }
-      if (day.domScore === null) {
-        day.domScore = 50; // Default wellness score
-      }
+      // Future days keep null values so lines don't extend
     });
 
     logger.debug('Monthly wellbeing data prepared with carry-forward:', monthData);

@@ -19,21 +19,17 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
   logger.debug('Fetching weekly wellbeing data for users:', subUserId, domUserId);
   
   try {
-    // Calculate current week (Monday to Sunday) but only up to today
+    // Calculate current week (Monday to Sunday)
     const today = new Date();
     const start = new Date(today);
     start.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
     start.setHours(0, 0, 0, 0);
 
-    const weekEnd = new Date(start);
-    weekEnd.setDate(start.getDate() + 6); // End of week (Sunday)
-    weekEnd.setHours(23, 59, 59, 999);
-
-    // Only generate days up to today, don't include future days
-    const end = today < weekEnd ? today : weekEnd;
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6); // End of week (Sunday)
     end.setHours(23, 59, 59, 999);
 
-    // Generate days for the week up to today only
+    // Generate all days for the week
     const weekDays = eachDayOfInterval({ start, end });
     const weekData: WeeklyWellbeingDataItem[] = weekDays.map(date => ({
       date: format(date, 'yyyy-MM-dd'),
@@ -95,8 +91,11 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
       }
     }
 
-    // Apply carry-forward logic day by day
+    // Apply carry-forward logic day by day, but only up to today
     weekData.forEach((day, index) => {
+      const dayDate = new Date(day.date);
+      const isToday = dayDate <= today;
+      
       // Update last known scores when we have actual data
       if (day.subHasData && day.subScore !== null) {
         lastSubScore = day.subScore;
@@ -105,21 +104,25 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
         lastDomScore = day.domScore;
       }
 
-      // Carry forward previous scores when no data exists
-      if (!day.subHasData && lastSubScore !== null) {
-        day.subScore = lastSubScore;
-      }
-      if (!day.domHasData && lastDomScore !== null) {
-        day.domScore = lastDomScore;
-      }
+      // Only apply carry-forward and defaults for days up to today
+      if (isToday) {
+        // Carry forward previous scores when no data exists
+        if (!day.subHasData && lastSubScore !== null) {
+          day.subScore = lastSubScore;
+        }
+        if (!day.domHasData && lastDomScore !== null) {
+          day.domScore = lastDomScore;
+        }
 
-      // Use default score if no prior data exists
-      if (day.subScore === null) {
-        day.subScore = 50; // Default wellness score
+        // Use default score if no prior data exists
+        if (day.subScore === null) {
+          day.subScore = 50; // Default wellness score
+        }
+        if (day.domScore === null) {
+          day.domScore = 50; // Default wellness score
+        }
       }
-      if (day.domScore === null) {
-        day.domScore = 50; // Default wellness score
-      }
+      // Future days keep null values so lines don't extend
     });
 
     logger.debug('Weekly wellbeing data prepared with carry-forward:', weekData);
