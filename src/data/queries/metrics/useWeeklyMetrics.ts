@@ -34,9 +34,16 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       });
     });
 
+    // Use consistent date calculation
     const today = new Date();
-    const start = startOfWeek(today, { weekStartsOn: 1 });
-    const end = endOfWeek(today, { weekStartsOn: 1 });
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+
+    logger.debug('Weekly chart date range:', { start: start.toISOString(), end: end.toISOString() });
 
     // Fetch task completions
     const { data: taskCompletions, error: taskError } = await supabase
@@ -44,18 +51,17 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       .select('task_id, completed_at')
       .in('user_id', [subUserId, domUserId])
       .gte('completed_at', start.toISOString())
-      .lte('completed_at', end.toISOString());
+      .lt('completed_at', end.toISOString());
 
     if (taskError) logger.error('Error fetching task completions:', taskError);
     else if (taskCompletions) {
-      const completionsByDate = new Map<string, Set<string>>();
+      logger.debug('Raw task completions:', taskCompletions);
       taskCompletions.forEach(entry => {
         const date = format(new Date(entry.completed_at), 'yyyy-MM-dd');
-        if (!completionsByDate.has(date)) completionsByDate.set(date, new Set());
-        completionsByDate.get(date)?.add(entry.task_id);
-      });
-      completionsByDate.forEach((taskIds, date) => {
-        if (metricsMap.has(date)) metricsMap.get(date)!.tasksCompleted = taskIds.size;
+        logger.debug('Processing task completion for date:', date);
+        if (metricsMap.has(date)) {
+          metricsMap.get(date)!.tasksCompleted++;
+        }
       });
     }
 
@@ -65,7 +71,7 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       .select('violation_date')
       .in('user_id', [subUserId, domUserId])
       .gte('violation_date', start.toISOString())
-      .lte('violation_date', end.toISOString());
+      .lt('violation_date', end.toISOString());
 
     if (ruleError) logger.error('Error fetching rule violations:', ruleError);
     else if (ruleViolations) {
@@ -81,7 +87,7 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       .select('created_at')
       .in('user_id', [subUserId, domUserId])
       .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString());
+      .lt('created_at', end.toISOString());
 
     if (rewardError) logger.error('Error fetching reward usages:', rewardError);
     else if (rewardUsages) {
@@ -97,7 +103,7 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       .select('applied_date')
       .in('user_id', [subUserId, domUserId])
       .gte('applied_date', start.toISOString())
-      .lte('applied_date', end.toISOString());
+      .lt('applied_date', end.toISOString());
 
     if (punishmentError) logger.error('Error fetching punishments:', punishmentError);
     else if (punishmentsData) {
