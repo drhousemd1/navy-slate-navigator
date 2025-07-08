@@ -13,6 +13,11 @@ export const fetchWellbeingSnapshotForDate = async (userId: string, date: string
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
+    logger.debug('[fetchWellbeingSnapshotForDate] Date range:', {
+      startOfDay: startOfDay.toISOString(),
+      endOfDay: endOfDay.toISOString()
+    });
+
     const { data, error } = await supabase
       .from('wellbeing_snapshots')
       .select('*')
@@ -22,6 +27,8 @@ export const fetchWellbeingSnapshotForDate = async (userId: string, date: string
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    logger.debug('[fetchWellbeingSnapshotForDate] Query result:', { data, error, queryParams: { userId, startOfDay: startOfDay.toISOString(), endOfDay: endOfDay.toISOString() } });
 
     if (error) {
       logger.error('[fetchWellbeingSnapshotForDate] Error fetching wellbeing snapshot:', error);

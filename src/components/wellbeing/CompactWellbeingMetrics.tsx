@@ -23,6 +23,14 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
   const displayMetrics = metrics || DEFAULT_METRICS;
   const isGrayedOut = !selectedDate || !metrics;
 
+  // Debug logging for metrics display
+  if (selectedDate) {
+    console.log('[CompactWellbeingMetrics] Selected date:', selectedDate);
+    console.log('[CompactWellbeingMetrics] Received metrics:', metrics);
+    console.log('[CompactWellbeingMetrics] Display metrics:', displayMetrics);
+    console.log('[CompactWellbeingMetrics] Is grayed out:', isGrayedOut);
+  }
+
   return (
     <Card className="bg-navy border-light-navy">
       <CardContent className="pt-4 space-y-4">

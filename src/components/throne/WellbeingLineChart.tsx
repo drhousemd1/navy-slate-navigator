@@ -83,6 +83,8 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
     if (data && data.activePayload && data.activePayload[0] && data.activePayload[0].payload) {
       const clickedDate = data.activePayload[0].payload.date;
       logger.debug('Chart clicked for date:', clickedDate);
+      logger.debug('Current user ID:', subUserId || domUserId);
+      logger.debug('Chart payload:', data.activePayload[0].payload);
       setSelectedDate(clickedDate);
     }
   };
