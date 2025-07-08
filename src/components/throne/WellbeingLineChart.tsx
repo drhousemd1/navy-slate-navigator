@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWeeklyWellbeingQuery, WeeklyWellbeingDataItem } from '@/data/wellbeing/queries/useWeeklyWellbeingQuery';
 import { useMonthlyWellbeingQuery, MonthlyWellbeingDataItem } from '@/data/wellbeing/queries/useMonthlyWellbeingQuery';
-import { useWellbeingQuery } from '@/data/wellbeing/queries/useWellbeingQuery';
+
 import { useUserIds } from '@/contexts/UserIdsContext';
 import WellbeingMetricsDisplay from '@/components/wellbeing/WellbeingMetricsDisplay';
 import { getWellbeingColor } from '@/lib/wellbeingUtils';
@@ -66,10 +66,26 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
     enabled: currentView 
   });
   
-  // Get wellbeing data for the selected date
-  const { data: selectedWellbeingData, isLoading: wellbeingLoading } = useWellbeingQuery(
-    selectedDate ? (subUserId || domUserId) : null
-  );
+  const data = currentView ? monthlyData : weeklyData;
+  
+  // Get wellbeing data for the selected date from existing chart data
+  const selectedWellbeingData = React.useMemo(() => {
+    if (!selectedDate || !data) return null;
+    
+    const selectedItem = data.find(item => item.date === selectedDate);
+    if (!selectedItem || !selectedItem.hasData) return null;
+    
+    // Create a wellbeing snapshot object from the chart data
+    return {
+      id: 'temp-id',
+      user_id: subUserId || domUserId || '',
+      overall_score: selectedItem.overall_score || 50,
+      created_at: selectedDate,
+      updated_at: selectedDate,
+      // We don't have detailed metrics in chart data, so show empty metrics
+      metrics: {}
+    };
+  }, [selectedDate, data, subUserId, domUserId]);
   
   const handleToggle = (value: boolean) => {
     setLocalIsMonthlyView(value);
@@ -84,8 +100,6 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
   const handleClearSelection = () => {
     setSelectedDate(null);
   };
-  
-  const data = currentView ? monthlyData : weeklyData;
   const isLoading = currentView ? monthlyLoading : weeklyLoading;
   
   // Filter data to only show points with wellbeing data
@@ -209,7 +223,7 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
       <WellbeingMetricsDisplay
         selectedDate={selectedDate}
         wellbeingData={selectedWellbeingData}
-        isLoading={wellbeingLoading}
+        isLoading={false}
         onClear={handleClearSelection}
       />
     </Card>
