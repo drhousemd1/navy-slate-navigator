@@ -8,29 +8,34 @@ import { toastManager } from '@/lib/toastManager';
 
 const NOTIFICATION_TYPES = [
   {
-    key: 'taskReminders' as const,
-    label: 'Task Reminders',
-    description: 'Get notified about upcoming tasks'
+    key: 'ruleBroken' as const,
+    label: 'Rule Broken',
+    description: 'Get notified when your partner marks a rule as broken'
   },
   {
-    key: 'ruleViolations' as const,
-    label: 'Rule Violations',
-    description: 'Get notified when rules are marked as broken'
+    key: 'taskCompleted' as const,
+    label: 'Task Completed',
+    description: 'Get notified when your partner completes a task'
   },
   {
-    key: 'rewardAvailable' as const,
-    label: 'Reward Available',
-    description: 'Get notified when rewards become available'
+    key: 'rewardPurchased' as const,
+    label: 'Reward Purchased',
+    description: 'Get notified when your partner purchases a reward'
   },
   {
-    key: 'punishmentAssigned' as const,
-    label: 'Punishment Assigned',
-    description: 'Get notified when punishments are applied'
+    key: 'rewardRedeemed' as const,
+    label: 'Reward Redeemed',
+    description: 'Get notified when your partner redeems a reward'
   },
   {
-    key: 'partnerActivity' as const,
-    label: 'Partner Activity',
-    description: 'Get notified about your partner\'s activities'
+    key: 'punishmentPerformed' as const,
+    label: 'Punishment Performed',
+    description: 'Get notified when your partner applies a punishment'
+  },
+  {
+    key: 'wellnessUpdated' as const,
+    label: 'Wellness Updated',
+    description: 'Get notified when your partner updates their wellness score'
   }
 ];
 
@@ -109,24 +114,22 @@ const NotificationSettings: React.FC = () => {
         </div>
 
         {/* Individual notification type toggles */}
-        {preferences.enabled && (
-          <div className="pt-4 border-t border-light-navy space-y-3">
-            <Label className="text-gray-300 text-sm">Notification Types</Label>
-            {NOTIFICATION_TYPES.map((type) => (
-              <div key={type.key} className="flex items-center justify-between">
-                <div>
-                  <Label className="text-white text-sm">{type.label}</Label>
-                  <p className="text-gray-400 text-xs">{type.description}</p>
-                </div>
-                <Switch
-                  checked={preferences.types[type.key]}
-                  onCheckedChange={(enabled) => handleTypeToggle(type.key, enabled)}
-                  disabled={isLoading}
-                />
+        <div className="pt-4 border-t border-light-navy space-y-3">
+          <Label className="text-gray-300 text-sm">Notification Types</Label>
+          {NOTIFICATION_TYPES.map((type) => (
+            <div key={type.key} className={`flex items-center justify-between ${!preferences.enabled ? 'opacity-50' : ''}`}>
+              <div>
+                <Label className={`text-sm ${preferences.enabled ? 'text-white' : 'text-gray-500'}`}>{type.label}</Label>
+                <p className={`text-xs ${preferences.enabled ? 'text-gray-400' : 'text-gray-600'}`}>{type.description}</p>
               </div>
-            ))}
-          </div>
-        )}
+              <Switch
+                checked={preferences.enabled && preferences.types[type.key]}
+                onCheckedChange={(enabled) => handleTypeToggle(type.key, enabled)}
+                disabled={isLoading || !preferences.enabled}
+              />
+            </div>
+          ))}
+        </div>
 
         {error && (
           <div className="mt-4 p-3 bg-red-900/30 border border-red-700 rounded">

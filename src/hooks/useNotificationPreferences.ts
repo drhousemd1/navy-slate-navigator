@@ -6,22 +6,24 @@ import { logger } from '@/lib/logger';
 export interface NotificationPreferences {
   enabled: boolean;
   types: {
-    taskReminders: boolean;
-    ruleViolations: boolean;
-    rewardAvailable: boolean;
-    punishmentAssigned: boolean;
-    partnerActivity: boolean;
+    ruleBroken: boolean;
+    taskCompleted: boolean;
+    rewardPurchased: boolean;
+    rewardRedeemed: boolean;
+    punishmentPerformed: boolean;
+    wellnessUpdated: boolean;
   };
 }
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
   enabled: false,
   types: {
-    taskReminders: true,
-    ruleViolations: true,
-    rewardAvailable: true,
-    punishmentAssigned: true,
-    partnerActivity: true,
+    ruleBroken: true,
+    taskCompleted: true,
+    rewardPurchased: true,
+    rewardRedeemed: true,
+    punishmentPerformed: true,
+    wellnessUpdated: true,
   }
 };
 

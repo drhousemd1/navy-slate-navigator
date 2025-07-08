@@ -41,6 +41,7 @@ export interface ApplyPunishmentArgs {
   dayOfWeek?: number;
   currentPoints?: number;
   domPointsAwarded: number;
+  punishmentTitle?: string;
 }
 
 export interface PunishmentsContextType {

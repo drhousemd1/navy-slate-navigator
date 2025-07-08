@@ -6,15 +6,20 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { usePartnerHelper } from '@/hooks/usePartnerHelper';
 
 interface CreateRuleViolationParams {
   ruleId: string;
   userId: string;
+  ruleName?: string;
 }
 
 export const useCreateRuleViolation = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
+  const { notifyRuleBroken } = usePushNotifications();
+  const { getPartnerId } = usePartnerHelper();
 
   return useMutation({
     mutationFn: async ({ ruleId, userId }: CreateRuleViolationParams) => {
@@ -43,17 +48,21 @@ export const useCreateRuleViolation = () => {
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
       // Invalidate rules query to refetch and update violation counts
       queryClient.invalidateQueries({ 
         queryKey: [...RULES_QUERY_KEY, subUserId, domUserId] 
       });
       
-      // Remove duplicate success toast - optimistic mutations handle this automatically
-      // toast({
-      //   title: "Rule Violation Recorded",
-      //   description: "The rule violation has been recorded successfully.",
-      // });
+      // Send push notification to partner
+      try {
+        const partnerId = await getPartnerId();
+        if (partnerId && variables.ruleName) {
+          await notifyRuleBroken(partnerId, variables.ruleName);
+        }
+      } catch (error) {
+        logger.error('Error sending rule broken notification:', error);
+      }
     },
     onError: (error: Error) => {
       logger.error('Failed to record rule violation:', error);

@@ -5,6 +5,8 @@ import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { usePartnerHelper } from '@/hooks/usePartnerHelper';
 
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
@@ -13,7 +15,8 @@ interface BuySubRewardVars {
   rewardId: string; 
   cost: number; 
   currentSupply: number; 
-  currentPoints: number 
+  currentPoints: number;
+  rewardTitle?: string;
 }
 
 interface BuySubRewardOptimisticContext {
@@ -24,6 +27,8 @@ interface BuySubRewardOptimisticContext {
 export const useBuySubReward = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
+  const { notifyRewardPurchased } = usePushNotifications();
+  const { getPartnerId } = usePartnerHelper();
 
   const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
@@ -102,6 +107,16 @@ export const useBuySubReward = () => {
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) => 
         oldRewards.map(r => r.id === data.id ? data : r)
       );
+      
+      // Send push notification to partner
+      try {
+        const partnerId = await getPartnerId();
+        if (partnerId && variables.rewardTitle) {
+          await notifyRewardPurchased(partnerId, variables.rewardTitle);
+        }
+      } catch (error) {
+        logger.error('Error sending reward purchased notification:', error);
+      }
       
       await queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
     },

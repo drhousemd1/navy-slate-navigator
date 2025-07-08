@@ -9,7 +9,7 @@ const corsHeaders = {
 interface NotificationData {
   title: string;
   body: string;
-  type: 'taskReminders' | 'ruleViolations' | 'rewardAvailable' | 'punishmentAssigned' | 'partnerActivity';
+  type: 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated';
   url?: string;
   payload?: Record<string, any>;
   requireInteraction?: boolean;
@@ -104,11 +104,12 @@ serve(async (req) => {
     const defaultPreferences = {
       enabled: true,
       types: {
-        taskReminders: true,
-        ruleViolations: true,
-        rewardAvailable: true,
-        punishmentAssigned: true,
-        partnerActivity: true,
+        ruleBroken: true,
+        taskCompleted: true,
+        rewardPurchased: true,
+        rewardRedeemed: true,
+        punishmentPerformed: true,
+        wellnessUpdated: true,
       }
     };
 
