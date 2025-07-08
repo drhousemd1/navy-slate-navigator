@@ -25,6 +25,16 @@ const ThroneRoom: React.FC = () => {
   const weeklyMetricsEnabled = !isLoadingUserIds;
   const monthlyMetricsEnabled = !isLoadingUserIds;
   
+  // Debug logging for user IDs
+  const { subUserId, domUserId } = useUserIds();
+  logger.debug('[ThroneRoom] User IDs debug:', { 
+    subUserId, 
+    domUserId, 
+    isLoadingUserIds, 
+    weeklyMetricsEnabled, 
+    monthlyMetricsEnabled 
+  });
+  
   useWeeklyMetrics({ enabled: weeklyMetricsEnabled });
   useMonthlyMetrics({ enabled: monthlyMetricsEnabled });
   

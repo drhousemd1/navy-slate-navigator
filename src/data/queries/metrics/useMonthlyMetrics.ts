@@ -147,10 +147,20 @@ interface UseMonthlyMetricsOptions {
 export const useMonthlyMetrics = (options?: UseMonthlyMetricsOptions) => {
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
   
+  const isEnabled = !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? false);
+  
+  logger.debug('[useMonthlyMetrics] Query enabled check:', {
+    isLoadingUserIds,
+    subUserId,
+    domUserId,
+    optionsEnabled: options?.enabled,
+    finalEnabled: isEnabled
+  });
+  
   return useQuery<MonthlyMetricsData, Error>({
     queryKey: [...MONTHLY_METRICS_QUERY_KEY, subUserId, domUserId],
     queryFn: () => fetchMonthlyData(subUserId!, domUserId!),
-    enabled: !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? false),
+    enabled: isEnabled,
     ...STANDARD_QUERY_CONFIG,
   });
 };

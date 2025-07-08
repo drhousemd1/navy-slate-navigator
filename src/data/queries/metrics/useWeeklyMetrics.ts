@@ -128,10 +128,20 @@ interface UseWeeklyMetricsOptions {
 export const useWeeklyMetrics = (options?: UseWeeklyMetricsOptions) => {
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
   
+  const isEnabled = !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? false);
+  
+  logger.debug('[useWeeklyMetrics] Query enabled check:', {
+    isLoadingUserIds,
+    subUserId,
+    domUserId,
+    optionsEnabled: options?.enabled,
+    finalEnabled: isEnabled
+  });
+  
   return useQuery<WeeklyDataItem[], Error>({
     queryKey: [...WEEKLY_METRICS_QUERY_KEY, subUserId, domUserId],
     queryFn: () => fetchWeeklyData(subUserId!, domUserId!),
-    enabled: !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? false),
+    enabled: isEnabled,
     ...STANDARD_QUERY_CONFIG,
   });
 };
