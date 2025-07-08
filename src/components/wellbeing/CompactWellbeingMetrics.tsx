@@ -25,15 +25,7 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
 
   return (
     <Card className="bg-navy border-light-navy">
-      <CardContent className="pt-6 space-y-4">
-        <div className="text-center mb-4">
-          <h3 className="text-white font-medium">
-            {selectedDate ? `Wellness Details - ${new Date(selectedDate).toLocaleDateString()}` : 'Wellness Details'}
-          </h3>
-          <p className="text-sm text-nav-inactive mt-1">
-            {selectedDate ? 'Showing metrics for selected date' : 'Click on a chart point to view detailed wellness breakdown'}
-          </p>
-        </div>
+      <CardContent className="pt-4 space-y-4">
         
         {isLoading ? (
           <div className="grid grid-cols-2 gap-4">
