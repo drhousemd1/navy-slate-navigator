@@ -147,7 +147,7 @@ interface UseMonthlyMetricsOptions {
 export const useMonthlyMetrics = (options?: UseMonthlyMetricsOptions) => {
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
   
-  const isEnabled = !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? false);
+  const isEnabled = !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? true);
   
   logger.debug('[useMonthlyMetrics] Query enabled check:', {
     isLoadingUserIds,

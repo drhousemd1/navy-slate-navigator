@@ -128,7 +128,7 @@ interface UseWeeklyMetricsOptions {
 export const useWeeklyMetrics = (options?: UseWeeklyMetricsOptions) => {
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
   
-  const isEnabled = !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? false);
+  const isEnabled = !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? true);
   
   logger.debug('[useWeeklyMetrics] Query enabled check:', {
     isLoadingUserIds,
