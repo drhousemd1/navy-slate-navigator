@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Dot, Legend
+  LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Dot
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
@@ -220,10 +220,6 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
                     />
                   )}
                   activeDot={{ r: 6, stroke: '#FFFFFF', strokeWidth: 2, fill: '#EF4444' }}
-                />
-                <Legend 
-                  wrapperStyle={{ paddingTop: '20px' }}
-                  iconType="line"
                 />
               </LineChart>
             </ResponsiveContainer>
