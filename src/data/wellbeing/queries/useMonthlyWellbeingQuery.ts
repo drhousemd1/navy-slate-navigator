@@ -21,10 +21,13 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
   try {
     const today = new Date();
     const start = startOfMonth(today);
-    const end = endOfMonth(today);
+    const monthEnd = endOfMonth(today);
+    
+    // Only generate days up to today, don't include future days
+    const end = today < monthEnd ? today : monthEnd;
     end.setHours(23, 59, 59, 999);
 
-    // Generate all days for the month
+    // Generate days for the month up to today only
     const monthDays = eachDayOfInterval({ start, end });
     const monthData: MonthlyWellbeingDataItem[] = monthDays.map(date => ({
       date: format(date, 'yyyy-MM-dd'),

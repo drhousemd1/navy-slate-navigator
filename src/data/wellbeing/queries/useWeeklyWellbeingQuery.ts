@@ -19,18 +19,22 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
   logger.debug('Fetching weekly wellbeing data for users:', subUserId, domUserId);
   
   try {
-    // Calculate current week (Monday to Sunday)
+    // Calculate current week (Monday to Sunday) but only up to today
     const today = new Date();
     const start = new Date(today);
     start.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
     start.setHours(0, 0, 0, 0);
 
-    const end = new Date(start);
-    end.setDate(start.getDate() + 7);
+    const weekEnd = new Date(start);
+    weekEnd.setDate(start.getDate() + 6); // End of week (Sunday)
+    weekEnd.setHours(23, 59, 59, 999);
+
+    // Only generate days up to today, don't include future days
+    const end = today < weekEnd ? today : weekEnd;
     end.setHours(23, 59, 59, 999);
 
-    // Generate all days for the week
-    const weekDays = eachDayOfInterval({ start, end: new Date(end.getTime() - 1) });
+    // Generate days for the week up to today only
+    const weekDays = eachDayOfInterval({ start, end });
     const weekData: WeeklyWellbeingDataItem[] = weekDays.map(date => ({
       date: format(date, 'yyyy-MM-dd'),
       subScore: null,
