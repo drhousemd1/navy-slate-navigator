@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
 import UnifiedMetricsChart from '@/components/throne/UnifiedMetricsChart';
 import UnifiedMetricsTiles from '@/components/throne/UnifiedMetricsTiles';
+import WellbeingLineChart from '@/components/throne/WellbeingLineChart';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
 
@@ -49,6 +50,13 @@ const ThroneRoom: React.FC = () => {
         </p>
         
         <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+          <div className="w-full max-w-full overflow-x-hidden">
+            <WellbeingLineChart 
+              isMonthlyView={isMonthlyView} 
+              onToggleView={setIsMonthlyView} 
+            />
+          </div>
+          
           <div className="w-full max-w-full overflow-x-hidden">
             <UnifiedMetricsChart 
               isMonthlyView={isMonthlyView} 
