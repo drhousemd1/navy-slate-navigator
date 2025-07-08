@@ -1,17 +1,12 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useAuth } from '@/contexts/auth';
-import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary'; 
-import MonthlyMetricsChart from '@/components/throne/MonthlyMetricsChart';
-import WeeklyMetricsChart from '@/components/throne/WeeklyMetricsChart';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useWeeklyMetricsSummary } from '@/data/queries/useWeeklyMetricsSummary'; 
-import { useWeeklyMetrics } from '@/data/queries/metrics/useWeeklyMetrics';
-import { useMonthlyMetrics } from '@/data/queries/metrics/useMonthlyMetrics';
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
-import WeeklyMetricsSummaryTiles from '@/components/throne/WeeklyMetricsSummaryTiles';
+import UnifiedMetricsChart from '@/components/throne/UnifiedMetricsChart';
+import UnifiedMetricsTiles from '@/components/throne/UnifiedMetricsTiles';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
 
@@ -20,42 +15,7 @@ const ThroneRoom: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { isLoadingUserIds } = useUserIds();
-  
-  // Debug logging for user IDs
-  const { subUserId, domUserId } = useUserIds();
-  console.log('[ThroneRoom] CONSOLE LOG - User IDs debug:', { 
-    subUserId, 
-    domUserId, 
-    isLoadingUserIds
-  });
-  
-  logger.debug('[ThroneRoom] User IDs debug:', { 
-    subUserId, 
-    domUserId, 
-    isLoadingUserIds
-  });
-  
-  // Let hooks manage their own enablement logic
-  const weeklyMetricsResult = useWeeklyMetrics();
-  const monthlyMetricsResult = useMonthlyMetrics();
-  
-  console.log('[ThroneRoom] CONSOLE LOG - Hook results:', {
-    weeklyLoading: weeklyMetricsResult.isLoading,
-    weeklyError: weeklyMetricsResult.error,
-    weeklyData: weeklyMetricsResult.data,
-    monthlyLoading: monthlyMetricsResult.isLoading,
-    monthlyError: monthlyMetricsResult.error,
-    monthlyData: monthlyMetricsResult.data
-  });
-  
-  const { data: metricsSummaryData, isLoading, error } = useWeeklyMetricsSummary();
-
-  const metricsSummary: WeeklyMetricsSummary = metricsSummaryData || { 
-    tasksCompleted: 0, 
-    rulesBroken: 0, 
-    rewardsRedeemed: 0, 
-    punishments: 0 
-  };
+  const [isMonthlyView, setIsMonthlyView] = useState(false);
   
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -69,25 +29,12 @@ const ThroneRoom: React.FC = () => {
     }
   }, [location.pathname, queryClient]);
 
-  if (isLoading || isLoadingUserIds) {
+  if (isLoadingUserIds) {
     return (
       <AppLayout>
         <div className="p-6 space-y-6 animate-fade-in overflow-x-hidden w-full max-w-full">
           <div className="flex items-center justify-center h-60 text-white">
             Loading your command center...
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (error) {
-    logger.error("Error fetching weekly metrics summary:", error);
-    return (
-      <AppLayout>
-        <div className="p-6 space-y-6 animate-fade-in overflow-x-hidden w-full max-w-full">
-          <div className="flex items-center justify-center h-60 text-white">
-            Error loading data: {error.message}
           </div>
         </div>
       </AppLayout>
@@ -103,20 +50,14 @@ const ThroneRoom: React.FC = () => {
         
         <div className="space-y-6 w-full max-w-full overflow-x-hidden">
           <div className="w-full max-w-full overflow-x-hidden">
-            <WeeklyMetricsChart />
-          </div>
-          
-          <div className="space-y-2 w-full max-w-full overflow-x-hidden">
-            <WeeklyMetricsSummaryTiles 
-              tasksCompleted={metricsSummary.tasksCompleted}
-              rulesBroken={metricsSummary.rulesBroken}
-              rewardsRedeemed={metricsSummary.rewardsRedeemed}
-              punishments={metricsSummary.punishments}
+            <UnifiedMetricsChart 
+              isMonthlyView={isMonthlyView} 
+              onToggleView={setIsMonthlyView} 
             />
           </div>
           
-          <div className="w-full max-w-full overflow-x-hidden">
-            <MonthlyMetricsChart />
+          <div className="space-y-2 w-full max-w-full overflow-x-hidden">
+            <UnifiedMetricsTiles isMonthlyView={isMonthlyView} />
           </div>
           
           <div className="w-full max-w-full overflow-x-hidden">
