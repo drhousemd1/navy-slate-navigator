@@ -55,8 +55,11 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
     }));
 
     const today = new Date();
-    const start = startOfMonth(today).toISOString();
-    const end = endOfMonth(today).toISOString();
+    const startDate = startOfMonth(today);
+    const endDate = endOfMonth(today);
+    endDate.setHours(23, 59, 59, 999); // Include the full last day
+    const start = startDate.toISOString();
+    const end = endDate.toISOString();
 
     logger.debug('Monthly chart date range:', { start, end });
 
@@ -71,7 +74,7 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
       `)
       .in('user_id', [subUserId, domUserId])
       .gte('completed_at', start)
-      .lt('completed_at', end);
+      .lte('completed_at', end);
     if (taskError) logger.error('Error loading task_completion_history for monthly hook', taskError);
     else if (taskEntries) {
       logger.debug('Monthly task completions found:', taskEntries.length);
@@ -94,7 +97,7 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
       .select('violation_date')
       .in('user_id', [subUserId, domUserId])
       .gte('violation_date', start)
-      .lt('violation_date', end);
+      .lte('violation_date', end);
     if (ruleError) logger.error('Error loading rule_violations for monthly hook', ruleError);
     else if (ruleEntries) {
       ruleEntries.forEach(entry => {
@@ -113,7 +116,7 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
       `)
       .in('user_id', [subUserId, domUserId])
       .gte('created_at', start)
-      .lt('created_at', end);
+      .lte('created_at', end);
     if (rewardError) logger.error('Error loading reward_usage for monthly hook', rewardError);
     else if (rewardEntries) {
       rewardEntries.forEach(entry => {
@@ -135,7 +138,7 @@ const fetchMonthlyData = async (subUserId: string, domUserId: string): Promise<M
       .select('applied_date')
       .in('user_id', [subUserId, domUserId])
       .gte('applied_date', start)
-      .lt('applied_date', end);
+      .lte('applied_date', end);
     if (punishmentError) logger.error('Error loading punishment_history for monthly hook', punishmentError);
     else if (punishmentEntries) {
       punishmentEntries.forEach(entry => {

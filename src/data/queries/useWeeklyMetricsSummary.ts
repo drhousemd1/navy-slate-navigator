@@ -25,8 +25,10 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
 
     const end = new Date(start);
     end.setDate(start.getDate() + 7);
+    end.setHours(23, 59, 59, 999); // Include the full last day
 
     logger.debug('Fetching weekly summary from', start.toISOString(), 'to', end.toISOString(), 'for users:', subUserId, domUserId);
+    logger.debug('Today is:', today.toISOString(), 'Day of week:', today.getDay());
 
     // Fetch task completions with task info to separate Dom/Sub
     const { data: taskCompletions, error: taskError } = await supabase
@@ -39,7 +41,7 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
       `)
       .in('user_id', [subUserId, domUserId])
       .gte('completed_at', start.toISOString())
-      .lt('completed_at', end.toISOString());
+      .lte('completed_at', end.toISOString());
     if (taskError) throw new Error(`Error fetching tasks: ${taskError.message}`);
 
     logger.debug('Task completions found:', taskCompletions?.length || 0);
@@ -60,7 +62,7 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
       .select('*')
       .in('user_id', [subUserId, domUserId])
       .gte('violation_date', start.toISOString())
-      .lt('violation_date', end.toISOString());
+      .lte('violation_date', end.toISOString());
     if (ruleError) throw new Error(`Error fetching rule violations: ${ruleError.message}`);
 
     logger.debug('Rule violations found:', ruleViolations?.length || 0);
@@ -75,7 +77,7 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
       `)
       .in('user_id', [subUserId, domUserId])
       .gte('created_at', start.toISOString())
-      .lt('created_at', end.toISOString());
+      .lte('created_at', end.toISOString());
     if (rewardError) throw new Error(`Error fetching rewards: ${rewardError.message}`);
 
     logger.debug('Reward usages found:', rewardUsages?.length || 0);
@@ -96,7 +98,7 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
       .select('*')
       .in('user_id', [subUserId, domUserId])
       .gte('applied_date', start.toISOString())
-      .lt('applied_date', end.toISOString());
+      .lte('applied_date', end.toISOString());
     if (punishmentError) throw new Error(`Error fetching punishments: ${punishmentError.message}`);
 
     logger.debug('Punishments found:', punishments?.length || 0);

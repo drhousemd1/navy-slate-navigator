@@ -46,8 +46,10 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
 
     const end = new Date(start);
     end.setDate(start.getDate() + 7);
+    end.setHours(23, 59, 59, 999); // Include the full last day
 
     logger.debug('Weekly chart date range:', { start: start.toISOString(), end: end.toISOString() });
+    logger.debug('Current day:', today.toISOString(), 'Day of week:', today.getDay());
 
     // Fetch task completions with task info to separate Dom/Sub
     const { data: taskCompletions, error: taskError } = await supabase
@@ -60,7 +62,7 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       `)
       .in('user_id', [subUserId, domUserId])
       .gte('completed_at', start.toISOString())
-      .lt('completed_at', end.toISOString());
+      .lte('completed_at', end.toISOString());
 
     if (taskError) logger.error('Error fetching task completions:', taskError);
     else if (taskCompletions) {
@@ -85,7 +87,7 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       .select('violation_date')
       .in('user_id', [subUserId, domUserId])
       .gte('violation_date', start.toISOString())
-      .lt('violation_date', end.toISOString());
+      .lte('violation_date', end.toISOString());
 
     if (ruleError) logger.error('Error fetching rule violations:', ruleError);
     else if (ruleViolations) {
@@ -105,7 +107,7 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       `)
       .in('user_id', [subUserId, domUserId])
       .gte('created_at', start.toISOString())
-      .lt('created_at', end.toISOString());
+      .lte('created_at', end.toISOString());
 
     if (rewardError) logger.error('Error fetching reward usages:', rewardError);
     else if (rewardUsages) {
@@ -128,7 +130,7 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       .select('applied_date')
       .in('user_id', [subUserId, domUserId])
       .gte('applied_date', start.toISOString())
-      .lt('applied_date', end.toISOString());
+      .lte('applied_date', end.toISOString());
 
     if (punishmentError) logger.error('Error fetching punishments:', punishmentError);
     else if (punishmentsData) {
