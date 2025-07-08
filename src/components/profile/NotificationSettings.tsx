@@ -87,8 +87,11 @@ const NotificationSettings: React.FC = () => {
   }
 
   return (
-    <div className="mb-8">
-      <Label className="block text-sm font-medium text-gray-300 mb-4">Notification Settings</Label>
+    <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
+      <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+        <Bell className="w-5 h-5" />
+        Notification Settings
+      </h2>
       
       {/* Main notification toggle */}
       <div className="bg-navy p-4 rounded border border-light-navy space-y-4">
