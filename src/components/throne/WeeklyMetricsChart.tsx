@@ -5,11 +5,23 @@ import {
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import WeeklyMetricsChartSkeleton from './WeeklyMetricsChartSkeleton';
 import { useWeeklyMetrics, WeeklyDataItem } from '@/data/queries/metrics/useWeeklyMetrics'; 
 import { logger } from '@/lib/logger';
 
-const WeeklyMetricsChart: React.FC = () => {
+interface WeeklyMetricsChartProps {
+  showToggle?: boolean;
+  onToggleView?: (isMonthly: boolean) => void;
+  currentView?: boolean;
+}
+
+const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({ 
+  showToggle = false, 
+  onToggleView, 
+  currentView = false 
+}) => {
   const chartConfig = {
     tasksCompleted: { color: '#0EA5E9', label: 'Tasks Completed' },
     rulesBroken: { color: '#F97316', label: 'Rules Broken' },
@@ -34,7 +46,26 @@ const WeeklyMetricsChart: React.FC = () => {
   return (
     <Card className="bg-navy border border-light-navy rounded-lg">
       <div className="p-4">
-        <h2 className="text-lg font-semibold text-white mb-2">Weekly Activity</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold text-white">
+            {currentView ? 'Monthly' : 'Weekly'} Activity
+          </h2>
+          {showToggle && (
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="view-toggle" className="text-sm text-nav-inactive">
+                Weekly
+              </Label>
+              <Switch
+                id="view-toggle"
+                checked={currentView}
+                onCheckedChange={onToggleView}
+              />
+              <Label htmlFor="view-toggle" className="text-sm text-nav-inactive">
+                Monthly
+              </Label>
+            </div>
+          )}
+        </div>
         <div className="h-60">
           {!hasData && !isLoading ? (
             <div className="flex items-center justify-center h-full text-white">

@@ -4,6 +4,8 @@ import {
 } from 'recharts';
 import { format, getMonth, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { ChartContainer } from '@/components/ui/chart';
 import MonthlyMetricsSummaryTiles from './MonthlyMetricsSummaryTiles';
 import MonthlyMetricsChartSkeleton from './MonthlyMetricsChartSkeleton';
@@ -11,9 +13,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useMonthlyMetrics, MonthlyMetricsData, MonthlyDataItem, MonthlyMetricsSummary } from '@/data/queries/metrics/useMonthlyMetrics';
 import { logger } from '@/lib/logger';
 
-// Interface MonthlyMetricsSummary is now imported from the hook
+interface MonthlyMetricsChartProps {
+  showToggle?: boolean;
+  onToggleView?: (isMonthly: boolean) => void;
+  currentView?: boolean;
+}
 
-const MonthlyMetricsChart: React.FC = () => {
+const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({ 
+  showToggle = false, 
+  onToggleView, 
+  currentView = true 
+}) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
@@ -183,7 +193,26 @@ const MonthlyMetricsChart: React.FC = () => {
     <div className="space-y-2">
       <Card className="bg-navy border border-light-navy rounded-lg">
         <div className="p-4">
-          <h2 className="text-lg font-semibold text-white mb-2">Monthly Activity</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold text-white">
+              {currentView ? 'Monthly' : 'Weekly'} Activity
+            </h2>
+            {showToggle && (
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="view-toggle" className="text-sm text-nav-inactive">
+                  Weekly
+                </Label>
+                <Switch
+                  id="view-toggle"
+                  checked={currentView}
+                  onCheckedChange={onToggleView}
+                />
+                <Label htmlFor="view-toggle" className="text-sm text-nav-inactive">
+                  Monthly
+                </Label>
+              </div>
+            )}
+          </div>
           <div ref={chartContainerRef} className="overflow-hidden relative h-64">
             <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
@@ -214,7 +243,7 @@ const MonthlyMetricsChart: React.FC = () => {
         </div>
       </Card>
       
-      <MonthlyMetricsSummaryTiles {...data.monthlyTotals} />
+      {!showToggle && <MonthlyMetricsSummaryTiles {...data.monthlyTotals} />}
     </div>
   );
 };
