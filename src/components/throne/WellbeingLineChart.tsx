@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Dot
+  LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Dot
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { useMonthlyWellbeingQuery, MonthlyWellbeingDataItem } from '@/data/wellb
 import { useWellbeingSnapshotForDate } from '@/data/wellbeing/queries/useWellbeingSnapshotForDate';
 
 import { useUserIds } from '@/contexts/UserIdsContext';
-import WellbeingMetricsSliders from '@/components/wellbeing/WellbeingMetricsSliders';
+import CompactWellbeingMetrics from '@/components/wellbeing/CompactWellbeingMetrics';
 import { getWellbeingColor } from '@/lib/wellbeingUtils';
 import { logger } from '@/lib/logger';
 
@@ -26,10 +26,10 @@ interface CustomDotProps {
   cx?: number;
   cy?: number;
   payload?: WeeklyWellbeingDataItem | MonthlyWellbeingDataItem;
-  onClick?: (date: string) => void;
+  isSelected?: boolean;
 }
 
-const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, onClick }) => {
+const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, isSelected }) => {
   if (!payload?.hasData || cx === undefined || cy === undefined) return null;
   
   const score = payload.overall_score || 50;
@@ -39,12 +39,11 @@ const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, onClick }) => {
     <Dot
       cx={cx}
       cy={cy}
-      r={4}
+      r={isSelected ? 6 : 4}
       fill={color}
       stroke="#FFFFFF"
-      strokeWidth={2}
+      strokeWidth={isSelected ? 3 : 2}
       style={{ cursor: 'pointer' }}
-      onClick={() => onClick?.(payload.date)}
     />
   );
 };
@@ -80,9 +79,12 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
     onToggleView?.(value);
   };
   
-  const handleDotClick = (date: string) => {
-    logger.debug('Wellbeing dot clicked for date:', date);
-    setSelectedDate(date);
+  const handleChartClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload[0] && data.activePayload[0].payload) {
+      const clickedDate = data.activePayload[0].payload.date;
+      logger.debug('Chart clicked for date:', clickedDate);
+      setSelectedDate(clickedDate);
+    }
   };
   
   const handleClearSelection = () => {
@@ -151,6 +153,7 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
               <LineChart 
                 data={chartData} 
                 margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                onClick={handleChartClick}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
                 <XAxis 
@@ -172,29 +175,18 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
                   tick={{ fill: '#D1D5DB' }} 
                   stroke="#8E9196"
                 />
-                <Tooltip 
-                  cursor={{ stroke: '#4B5563', strokeWidth: 1 }}
-                  contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155' }}
-                  labelStyle={{ color: '#F8FAFC' }}
-                  labelFormatter={(label) => {
-                    try {
-                      return format(parseISO(String(label)), 'EEEE, MMM d');
-                    } catch {
-                      return label;
-                    }
-                  }}
-                  formatter={(value: number | null) => {
-                    if (value === null) return ['No data', 'Wellness Score'];
-                    return [`${value}/100`, 'Wellness Score'];
-                  }}
-                />
                 <Line 
                   type="monotone" 
                   dataKey="displayScore" 
                   stroke="hsl(var(--wellbeing-good))"
                   strokeWidth={2}
                   connectNulls={false}
-                  dot={<CustomDot onClick={handleDotClick} />}
+                  dot={(props) => (
+                    <CustomDot 
+                      {...props} 
+                      isSelected={props.payload?.date === selectedDate}
+                    />
+                  )}
                   activeDot={{ r: 6, stroke: '#FFFFFF', strokeWidth: 2 }}
                 />
               </LineChart>
@@ -204,7 +196,7 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
       </div>
       
       <div className="mt-4">
-        <WellbeingMetricsSliders
+        <CompactWellbeingMetrics
           metrics={selectedWellbeingData?.metrics || null}
           selectedDate={selectedDate}
           isLoading={wellbeingLoading}
