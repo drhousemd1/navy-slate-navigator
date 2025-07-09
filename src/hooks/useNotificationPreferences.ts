@@ -12,6 +12,7 @@ export interface NotificationPreferences {
     rewardRedeemed: boolean;
     punishmentPerformed: boolean;
     wellnessUpdated: boolean;
+    wellnessCheckin: boolean;
   };
 }
 
@@ -24,6 +25,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
     rewardRedeemed: true,
     punishmentPerformed: true,
     wellnessUpdated: true,
+    wellnessCheckin: true,
   }
 };
 

@@ -9,7 +9,8 @@ export type NotificationType =
   | 'rewardPurchased'
   | 'rewardRedeemed'
   | 'punishmentPerformed'
-  | 'wellnessUpdated';
+  | 'wellnessUpdated'
+  | 'wellnessCheckin';
 
 interface NotificationPayload {
   title: string;
@@ -111,6 +112,31 @@ export const usePushNotifications = () => {
     });
   }, [sendNotificationToPartner]);
 
+  const triggerWellnessCheckin = useCallback(async (userId?: string) => {
+    try {
+      if (!user) {
+        logger.warn('[usePushNotifications] User not authenticated');
+        return false;
+      }
+
+      // Call the wellness reminder function
+      const { error } = await supabase.functions.invoke('send-wellness-reminder', {
+        body: { userId }
+      });
+
+      if (error) {
+        logger.error('[usePushNotifications] Error triggering wellness checkin:', error);
+        return false;
+      }
+
+      logger.debug('[usePushNotifications] Wellness checkin triggered successfully');
+      return true;
+    } catch (error) {
+      logger.error('[usePushNotifications] Failed to trigger wellness checkin:', error);
+      return false;
+    }
+  }, [user]);
+
   return {
     sendNotificationToPartner,
     notifyRuleBroken,
@@ -118,6 +144,7 @@ export const usePushNotifications = () => {
     notifyRewardPurchased,
     notifyRewardRedeemed,
     notifyPunishmentPerformed,
-    notifyWellnessUpdated
+    notifyWellnessUpdated,
+    triggerWellnessCheckin
   };
 };

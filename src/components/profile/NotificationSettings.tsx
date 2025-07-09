@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Bell, BellOff } from 'lucide-react';
 import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { toastManager } from '@/lib/toastManager';
+import WellnessReminderSettings from './WellnessReminderSettings';
 
 const NOTIFICATION_TYPES = [
   {
@@ -140,6 +141,9 @@ const NotificationSettings: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Wellness Reminder Settings */}
+      <WellnessReminderSettings />
     </div>
   );
 };
