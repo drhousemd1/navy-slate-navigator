@@ -28,9 +28,10 @@ interface CustomDotProps {
   payload?: WeeklyWellbeingDataItem | MonthlyWellbeingDataItem;
   isSelected?: boolean;
   userType?: 'sub' | 'dom';
+  onClick?: (date: string, userType: 'sub' | 'dom') => void;
 }
 
-const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, isSelected, userType }) => {
+const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, isSelected, userType, onClick }) => {
   if (!payload || cx === undefined || cy === undefined) return null;
   
   // Check if this user type has data
@@ -39,6 +40,12 @@ const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, isSelected, user
   
   // Use role-based colors instead of score-based colors
   const color = userType === 'sub' ? '#3B82F6' : '#EF4444'; // Blue for sub, red for dom
+  
+  const handleClick = () => {
+    if (onClick && userType) {
+      onClick(payload.date, userType);
+    }
+  };
   
   return (
     <Dot
@@ -49,6 +56,7 @@ const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, isSelected, user
       stroke="#FFFFFF"
       strokeWidth={isSelected ? 3 : 2}
       style={{ cursor: 'pointer' }}
+      onClick={handleClick}
     />
   );
 };
@@ -86,21 +94,10 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
     onToggleView?.(value);
   };
   
-  const handleChartClick = (data: any) => {
-    if (data && data.activePayload && data.activePayload[0] && data.activePayload[0].payload) {
-      const clickedDate = data.activePayload[0].payload.date;
-      const payload = data.activePayload[0].payload;
-      
-      // Determine which user's data was clicked based on the dataKey
-      const dataKey = data.activePayload[0].dataKey;
-      const userType = dataKey === 'subScore' ? 'sub' : 'dom';
-      
-      logger.debug('Chart clicked for date:', clickedDate, 'userType:', userType);
-      logger.debug('Chart payload:', payload);
-      
-      setSelectedDate(clickedDate);
-      setSelectedUserType(userType);
-    }
+  const handleDotClick = (date: string, userType: 'sub' | 'dom') => {
+    logger.debug('Dot clicked for date:', date, 'userType:', userType);
+    setSelectedDate(date);
+    setSelectedUserType(userType);
   };
   
   const handleClearSelection = () => {
@@ -167,7 +164,6 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
               <LineChart 
                 data={chartData} 
                 margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                onClick={handleChartClick}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
                 <XAxis 
@@ -196,13 +192,14 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
                   strokeWidth={2}
                   connectNulls={false}
                   name="Submissive"
-                  dot={(props) => (
-                    <CustomDot 
-                      {...props} 
-                      userType="sub"
-                      isSelected={props.payload?.date === selectedDate && selectedUserType === 'sub'}
-                    />
-                  )}
+                   dot={(props) => (
+                     <CustomDot 
+                       {...props} 
+                       userType="sub"
+                       isSelected={props.payload?.date === selectedDate && selectedUserType === 'sub'}
+                       onClick={handleDotClick}
+                     />
+                   )}
                   activeDot={{ r: 6, stroke: '#FFFFFF', strokeWidth: 2, fill: '#3B82F6' }}
                 />
                 <Line 
@@ -212,13 +209,14 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
                   strokeWidth={2}
                   connectNulls={false}
                   name="Dominant"
-                  dot={(props) => (
-                    <CustomDot 
-                      {...props} 
-                      userType="dom"
-                      isSelected={props.payload?.date === selectedDate && selectedUserType === 'dom'}
-                    />
-                  )}
+                   dot={(props) => (
+                     <CustomDot 
+                       {...props} 
+                       userType="dom"
+                       isSelected={props.payload?.date === selectedDate && selectedUserType === 'dom'}
+                       onClick={handleDotClick}
+                     />
+                   )}
                   activeDot={{ r: 6, stroke: '#FFFFFF', strokeWidth: 2, fill: '#EF4444' }}
                 />
               </LineChart>
