@@ -41,3 +41,27 @@ export const DEFAULT_METRICS: WellbeingMetrics = {
   physical_touch: 50,
   emotional_support: 50,
 };
+
+// Wellness reminder types
+export interface WellnessReminder {
+  id: string;
+  user_id: string;
+  enabled: boolean;
+  reminder_time: string; // Format: "HH:MM:SS"
+  timezone: string;
+  last_sent: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateWellnessReminderData {
+  enabled: boolean;
+  reminder_time: string;
+  timezone: string;
+}
+
+export interface UpdateWellnessReminderData {
+  enabled?: boolean;
+  reminder_time?: string;
+  timezone?: string;
+}

@@ -4,3 +4,4 @@ export * from './useWeeklyWellbeingQuery';
 export * from './useMonthlyWellbeingQuery';
 export * from './fetchWellbeingSnapshotForDate';
 export * from './useWellbeingSnapshotForDate';
+export * from './useWellnessReminderQuery';
