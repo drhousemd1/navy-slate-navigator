@@ -1,14 +1,23 @@
 import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUpdateNotificationPreferences, useCreatePushSubscription, useDeletePushSubscription } from '@/data/notifications';
 import type { NotificationPreferences } from '@/data/notifications/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Simple VAPID key for development
 const VAPID_PUBLIC_KEY = "BEl62iUYgUivxIkv69yViEuiBIa40HEd0-3NqShQqFng_blTsrfCNnHR-f1z6J1KuEf8bjuMc2g6F8C9_1mNsNE";
 
-export function useNotificationManager(preferences: NotificationPreferences) {
+export function useNotificationManager() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const updatePreferences = useUpdateNotificationPreferences();
   const createPushSubscription = useCreatePushSubscription();
   const deletePushSubscription = useDeletePushSubscription();
+
+  // Helper to get current preferences from query cache
+  const getCurrentPreferences = useCallback((): NotificationPreferences | undefined => {
+    return queryClient.getQueryData<NotificationPreferences>(['notification-preferences', user?.id]);
+  }, [queryClient, user?.id]);
 
   const enablePushNotifications = useCallback(async (): Promise<boolean> => {
     try {
@@ -71,53 +80,83 @@ export function useNotificationManager(preferences: NotificationPreferences) {
     }
   }, [deletePushSubscription]);
 
-  const enableNotifications = useCallback(() => {
+  const enableNotifications = useCallback(async () => {
+    const currentPreferences = getCurrentPreferences();
+    if (!currentPreferences) {
+      console.warn('No preferences available for enabling notifications');
+      return;
+    }
+
+    console.log('Enabling notifications with current preferences:', currentPreferences);
+
     // Update preferences immediately with optimistic update
     const newPreferences: NotificationPreferences = {
-      ...preferences,
+      ...currentPreferences,
       enabled: true,
     };
 
-    // Handle push notifications first, then update preferences
-    enablePushNotifications().then((success) => {
+    try {
+      // Handle push notifications first, then update preferences
+      const success = await enablePushNotifications();
       if (success) {
         updatePreferences.mutate({ preferences: newPreferences });
+      } else {
+        console.warn('Push notification setup failed, updating preferences anyway');
+        updatePreferences.mutate({ preferences: newPreferences });
       }
-    }).catch(error => {
+    } catch (error) {
       console.warn('Push notification setup failed:', error);
-    });
-  }, [preferences, updatePreferences, enablePushNotifications]);
+      updatePreferences.mutate({ preferences: newPreferences });
+    }
+  }, [getCurrentPreferences, updatePreferences, enablePushNotifications]);
 
-  const disableNotifications = useCallback(() => {
+  const disableNotifications = useCallback(async () => {
+    const currentPreferences = getCurrentPreferences();
+    if (!currentPreferences) {
+      console.warn('No preferences available for disabling notifications');
+      return;
+    }
+
+    console.log('Disabling notifications with current preferences:', currentPreferences);
+
     // Update preferences immediately with optimistic update
     const newPreferences: NotificationPreferences = {
-      ...preferences,
+      ...currentPreferences,
       enabled: false,
     };
 
-    // Handle push notifications cleanup first, then update preferences
-    disablePushNotifications().then((success) => {
+    try {
+      // Handle push notifications cleanup first, then update preferences
+      await disablePushNotifications();
       updatePreferences.mutate({ preferences: newPreferences });
-    }).catch(error => {
+    } catch (error) {
       console.warn('Push notification cleanup failed:', error);
       // Still update preferences even if cleanup fails
       updatePreferences.mutate({ preferences: newPreferences });
-    });
-  }, [preferences, updatePreferences, disablePushNotifications]);
+    }
+  }, [getCurrentPreferences, updatePreferences, disablePushNotifications]);
 
   const updateNotificationType = useCallback(
     (type: keyof NotificationPreferences['types'], enabled: boolean) => {
+      const currentPreferences = getCurrentPreferences();
+      if (!currentPreferences) {
+        console.warn('No preferences available for updating notification type');
+        return;
+      }
+
+      console.log(`Updating notification type ${type} to ${enabled} with current preferences:`, currentPreferences);
+
       const newPreferences: NotificationPreferences = {
-        ...preferences,
+        ...currentPreferences,
         types: {
-          ...preferences.types,
+          ...currentPreferences.types,
           [type]: enabled,
         },
       };
 
       updatePreferences.mutate({ preferences: newPreferences });
     },
-    [preferences, updatePreferences]
+    [getCurrentPreferences, updatePreferences]
   );
 
   return {

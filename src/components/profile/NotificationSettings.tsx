@@ -41,11 +41,16 @@ const NOTIFICATION_TYPES = [
 ];
 
 const NotificationSettings: React.FC = () => {
-  const { data: preferences } = useNotificationPreferencesQuery();
-  const { enableNotifications, disableNotifications, updateNotificationType } = useNotificationManager(preferences!);
+  const { data: preferences, isLoading } = useNotificationPreferencesQuery();
+  const { enableNotifications, disableNotifications, updateNotificationType } = useNotificationManager();
 
   const handleMainToggle = async () => {
-    if (!preferences) return;
+    if (!preferences) {
+      console.warn('Cannot toggle notifications - preferences not loaded');
+      return;
+    }
+    
+    console.log('Toggling notifications from:', preferences.enabled);
     
     if (preferences.enabled) {
       await disableNotifications();
@@ -55,11 +60,25 @@ const NotificationSettings: React.FC = () => {
   };
 
   const handleTypeToggle = (type: keyof NotificationPreferences['types'], enabled: boolean) => {
+    if (!preferences) {
+      console.warn('Cannot toggle notification type - preferences not loaded');
+      return;
+    }
     updateNotificationType(type, enabled);
   };
 
-  if (!preferences) {
-    return <div>Loading notification settings...</div>;
+  if (isLoading || !preferences) {
+    return (
+      <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
+        <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+          <Bell className="w-5 h-5" />
+          Notification Settings
+        </h2>
+        <div className="bg-navy p-4 rounded border border-light-navy">
+          <div className="text-white">Loading notification settings...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
