@@ -2,7 +2,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Bell, BellOff } from 'lucide-react';
-import { useNotificationPreferencesQuery } from '@/data/notifications';
+import { useNotificationPreferencesData } from '@/data/notifications/useNotificationPreferencesData';
 import { useNotificationManager } from '@/hooks/useNotificationManager';
 import type { NotificationPreferences } from '@/data/notifications/types';
 import WellnessReminderSettings from './WellnessReminderSettings';
@@ -41,11 +41,15 @@ const NOTIFICATION_TYPES = [
 ];
 
 const NotificationSettings: React.FC = () => {
-  const { data: preferences, isLoading } = useNotificationPreferencesQuery();
+  const { 
+    preferences, 
+    isLoading,
+    updatePreferences,
+    isUpdating
+  } = useNotificationPreferencesData();
   const { 
     enableNotifications, 
     disableNotifications, 
-    updateNotificationType, 
     pushSupported, 
     pushError, 
     isMobile, 
@@ -53,29 +57,34 @@ const NotificationSettings: React.FC = () => {
   } = useNotificationManager();
 
   const handleMainToggle = async () => {
-    if (!preferences) {
-      console.warn('Cannot toggle notifications - preferences not loaded');
-      return;
-    }
+    const newPreferences = {
+      ...preferences,
+      enabled: !preferences.enabled
+    };
     
-    console.log('Toggling notifications from:', preferences.enabled);
+    await updatePreferences(newPreferences);
     
-    if (preferences.enabled) {
-      await disableNotifications();
-    } else {
+    // Also handle push notifications
+    if (newPreferences.enabled) {
       await enableNotifications();
+    } else {
+      await disableNotifications();
     }
   };
 
-  const handleTypeToggle = (type: keyof NotificationPreferences['types'], enabled: boolean) => {
-    if (!preferences) {
-      console.warn('Cannot toggle notification type - preferences not loaded');
-      return;
-    }
-    updateNotificationType(type, enabled);
+  const handleTypeToggle = async (type: keyof NotificationPreferences['types'], enabled: boolean) => {
+    const newPreferences = {
+      ...preferences,
+      types: {
+        ...preferences.types,
+        [type]: enabled
+      }
+    };
+    
+    await updatePreferences(newPreferences);
   };
 
-  if (isLoading || !preferences) {
+  if (isLoading) {
     return (
       <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -83,7 +92,10 @@ const NotificationSettings: React.FC = () => {
           Notification Settings
         </h2>
         <div className="bg-navy p-4 rounded border border-light-navy">
-          <div className="text-white">Loading notification settings...</div>
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-light-navy rounded w-1/3"></div>
+            <div className="h-8 bg-light-navy rounded"></div>
+          </div>
         </div>
       </div>
     );
@@ -95,13 +107,12 @@ const NotificationSettings: React.FC = () => {
         <Bell className="w-5 h-5" />
         Notification Settings
       </h2>
-      
 
       {/* Main notification toggle */}
       <div className="bg-navy p-4 rounded border border-light-navy space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            {preferences.enabled ? (
+            {preferences?.enabled ? (
               <Bell className="w-5 h-5 text-cyan-500" />
             ) : (
               <BellOff className="w-5 h-5 text-gray-400" />
@@ -109,14 +120,14 @@ const NotificationSettings: React.FC = () => {
             <div>
               <Label className="text-white font-medium">Push Notifications</Label>
               <p className="text-gray-400 text-sm">
-                {preferences.enabled ? 'Notifications are enabled' : 'Enable push notifications'}
+                {preferences?.enabled ? 'Notifications are enabled' : 'Enable push notifications'}
               </p>
             </div>
           </div>
           <Switch
-            checked={preferences.enabled}
+            checked={preferences?.enabled || false}
             onCheckedChange={handleMainToggle}
-            disabled={pushSupported === null} // Disable while checking support
+            disabled={isUpdating}
           />
         </div>
 
@@ -124,15 +135,15 @@ const NotificationSettings: React.FC = () => {
         <div className="pt-4 border-t border-light-navy space-y-3">
           <Label className="text-gray-300 text-sm">Notification Types</Label>
           {NOTIFICATION_TYPES.map((type) => (
-            <div key={type.key} className={`flex items-center justify-between ${!preferences.enabled ? 'opacity-50' : ''}`}>
+            <div key={type.key} className={`flex items-center justify-between ${!preferences?.enabled ? 'opacity-50' : ''}`}>
               <div>
-                <Label className={`text-sm ${preferences.enabled ? 'text-white' : 'text-gray-500'}`}>{type.label}</Label>
-                <p className={`text-xs ${preferences.enabled ? 'text-gray-400' : 'text-gray-600'}`}>{type.description}</p>
+                <Label className={`text-sm ${preferences?.enabled ? 'text-white' : 'text-gray-500'}`}>{type.label}</Label>
+                <p className={`text-xs ${preferences?.enabled ? 'text-gray-400' : 'text-gray-600'}`}>{type.description}</p>
               </div>
               <Switch
-                checked={preferences.enabled && preferences.types[type.key]}
+                checked={preferences?.types?.[type.key] || false}
                 onCheckedChange={(enabled) => handleTypeToggle(type.key, enabled)}
-                disabled={!preferences.enabled}
+                disabled={!preferences?.enabled || isUpdating}
               />
             </div>
           ))}

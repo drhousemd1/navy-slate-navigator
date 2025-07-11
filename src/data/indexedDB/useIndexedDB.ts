@@ -334,6 +334,26 @@ export const saveNotificationPreferencesToDB = async (preferences: any, userId?:
   }
 };
 
+export const getLastSyncTimeForNotificationPreferences = async (userId?: string | null): Promise<string | null> => {
+  try {
+    const key = getUserKey('notificationPreferencesLastSync', userId);
+    const time = await lastSyncStore.getItem<string>(key);
+    return time;
+  } catch (error) {
+    logger.error('Error getting last sync time for notification preferences:', error);
+    return null;
+  }
+};
+
+export const setLastSyncTimeForNotificationPreferences = async (time: string, userId?: string | null): Promise<void> => {
+  try {
+    const key = getUserKey('notificationPreferencesLastSync', userId);
+    await lastSyncStore.setItem(key, time);
+  } catch (error) {
+    logger.error('Error setting last sync time for notification preferences:', error);
+  }
+};
+
 // Function to clear all data for a specific user
 export const clearUserDataFromDB = async (userId: string): Promise<void> => {
   try {
