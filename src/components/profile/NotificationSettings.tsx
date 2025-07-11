@@ -1,7 +1,7 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, AlertTriangle, Smartphone, Wifi } from 'lucide-react';
 import { useNotificationPreferencesQuery } from '@/data/notifications';
 import { useNotificationManager } from '@/hooks/useNotificationManager';
 import type { NotificationPreferences } from '@/data/notifications/types';
@@ -42,7 +42,15 @@ const NOTIFICATION_TYPES = [
 
 const NotificationSettings: React.FC = () => {
   const { data: preferences, isLoading } = useNotificationPreferencesQuery();
-  const { enableNotifications, disableNotifications, updateNotificationType } = useNotificationManager();
+  const { 
+    enableNotifications, 
+    disableNotifications, 
+    updateNotificationType, 
+    pushSupported, 
+    pushError, 
+    isMobile, 
+    isIOS 
+  } = useNotificationManager();
 
   const handleMainToggle = async () => {
     if (!preferences) {
@@ -88,6 +96,43 @@ const NotificationSettings: React.FC = () => {
         Notification Settings
       </h2>
       
+      {/* Mobile/iOS specific warnings */}
+      {(isMobile || pushError) && (
+        <div className="bg-navy border border-light-navy rounded p-4">
+          <div className="flex items-start gap-3">
+            {isMobile ? (
+              <Smartphone className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+            ) : (
+              <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+            )}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-yellow-500">
+                {isMobile ? 'Mobile Device Detected' : 'Notification Status'}
+              </h3>
+              <div className="space-y-1">
+                {pushError && (
+                  <p className="text-sm text-gray-300">{pushError}</p>
+                )}
+                {isIOS && (
+                  <p className="text-sm text-gray-400">
+                    💡 For best experience on iOS, add this app to your home screen
+                  </p>
+                )}
+                {isMobile && pushSupported === false && (
+                  <p className="text-sm text-gray-400">
+                    Notification preferences will still be saved for in-app notifications
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Wifi className="w-3 h-3" />
+                <span>Status: {pushSupported ? 'Push supported' : 'Push not available'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main notification toggle */}
       <div className="bg-navy p-4 rounded border border-light-navy space-y-4">
         <div className="flex items-center justify-between">
@@ -107,6 +152,7 @@ const NotificationSettings: React.FC = () => {
           <Switch
             checked={preferences.enabled}
             onCheckedChange={handleMainToggle}
+            disabled={pushSupported === null} // Disable while checking support
           />
         </div>
 
