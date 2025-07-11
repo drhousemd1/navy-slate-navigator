@@ -29,11 +29,15 @@ export function useNotificationPreferencesData() {
     isLoading,
     error,
     refetch
-  } = useQuery({
+  } = useQuery<NotificationPreferences>({
     queryKey,
-    queryFn: () => fetchNotificationPreferences(user!.id),
+    queryFn: (): NotificationPreferences => {
+      // This should never be called since data is preloaded into cache
+      throw new Error('Notification preferences should be preloaded into cache');
+    },
     enabled: !!user?.id,
     ...STANDARD_QUERY_CONFIG, // Uses staleTime: Infinity, refetchOnMount: false
+    placeholderData: DEFAULT_NOTIFICATION_PREFERENCES,
   });
 
   // Update mutation with optimistic updates and IndexedDB sync

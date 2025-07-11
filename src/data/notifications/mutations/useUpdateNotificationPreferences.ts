@@ -3,6 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { NotificationPreferences } from "../types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { NOTIFICATION_PREFERENCES_QUERY_KEY } from "../useNotificationPreferencesData";
+import { 
+  saveNotificationPreferencesToDB,
+  setLastSyncTimeForNotificationPreferences
+} from "../../indexedDB/useIndexedDB";
 
 interface UpdateNotificationPreferencesParams {
   preferences: NotificationPreferences;
@@ -32,37 +37,32 @@ async function updateNotificationPreferences(
 export function useUpdateNotificationPreferences() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const queryKey = [...NOTIFICATION_PREFERENCES_QUERY_KEY, user?.id];
 
   return useMutation({
     mutationFn: (params: UpdateNotificationPreferencesParams) =>
       updateNotificationPreferences(user!.id, params),
     onMutate: async ({ preferences }) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ 
-        queryKey: ['notification-preferences', user?.id] 
-      });
+      await queryClient.cancelQueries({ queryKey });
 
       // Snapshot previous value
-      const previousPreferences = queryClient.getQueryData<NotificationPreferences>([
-        'notification-preferences', 
-        user?.id
-      ]);
+      const previousPreferences = queryClient.getQueryData<NotificationPreferences>(queryKey);
 
       // Optimistically update cache
-      queryClient.setQueryData<NotificationPreferences>(
-        ['notification-preferences', user?.id],
-        preferences
-      );
+      queryClient.setQueryData<NotificationPreferences>(queryKey, preferences);
+
+      // Update IndexedDB optimistically
+      await saveNotificationPreferencesToDB(preferences, user?.id);
 
       return { previousPreferences };
     },
-    onError: (error, variables, context) => {
-      // Revert optimistic update
+    onError: async (error, variables, context) => {
+      // Revert optimistic update in cache
       if (context?.previousPreferences) {
-        queryClient.setQueryData(
-          ['notification-preferences', user?.id],
-          context.previousPreferences
-        );
+        queryClient.setQueryData(queryKey, context.previousPreferences);
+        // Revert IndexedDB too
+        await saveNotificationPreferencesToDB(context.previousPreferences, user?.id);
       }
       
       console.error('Failed to update notification preferences:', error);
@@ -71,7 +71,11 @@ export function useUpdateNotificationPreferences() {
         variant: 'destructive'
       });
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      // Update IndexedDB with confirmed data
+      await saveNotificationPreferencesToDB(data, user?.id);
+      await setLastSyncTimeForNotificationPreferences(new Date().toISOString(), user?.id);
+      
       toast({
         title: 'Notification preferences updated'
       });
