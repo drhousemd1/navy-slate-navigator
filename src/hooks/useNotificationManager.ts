@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useUpdateNotificationPreferences } from '@/data/notifications';
+import { useUpdateNotificationPreferences, useCreatePushSubscription, useDeletePushSubscription } from '@/data/notifications';
 import type { NotificationPreferences } from '@/data/notifications/types';
 
 // Simple VAPID key for development
@@ -7,6 +7,8 @@ const VAPID_PUBLIC_KEY = "BEl62iUYgUivxIkv69yViEuiBIa40HEd0-3NqShQqFng_blTsrfCNn
 
 export function useNotificationManager(preferences: NotificationPreferences) {
   const updatePreferences = useUpdateNotificationPreferences();
+  const createPushSubscription = useCreatePushSubscription();
+  const deletePushSubscription = useDeletePushSubscription();
 
   const enablePushNotifications = useCallback(async (): Promise<boolean> => {
     try {
@@ -27,13 +29,23 @@ export function useNotificationManager(preferences: NotificationPreferences) {
         applicationServerKey: VAPID_PUBLIC_KEY,
       });
 
-      console.log('Push subscription created:', subscription);
+      // Store subscription in database
+      const subscriptionData = subscription.toJSON();
+      if (subscriptionData.keys?.p256dh && subscriptionData.keys?.auth && subscriptionData.endpoint) {
+        await createPushSubscription.mutateAsync({
+          endpoint: subscriptionData.endpoint,
+          p256dhKey: subscriptionData.keys.p256dh,
+          authKey: subscriptionData.keys.auth,
+        });
+      }
+
+      console.log('Push subscription created and stored:', subscription);
       return true;
     } catch (error) {
       console.error('Failed to enable push notifications:', error);
       return false;
     }
-  }, []);
+  }, [createPushSubscription]);
 
   const disablePushNotifications = useCallback(async (): Promise<boolean> => {
     try {
@@ -45,8 +57,11 @@ export function useNotificationManager(preferences: NotificationPreferences) {
       const subscription = await registration.pushManager.getSubscription();
       
       if (subscription) {
+        // Remove from database first
+        await deletePushSubscription.mutateAsync(subscription.endpoint);
+        // Then unsubscribe
         await subscription.unsubscribe();
-        console.log('Push subscription cancelled');
+        console.log('Push subscription cancelled and removed from database');
       }
       
       return true;
@@ -54,7 +69,7 @@ export function useNotificationManager(preferences: NotificationPreferences) {
       console.error('Failed to disable push notifications:', error);
       return false;
     }
-  }, []);
+  }, [deletePushSubscription]);
 
   const enableNotifications = useCallback(() => {
     // Update preferences immediately with optimistic update
@@ -63,10 +78,12 @@ export function useNotificationManager(preferences: NotificationPreferences) {
       enabled: true,
     };
 
-    updatePreferences.mutate({ preferences: newPreferences });
-    
-    // Handle push notifications in background
-    enablePushNotifications().catch(error => {
+    // Handle push notifications first, then update preferences
+    enablePushNotifications().then((success) => {
+      if (success) {
+        updatePreferences.mutate({ preferences: newPreferences });
+      }
+    }).catch(error => {
       console.warn('Push notification setup failed:', error);
     });
   }, [preferences, updatePreferences, enablePushNotifications]);
@@ -78,11 +95,13 @@ export function useNotificationManager(preferences: NotificationPreferences) {
       enabled: false,
     };
 
-    updatePreferences.mutate({ preferences: newPreferences });
-    
-    // Handle push notifications cleanup in background
-    disablePushNotifications().catch(error => {
+    // Handle push notifications cleanup first, then update preferences
+    disablePushNotifications().then((success) => {
+      updatePreferences.mutate({ preferences: newPreferences });
+    }).catch(error => {
       console.warn('Push notification cleanup failed:', error);
+      // Still update preferences even if cleanup fails
+      updatePreferences.mutate({ preferences: newPreferences });
     });
   }, [preferences, updatePreferences, disablePushNotifications]);
 

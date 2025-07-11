@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger';
 export function registerSW() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register("/service-worker.js")
+      .register("/sw.js")
       .then((reg) => {
         // Listen when a new worker is found
         reg.addEventListener("updatefound", () => {

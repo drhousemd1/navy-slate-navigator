@@ -10,10 +10,7 @@ export function useNotificationPreferencesQuery() {
     queryKey: ['notification-preferences', user?.id],
     queryFn: () => fetchNotificationPreferences(user!.id),
     enabled: !!user?.id,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    staleTime: 30 * 60 * 1000, // 30 minutes like other app queries
     initialData: DEFAULT_NOTIFICATION_PREFERENCES,
   });
 }

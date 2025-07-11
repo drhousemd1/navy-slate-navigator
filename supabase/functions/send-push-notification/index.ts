@@ -132,23 +132,45 @@ serve(async (req) => {
     // Send push notifications to all user subscriptions
     for (const subscription of subscriptions) {
       try {
-        // Note: This is a placeholder for actual push sending
-        // In a real implementation, you would use a service like:
-        // - Firebase Cloud Messaging
-        // - Web Push Protocol with VAPID keys
-        // - A third-party service like Pusher or Ably
-        
         console.log(`Sending notification to subscription: ${subscription.endpoint}`);
         console.log('Notification payload:', notificationPayload);
         
-        // For now, we'll simulate a successful send
-        sentCount++;
-        
-        // In a real implementation, you would:
-        // 1. Use the subscription.endpoint, subscription.p256dh_key, and subscription.auth_key
-        // 2. Create a proper push message with VAPID authentication
-        // 3. Send the HTTP request to the push service
-        // 4. Handle any errors (invalid subscriptions should be removed)
+        // Create the push message payload
+        const pushPayload = JSON.stringify({
+          title: notificationPayload.title,
+          body: notificationPayload.body,
+          icon: '/icons/icon-192.png',
+          badge: '/icons/icon-192.png',
+          url: notificationPayload.url,
+          data: {
+            type: notificationPayload.type,
+            payload: notificationPayload.payload,
+          },
+          requireInteraction: notificationPayload.requireInteraction,
+        });
+
+        // Send the push notification using Web Push Protocol
+        const pushResponse = await fetch(subscription.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'Content-Encoding': 'aes128gcm',
+            'Authorization': `Bearer ${Deno.env.get('VAPID_PRIVATE_KEY') || 'development-key'}`,
+            'Crypto-Key': `p256ecdsa=${Deno.env.get('VAPID_PUBLIC_KEY') || 'BEl62iUYgUivxIkv69yViEuiBIa40HEd0-3NqShQqFng_blTsrfCNnHR-f1z6J1KuEf8bjuMc2g6F8C9_1mNsNE'}`,
+          },
+          body: pushPayload,
+        });
+
+        if (pushResponse.ok) {
+          sentCount++;
+          console.log(`Successfully sent notification to ${subscription.endpoint}`);
+        } else {
+          console.error(`Failed to send notification: ${pushResponse.status} ${pushResponse.statusText}`);
+          // If subscription is invalid (410 Gone), mark for removal
+          if (pushResponse.status === 410) {
+            failedSubscriptions.push(subscription.id);
+          }
+        }
         
       } catch (error) {
         console.error(`Failed to send notification to ${subscription.endpoint}:`, error);
