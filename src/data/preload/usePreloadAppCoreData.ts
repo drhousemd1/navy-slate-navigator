@@ -8,7 +8,9 @@ import { fetchRules } from '@/data/rules/fetchRules';
 import { fetchTasks, TASKS_QUERY_KEY } from '@/data/tasks/queries';
 import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
 import { fetchWellbeingSnapshot, WELLBEING_QUERY_KEY } from '@/data/wellbeing/queries';
+import { preloadNotificationPreferences, NOTIFICATION_PREFERENCES_QUERY_KEY } from '@/data/notifications/useNotificationPreferencesData';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
 
 // Define necessary keys directly or import from a central query key store if available
@@ -17,6 +19,7 @@ const PUNISHMENTS_QUERY_KEY = ['punishments'];
 export const usePreloadAppCoreData = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
+  const { user } = useAuth();
 
   useEffect(() => {
     const prefetchData = async () => {
@@ -27,6 +30,12 @@ export const usePreloadAppCoreData = () => {
       }
 
       logger.debug('[PreloadAppCoreData] Pre-fetching core application data...');
+      
+      // Notification preferences (user-specific, load immediately for UI)
+      if (user?.id) {
+        await preloadNotificationPreferences(user.id);
+        logger.debug('[PreloadAppCoreData] Notification preferences pre-fetched.');
+      }
       
       // Rewards
       await queryClient.prefetchQuery({
@@ -80,11 +89,12 @@ export const usePreloadAppCoreData = () => {
       !queryClient.getQueryData([...REWARDS_QUERY_KEY, subUserId, domUserId]) ||
       !queryClient.getQueryData([...RULES_QUERY_KEY, subUserId, domUserId]) ||
       !queryClient.getQueryData([...TASKS_QUERY_KEY, subUserId, domUserId]) ||
-      !queryClient.getQueryData([...PUNISHMENTS_QUERY_KEY, subUserId, domUserId])
+      !queryClient.getQueryData([...PUNISHMENTS_QUERY_KEY, subUserId, domUserId]) ||
+      (user?.id && !queryClient.getQueryData([...NOTIFICATION_PREFERENCES_QUERY_KEY, user.id]))
     ) {
       prefetchData();
     } else {
       logger.debug('[PreloadAppCoreData] Core data already in cache, skipping prefetch.');
     }
-  }, [queryClient, subUserId, domUserId]);
+  }, [queryClient, subUserId, domUserId, user?.id]);
 };
