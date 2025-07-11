@@ -42,9 +42,11 @@ const NOTIFICATION_TYPES = [
 
 const NotificationSettings: React.FC = () => {
   const { data: preferences } = useNotificationPreferencesQuery();
-  const { enableNotifications, disableNotifications, updateNotificationType } = useNotificationManager(preferences);
+  const { enableNotifications, disableNotifications, updateNotificationType } = useNotificationManager(preferences!);
 
   const handleMainToggle = async () => {
+    if (!preferences) return;
+    
     if (preferences.enabled) {
       await disableNotifications();
     } else {
@@ -55,6 +57,10 @@ const NotificationSettings: React.FC = () => {
   const handleTypeToggle = (type: keyof NotificationPreferences['types'], enabled: boolean) => {
     updateNotificationType(type, enabled);
   };
+
+  if (!preferences) {
+    return <div>Loading notification settings...</div>;
+  }
 
   return (
     <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
