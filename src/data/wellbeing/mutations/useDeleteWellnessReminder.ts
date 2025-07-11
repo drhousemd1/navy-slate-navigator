@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { WELLNESS_REMINDER_QUERY_KEY } from '../queries/useWellnessReminderQuery';
 import { logger } from '@/lib/logger';
-import { toastManager } from '@/lib/toastManager';
 import { getErrorMessage } from '@/lib/errors';
 
 export const useDeleteWellnessReminder = (userId: string | null) => {
@@ -29,11 +28,9 @@ export const useDeleteWellnessReminder = (userId: string | null) => {
       queryClient.setQueryData([...WELLNESS_REMINDER_QUERY_KEY, userId], null);
       
       logger.debug('[useDeleteWellnessReminder] Cache cleared');
-      toastManager.success('Reminder Deleted', 'Wellness reminder has been removed.');
     },
     onError: (error) => {
       logger.error('[useDeleteWellnessReminder] Error deleting reminder:', error);
-      toastManager.error('Failed to Delete Reminder', getErrorMessage(error));
     }
   });
 };

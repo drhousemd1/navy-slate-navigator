@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { WellnessReminder, UpdateWellnessReminderData } from '../types';
 import { WELLNESS_REMINDER_QUERY_KEY } from '../queries/useWellnessReminderQuery';
 import { logger } from '@/lib/logger';
-import { toastManager } from '@/lib/toastManager';
 import { getErrorMessage } from '@/lib/errors';
 
 export const useUpdateWellnessReminder = (userId: string | null) => {
@@ -33,11 +32,9 @@ export const useUpdateWellnessReminder = (userId: string | null) => {
       queryClient.setQueryData([...WELLNESS_REMINDER_QUERY_KEY, userId], reminder);
       
       logger.debug('[useUpdateWellnessReminder] Cache updated with updated reminder');
-      toastManager.success('Reminder Updated', 'Wellness reminder has been updated successfully.');
     },
     onError: (error) => {
       logger.error('[useUpdateWellnessReminder] Error updating reminder:', error);
-      toastManager.error('Failed to Update Reminder', getErrorMessage(error));
     }
   });
 };

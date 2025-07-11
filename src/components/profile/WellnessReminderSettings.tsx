@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Clock, Bell, Calendar } from 'lucide-react';
 import { TimePicker } from '@/components/ui/time-picker';
 import { useWellnessReminders } from '@/hooks/useWellnessReminders';
-import { toastManager } from '@/lib/toastManager';
+import { toast } from '@/hooks/use-toast';
 
 const WellnessReminderSettings: React.FC = () => {
   const {
@@ -34,15 +34,22 @@ const WellnessReminderSettings: React.FC = () => {
       setIsSaving(true);
       const success = await saveReminder(isEnabled, localTime);
       if (success) {
-        toastManager.success(
-          'Reminder Updated', 
-          isEnabled 
+        toast({
+          title: isEnabled 
             ? `Wellness reminder set for ${localTime} daily` 
             : 'Wellness reminder disabled'
-        );
+        });
+      } else {
+        toast({
+          title: 'Failed to update wellness reminder',
+          variant: 'destructive'
+        });
       }
     } catch (err) {
-      toastManager.error('Error', 'Failed to update wellness reminder');
+      toast({
+        title: 'Failed to update wellness reminder',
+        variant: 'destructive'
+      });
     } finally {
       setIsSaving(false);
     }
