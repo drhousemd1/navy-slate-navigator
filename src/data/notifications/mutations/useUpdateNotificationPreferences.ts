@@ -12,33 +12,21 @@ async function updateNotificationPreferences(
   userId: string, 
   { preferences }: UpdateNotificationPreferencesParams
 ): Promise<NotificationPreferences> {
-  // First try to update existing record
-  const { data: updated, error: updateError } = await supabase
+  const { data, error } = await supabase
     .from('user_notification_preferences')
-    .update({ preferences: preferences as any })
-    .eq('user_id', userId)
+    .upsert(
+      { user_id: userId, preferences: preferences as any },
+      { onConflict: 'user_id' }
+    )
     .select('preferences')
-    .maybeSingle();
+    .single();
 
-  if (updateError?.code === 'PGRST116') {
-    // No existing record, create one
-    const { data: created, error: insertError } = await supabase
-      .from('user_notification_preferences')
-      .insert({ user_id: userId, preferences: preferences as any })
-      .select('preferences')
-      .single();
-
-    if (insertError) {
-      throw insertError;
-    }
-    return created.preferences as unknown as NotificationPreferences;
+  if (error) {
+    console.error('Error updating notification preferences:', error);
+    throw error;
   }
 
-  if (updateError) {
-    throw updateError;
-  }
-
-  return (updated?.preferences as unknown as NotificationPreferences) || preferences;
+  return (data.preferences as unknown as NotificationPreferences) || preferences;
 }
 
 export function useUpdateNotificationPreferences() {
