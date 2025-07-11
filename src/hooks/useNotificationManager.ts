@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useUpdateNotificationPreferences } from '@/data/notifications';
 import type { NotificationPreferences } from '@/data/notifications/types';
 
@@ -6,7 +6,6 @@ import type { NotificationPreferences } from '@/data/notifications/types';
 const VAPID_PUBLIC_KEY = "BEl62iUYgUivxIkv69yViEuiBIa40HEd0-3NqShQqFng_blTsrfCNnHR-f1z6J1KuEf8bjuMc2g6F8C9_1mNsNE";
 
 export function useNotificationManager(preferences: NotificationPreferences) {
-  const [isProcessing, setIsProcessing] = useState(false);
   const updatePreferences = useUpdateNotificationPreferences();
 
   const enablePushNotifications = useCallback(async (): Promise<boolean> => {
@@ -57,50 +56,35 @@ export function useNotificationManager(preferences: NotificationPreferences) {
     }
   }, []);
 
-  const enableNotifications = useCallback(async (): Promise<boolean> => {
-    if (isProcessing) return false;
+  const enableNotifications = useCallback(() => {
+    // Update preferences immediately with optimistic update
+    const newPreferences: NotificationPreferences = {
+      ...preferences,
+      enabled: true,
+    };
+
+    updatePreferences.mutate({ preferences: newPreferences });
     
-    setIsProcessing(true);
-    try {
-      const pushEnabled = await enablePushNotifications();
-      
-      // Update preferences regardless of push notification success
-      const newPreferences: NotificationPreferences = {
-        ...preferences,
-        enabled: true,
-      };
+    // Handle push notifications in background
+    enablePushNotifications().catch(error => {
+      console.warn('Push notification setup failed:', error);
+    });
+  }, [preferences, updatePreferences, enablePushNotifications]);
 
-      updatePreferences.mutate({ preferences: newPreferences });
-      return true;
-    } catch (error) {
-      console.error('Failed to enable notifications:', error);
-      return false;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [preferences, updatePreferences, enablePushNotifications, isProcessing]);
+  const disableNotifications = useCallback(() => {
+    // Update preferences immediately with optimistic update
+    const newPreferences: NotificationPreferences = {
+      ...preferences,
+      enabled: false,
+    };
 
-  const disableNotifications = useCallback(async (): Promise<boolean> => {
-    if (isProcessing) return false;
+    updatePreferences.mutate({ preferences: newPreferences });
     
-    setIsProcessing(true);
-    try {
-      await disablePushNotifications();
-      
-      const newPreferences: NotificationPreferences = {
-        ...preferences,
-        enabled: false,
-      };
-
-      updatePreferences.mutate({ preferences: newPreferences });
-      return true;
-    } catch (error) {
-      console.error('Failed to disable notifications:', error);
-      return false;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [preferences, updatePreferences, disablePushNotifications, isProcessing]);
+    // Handle push notifications cleanup in background
+    disablePushNotifications().catch(error => {
+      console.warn('Push notification cleanup failed:', error);
+    });
+  }, [preferences, updatePreferences, disablePushNotifications]);
 
   const updateNotificationType = useCallback(
     (type: keyof NotificationPreferences['types'], enabled: boolean) => {
@@ -121,6 +105,5 @@ export function useNotificationManager(preferences: NotificationPreferences) {
     enableNotifications,
     disableNotifications,
     updateNotificationType,
-    isProcessing,
   };
 }
