@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { NotificationPreferences } from "../types";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 interface UpdateNotificationPreferencesParams {
   preferences: NotificationPreferences;
@@ -78,10 +78,15 @@ export function useUpdateNotificationPreferences() {
       }
       
       console.error('Failed to update notification preferences:', error);
-      toast.error('Failed to update notification preferences');
+      toast({
+        title: 'Failed to update notification preferences',
+        variant: 'destructive'
+      });
     },
     onSuccess: () => {
-      toast.success('Notification preferences updated');
+      toast({
+        title: 'Notification preferences updated'
+      });
     },
   });
 }

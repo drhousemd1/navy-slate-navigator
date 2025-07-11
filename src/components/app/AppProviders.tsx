@@ -4,7 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UserIdsProvider } from '@/contexts/UserIdsContext';
-import { Toaster as SonnerToaster } from '@/components/ui/sonner';
+import { Toaster } from '@/components/ui/toaster';
 import { queryClient } from '@/data/queryClient';
 import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 import { OfflineBanner } from '@/components/OfflineBanner';
@@ -21,7 +21,7 @@ export const AppProviders: React.FC<React.PropsWithChildren<{}>> = ({ children }
               <PunishmentsProvider>
                 <OfflineBanner />
                 {children}
-                <SonnerToaster richColors closeButton />
+                <Toaster />
               </PunishmentsProvider>
             </RewardsProvider>
           </UserIdsProvider>
