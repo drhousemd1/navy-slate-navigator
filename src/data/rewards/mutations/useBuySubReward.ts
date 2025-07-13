@@ -5,7 +5,6 @@ import { Reward } from '@/data/rewards/types';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { usePartnerHelper } from '@/hooks/usePartnerHelper';
 
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
@@ -27,7 +26,6 @@ interface BuySubRewardOptimisticContext {
 export const useBuySubReward = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
-  const { notifyRewardPurchased } = usePushNotifications();
   const { getPartnerId } = usePartnerHelper();
 
   const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
@@ -108,15 +106,6 @@ export const useBuySubReward = () => {
         oldRewards.map(r => r.id === data.id ? data : r)
       );
       
-      // Send push notification to partner
-      try {
-        const partnerId = await getPartnerId();
-        if (partnerId && variables.rewardTitle) {
-          await notifyRewardPurchased(partnerId, variables.rewardTitle);
-        }
-      } catch (error) {
-        logger.error('Error sending reward purchased notification:', error);
-      }
       
       await queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
     },

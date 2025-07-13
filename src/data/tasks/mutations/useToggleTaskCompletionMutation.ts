@@ -10,7 +10,6 @@ import { TaskWithId, Task } from '@/data/tasks/types';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { usePartnerHelper } from '@/hooks/usePartnerHelper';
 
 interface ToggleTaskCompletionVariables {
@@ -23,7 +22,6 @@ interface ToggleTaskCompletionVariables {
 export function useToggleTaskCompletionMutation() {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
-  const { notifyTaskCompleted } = usePushNotifications();
   const { getPartnerId } = usePartnerHelper();
 
   return useMutation<void, Error, ToggleTaskCompletionVariables, { previousTasks?: TaskWithId[] }>(
@@ -212,17 +210,6 @@ export function useToggleTaskCompletionMutation() {
           variables.completed ? 'Points and history have been updated if applicable.' : 'Task status updated.'
         );
 
-        // Send push notification to partner when task is completed
-        if (variables.completed) {
-          try {
-            const partnerId = await getPartnerId();
-            if (partnerId && variables.task.title) {
-              await notifyTaskCompleted(partnerId, variables.task.title);
-            }
-          } catch (error) {
-            logger.error('Error sending task completion notification:', error);
-          }
-        }
 
         try {
             const localTasks = await loadTasksFromDB() || [];

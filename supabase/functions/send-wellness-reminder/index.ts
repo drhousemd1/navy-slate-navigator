@@ -99,43 +99,8 @@ serve(async (req) => {
       try {
         console.log(`[send-wellness-reminder] Processing reminder for user: ${reminder.user_id}`);
 
-        // Get user's push subscriptions
-        const { data: subscriptions, error: subError } = await supabase
-          .from('user_push_subscriptions')
-          .select('*')
-          .eq('user_id', reminder.user_id);
-
-        if (subError) {
-          console.error(`[send-wellness-reminder] Error fetching subscriptions for user ${reminder.user_id}:`, subError);
-          errorCount++;
-          continue;
-        }
-
-        if (!subscriptions || subscriptions.length === 0) {
-          console.log(`[send-wellness-reminder] No push subscriptions found for user: ${reminder.user_id}`);
-          continue;
-        }
-
-        // Send notification via the send-push-notification function
-        const notificationPayload = {
-          title: '🌟 Wellness Check-in Time',
-          body: 'How are you feeling today? Take a moment to update your wellness score.',
-          type: 'wellnessCheckin',
-          url: '/wellbeing',
-          requireInteraction: false,
-          targetUserId: reminder.user_id
-        };
-
-        // Call the send-push-notification function
-        const { error: notificationError } = await supabase.functions.invoke('send-push-notification', {
-          body: notificationPayload
-        });
-
-        if (notificationError) {
-          console.error(`[send-wellness-reminder] Error sending notification to user ${reminder.user_id}:`, notificationError);
-          errorCount++;
-          continue;
-        }
+        // Note: Push notifications have been removed
+        console.log(`[send-wellness-reminder] Wellness reminder scheduled for user: ${reminder.user_id}`);
 
         // Update last_sent timestamp
         const { error: updateError } = await supabase

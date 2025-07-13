@@ -6,7 +6,6 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
 import { toast } from '@/hooks/use-toast';
 import { getMondayBasedDay } from '@/lib/utils';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { usePartnerHelper } from '@/hooks/usePartnerHelper';
 
 interface CreateRuleViolationParams {
@@ -18,7 +17,6 @@ interface CreateRuleViolationParams {
 export const useCreateRuleViolation = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
-  const { notifyRuleBroken } = usePushNotifications();
   const { getPartnerId } = usePartnerHelper();
 
   return useMutation({
@@ -54,15 +52,6 @@ export const useCreateRuleViolation = () => {
         queryKey: [...RULES_QUERY_KEY, subUserId, domUserId] 
       });
       
-      // Send push notification to partner
-      try {
-        const partnerId = await getPartnerId();
-        if (partnerId && variables.ruleName) {
-          await notifyRuleBroken(partnerId, variables.ruleName);
-        }
-      } catch (error) {
-        logger.error('Error sending rule broken notification:', error);
-      }
     },
     onError: (error: Error) => {
       logger.error('Failed to record rule violation:', error);

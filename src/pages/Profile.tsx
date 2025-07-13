@@ -10,7 +10,7 @@ import { Camera, Trash2, LogOut } from 'lucide-react';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { DeleteAvatarDialog } from '@/components/profile/DeleteAvatarDialog';
 import PartnerLinkingSection from '@/components/profile/PartnerLinkingSection';
-import NotificationSettings from '@/components/profile/NotificationSettings';
+
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { ProfileRole } from '@/types/profile';
@@ -290,8 +290,6 @@ const Profile: React.FC = () => {
           {/* Partner Linking Section */}
           <PartnerLinkingSection />
 
-          {/* Notification Settings Section */}
-          <NotificationSettings />
           
           {/* Actions Section */}
           <div className="space-y-4 border-t border-light-navy pt-8 mt-8">
