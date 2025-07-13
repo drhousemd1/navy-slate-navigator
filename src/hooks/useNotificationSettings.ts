@@ -84,6 +84,8 @@ export const useNotificationSettings = () => {
         .upsert({
           user_id: user.id,
           preferences: newPreferences as any,
+        }, {
+          onConflict: 'user_id'
         });
 
       if (error) {
