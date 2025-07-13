@@ -1,34 +1,42 @@
 import { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { NotificationPreferences } from '@/data/notifications/types';
 
 export const useNotificationSettings = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Force cache refresh key with timestamp
-  const getCacheKey = () => ['notification-preferences', user?.id, Date.now()];
+  // Clear all notification cache on app start
+  const clearNotificationCache = () => {
+    try {
+      // Clear any potential IndexedDB notification data
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.includes('notification') || key.includes('Notification')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+      console.log('🧹 [Cache Clear] Cleared all notification cache');
+    } catch (error) {
+      console.log('Cache clear error (non-critical):', error);
+    }
+  };
 
-  // Load preferences from database with cache busting
-  const loadPreferences = async (bustCache = false) => {
+  // Load preferences DIRECTLY from database - NO CACHE
+  const loadPreferences = async () => {
     if (!user?.id) return;
     
     setLoading(true);
-    
-    // Clear any stale cache if bust cache is requested
-    if (bustCache) {
-      await queryClient.invalidateQueries({ 
-        queryKey: ['notification-preferences', user.id] 
-      });
-    }
+    clearNotificationCache(); // Clear cache every time
     
     try {
-      // Always fetch fresh from database on mobile
-      const timestamp = Date.now();
+      console.log('📱 [Direct DB] Loading notification preferences directly from Supabase...');
+      
+      // Direct Supabase call - no caching layers
       const { data, error } = await supabase
         .from('user_notification_preferences')
         .select('preferences')
@@ -40,7 +48,7 @@ export const useNotificationSettings = () => {
       if (data) {
         const freshPrefs = data.preferences as unknown as NotificationPreferences;
         setPreferences(freshPrefs);
-        console.log('📱 [Mobile Cache Debug] Loaded fresh preferences:', freshPrefs);
+        console.log('✅ [Direct DB] Loaded fresh preferences:', freshPrefs);
       } else {
         // Create default preferences
         const defaultPrefs: NotificationPreferences = {
@@ -64,22 +72,24 @@ export const useNotificationSettings = () => {
 
         if (!insertError) {
           setPreferences(defaultPrefs);
+          console.log('✅ [Direct DB] Created default preferences:', defaultPrefs);
         }
       }
     } catch (error) {
-      console.error('Error loading notification preferences:', error);
+      console.error('❌ [Direct DB] Error loading notification preferences:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Save preferences to database with aggressive cache invalidation
+  // Save preferences DIRECTLY to database - NO CACHE
   const savePreferences = async (newPreferences: NotificationPreferences) => {
     if (!user?.id) return false;
 
     try {
-      console.log('📱 [Mobile Cache Debug] Saving preferences:', newPreferences);
+      console.log('💾 [Direct DB] Saving preferences to Supabase:', newPreferences);
       
+      // Direct Supabase call - no caching layers
       const { error } = await supabase
         .from('user_notification_preferences')
         .upsert({
@@ -89,32 +99,26 @@ export const useNotificationSettings = () => {
 
       if (error) throw error;
 
-      // Immediately update local state
+      // Update local state immediately
       setPreferences(newPreferences);
       
-      // Aggressively invalidate all notification-related cache
-      await queryClient.invalidateQueries({ 
-        queryKey: ['notification-preferences'] 
-      });
+      // Clear any residual cache
+      clearNotificationCache();
       
-      // Force refetch to ensure mobile gets fresh data
-      setTimeout(() => {
-        loadPreferences(true);
-      }, 100);
-      
-      console.log('📱 [Mobile Cache Debug] Preferences saved and cache invalidated');
+      console.log('✅ [Direct DB] Preferences saved successfully');
       return true;
     } catch (error) {
-      console.error('Error saving notification preferences:', error);
+      console.error('❌ [Direct DB] Error saving notification preferences:', error);
       return false;
     }
   };
 
-  // Load preferences when user changes - always bust cache on mobile
+  // Load preferences when user changes - clear cache first
   useEffect(() => {
     if (user?.id) {
-      // Always load with cache busting on mobile to ensure fresh data
-      loadPreferences(true);
+      console.log('👤 [User Change] Loading notification preferences for user:', user.id);
+      clearNotificationCache();
+      loadPreferences();
     }
   }, [user?.id]);
 

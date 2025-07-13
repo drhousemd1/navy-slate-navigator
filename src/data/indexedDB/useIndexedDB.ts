@@ -30,8 +30,6 @@ const LAST_SYNC_STORE_NAME = 'lastSyncTimes';
 const POINTS_STORE_NAME = 'points';
 const DOM_POINTS_STORE_NAME = 'domPoints';
 const WELLBEING_STORE_NAME = 'wellbeingSnapshots';
-const NOTIFICATION_PREFERENCES_STORE_NAME = 'notificationPreferences';
-
 // Configure localforage instance
 localforage.config({
   driver: localforage.INDEXEDDB,
@@ -47,7 +45,7 @@ const lastSyncStore = localforage.createInstance({ name: DB_NAME, storeName: LAS
 const pointsStore = localforage.createInstance({ name: DB_NAME, storeName: POINTS_STORE_NAME });
 const domPointsStore = localforage.createInstance({ name: DB_NAME, storeName: DOM_POINTS_STORE_NAME });
 const wellbeingStore = localforage.createInstance({ name: DB_NAME, storeName: WELLBEING_STORE_NAME });
-const notificationPreferencesStore = localforage.createInstance({ name: DB_NAME, storeName: NOTIFICATION_PREFERENCES_STORE_NAME });
+// NOTE: Notification preferences removed from IndexedDB to fix mobile cache conflicts
 
 // Helper function to create user-specific keys
 const getUserKey = (baseKey: string, userId: string | null): string => {
@@ -313,46 +311,8 @@ export const setLastSyncTimeForWellbeing = async (time: string, userId?: string 
   }
 };
 
-// Notification Preferences specific functions
-export const loadNotificationPreferencesFromDB = async (userId?: string | null): Promise<any> => {
-  try {
-    const key = getUserKey('notificationPreferences', userId || null);
-    const preferences = await notificationPreferencesStore.getItem(key);
-    return preferences;
-  } catch (error) {
-    logger.error('Error loading notification preferences from IndexedDB:', error);
-    return null;
-  }
-};
-
-export const saveNotificationPreferencesToDB = async (preferences: any, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('notificationPreferences', userId || null);
-    await notificationPreferencesStore.setItem(key, preferences);
-  } catch (error) {
-    logger.error('Error saving notification preferences to IndexedDB:', error);
-  }
-};
-
-export const getLastSyncTimeForNotificationPreferences = async (userId?: string | null): Promise<string | null> => {
-  try {
-    const key = getUserKey('notificationPreferencesLastSync', userId);
-    const time = await lastSyncStore.getItem<string>(key);
-    return time;
-  } catch (error) {
-    logger.error('Error getting last sync time for notification preferences:', error);
-    return null;
-  }
-};
-
-export const setLastSyncTimeForNotificationPreferences = async (time: string, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('notificationPreferencesLastSync', userId);
-    await lastSyncStore.setItem(key, time);
-  } catch (error) {
-    logger.error('Error setting last sync time for notification preferences:', error);
-  }
-};
+// Notification Preferences functions REMOVED to fix mobile cache conflicts
+// Notification settings now use ONLY direct Supabase calls for reliability
 
 // Function to clear all data for a specific user
 export const clearUserDataFromDB = async (userId: string): Promise<void> => {
@@ -371,7 +331,6 @@ export const clearUserDataFromDB = async (userId: string): Promise<void> => {
       getUserKey('rulesLastSync', userId),
       getUserKey('punishmentsLastSync', userId),
       getUserKey('wellbeingLastSync', userId),
-      getUserKey('notificationPreferences', userId),
     ];
 
     await Promise.all([
@@ -383,7 +342,6 @@ export const clearUserDataFromDB = async (userId: string): Promise<void> => {
       ...userKeys.map(key => pointsStore.removeItem(key).catch(() => {})),
       ...userKeys.map(key => domPointsStore.removeItem(key).catch(() => {})),
       ...userKeys.map(key => wellbeingStore.removeItem(key).catch(() => {})),
-      ...userKeys.map(key => notificationPreferencesStore.removeItem(key).catch(() => {})),
       ...userKeys.map(key => lastSyncStore.removeItem(key).catch(() => {})),
     ]);
 
