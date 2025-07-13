@@ -2,10 +2,10 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Bell, BellOff } from 'lucide-react';
-import { useNotificationPreferencesData } from '@/data/notifications/useNotificationPreferencesData';
-import { useNotificationManager } from '@/hooks/useNotificationManager';
+import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import type { NotificationPreferences } from '@/data/notifications/types';
 import WellnessReminderSettings from './WellnessReminderSettings';
+import { toast } from '@/hooks/use-toast';
 
 const NOTIFICATION_TYPES = [
   {
@@ -41,20 +41,7 @@ const NOTIFICATION_TYPES = [
 ];
 
 const NotificationSettings: React.FC = () => {
-  const { 
-    preferences, 
-    isLoading,
-    updatePreferences,
-    isUpdating
-  } = useNotificationPreferencesData();
-  const { 
-    enableNotifications, 
-    disableNotifications, 
-    pushSupported, 
-    pushError, 
-    isMobile, 
-    isIOS 
-  } = useNotificationManager();
+  const { preferences, loading, savePreferences } = useNotificationSettings();
 
   const handleMainToggle = async () => {
     if (!preferences) return;
@@ -64,13 +51,20 @@ const NotificationSettings: React.FC = () => {
       enabled: !preferences.enabled
     };
     
-    await updatePreferences(newPreferences);
-    
-    // Also handle push notifications
-    if (newPreferences.enabled) {
-      await enableNotifications();
+    const success = await savePreferences(newPreferences);
+    if (success) {
+      toast({
+        title: newPreferences.enabled ? 'Notifications Enabled' : 'Notifications Disabled',
+        description: newPreferences.enabled 
+          ? 'You will receive notifications' 
+          : 'You will no longer receive notifications'
+      });
     } else {
-      await disableNotifications();
+      toast({
+        title: 'Error',
+        description: 'Failed to update notification settings',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -85,10 +79,17 @@ const NotificationSettings: React.FC = () => {
       }
     };
     
-    await updatePreferences(newPreferences);
+    const success = await savePreferences(newPreferences);
+    if (!success) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update notification settings',
+        variant: 'destructive'
+      });
+    }
   };
 
-  if (isLoading || !preferences) {
+  if (loading) {
     return (
       <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -105,6 +106,20 @@ const NotificationSettings: React.FC = () => {
     );
   }
 
+  if (!preferences) {
+    return (
+      <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
+        <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+          <Bell className="w-5 h-5" />
+          Notification Settings
+        </h2>
+        <div className="bg-navy p-4 rounded border border-light-navy">
+          <p className="text-gray-400">Failed to load notification settings</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
       <h2 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -116,22 +131,21 @@ const NotificationSettings: React.FC = () => {
       <div className="bg-navy p-4 rounded border border-light-navy space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            {preferences?.enabled ? (
+            {preferences.enabled ? (
               <Bell className="w-5 h-5 text-cyan-500" />
             ) : (
               <BellOff className="w-5 h-5 text-gray-400" />
             )}
             <div>
-              <Label className="text-white font-medium">Push Notifications</Label>
+              <Label className="text-white font-medium">Notifications</Label>
               <p className="text-gray-400 text-sm">
-                {preferences?.enabled ? 'Notifications are enabled' : 'Enable push notifications'}
+                {preferences.enabled ? 'Notifications are enabled' : 'Enable notifications'}
               </p>
             </div>
           </div>
           <Switch
-            checked={preferences?.enabled || false}
+            checked={preferences.enabled}
             onCheckedChange={handleMainToggle}
-            disabled={isUpdating}
           />
         </div>
 
@@ -139,15 +153,15 @@ const NotificationSettings: React.FC = () => {
         <div className="pt-4 border-t border-light-navy space-y-3">
           <Label className="text-gray-300 text-sm">Notification Types</Label>
           {NOTIFICATION_TYPES.map((type) => (
-            <div key={type.key} className={`flex items-center justify-between ${!preferences?.enabled ? 'opacity-50' : ''}`}>
+            <div key={type.key} className={`flex items-center justify-between ${!preferences.enabled ? 'opacity-50' : ''}`}>
               <div>
-                <Label className={`text-sm ${preferences?.enabled ? 'text-white' : 'text-gray-500'}`}>{type.label}</Label>
-                <p className={`text-xs ${preferences?.enabled ? 'text-gray-400' : 'text-gray-600'}`}>{type.description}</p>
+                <Label className={`text-sm ${preferences.enabled ? 'text-white' : 'text-gray-500'}`}>{type.label}</Label>
+                <p className={`text-xs ${preferences.enabled ? 'text-gray-400' : 'text-gray-600'}`}>{type.description}</p>
               </div>
               <Switch
-                checked={preferences?.types?.[type.key] || false}
+                checked={preferences.types[type.key] || false}
                 onCheckedChange={(enabled) => handleTypeToggle(type.key, enabled)}
-                disabled={!preferences?.enabled || isUpdating}
+                disabled={!preferences.enabled}
               />
             </div>
           ))}
