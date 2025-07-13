@@ -113,33 +113,6 @@ export const NotificationSettings: React.FC = () => {
     return descriptions[type] || '';
   };
 
-  if (!isSupported) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BellOff className="h-5 w-5" />
-            Push Notifications
-          </CardTitle>
-          <CardDescription>
-            Configure your notification preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
-            <div>
-              <p className="font-medium">Push notifications not supported</p>
-              <p className="text-sm text-muted-foreground">
-                Your browser doesn't support push notifications, or you're not using HTTPS.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -157,34 +130,49 @@ export const NotificationSettings: React.FC = () => {
           <div>
             <h4 className="font-medium">Push Subscription</h4>
             <p className="text-sm text-muted-foreground">
-              Enable push notifications to receive real-time updates
+              {isSupported 
+                ? 'Enable push notifications to receive real-time updates'
+                : 'Push notifications not available in this environment'
+              }
             </p>
           </div>
           
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-4 w-4" />
+          {isSupported ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Smartphone className="h-4 w-4" />
+                <div>
+                  <Label className="font-medium">
+                    {isSubscribed ? 'Subscribed to push notifications' : 'Not subscribed'}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {isSubscribed 
+                      ? 'Your device will receive push notifications' 
+                      : 'Subscribe to receive push notifications'
+                    }
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleSubscriptionToggle}
+                disabled={subscriptionLoading}
+                variant={isSubscribed ? 'outline' : 'default'}
+                size="sm"
+              >
+                {subscriptionLoading ? 'Loading...' : (isSubscribed ? 'Unsubscribe' : 'Subscribe')}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               <div>
-                <Label className="font-medium">
-                  {isSubscribed ? 'Subscribed to push notifications' : 'Not subscribed'}
-                </Label>
+                <p className="text-sm font-medium">Browser push notifications unavailable</p>
                 <p className="text-xs text-muted-foreground">
-                  {isSubscribed 
-                    ? 'Your device will receive push notifications' 
-                    : 'Subscribe to receive push notifications'
-                  }
+                  Notification preferences will still be saved for when push is available
                 </p>
               </div>
             </div>
-            <Button
-              onClick={handleSubscriptionToggle}
-              disabled={subscriptionLoading}
-              variant={isSubscribed ? 'outline' : 'default'}
-              size="sm"
-            >
-              {subscriptionLoading ? 'Loading...' : (isSubscribed ? 'Unsubscribe' : 'Subscribe')}
-            </Button>
-          </div>
+          )}
         </div>
 
         <Separator />
