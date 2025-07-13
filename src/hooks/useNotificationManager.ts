@@ -26,7 +26,7 @@ const isSecureContext = () => {
 export function useNotificationManager() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const updatePreferences = useUpdateNotificationPreferences();
+  const updatePreferences = useUpdateNotificationPreferences(user?.id || null);
   const createPushSubscription = useCreatePushSubscription();
   const deletePushSubscription = useDeletePushSubscription();
   

@@ -1,84 +1,60 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { NotificationPreferences } from "../types";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "@/hooks/use-toast";
-import { NOTIFICATION_PREFERENCES_QUERY_KEY } from "../useNotificationPreferencesData";
-import { 
-  saveNotificationPreferencesToDB,
-  setLastSyncTimeForNotificationPreferences
-} from "../../indexedDB/useIndexedDB";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import type { NotificationPreferences } from '../types';
+import { NOTIFICATION_PREFERENCES_QUERY_KEY } from '../queries/useNotificationPreferencesQuery';
+import { logger } from '@/lib/logger';
+import { toast } from '@/hooks/use-toast';
 
 interface UpdateNotificationPreferencesParams {
   preferences: NotificationPreferences;
 }
 
-async function updateNotificationPreferences(
-  userId: string, 
-  { preferences }: UpdateNotificationPreferencesParams
-): Promise<NotificationPreferences> {
-  const { data, error } = await supabase
-    .from('user_notification_preferences')
-    .upsert(
-      { user_id: userId, preferences: preferences as any },
-      { onConflict: 'user_id' }
-    )
-    .select('preferences')
-    .single();
-
-  if (error) {
-    console.error('Error updating notification preferences:', error);
-    throw error;
-  }
-
-  return (data.preferences as unknown as NotificationPreferences) || preferences;
-}
-
-export function useUpdateNotificationPreferences() {
-  const { user } = useAuth();
+export const useUpdateNotificationPreferences = (userId: string | null) => {
   const queryClient = useQueryClient();
-  const queryKey = [...NOTIFICATION_PREFERENCES_QUERY_KEY, user?.id];
 
-  return useMutation({
-    mutationFn: (params: UpdateNotificationPreferencesParams) =>
-      updateNotificationPreferences(user!.id, params),
-    onMutate: async ({ preferences }) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey });
-
-      // Snapshot previous value
-      const previousPreferences = queryClient.getQueryData<NotificationPreferences>(queryKey);
-
-      // Optimistically update cache
-      queryClient.setQueryData<NotificationPreferences>(queryKey, preferences);
-
-      // Update IndexedDB optimistically
-      await saveNotificationPreferencesToDB(preferences, user?.id);
-
-      return { previousPreferences };
-    },
-    onError: async (error, variables, context) => {
-      // Revert optimistic update in cache
-      if (context?.previousPreferences) {
-        queryClient.setQueryData(queryKey, context.previousPreferences);
-        // Revert IndexedDB too
-        await saveNotificationPreferencesToDB(context.previousPreferences, user?.id);
+  return useMutation<NotificationPreferences, Error, UpdateNotificationPreferencesParams>({
+    mutationFn: async ({ preferences }) => {
+      if (!userId) {
+        throw new Error('User ID is required');
       }
-      
-      console.error('Failed to update notification preferences:', error);
-      toast({
-        title: 'Failed to update notification preferences',
-        variant: 'destructive'
-      });
+
+      logger.debug('[useUpdateNotificationPreferences] Updating preferences:', preferences);
+
+      const { data, error } = await supabase
+        .from('user_notification_preferences')
+        .upsert(
+          { user_id: userId, preferences: preferences as any },
+          { onConflict: 'user_id' }
+        )
+        .select('preferences')
+        .single();
+
+      if (error) {
+        logger.error('[useUpdateNotificationPreferences] Error:', error);
+        throw error;
+      }
+
+      const result = (data.preferences as unknown as NotificationPreferences) || preferences;
+      logger.debug('[useUpdateNotificationPreferences] Updated preferences:', result);
+      return result;
     },
-    onSuccess: async (data) => {
-      // Update IndexedDB with confirmed data
-      await saveNotificationPreferencesToDB(data, user?.id);
-      await setLastSyncTimeForNotificationPreferences(new Date().toISOString(), user?.id);
+    onSuccess: (preferences) => {
+      // Update query cache optimistically
+      queryClient.setQueryData([...NOTIFICATION_PREFERENCES_QUERY_KEY, userId], preferences);
+      
+      logger.debug('[useUpdateNotificationPreferences] Cache updated with updated preferences');
       
       toast({
         title: 'Notification preferences updated'
       });
     },
+    onError: (error) => {
+      logger.error('[useUpdateNotificationPreferences] Error updating preferences:', error);
+      
+      toast({
+        title: 'Failed to update notification preferences',
+        variant: 'destructive'
+      });
+    }
   });
-}
+};

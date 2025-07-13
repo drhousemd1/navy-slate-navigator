@@ -1,8 +1,10 @@
 import { useNotificationPreferencesQuery } from '@/data/notifications';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Re-export the query hook with a simpler interface for backward compatibility
 export const useNotificationPreferences = () => {
-  const query = useNotificationPreferencesQuery();
+  const { user } = useAuth();
+  const query = useNotificationPreferencesQuery(user?.id || null);
   
   return {
     preferences: query.data,

@@ -8,7 +8,7 @@ import { fetchRules } from '@/data/rules/fetchRules';
 import { fetchTasks, TASKS_QUERY_KEY } from '@/data/tasks/queries';
 import { fetchPunishments } from '@/data/punishments/queries/fetchPunishments';
 import { fetchWellbeingSnapshot, WELLBEING_QUERY_KEY } from '@/data/wellbeing/queries';
-import { preloadNotificationPreferences, NOTIFICATION_PREFERENCES_QUERY_KEY } from '@/data/notifications/useNotificationPreferencesData';
+// Remove notification preferences from preload - they use direct fetch like wellness reminders
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
@@ -31,11 +31,7 @@ export const usePreloadAppCoreData = () => {
 
       logger.debug('[PreloadAppCoreData] Pre-fetching core application data...');
       
-      // Notification preferences (user-specific, load immediately for UI)
-      if (user?.id) {
-        await preloadNotificationPreferences(user.id);
-        logger.debug('[PreloadAppCoreData] Notification preferences pre-fetched.');
-      }
+      // Notification preferences are not preloaded - they use direct fetch like wellness reminders
       
       // Rewards
       await queryClient.prefetchQuery({
@@ -89,8 +85,7 @@ export const usePreloadAppCoreData = () => {
       !queryClient.getQueryData([...REWARDS_QUERY_KEY, subUserId, domUserId]) ||
       !queryClient.getQueryData([...RULES_QUERY_KEY, subUserId, domUserId]) ||
       !queryClient.getQueryData([...TASKS_QUERY_KEY, subUserId, domUserId]) ||
-      !queryClient.getQueryData([...PUNISHMENTS_QUERY_KEY, subUserId, domUserId]) ||
-      (user?.id && !queryClient.getQueryData([...NOTIFICATION_PREFERENCES_QUERY_KEY, user.id]))
+      !queryClient.getQueryData([...PUNISHMENTS_QUERY_KEY, subUserId, domUserId])
     ) {
       prefetchData();
     } else {
