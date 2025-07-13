@@ -35,8 +35,8 @@ export const useNotificationPreferencesData = () => {
   }, [userId, updateMutation]);
 
   return {
-    // Data
-    preferences: preferences ?? DEFAULT_NOTIFICATION_PREFERENCES,
+    // Data - direct return like wellness reminders (no fallback override)
+    preferences,
     isLoading: isLoading || updateMutation.isPending,
     error: error?.message || updateMutation.error?.message || null,
     

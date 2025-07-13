@@ -57,6 +57,8 @@ const NotificationSettings: React.FC = () => {
   } = useNotificationManager();
 
   const handleMainToggle = async () => {
+    if (!preferences) return;
+    
     const newPreferences = {
       ...preferences,
       enabled: !preferences.enabled
@@ -73,6 +75,8 @@ const NotificationSettings: React.FC = () => {
   };
 
   const handleTypeToggle = async (type: keyof NotificationPreferences['types'], enabled: boolean) => {
+    if (!preferences) return;
+    
     const newPreferences = {
       ...preferences,
       types: {
@@ -84,7 +88,7 @@ const NotificationSettings: React.FC = () => {
     await updatePreferences(newPreferences);
   };
 
-  if (isLoading) {
+  if (isLoading || !preferences) {
     return (
       <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
