@@ -51,21 +51,23 @@ export const useNotificationSettings = () => {
         .from('user_notification_preferences')
         .select('preferences')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         logger.error('Error loading notification preferences:', error);
+        setPreferences(defaultPreferences);
         return;
       }
 
       if (data?.preferences) {
         setPreferences(data.preferences as unknown as NotificationPreferences);
       } else {
-        // Create default preferences if none exist
-        await savePreferences(defaultPreferences);
+        // Set default preferences in state only, save will happen on first update
+        setPreferences(defaultPreferences);
       }
     } catch (error) {
       logger.error('Error loading notification preferences:', error);
+      setPreferences(defaultPreferences);
     } finally {
       setIsLoading(false);
     }
