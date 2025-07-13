@@ -37,5 +37,6 @@ export const useNotificationPreferencesQuery = (userId: string | null) => {
       return fetchNotificationPreferences(userId);
     },
     enabled: !!userId,
+    staleTime: Infinity,
   });
 };
