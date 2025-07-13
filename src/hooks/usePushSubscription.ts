@@ -11,29 +11,67 @@ export const usePushSubscription = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    checkPushSupport();
-    if (user) {
-      checkSubscriptionStatus();
-    }
+    const initializePushNotifications = async () => {
+      await checkPushSupport();
+      if (user) {
+        await checkSubscriptionStatus();
+      }
+    };
+    
+    initializePushNotifications();
   }, [user]);
 
-  const checkPushSupport = () => {
-    const supported = 'serviceWorker' in navigator && 'PushManager' in window;
-    setIsSupported(supported);
-    if (!supported) {
+  const checkPushSupport = async () => {
+    logger.info('Checking push notification support...');
+    
+    // Basic API check
+    const hasApis = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    logger.info('Basic APIs available:', hasApis);
+    
+    if (!hasApis) {
+      logger.warn('Missing required APIs for push notifications');
+      setIsSupported(false);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Try to get service worker registration
+      logger.info('Waiting for service worker registration...');
+      const registration = await navigator.serviceWorker.ready;
+      logger.info('Service worker ready:', registration);
+      
+      // Check if push manager is available
+      if (!registration.pushManager) {
+        logger.warn('Push manager not available');
+        setIsSupported(false);
+        setIsLoading(false);
+        return;
+      }
+      
+      logger.info('Push notifications fully supported');
+      setIsSupported(true);
+    } catch (error) {
+      logger.error('Service worker registration failed:', error);
+      setIsSupported(false);
       setIsLoading(false);
     }
   };
 
   const checkSubscriptionStatus = async () => {
     if (!isSupported || !user) {
+      logger.info('Skipping subscription check - not supported or no user');
       setIsLoading(false);
       return;
     }
 
     try {
+      logger.info('Checking subscription status...');
       const registration = await navigator.serviceWorker.ready;
+      logger.info('Got service worker registration for subscription check');
+      
       const subscription = await registration.pushManager.getSubscription();
+      logger.info('Current subscription:', subscription ? 'exists' : 'none');
       
       if (subscription) {
         // Check if subscription exists in database
@@ -42,9 +80,15 @@ export const usePushSubscription = () => {
           .select('id')
           .eq('user_id', user.id)
           .eq('endpoint', subscription.endpoint)
-          .single();
+          .maybeSingle();
 
-        setIsSubscribed(!!data && !error);
+        if (error) {
+          logger.error('Database query error:', error);
+          setIsSubscribed(false);
+        } else {
+          setIsSubscribed(!!data);
+          logger.info('Subscription status from DB:', !!data);
+        }
       } else {
         setIsSubscribed(false);
       }
