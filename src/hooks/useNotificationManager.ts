@@ -97,13 +97,7 @@ export function useNotificationManager() {
       // Check if push notifications are supported
       if (!pushSupported) {
         console.warn('Push notifications not supported:', pushError);
-        if (isMobile()) {
-          toast({
-            title: 'Push Notifications Not Available',
-            description: pushError || 'Push notifications are not supported on this device',
-            variant: 'destructive'
-          });
-        }
+        // Removed mobile device toast as it was confusing users
         return false;
       }
 
