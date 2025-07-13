@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -84,12 +85,12 @@ export const usePushSubscription = () => {
       // Get service worker registration
       const registration = await navigator.serviceWorker.ready;
 
-      // Subscribe to push notifications
+      // Subscribe to push notifications with your actual VAPID public key
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
-          'BLQELIDDNiRBpETp8RXYnWuAK-fhKhEEaJQZM-5_-8U6XZPdYP2Qx6dLYJD1L4x3Qx6dLYJD1L4x3'
-        ), // This should be your VAPID public key
+          'BCRZq1g3uH8yvR-54dWzDIwq5jC-zRFnrrsGd2urb4QSgmwE6EkURTD7N4AoTRkdGAAvtqsfGP80vL2JRO8alMc'
+        ),
       });
 
       // Convert subscription to format for database
