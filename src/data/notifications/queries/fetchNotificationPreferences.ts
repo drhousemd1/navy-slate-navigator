@@ -11,7 +11,7 @@ export async function fetchNotificationPreferences(userId: string): Promise<Noti
 
   if (error) {
     console.error('Error fetching notification preferences:', error);
-    return DEFAULT_NOTIFICATION_PREFERENCES;
+    throw error;
   }
 
   // If no record exists, create one with default preferences
@@ -24,7 +24,7 @@ export async function fetchNotificationPreferences(userId: string): Promise<Noti
 
     if (createError) {
       console.error('Error creating notification preferences:', createError);
-      return DEFAULT_NOTIFICATION_PREFERENCES;
+      throw createError;
     }
 
     return (created.preferences as unknown as NotificationPreferences) || DEFAULT_NOTIFICATION_PREFERENCES;
