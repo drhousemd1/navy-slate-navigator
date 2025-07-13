@@ -30,5 +30,8 @@ export async function fetchNotificationPreferences(userId: string): Promise<Noti
     return (created.preferences as unknown as NotificationPreferences) || DEFAULT_NOTIFICATION_PREFERENCES;
   }
 
-  return (data.preferences as unknown as NotificationPreferences) || DEFAULT_NOTIFICATION_PREFERENCES;
+  const preferences = data.preferences as unknown as NotificationPreferences;
+  console.log('[fetchNotificationPreferences] Raw database data:', data.preferences);
+  console.log('[fetchNotificationPreferences] Parsed preferences:', preferences);
+  return preferences;
 }

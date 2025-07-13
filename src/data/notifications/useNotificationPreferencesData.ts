@@ -36,7 +36,7 @@ export const useNotificationPreferencesData = () => {
 
   return {
     // Data
-    preferences: preferences || DEFAULT_NOTIFICATION_PREFERENCES,
+    preferences: preferences ?? DEFAULT_NOTIFICATION_PREFERENCES,
     isLoading: isLoading || updateMutation.isPending,
     error: error?.message || updateMutation.error?.message || null,
     
