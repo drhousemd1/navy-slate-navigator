@@ -133,8 +133,8 @@ const Notifications: React.FC = () => {
           </div>
 
           {/* Wellness Reminder Settings */}
-          <div className="mt-8 pt-8 border-t border-light-navy">
-            <WellnessReminderSettings />
+        <div className="mt-8">
+          <WellnessReminderSettings />
           </div>
         </div>
 
