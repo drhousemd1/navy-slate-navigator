@@ -106,11 +106,30 @@ export const usePushSubscription = () => {
       return false;
     }
 
+    // Log current permission state
+    const currentPermission = Notification.permission;
+    logger.info('Current notification permission:', currentPermission);
+
+    // If already granted, no need to request again
+    if (currentPermission === 'granted') {
+      logger.info('Permission already granted');
+      return true;
+    }
+
+    // If denied, don't try to request again
+    if (currentPermission === 'denied') {
+      logger.warn('Permission previously denied');
+      return false;
+    }
+
+    // Request permission (only when 'default')
+    logger.info('Requesting notification permission...');
     const permission = await Notification.requestPermission();
+    logger.info('Permission request result:', permission);
     return permission === 'granted';
   };
 
-  const subscribe = async (): Promise<boolean> => {
+  const subscribe = async (hasUserPermission: boolean = false): Promise<boolean> => {
     if (!isSupported || !user) {
       logger.error('Push notifications not supported or user not authenticated');
       return false;
@@ -119,23 +138,35 @@ export const usePushSubscription = () => {
     try {
       setIsLoading(true);
 
-      // Request notification permission
-      const hasPermission = await requestNotificationPermission();
+      // If permission wasn't already requested in user gesture context, request it now
+      let hasPermission = hasUserPermission;
       if (!hasPermission) {
-        logger.warn('Notification permission denied');
-        return false;
+        hasPermission = await requestNotificationPermission();
+        if (!hasPermission) {
+          logger.warn('Notification permission denied');
+          return false;
+        }
       }
 
-      // Get service worker registration
-      const registration = await navigator.serviceWorker.ready;
+      // Wait for service worker to be ready with timeout
+      logger.info('Waiting for service worker to be ready...');
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Service worker timeout')), 10000)
+        )
+      ]);
+      logger.info('Service worker ready for subscription');
 
-      // Subscribe to push notifications with your actual VAPID public key
+      // Subscribe to push notifications with VAPID public key
+      logger.info('Attempting to subscribe to push manager...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
           'BCRZq1g3uH8yvR-54dWzDIwq5jC-zRFnrrsGd2urb4QSgmwE6EkURTD7N4AoTRkdGAAvtqsfGP80vL2JRO8alMc'
         ),
       });
+      logger.info('Push subscription created successfully');
 
       // Convert subscription to format for database
       const p256dh = arrayBufferToBase64(subscription.getKey('p256dh')!);
@@ -209,6 +240,12 @@ export const usePushSubscription = () => {
     }
   };
 
+  // New function to request permission immediately on user gesture
+  const requestPermissionImmediately = async (): Promise<boolean> => {
+    logger.info('Requesting permission immediately on user gesture');
+    return await requestNotificationPermission();
+  };
+
   return {
     isSubscribed,
     isSupported,
@@ -216,6 +253,7 @@ export const usePushSubscription = () => {
     subscribe,
     unsubscribe,
     checkSubscriptionStatus,
+    requestPermissionImmediately,
   };
 };
 

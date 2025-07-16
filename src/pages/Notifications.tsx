@@ -12,7 +12,7 @@ import WellnessReminderSettings from '@/components/profile/WellnessReminderSetti
 const Notifications: React.FC = () => {
   const navigate = useNavigate();
   const { preferences, isLoading, isSaving, updateNotificationType, toggleNotifications } = useNotificationSettings();
-  const { isSubscribed, isSupported, isLoading: pushLoading, subscribe, unsubscribe } = usePushSubscription();
+  const { isSubscribed, isSupported, isLoading: pushLoading, subscribe, unsubscribe, requestPermissionImmediately } = usePushSubscription();
 
   const handleTypeToggle = async (type: keyof typeof preferences.types, enabled: boolean) => {
     try {
@@ -28,17 +28,28 @@ const Notifications: React.FC = () => {
 
   const handleMasterToggle = async (enabled: boolean) => {
     try {
-      // Update database preferences
-      await toggleNotifications(enabled);
-      
-      // Handle browser push subscription
       if (enabled) {
+        // First, request permission immediately (in user gesture context)
         if (isSupported) {
-          const success = await subscribe();
+          const hasPermission = await requestPermissionImmediately();
+          if (!hasPermission) {
+            toast({
+              title: 'Permission Required',
+              description: 'Please allow notifications in your browser to enable push notifications.',
+              variant: 'destructive',
+            });
+            return;
+          }
+
+          // Update database preferences first
+          await toggleNotifications(enabled);
+          
+          // Then subscribe with permission already granted
+          const success = await subscribe(true);
           if (!success) {
             toast({
               title: 'Warning',
-              description: 'Notifications enabled but push subscription failed. Check browser permissions.',
+              description: 'Notifications enabled but push subscription failed. Please try again.',
               variant: 'destructive',
             });
           } else {
@@ -55,6 +66,8 @@ const Notifications: React.FC = () => {
           });
         }
       } else {
+        // Disable notifications
+        await toggleNotifications(enabled);
         if (isSubscribed) {
           await unsubscribe();
         }
