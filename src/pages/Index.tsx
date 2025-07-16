@@ -17,7 +17,7 @@ const Index: React.FC = () => {
               <div className="mb-6 w-full max-w-[240px]">
                 <img 
                   src={APP_CONFIG.logoUrl} 
-                  alt="TaskMaster Logo" 
+                  alt="Playful Obedience Logo" 
                   className="w-full h-auto object-contain"
                   onError={(e) => {
                     logger.error('Failed to load logo image', e);
