@@ -112,13 +112,13 @@ export const usePushSubscription = () => {
 
     // If already granted, no need to request again
     if (currentPermission === 'granted') {
-      logger.info('Permission already granted');
+      logger.info('Permission already granted, proceeding with subscription');
       return true;
     }
 
     // If denied, don't try to request again
     if (currentPermission === 'denied') {
-      logger.warn('Permission previously denied');
+      logger.warn('Permission previously denied - user needs to enable in browser settings');
       return false;
     }
 
