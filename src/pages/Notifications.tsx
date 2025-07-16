@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { toast } from '@/hooks/use-toast';
+import WellnessReminderSettings from '@/components/profile/WellnessReminderSettings';
 
 const Notifications: React.FC = () => {
   const navigate = useNavigate();
@@ -131,6 +132,11 @@ const Notifications: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Wellness Reminder Settings */}
+          <div className="mt-8 pt-8 border-t border-light-navy">
+            <WellnessReminderSettings />
           </div>
         </div>
 
