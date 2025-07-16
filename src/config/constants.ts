@@ -2,7 +2,7 @@
 // App-wide constants
 export const APP_CONFIG = {
   // Company/App branding
-  logoUrl: "/lovable-uploads/d623e2ad-293b-4400-b123-c5ca8c0e77a9.png",
+  logoUrl: "/lovable-uploads/623c4add-3e36-4702-8609-e31c99db4d37.png",
   appName: "Playful Obedience",
   
   // Other global constants can be added here as the app grows
