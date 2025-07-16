@@ -84,52 +84,50 @@ const Notifications: React.FC = () => {
               Push Notifications
             </h2>
             
-            <div className="bg-navy p-4 rounded space-y-4">
-              {/* Master Toggle */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Bell className={`w-5 h-5 ${preferences.enabled ? 'text-cyan-500' : 'text-gray-400'}`} />
-                  <div>
-                    <p className="text-white font-medium">Push Notifications</p>
-                    <p className="text-gray-400 text-sm">Enable push notifications</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.enabled}
-                  onCheckedChange={handleMasterToggle}
-                  disabled={isLoading || isSaving}
-                />
-              </div>
-
-              {/* Status */}
+            {/* Master Toggle */}
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Wifi className="h-4 w-4 text-gray-400" />
-                <p className="text-sm text-gray-400">Status: Push supported</p>
-              </div>
-
-              {/* Notification Types */}
-              <div className="space-y-4">
-                <h4 className="text-white font-medium">Notification Types</h4>
-                <div className="space-y-4">
-                  {notificationTypes.map(([type, enabled]) => {
-                    const typeInfo = getNotificationTypeInfo(type as keyof typeof preferences.types);
-                    return (
-                      <div key={type} className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h5 className="text-white font-medium">{typeInfo.title}</h5>
-                          <p className="text-gray-400 text-sm">{typeInfo.description}</p>
-                        </div>
-                        <Switch
-                          checked={enabled}
-                          onCheckedChange={(checked) => 
-                            handleTypeToggle(type as keyof typeof preferences.types, checked)
-                          }
-                          disabled={isLoading || isSaving || !preferences.enabled}
-                        />
-                      </div>
-                    );
-                  })}
+                <Bell className={`w-5 h-5 ${preferences.enabled ? 'text-cyan-500' : 'text-gray-400'}`} />
+                <div>
+                  <p className="text-white font-medium">Push Notifications</p>
+                  <p className="text-gray-400 text-sm">Enable push notifications</p>
                 </div>
+              </div>
+              <Switch
+                checked={preferences.enabled}
+                onCheckedChange={handleMasterToggle}
+                disabled={isLoading || isSaving}
+              />
+            </div>
+
+            {/* Status */}
+            <div className="flex items-center space-x-2">
+              <Wifi className="h-4 w-4 text-gray-400" />
+              <p className="text-sm text-gray-400">Status: Push supported</p>
+            </div>
+
+            {/* Notification Types */}
+            <div className="space-y-4">
+              <h4 className="text-white font-medium">Notification Types</h4>
+              <div className="space-y-4">
+                {notificationTypes.map(([type, enabled]) => {
+                  const typeInfo = getNotificationTypeInfo(type as keyof typeof preferences.types);
+                  return (
+                    <div key={type} className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h5 className="text-white font-medium">{typeInfo.title}</h5>
+                        <p className="text-gray-400 text-sm">{typeInfo.description}</p>
+                      </div>
+                      <Switch
+                        checked={enabled}
+                        onCheckedChange={(checked) => 
+                          handleTypeToggle(type as keyof typeof preferences.types, checked)
+                        }
+                        disabled={isLoading || isSaving || !preferences.enabled}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
