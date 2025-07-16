@@ -84,7 +84,7 @@ const Notifications: React.FC = () => {
               Push Notifications
             </h2>
             
-            <div className="bg-navy p-4 rounded border border-light-navy space-y-4">
+            <div className="bg-navy p-4 rounded space-y-4">
               {/* Master Toggle */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
