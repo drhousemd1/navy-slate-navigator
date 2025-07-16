@@ -47,8 +47,11 @@
     --neon-glow: #00FFF7;
     
     /* Navigation colors */
+    --dark-navy: 218 36% 13%;
+    --navy: 218 36% 18%;
     --light-navy: 218 36% 23%;
     --nav-active: 189 100% 43%;
+    --nav-inactive: 215 20.2% 65.1%;
     
     /* Wellbeing color tokens */
     --wellbeing-great: 142 76% 36%;      /* Emerald 600 */
@@ -105,8 +108,11 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
     
     /* Navigation colors - same values for dark mode */
+    --dark-navy: 218 36% 13%;
+    --navy: 218 36% 18%;
     --light-navy: 218 36% 23%;
     --nav-active: 189 100% 43%;
+    --nav-inactive: 215 20.2% 65.1%;
     
     /* Wellbeing color tokens - same values for dark mode */
     --wellbeing-great: 142 76% 36%;      /* Emerald 600 */

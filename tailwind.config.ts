@@ -70,11 +70,11 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				// Custom colors for our app
-				"dark-navy": "#0A192F",
-				"navy": "#112240",
-				"light-navy": "#233554",
-				"nav-active": "#00B8D9",
-				"nav-inactive": "#8892B0",
+				"dark-navy": 'hsl(var(--dark-navy))',
+				"navy": 'hsl(var(--navy))',
+				"light-navy": 'hsl(var(--light-navy))',
+				"nav-active": 'hsl(var(--nav-active))',
+				"nav-inactive": 'hsl(var(--nav-inactive))',
 				// Wellbeing status colors
 				wellbeing: {
 					great: 'hsl(var(--wellbeing-great))',
