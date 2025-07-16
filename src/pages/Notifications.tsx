@@ -108,7 +108,7 @@ const Notifications: React.FC = () => {
               </div>
 
               {/* Notification Types */}
-              <div className="pt-4 border-t border-light-navy space-y-4">
+              <div className="pt-4 space-y-4">
                 <h4 className="text-white font-medium">Notification Types</h4>
                 <div className="space-y-4">
                   {notificationTypes.map(([type, enabled]) => {
