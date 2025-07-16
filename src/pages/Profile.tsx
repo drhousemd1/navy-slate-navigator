@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Camera, Trash2, LogOut } from 'lucide-react';
 import { DeleteAccountDialog } from '@/components/profile/DeleteAccountDialog';
 import { DeleteAvatarDialog } from '@/components/profile/DeleteAvatarDialog';
-import { NotificationSettings } from '@/components/profile/NotificationSettings';
+
 import WellnessReminderSettings from '@/components/profile/WellnessReminderSettings';
 import PartnerLinkingSection from '@/components/profile/PartnerLinkingSection';
 
@@ -293,11 +293,6 @@ const Profile: React.FC = () => {
 
           {/* Partner Linking Section */}
           <PartnerLinkingSection />
-
-          {/* Notification Settings */}
-          <div className="mt-8">
-            <NotificationSettings />
-          </div>
 
           {/* Wellness Reminder Settings */}
           <WellnessReminderSettings />

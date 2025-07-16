@@ -11,6 +11,7 @@ import Messages from './pages/Messages';
 import Encyclopedia from './pages/Encyclopedia';
 import Wellbeing from './pages/Wellbeing';
 import ColorScheme from './pages/ColorScheme';
+import Notifications from './pages/Notifications';
 import Auth from './pages/auth';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
@@ -69,6 +70,10 @@ const AppRoutes = () => {
       <Route 
         path="/profile/color-scheme" 
         element={<ProtectedRoute><ErrorBoundary><ColorScheme /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/profile/notifications" 
+        element={<ProtectedRoute><ErrorBoundary><Notifications /></ErrorBoundary></ProtectedRoute>} 
       />
       
       {/* Catch-all for not found routes */}
