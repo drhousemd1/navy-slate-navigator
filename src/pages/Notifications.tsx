@@ -12,7 +12,7 @@ import WellnessReminderSettings from '@/components/profile/WellnessReminderSetti
 const Notifications: React.FC = () => {
   const navigate = useNavigate();
   const { preferences, isLoading, isSaving, updateNotificationType, toggleNotifications } = useNotificationSettings();
-  const { isSubscribed, isSupported } = usePushSubscription();
+  const { isSubscribed, isSupported, isLoading: pushLoading, subscribe, unsubscribe } = usePushSubscription();
 
   const handleTypeToggle = async (type: keyof typeof preferences.types, enabled: boolean) => {
     try {
@@ -28,7 +28,41 @@ const Notifications: React.FC = () => {
 
   const handleMasterToggle = async (enabled: boolean) => {
     try {
+      // Update database preferences
       await toggleNotifications(enabled);
+      
+      // Handle browser push subscription
+      if (enabled) {
+        if (isSupported) {
+          const success = await subscribe();
+          if (!success) {
+            toast({
+              title: 'Warning',
+              description: 'Notifications enabled but push subscription failed. Check browser permissions.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: 'Success',
+              description: 'Push notifications enabled successfully!',
+            });
+          }
+        } else {
+          toast({
+            title: 'Warning',
+            description: 'Push notifications not supported by this browser.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        if (isSubscribed) {
+          await unsubscribe();
+        }
+        toast({
+          title: 'Success',
+          description: 'Push notifications disabled.',
+        });
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -96,14 +130,16 @@ const Notifications: React.FC = () => {
               <Switch
                 checked={preferences.enabled}
                 onCheckedChange={handleMasterToggle}
-                disabled={isLoading || isSaving}
+                disabled={isLoading || isSaving || pushLoading}
               />
             </div>
 
             {/* Status */}
             <div className="flex items-center space-x-2">
-              <Wifi className="h-4 w-4 text-gray-400" />
-              <p className="text-sm text-gray-400">Status: Push supported</p>
+              <Wifi className={`h-4 w-4 ${isSubscribed ? 'text-green-500' : 'text-gray-400'}`} />
+              <p className="text-sm text-gray-400">
+                Status: {isSupported ? (isSubscribed ? 'Subscribed' : 'Not subscribed') : 'Not supported'}
+              </p>
             </div>
 
             {/* Notification Types */}
