@@ -302,22 +302,6 @@ const Profile: React.FC = () => {
           {/* Wellness Reminder Settings */}
           <WellnessReminderSettings />
           
-          {/* Color Scheme Section */}
-          <div className="border-t border-light-navy pt-8 mt-8">
-            <h3 className="text-lg font-semibold text-gray-300 mb-4">
-              Color Scheme
-            </h3>
-            <p className="text-gray-400 mb-4">
-              Customize your app's appearance with different color themes.
-            </p>
-            <Button
-              onClick={() => navigate('/profile/color-scheme')}
-              className="w-full bg-gray-600 text-white hover:bg-gray-500 hover:text-white"
-            >
-              Choose Color Scheme
-            </Button>
-          </div>
-          
           {/* Actions Section */}
           <div className="space-y-4 border-t border-light-navy pt-8 mt-8">
             <Button onClick={handleLogout} className="w-full bg-gray-600 text-white hover:bg-gray-500 hover:text-white flex items-center">

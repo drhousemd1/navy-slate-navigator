@@ -7,7 +7,7 @@ import {
   SheetTitle,
   SheetTrigger
 } from '@/components/ui/sheet';
-import { UserCircle2, User, LogOut, BookOpen, ShieldCheck, Activity } from 'lucide-react';
+import { UserCircle2, User, LogOut, BookOpen, ShieldCheck, Activity, Palette } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -48,6 +48,11 @@ const AccountSheet = () => {
 
   const handleAdminPanelClick = () => {
     navigate('/admin-panel');
+    setSheetOpen(false);
+  };
+
+  const handleColorSchemeClick = () => {
+    navigate('/profile/color-scheme');
     setSheetOpen(false);
   };
   
@@ -163,6 +168,15 @@ const AccountSheet = () => {
             >
               <Activity className="w-5 h-5 mr-3" />
               Wellbeing
+            </Button>
+
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              onClick={handleColorSchemeClick}
+            >
+              <Palette className="w-5 h-5 mr-3" />
+              Color Scheme
             </Button>
 
             {isAdmin && user && ( // Show Admin Panel button if user is admin
