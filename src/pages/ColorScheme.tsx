@@ -1,12 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import { COLOR_SCHEMES } from '@/lib/colorSchemes';
 
 export default function ColorScheme() {
+  const navigate = useNavigate();
   const { currentScheme, applyScheme, isLoading } = useColorScheme();
 
   const handleApplyScheme = async (schemeName: string) => {
@@ -90,6 +92,17 @@ export default function ColorScheme() {
               </Card>
             );
           })}
+        </div>
+
+        <div className="mt-8 flex justify-center">
+          <Button
+            onClick={() => navigate('/')}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <X className="h-4 w-4" />
+            Close & Return Home
+          </Button>
         </div>
       </div>
     </AppLayout>
