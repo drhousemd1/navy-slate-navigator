@@ -23,12 +23,13 @@ export default function ColorScheme() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-4">
           {COLOR_SCHEMES.map((scheme) => {
+            console.log('Rendering scheme:', scheme.name);
             const isActive = currentScheme === scheme.name;
             
             return (
-              <Card key={scheme.name} className={`relative transition-all ${isActive ? 'ring-2 ring-primary' : ''}`}>
+              <Card key={scheme.name} className={`transition-all ${isActive ? 'ring-2 ring-primary' : ''}`}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="capitalize">
@@ -45,147 +46,6 @@ export default function ColorScheme() {
                 </CardHeader>
                 
                 <CardContent>
-                  {/* Labeled Color Swatches */}
-                  <div className="space-y-3 mb-6">
-                    <h4 className="text-sm font-medium text-foreground mb-2">Color Elements</h4>
-                    
-                    {/* Navigation Colors */}
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground font-medium">Navigation</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded border border-border"
-                            style={{ backgroundColor: `hsl(${scheme.variables['--dark-navy']})` }}
-                          />
-                          <span className="text-muted-foreground">Nav Bar</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded border border-border"
-                            style={{ backgroundColor: `hsl(${scheme.variables['--nav-active']})` }}
-                          />
-                          <span className="text-muted-foreground">Active Item</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Content Colors */}
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground font-medium">Content</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded border border-border"
-                            style={{ backgroundColor: `hsl(${scheme.variables['--background']})` }}
-                          />
-                          <span className="text-muted-foreground">Background</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded border border-border"
-                            style={{ backgroundColor: `hsl(${scheme.variables['--card']})` }}
-                          />
-                          <span className="text-muted-foreground">Cards</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Interactive Colors */}
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground font-medium">Interactive</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded border border-border"
-                            style={{ backgroundColor: `hsl(${scheme.variables['--primary']})` }}
-                          />
-                          <span className="text-muted-foreground">Buttons</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded border border-border"
-                            style={{ backgroundColor: `hsl(${scheme.variables['--foreground']})` }}
-                          />
-                          <span className="text-muted-foreground">Text</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Realistic App Preview */}
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-foreground mb-2">Preview</h4>
-                    <div 
-                      className="rounded-lg border overflow-hidden"
-                      style={{ borderColor: `hsl(${scheme.variables['--border']})` }}
-                    >
-                      {/* Mock Navigation Bar */}
-                      <div 
-                        className="p-2 border-b flex items-center gap-2"
-                        style={{ 
-                          backgroundColor: `hsl(${scheme.variables['--dark-navy']})`,
-                          borderBottomColor: `hsl(${scheme.variables['--border']})`
-                        }}
-                      >
-                        <div 
-                          className="px-2 py-1 rounded text-xs font-medium"
-                          style={{ 
-                            backgroundColor: `hsl(${scheme.variables['--nav-active']})`,
-                            color: `hsl(${scheme.variables['--background']})`
-                          }}
-                        >
-                          Tasks
-                        </div>
-                        <div 
-                          className="px-2 py-1 text-xs"
-                          style={{ color: `hsl(${scheme.variables['--nav-inactive']})` }}
-                        >
-                          Rewards
-                        </div>
-                      </div>
-                      
-                      {/* Mock Content Area */}
-                      <div 
-                        className="p-3 space-y-2"
-                        style={{ backgroundColor: `hsl(${scheme.variables['--background']})` }}
-                      >
-                        {/* Mock Task Card */}
-                        <div 
-                          className="p-2 rounded border"
-                          style={{ 
-                            backgroundColor: `hsl(${scheme.variables['--card']})`,
-                            borderColor: `hsl(${scheme.variables['--border']})`
-                          }}
-                        >
-                          <div 
-                            className="text-xs font-medium mb-1"
-                            style={{ color: `hsl(${scheme.variables['--foreground']})` }}
-                          >
-                            Sample Task
-                          </div>
-                          <div 
-                            className="text-xs"
-                            style={{ color: `hsl(${scheme.variables['--muted-foreground']})` }}
-                          >
-                            Task description
-                          </div>
-                        </div>
-                        
-                        {/* Mock Button */}
-                        <div 
-                          className="inline-block px-3 py-1 rounded text-xs font-medium"
-                          style={{ 
-                            backgroundColor: `hsl(${scheme.variables['--primary']})`,
-                            color: `hsl(${scheme.variables['--primary-foreground']})`
-                          }}
-                        >
-                          Complete Task
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   <Button
                     onClick={() => handleApplyScheme(scheme.name)}
                     disabled={isLoading || isActive}
