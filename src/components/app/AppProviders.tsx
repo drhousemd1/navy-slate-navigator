@@ -10,21 +10,24 @@ import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { PunishmentsProvider } from '@/contexts/punishments/PunishmentsProvider';
+import { ColorSchemeProvider } from '@/contexts/ColorSchemeContext';
 
 export const AppProviders: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <NetworkStatusProvider>
         <AuthProvider>
-          <UserIdsProvider>
-            <RewardsProvider>
-              <PunishmentsProvider>
-                <OfflineBanner />
-                {children}
-                <Toaster />
-              </PunishmentsProvider>
-            </RewardsProvider>
-          </UserIdsProvider>
+          <ColorSchemeProvider>
+            <UserIdsProvider>
+              <RewardsProvider>
+                <PunishmentsProvider>
+                  <OfflineBanner />
+                  {children}
+                  <Toaster />
+                </PunishmentsProvider>
+              </RewardsProvider>
+            </UserIdsProvider>
+          </ColorSchemeProvider>
         </AuthProvider>
       </NetworkStatusProvider>
       <ReactQueryDevtools initialIsOpen={false} />

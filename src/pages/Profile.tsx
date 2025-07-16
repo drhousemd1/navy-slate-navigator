@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { ProfileRole } from '@/types/profile';
 
 const Profile: React.FC = () => {
+  const navigate = useNavigate();
   const { 
     user, 
     getNickname, 
@@ -299,6 +301,22 @@ const Profile: React.FC = () => {
 
           {/* Wellness Reminder Settings */}
           <WellnessReminderSettings />
+          
+          {/* Color Scheme Section */}
+          <div className="border-t border-light-navy pt-8 mt-8">
+            <h3 className="text-lg font-semibold text-gray-300 mb-4">
+              Color Scheme
+            </h3>
+            <p className="text-gray-400 mb-4">
+              Customize your app's appearance with different color themes.
+            </p>
+            <Button
+              onClick={() => navigate('/profile/color-scheme')}
+              className="w-full bg-gray-600 text-white hover:bg-gray-500 hover:text-white"
+            >
+              Choose Color Scheme
+            </Button>
+          </div>
           
           {/* Actions Section */}
           <div className="space-y-4 border-t border-light-navy pt-8 mt-8">

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Index from './pages/Index';
@@ -11,11 +10,12 @@ import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Encyclopedia from './pages/Encyclopedia';
 import Wellbeing from './pages/Wellbeing';
+import ColorScheme from './pages/ColorScheme';
 import Auth from './pages/auth';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import ProtectedRoute from '@/components/auth/ProtectedRoute'; // Import ProtectedRoute
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 const AppRoutes = () => {
   return (
@@ -65,6 +65,10 @@ const AppRoutes = () => {
       <Route 
         path="/wellbeing" 
         element={<ProtectedRoute><ErrorBoundary><Wellbeing /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/profile/color-scheme" 
+        element={<ProtectedRoute><ErrorBoundary><ColorScheme /></ErrorBoundary></ProtectedRoute>} 
       />
       
       {/* Catch-all for not found routes */}
