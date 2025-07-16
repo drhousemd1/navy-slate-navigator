@@ -62,7 +62,11 @@ export default function ColorScheme() {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 rounded border bg-foreground"></div>
-                      <span className="text-xs text-muted-foreground">Text</span>
+                      <span className="text-xs text-muted-foreground">Title Text</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded border bg-muted-foreground"></div>
+                      <span className="text-xs text-muted-foreground">Subtext</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 rounded border bg-muted"></div>

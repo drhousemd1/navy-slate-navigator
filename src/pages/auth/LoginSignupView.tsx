@@ -88,10 +88,10 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
   const isSignup = currentView === "signup";
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-navy p-4">
-      <div className="w-full max-w-md p-6 space-y-6 bg-dark-navy rounded-lg shadow-lg border border-light-navy">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+      <div className="w-full max-w-md p-6 space-y-6 bg-card rounded-lg shadow-lg border border-border">
         <h1 
-          className="text-2xl font-bold text-center text-white cursor-default"
+          className="text-2xl font-bold text-center text-foreground cursor-default"
           onClick={handleTitleClick}
         >
           Welcome to Playful Obedience
@@ -99,27 +99,27 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
         
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-white text-sm">Email</label>
+            <label className="text-foreground text-sm">Email</label>
             <Input
               type="email"
               value={formState.email}
               onChange={(e) => updateFormState({ email: e.target.value })}
               required
-              className="bg-navy border-light-navy text-white"
+              className="bg-background border-border text-foreground"
               placeholder="your@email.com"
               autoComplete="email"
             />
           </div>
           
           <div className="space-y-2">
-            <label className="text-white text-sm">Password</label>
+            <label className="text-foreground text-sm">Password</label>
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
                 value={formState.password}
                 onChange={(e) => updateFormState({ password: e.target.value })}
                 required
-                className="bg-navy border-light-navy text-white pr-10"
+                className="bg-background border-border text-foreground pr-10"
                 placeholder="********"
                 minLength={6}
                 autoComplete={currentView === "login" ? "current-password" : "new-password"}
@@ -128,7 +128,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 type="button" 
                 variant="ghost" 
                 size="sm"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 text-gray-400 hover:text-white"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? "Hide" : "Show"}
@@ -139,7 +139,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 <Button 
                   type="button" 
                   variant="link" 
-                  className="text-sm text-blue-400 hover:text-blue-300 p-0"
+                  className="text-sm text-primary hover:text-primary/80 p-0"
                   onClick={() => onViewChange("forgot-password")}
                 >
                   Forgot Password?
@@ -150,17 +150,17 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
 
           {isSignup && (
             <div className="space-y-2">
-              <label className="text-white text-sm">Select Role</label>
+              <label className="text-foreground text-sm">Select Role</label>
               <Select 
                 value={formState.role || ""} 
                 onValueChange={(value: 'dominant' | 'submissive') => updateFormState({ role: value })}
               >
-                <SelectTrigger className="bg-navy border-light-navy text-white">
+                <SelectTrigger className="bg-background border-border text-foreground">
                   <SelectValue placeholder="Choose your role" />
                 </SelectTrigger>
-                <SelectContent className="bg-navy border-light-navy">
-                  <SelectItem value="dominant" className="text-white hover:bg-light-navy">Dominant</SelectItem>
-                  <SelectItem value="submissive" className="text-white hover:bg-light-navy">Submissive</SelectItem>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="dominant" className="text-foreground hover:bg-accent">Dominant</SelectItem>
+                  <SelectItem value="submissive" className="text-foreground hover:bg-accent">Submissive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -174,7 +174,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
           )}
           
           {debugMode && (
-            <div className="text-xs text-gray-400 p-2 border border-gray-700 rounded bg-gray-900/50 overflow-auto">
+            <div className="text-xs text-muted-foreground p-2 border border-border rounded bg-muted/50 overflow-auto">
               <p>Debug mode enabled</p>
               <p>Email: {formState.email}</p>
               <p>Password length: {formState.password?.length || 0}</p>
@@ -207,14 +207,14 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
             }
           </Button>
           
-          <p className="text-center text-sm text-gray-400 pt-2">
+          <p className="text-center text-sm text-muted-foreground pt-2">
             {isSignup ? (
               <>
                 Already have an account?{" "}
                 <Button 
                   type="button" 
                   variant="link" 
-                  className="text-blue-400 hover:text-blue-300 p-0"
+                  className="text-primary hover:text-primary/80 p-0"
                   onClick={() => onViewChange("login")}
                 >
                   Sign in
@@ -226,7 +226,7 @@ export const LoginSignupView: React.FC<AuthViewProps> = ({ currentView, onViewCh
                 <Button 
                   type="button" 
                   variant="link" 
-                  className="text-blue-400 hover:text-blue-300 p-0"
+                  className="text-primary hover:text-primary/80 p-0"
                   onClick={() => onViewChange("signup")}
                 >
                   Sign up
