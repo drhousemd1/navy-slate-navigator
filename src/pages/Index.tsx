@@ -20,6 +20,8 @@ const Index: React.FC = () => {
                   alt="Playful Obedience Logo" 
                   className="w-full h-auto object-contain"
                   onError={(e) => {
+                    console.log('Image failed to load:', APP_CONFIG.logoUrl);
+                    console.log('Error event:', e);
                     logger.error('Failed to load logo image', { 
                       src: APP_CONFIG.logoUrl,
                       error: e.type 
