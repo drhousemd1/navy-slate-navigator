@@ -76,7 +76,7 @@ const Notifications: React.FC = () => {
       <div className="container mx-auto px-4 py-8 text-white">
         <h1 className="text-3xl font-bold mb-8 text-center">Notification Settings</h1>
 
-        <div className="max-w-2xl mx-auto bg-dark-navy p-8 rounded-lg shadow-xl border border-light-navy">
+        <div className="max-w-2xl mx-auto bg-dark-navy p-8 rounded-lg shadow-xl">
           <div className="space-y-6">
             {/* Header */}
             <h2 className="text-xl font-semibold text-white flex items-center gap-2">
