@@ -11,6 +11,7 @@ import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
 import { usePartnerHelper } from '@/hooks/usePartnerHelper';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface ToggleTaskCompletionVariables {
   taskId: string;
@@ -23,6 +24,7 @@ export function useToggleTaskCompletionMutation() {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   const { getPartnerId } = usePartnerHelper();
+  const { sendTaskCompletedNotification } = usePushNotifications();
 
   return useMutation<void, Error, ToggleTaskCompletionVariables, { previousTasks?: TaskWithId[] }>(
     {
@@ -209,6 +211,22 @@ export function useToggleTaskCompletionMutation() {
           `Task ${variables.completed ? 'Activity Logged' : 'Activity Reversed'}`, 
           variables.completed ? 'Points and history have been updated if applicable.' : 'Task status updated.'
         );
+
+        // Send push notification to partner when task is completed
+        if (variables.completed) {
+          const partnerId = await getPartnerId();
+          if (partnerId) {
+            try {
+              await sendTaskCompletedNotification(
+                partnerId, 
+                variables.task.title, 
+                variables.pointsValue
+              );
+            } catch (error) {
+              logger.error('Failed to send task completion notification:', error);
+            }
+          }
+        }
 
 
         try {

@@ -8,10 +8,12 @@ import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { usePartnerHelper } from '@/hooks/usePartnerHelper';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export const useUpsertWellbeing = (userId: string | null) => {
   const queryClient = useQueryClient();
   const { getPartnerId } = usePartnerHelper();
+  const { sendWellnessUpdatedNotification } = usePushNotifications();
 
   return useMutation<WellbeingSnapshot, Error, CreateWellbeingData>({
     mutationFn: async (variables: CreateWellbeingData) => {
@@ -87,6 +89,15 @@ export const useUpsertWellbeing = (userId: string | null) => {
         
         logger.debug('[useUpsertWellbeing onSuccess] Query cache updated and chart queries invalidated.');
         
+        // Send push notification to partner about wellness update
+        const partnerId = await getPartnerId();
+        if (partnerId) {
+          try {
+            await sendWellnessUpdatedNotification(partnerId, wellbeingData.overall_score);
+          } catch (error) {
+            logger.error('Failed to send wellness update notification:', error);
+          }
+        }
         
         toastManager.success("Wellbeing Updated", "Your wellbeing status has been saved.");
       } catch (e: unknown) {

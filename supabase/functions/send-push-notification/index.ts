@@ -1,5 +1,49 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { encode as base64urlEncode } from "https://deno.land/std@0.190.0/encoding/base64url.ts";
+
+// Helper function to generate VAPID JWT token
+async function generateVAPIDJWT(publicKey: string, privateKey: string, audience: string): Promise<string> {
+  const header = {
+    typ: 'JWT',
+    alg: 'ES256'
+  };
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    aud: new URL(audience).origin,
+    exp: now + (12 * 60 * 60), // 12 hours
+    sub: `mailto:support@example.com` // You can customize this
+  };
+
+  const encodedHeader = base64urlEncode(JSON.stringify(header));
+  const encodedPayload = base64urlEncode(JSON.stringify(payload));
+  
+  const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+  
+  // Convert private key from base64url to raw bytes
+  const privateKeyBytes = Uint8Array.from(atob(privateKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  
+  // Import the private key for signing
+  const key = await crypto.subtle.importKey(
+    'raw',
+    privateKeyBytes,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+  
+  // Sign the token
+  const signature = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    key,
+    new TextEncoder().encode(unsignedToken)
+  );
+  
+  const encodedSignature = base64urlEncode(new Uint8Array(signature));
+  
+  return `${unsignedToken}.${encodedSignature}`;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -150,15 +194,16 @@ const serve_handler = async (req: Request): Promise<Response> => {
             data: notificationData
           });
 
-          // Use web-push library for sending (you'd need to import this)
-          // For now, we'll simulate the request
+          // Create the VAPID JWT token properly
+          const vapidJWT = await generateVAPIDJWT(vapidPublicKey, vapidPrivateKey, subscription.endpoint);
+          
           const response = await fetch(subscription.endpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/octet-stream',
               'Content-Length': payload.length.toString(),
               'TTL': '86400',
-              'Authorization': `vapid t=${vapidPublicKey}, k=${vapidPrivateKey}`,
+              'Authorization': `vapid t=${vapidJWT}, k=${vapidPublicKey}`,
             },
             body: payload,
           });

@@ -11,6 +11,7 @@ import { logger } from '@/lib/logger';
 import { getMondayBasedDay } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { usePartnerHelper } from '@/hooks/usePartnerHelper';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface OptimisticApplyContext {
   previousHistoryData?: PunishmentHistoryItem[];
@@ -21,6 +22,7 @@ export const useApplyPunishment = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   const { getPartnerId } = usePartnerHelper();
+  const { sendPunishmentPerformedNotification } = usePushNotifications();
 
   const historyQueryKey = [...PUNISHMENT_HISTORY_QUERY_KEY, subUserId, domUserId];
 
@@ -126,6 +128,19 @@ export const useApplyPunishment = () => {
         return [data, ...filteredList];
       });
       
+      // Send push notification to partner about punishment
+      const partnerId = await getPartnerId();
+      if (partnerId) {
+        try {
+          await sendPunishmentPerformedNotification(
+            partnerId, 
+            variables.punishmentTitle || 'A punishment', 
+            variables.pointsDeducted
+          );
+        } catch (error) {
+          logger.error('Failed to send punishment notification:', error);
+        }
+      }
       
       // Invalidate both submissive and dominant points caches
       queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });

@@ -7,6 +7,7 @@ import { REWARDS_QUERY_KEY } from '../queries';
 import { getISOWeekString } from '@/lib/dateUtils';
 import { USER_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserPointsQuery';
 import { usePartnerHelper } from '@/hooks/usePartnerHelper';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { logger } from '@/lib/logger';
 
 interface RedeemSubRewardVariables {
@@ -40,6 +41,7 @@ export const useRedeemSubReward = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   const { getPartnerId } = usePartnerHelper();
+  const { sendRewardRedeemedNotification } = usePushNotifications();
 
   const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
@@ -98,6 +100,18 @@ export const useRedeemSubReward = () => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
       
+      // Send push notification to partner about reward redemption
+      const partnerId = await getPartnerId();
+      if (partnerId) {
+        try {
+          await sendRewardRedeemedNotification(
+            partnerId, 
+            variables.rewardTitle || 'A reward'
+          );
+        } catch (error) {
+          logger.error('Failed to send reward redemption notification:', error);
+        }
+      }
       
       queryClient.invalidateQueries({ queryKey: ['reward-usage', variables.rewardId] });
     },
