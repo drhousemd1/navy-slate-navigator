@@ -45,56 +45,145 @@ export default function ColorScheme() {
                 </CardHeader>
                 
                 <CardContent>
-                  {/* Color preview swatches */}
-                  <div className="flex gap-2 mb-4">
-                    <div 
-                      className="w-8 h-8 rounded border border-border"
-                      style={{ backgroundColor: `hsl(${scheme.variables['--background']})` }}
-                      title="Background"
-                    />
-                    <div 
-                      className="w-8 h-8 rounded border border-border"
-                      style={{ backgroundColor: `hsl(${scheme.variables['--primary']})` }}
-                      title="Primary"
-                    />
-                    <div 
-                      className="w-8 h-8 rounded border border-border"
-                      style={{ backgroundColor: `hsl(${scheme.variables['--sidebar-background']})` }}
-                      title="Sidebar"
-                    />
-                    <div 
-                      className="w-8 h-8 rounded border border-border"
-                      style={{ backgroundColor: `hsl(${scheme.variables['--card']})` }}
-                      title="Card"
-                    />
+                  {/* Labeled Color Swatches */}
+                  <div className="space-y-3 mb-6">
+                    <h4 className="text-sm font-medium text-foreground mb-2">Color Elements</h4>
+                    
+                    {/* Navigation Colors */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground font-medium">Navigation</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded border border-border"
+                            style={{ backgroundColor: `hsl(${scheme.variables['--dark-navy']})` }}
+                          />
+                          <span className="text-muted-foreground">Nav Bar</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded border border-border"
+                            style={{ backgroundColor: `hsl(${scheme.variables['--nav-active']})` }}
+                          />
+                          <span className="text-muted-foreground">Active Item</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Content Colors */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground font-medium">Content</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded border border-border"
+                            style={{ backgroundColor: `hsl(${scheme.variables['--background']})` }}
+                          />
+                          <span className="text-muted-foreground">Background</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded border border-border"
+                            style={{ backgroundColor: `hsl(${scheme.variables['--card']})` }}
+                          />
+                          <span className="text-muted-foreground">Cards</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Interactive Colors */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground font-medium">Interactive</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded border border-border"
+                            style={{ backgroundColor: `hsl(${scheme.variables['--primary']})` }}
+                          />
+                          <span className="text-muted-foreground">Buttons</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded border border-border"
+                            style={{ backgroundColor: `hsl(${scheme.variables['--foreground']})` }}
+                          />
+                          <span className="text-muted-foreground">Text</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Mini app preview */}
-                  <div 
-                    className="rounded-lg border p-3 mb-4"
-                    style={{ 
-                      backgroundColor: `hsl(${scheme.variables['--background']})`,
-                      borderColor: `hsl(${scheme.variables['--border']})`
-                    }}
-                  >
-                    <div className="flex gap-2 mb-2">
+                  {/* Realistic App Preview */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-foreground mb-2">Preview</h4>
+                    <div 
+                      className="rounded-lg border overflow-hidden"
+                      style={{ borderColor: `hsl(${scheme.variables['--border']})` }}
+                    >
+                      {/* Mock Navigation Bar */}
                       <div 
-                        className="h-2 w-8 rounded"
-                        style={{ backgroundColor: `hsl(${scheme.variables['--primary']})` }}
-                      />
+                        className="p-2 border-b flex items-center gap-2"
+                        style={{ 
+                          backgroundColor: `hsl(${scheme.variables['--dark-navy']})`,
+                          borderBottomColor: `hsl(${scheme.variables['--border']})`
+                        }}
+                      >
+                        <div 
+                          className="px-2 py-1 rounded text-xs font-medium"
+                          style={{ 
+                            backgroundColor: `hsl(${scheme.variables['--nav-active']})`,
+                            color: `hsl(${scheme.variables['--background']})`
+                          }}
+                        >
+                          Tasks
+                        </div>
+                        <div 
+                          className="px-2 py-1 text-xs"
+                          style={{ color: `hsl(${scheme.variables['--nav-inactive']})` }}
+                        >
+                          Rewards
+                        </div>
+                      </div>
+                      
+                      {/* Mock Content Area */}
                       <div 
-                        className="h-2 w-6 rounded"
-                        style={{ backgroundColor: `hsl(${scheme.variables['--muted']})` }}
-                      />
+                        className="p-3 space-y-2"
+                        style={{ backgroundColor: `hsl(${scheme.variables['--background']})` }}
+                      >
+                        {/* Mock Task Card */}
+                        <div 
+                          className="p-2 rounded border"
+                          style={{ 
+                            backgroundColor: `hsl(${scheme.variables['--card']})`,
+                            borderColor: `hsl(${scheme.variables['--border']})`
+                          }}
+                        >
+                          <div 
+                            className="text-xs font-medium mb-1"
+                            style={{ color: `hsl(${scheme.variables['--foreground']})` }}
+                          >
+                            Sample Task
+                          </div>
+                          <div 
+                            className="text-xs"
+                            style={{ color: `hsl(${scheme.variables['--muted-foreground']})` }}
+                          >
+                            Task description
+                          </div>
+                        </div>
+                        
+                        {/* Mock Button */}
+                        <div 
+                          className="inline-block px-3 py-1 rounded text-xs font-medium"
+                          style={{ 
+                            backgroundColor: `hsl(${scheme.variables['--primary']})`,
+                            color: `hsl(${scheme.variables['--primary-foreground']})`
+                          }}
+                        >
+                          Complete Task
+                        </div>
+                      </div>
                     </div>
-                    <div 
-                      className="h-4 w-full rounded mb-1"
-                      style={{ backgroundColor: `hsl(${scheme.variables['--card']})` }}
-                    />
-                    <div 
-                      className="h-3 w-3/4 rounded"
-                      style={{ backgroundColor: `hsl(${scheme.variables['--muted']})` }}
-                    />
                   </div>
 
                   <Button
