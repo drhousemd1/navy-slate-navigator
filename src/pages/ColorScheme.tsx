@@ -45,7 +45,35 @@ export default function ColorScheme() {
                   <CardDescription>{scheme.description}</CardDescription>
                 </CardHeader>
                 
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Color Preview Boxes */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded border bg-sidebar"></div>
+                      <span className="text-xs text-muted-foreground">Navigation</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded border bg-card"></div>
+                      <span className="text-xs text-muted-foreground">Cards</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded border bg-primary"></div>
+                      <span className="text-xs text-muted-foreground">Buttons</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded border bg-foreground"></div>
+                      <span className="text-xs text-muted-foreground">Text</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded border bg-muted"></div>
+                      <span className="text-xs text-muted-foreground">Backgrounds</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded border bg-accent"></div>
+                      <span className="text-xs text-muted-foreground">Accents</span>
+                    </div>
+                  </div>
+                  
                   <Button
                     onClick={() => handleApplyScheme(scheme.name)}
                     disabled={isLoading || isActive}
