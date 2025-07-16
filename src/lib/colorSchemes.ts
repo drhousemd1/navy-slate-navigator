@@ -202,8 +202,25 @@ export function getColorScheme(name: string): ColorScheme | undefined {
 }
 
 export function applyColorScheme(scheme: ColorScheme): void {
-  const root = document.documentElement;
-  Object.entries(scheme.variables).forEach(([property, value]) => {
-    root.style.setProperty(property, value);
-  });
+  try {
+    // Mobile-safe check for document and documentElement
+    if (typeof document === 'undefined' || !document.documentElement) {
+      console.warn('Document not available - skipping color scheme application');
+      return;
+    }
+
+    const root = document.documentElement;
+    
+    Object.entries(scheme.variables).forEach(([key, value]) => {
+      try {
+        root.style.setProperty(key, value);
+      } catch (error) {
+        console.warn(`Failed to set CSS property ${key}:`, error);
+      }
+    });
+    
+    console.log('Color scheme applied successfully:', scheme.name);
+  } catch (error) {
+    console.error('Failed to apply color scheme:', error);
+  }
 }

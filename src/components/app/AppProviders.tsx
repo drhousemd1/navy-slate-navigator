@@ -11,14 +11,16 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { PunishmentsProvider } from '@/contexts/punishments/PunishmentsProvider';
 import { ColorSchemeProvider } from '@/contexts/ColorSchemeContext';
+import { ColorSchemeErrorBoundary } from '@/components/ColorSchemeErrorBoundary';
 
 export const AppProviders: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <NetworkStatusProvider>
         <AuthProvider>
-          <ColorSchemeProvider>
-            <UserIdsProvider>
+          <ColorSchemeErrorBoundary>
+            <ColorSchemeProvider>
+              <UserIdsProvider>
               <RewardsProvider>
                 <PunishmentsProvider>
                   <OfflineBanner />
@@ -27,7 +29,8 @@ export const AppProviders: React.FC<React.PropsWithChildren<{}>> = ({ children }
                 </PunishmentsProvider>
               </RewardsProvider>
             </UserIdsProvider>
-          </ColorSchemeProvider>
+            </ColorSchemeProvider>
+          </ColorSchemeErrorBoundary>
         </AuthProvider>
       </NetworkStatusProvider>
       <ReactQueryDevtools initialIsOpen={false} />
