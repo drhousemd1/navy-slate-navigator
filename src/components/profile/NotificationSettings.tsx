@@ -58,6 +58,10 @@ export const NotificationSettings: React.FC = () => {
       wellnessUpdated: {
         title: 'Wellness Updated',
         description: 'Get notified when your partner updates their wellness score'
+      },
+      messages: {
+        title: 'Messages',
+        description: 'Get notified when you receive a new message from your partner'
       }
     };
     return typeInfo[type] || { title: type, description: '' };

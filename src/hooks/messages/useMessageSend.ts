@@ -3,13 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
 import { PostgrestError } from '@supabase/supabase-js';
+import { useSmartMessageNotifications } from '../useSmartMessageNotifications';
 
 interface MessageSendResult {
   id: string;
 }
 
 export const useMessageSend = () => {
-  const { user } = useAuth();
+  const { user, getNickname } = useAuth();
+  const { sendNewMessageNotification } = useSmartMessageNotifications();
 
   const sendMessage = async (content: string, receiverId: string, imageUrl: string | null = null): Promise<string | null> => {
     if (!user) {
@@ -35,6 +37,16 @@ export const useMessageSend = () => {
       if (error) {
         logger.error('Error sending message:', error);
         throw error;
+      }
+
+      // Send push notification if conditions are met
+      try {
+        const senderName = getNickname() || 'Someone';
+        const messageContent = content.trim() || (imageUrl ? '📸 Image' : '');
+        await sendNewMessageNotification(receiverId, senderName, messageContent);
+      } catch (notificationError) {
+        // Don't fail the message send if notification fails
+        logger.warn('Failed to send push notification:', notificationError);
       }
       
       return (data as MessageSendResult).id;

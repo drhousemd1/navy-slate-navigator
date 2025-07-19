@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
 
-export type NotificationType = 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin';
+export type NotificationType = 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin' | 'messages';
 
 interface SendNotificationParams {
   targetUserId: string;
@@ -121,6 +121,16 @@ export const usePushNotifications = () => {
     });
   };
 
+  const sendMessageNotification = async (targetUserId: string, senderName: string, messagePreview: string) => {
+    return sendNotification({
+      targetUserId,
+      type: 'messages',
+      title: `New message from ${senderName}`,
+      body: messagePreview,
+      data: { type: 'message', senderName },
+    });
+  };
+
   return {
     sendNotification,
     sendRuleBrokenNotification,
@@ -130,5 +140,6 @@ export const usePushNotifications = () => {
     sendPunishmentPerformedNotification,
     sendWellnessUpdatedNotification,
     sendWellnessCheckinNotification,
+    sendMessageNotification,
   };
 };

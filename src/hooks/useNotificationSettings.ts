@@ -13,6 +13,7 @@ export interface NotificationPreferences {
     punishmentPerformed: boolean;
     wellnessUpdated: boolean;
     wellnessCheckin: boolean;
+    messages: boolean;
   };
 }
 
@@ -26,6 +27,7 @@ const defaultPreferences: NotificationPreferences = {
     punishmentPerformed: true,
     wellnessUpdated: true,
     wellnessCheckin: true,
+    messages: true,
   },
 };
 
