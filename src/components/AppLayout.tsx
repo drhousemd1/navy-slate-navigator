@@ -35,6 +35,16 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   // Don't add bottom padding on messages page
   const isMessagesPage = location.pathname === '/messages';
 
+  const handleMessagingClick = () => {
+    if (isMessagesPage) {
+      // If we're on messages page, go back to home
+      navigate('/');
+    } else {
+      // If we're not on messages page, go to messages
+      navigate('/messages');
+    }
+  };
+
   const handleAddNewItem = () => {
     if (onAddNewItem) {
       onAddNewItem();
@@ -111,8 +121,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             {/* Messaging icon with notification badge */}
             <div className="relative">
               <MessageSquare 
-                className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
-                onClick={() => navigate('/messages')}
+                className={`w-5 h-5 cursor-pointer transition-colors ${
+                  isMessagesPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
+                }`}
+                onClick={handleMessagingClick}
               />
               <NotificationBadge count={unreadCount} />
             </div>
