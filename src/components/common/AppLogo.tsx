@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { logoManager } from '@/services/logoManager';
 import { LOGO_SIZES, LogoSize } from '@/config/logoConfig';
@@ -21,7 +21,30 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   loading = false
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Changed to false by default
+  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
+  const sizeStyle = LOGO_SIZES[size];
+
+  // Set up a timeout to prevent infinite loading for SVGs
+  useEffect(() => {
+    if (isLoading) {
+      const timeout = setTimeout(() => {
+        logger.warn('Logo loading timeout, showing image anyway');
+        setIsLoading(false);
+      }, 2000); // 2 second timeout
+      
+      setLoadingTimeout(timeout);
+      
+      return () => {
+        if (timeout) clearTimeout(timeout);
+      };
+    } else if (loadingTimeout) {
+      clearTimeout(loadingTimeout);
+      setLoadingTimeout(null);
+    }
+  }, [isLoading]);
 
   const handleImageError = () => {
     logger.warn('Logo failed to load, using fallback');
@@ -30,11 +53,16 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   };
 
   const handleImageLoad = () => {
+    logger.info('Logo loaded successfully');
     setIsLoading(false);
   };
 
-  const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
-  const sizeStyle = LOGO_SIZES[size];
+  const handleImageLoadStart = () => {
+    // Only show loading for non-SVG images or if explicitly requested
+    if (!logoUrl.endsWith('.svg') || loading) {
+      setIsLoading(true);
+    }
+  };
 
   if (loading || isLoading) {
     return (
@@ -66,6 +94,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
         className="w-full h-full object-contain drop-shadow-lg"
         onError={handleImageError}
         onLoad={handleImageLoad}
+        onLoadStart={handleImageLoadStart}
         style={{ 
           maxWidth: '100%', 
           maxHeight: '100%',
