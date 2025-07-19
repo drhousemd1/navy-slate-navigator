@@ -34,7 +34,7 @@ export const NotificationSettings: React.FC = () => {
   };
 
   const getNotificationTypeInfo = (type: keyof typeof preferences.types) => {
-    const typeInfo = {
+    const typeInfo: Record<string, { title: string; description: string }> = {
       ruleBroken: {
         title: 'Rule Broken',
         description: 'Get notified when your partner marks a rule as broken'
@@ -59,11 +59,16 @@ export const NotificationSettings: React.FC = () => {
         title: 'Wellness Updated',
         description: 'Get notified when your partner updates their wellness score'
       },
+      wellnessCheckin: {
+        title: 'Wellness Check-in',
+        description: 'Get notified for wellness check-in reminders'
+      },
       messages: {
         title: 'Messages',
         description: 'Get notified when you receive a new message from your partner'
       }
     };
+    
     return typeInfo[type] || { title: type, description: '' };
   };
 
