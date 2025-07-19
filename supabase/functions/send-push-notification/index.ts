@@ -9,7 +9,7 @@ const corsHeaders = {
 
 interface NotificationRequest {
   targetUserId: string;
-  type: 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin';
+  type: 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin' | 'messages';
   title: string;
   body: string;
   data?: Record<string, any>;
