@@ -1,20 +1,25 @@
 
 // Logo configuration and paths
 export const LOGO_CONFIG = {
-  // Fallback logo path for when no logo is uploaded
+  // Current logo path - changed to PNG
+  currentLogoPath: '/app-assets/logos/current/logo.png',
+  
+  // Archive directory
+  archiveDirectory: '/app-assets/logos/archive',
+  
+  // Fallback logo path
   fallbackLogoPath: '/app-assets/logos/fallback/default-logo.svg',
   
-  // File settings - support all major image formats
-  maxFileSize: 10 * 1024 * 1024, // 10MB
-  allowedFormats: ['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'],
-  allowedExtensions: ['.svg', '.png', '.jpg', '.jpeg', '.webp'],
-  
-  // Storage settings
-  storageBucket: 'logos',
-  currentLogoPath: 'current/',
+  // File settings - updated to support PNG
+  maxFileSize: 5 * 1024 * 1024, // 5MB
+  allowedFormats: ['image/svg+xml', 'image/png', 'image/jpeg'],
+  allowedExtensions: ['.svg', '.png', '.jpg', '.jpeg'],
   
   // Version tracking
-  currentVersion: '1.0.0'
+  currentVersion: '1.0.0',
+  
+  // Timestamp format for archives
+  timestampFormat: 'YYYY-MM-DD_HH-mm-ss'
 } as const;
 
 export type LogoSize = 'small' | 'medium' | 'large' | 'responsive';
