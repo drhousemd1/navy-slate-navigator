@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import MessageList from '@/components/messages/MessageList';
 import MessageInput from '@/components/messages/MessageInput';
 import { logger } from '@/lib/logger';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 
 const Messages: React.FC = () => {
   const { user, getNickname } = useAuth();
@@ -28,6 +29,8 @@ const Messages: React.FC = () => {
     partnerId
   } = useMessages();
   
+  const { markAllMessagesAsRead } = useUnreadMessages();
+  
   useEffect(() => {
     if (!isLoading && partnerId) {
       logger.debug('[Messages] Component mounted with partnerId:', partnerId, ', forcing refetch');
@@ -41,6 +44,14 @@ const Messages: React.FC = () => {
       return () => clearInterval(intervalId);
     }
   }, [partnerId, isLoading, refetch]);
+
+  // Mark all messages as read when the Messages page is opened
+  useEffect(() => {
+    if (!isLoading && user) {
+      logger.debug('[Messages] Marking all messages as read');
+      markAllMessagesAsRead();
+    }
+  }, [isLoading, user, markAllMessagesAsRead]);
 
   const userNickname = getNickname();
 

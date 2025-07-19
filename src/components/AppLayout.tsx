@@ -11,6 +11,8 @@ import PartnerDisplay from './PartnerDisplay';
 import UserHealthBar from './header/UserHealthBar';
 import AvatarPreviewPopover from './AvatarPreviewPopover';
 import { logger } from '@/lib/logger';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
+import { NotificationBadge } from '@/components/ui/notification-badge';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -21,6 +23,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { getNickname, getProfileImage, getUserRoleSync } = useAuth();
+  const { unreadCount } = useUnreadMessages();
 
   // Only show "Add" button for specific routes
   const shouldShowAddButton = 
@@ -105,11 +108,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               onClick={() => navigate('/throne-room')}
             />
 
-            {/* Messaging icon */}
-            <MessageSquare 
-              className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
-              onClick={() => navigate('/messages')}
-            />
+            {/* Messaging icon with notification badge */}
+            <div className="relative">
+              <MessageSquare 
+                className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" 
+                onClick={() => navigate('/messages')}
+              />
+              <NotificationBadge count={unreadCount} />
+            </div>
           </div>
         </div>
       </div>
