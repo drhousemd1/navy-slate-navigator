@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { logoManager } from '@/services/logoManager';
@@ -15,7 +16,7 @@ interface AppLogoProps {
 export const AppLogo: React.FC<AppLogoProps> = ({
   size = 'responsive',
   className,
-  alt = 'App Logo',
+  alt = 'Playful Obedience Logo',
   onClick,
   loading = false
 }) => {
@@ -62,12 +63,13 @@ export const AppLogo: React.FC<AppLogoProps> = ({
       <img
         src={logoUrl}
         alt={alt}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-contain drop-shadow-lg"
         onError={handleImageError}
         onLoad={handleImageLoad}
         style={{ 
           maxWidth: '100%', 
-          maxHeight: '100%' 
+          maxHeight: '100%',
+          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
         }}
       />
     </div>
