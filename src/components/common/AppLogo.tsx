@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { logoManager } from '@/services/logoManager';
@@ -21,19 +20,19 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   loading = false
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Changed to false by default
+  const [isLoading, setIsLoading] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
   const sizeStyle = LOGO_SIZES[size];
 
-  // Set up a timeout to prevent infinite loading for SVGs
+  // Set up a timeout to prevent infinite loading
   useEffect(() => {
     if (isLoading) {
       const timeout = setTimeout(() => {
         logger.warn('Logo loading timeout, showing image anyway');
         setIsLoading(false);
-      }, 2000); // 2 second timeout
+      }, 3000); // 3 second timeout for PNG files
       
       setLoadingTimeout(timeout);
       
@@ -58,8 +57,8 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   };
 
   const handleImageLoadStart = () => {
-    // Only show loading for non-SVG images or if explicitly requested
-    if (!logoUrl.endsWith('.svg') || loading) {
+    // Show loading for all image types if explicitly requested
+    if (loading) {
       setIsLoading(true);
     }
   };

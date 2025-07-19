@@ -1,7 +1,8 @@
+
 // Logo configuration and paths
 export const LOGO_CONFIG = {
-  // Current logo path
-  currentLogoPath: '/app-assets/logos/current/logo.svg',
+  // Current logo path - changed to PNG
+  currentLogoPath: '/app-assets/logos/current/logo.png',
   
   // Archive directory
   archiveDirectory: '/app-assets/logos/archive',
@@ -9,10 +10,10 @@ export const LOGO_CONFIG = {
   // Fallback logo path
   fallbackLogoPath: '/app-assets/logos/fallback/default-logo.svg',
   
-  // File settings
+  // File settings - updated to support PNG
   maxFileSize: 5 * 1024 * 1024, // 5MB
-  allowedFormats: ['image/svg+xml'],
-  allowedExtensions: ['.svg'],
+  allowedFormats: ['image/svg+xml', 'image/png', 'image/jpeg'],
+  allowedExtensions: ['.svg', '.png', '.jpg', '.jpeg'],
   
   // Version tracking
   currentVersion: '1.0.0',

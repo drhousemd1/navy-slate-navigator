@@ -50,7 +50,7 @@ export const uploadLogo = async (
 };
 
 /**
- * Validate logo file before upload
+ * Validate logo file before upload - updated to support PNG
  */
 export const validateLogoFile = (file: File): { valid: boolean; error?: string } => {
   // Check if file exists
@@ -58,9 +58,9 @@ export const validateLogoFile = (file: File): { valid: boolean; error?: string }
     return { valid: false, error: 'No file selected' };
   }
 
-  // Check file type
-  if (!file.type.includes('svg')) {
-    return { valid: false, error: 'Only SVG files are supported' };
+  // Check file type - updated to support PNG and JPEG
+  if (!file.type.includes('svg') && !file.type.includes('png') && !file.type.includes('jpeg')) {
+    return { valid: false, error: 'Only SVG, PNG, and JPEG files are supported' };
   }
 
   // Check file size (5MB limit)
@@ -69,24 +69,24 @@ export const validateLogoFile = (file: File): { valid: boolean; error?: string }
     return { valid: false, error: 'File size must be less than 5MB' };
   }
 
-  // Check file extension
+  // Check file extension - updated to support PNG and JPEG
   const extension = file.name.split('.').pop()?.toLowerCase();
-  if (extension !== 'svg') {
-    return { valid: false, error: 'File must have .svg extension' };
+  if (!['svg', 'png', 'jpg', 'jpeg'].includes(extension || '')) {
+    return { valid: false, error: 'File must have .svg, .png, .jpg, or .jpeg extension' };
   }
 
   return { valid: true };
 };
 
 /**
- * Create a file input element for logo upload
+ * Create a file input element for logo upload - updated accept attribute
  */
 export const createLogoFileInput = (
   onFileSelect: (file: File) => void
 ): HTMLInputElement => {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.svg,image/svg+xml';
+  input.accept = '.svg,.png,.jpg,.jpeg,image/svg+xml,image/png,image/jpeg';
   input.style.display = 'none';
   
   input.addEventListener('change', (event) => {
