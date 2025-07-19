@@ -10,9 +10,9 @@ export const LOGO_CONFIG = {
   fallbackLogoPath: '/app-assets/logos/fallback/default-logo.svg',
   
   // File settings
-  maxFileSize: 5 * 1024 * 1024, // 5MB
-  allowedFormats: ['image/svg+xml'],
-  allowedExtensions: ['.svg'],
+  maxFileSize: 10 * 1024 * 1024, // 10MB
+  allowedFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'],
+  allowedExtensions: ['.png', '.jpg', '.jpeg', '.webp', '.svg'],
   
   // Version tracking
   currentVersion: '1.0.0',

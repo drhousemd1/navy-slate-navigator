@@ -12,6 +12,7 @@ import Encyclopedia from './pages/Encyclopedia';
 import Wellbeing from './pages/Wellbeing';
 import ColorScheme from './pages/ColorScheme';
 import Notifications from './pages/Notifications';
+import LogoUpload from './pages/LogoUpload';
 import Auth from './pages/auth';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
@@ -74,6 +75,10 @@ const AppRoutes = () => {
       <Route 
         path="/profile/notifications" 
         element={<ProtectedRoute><ErrorBoundary><Notifications /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/logo-upload" 
+        element={<ProtectedRoute><ErrorBoundary><LogoUpload /></ErrorBoundary></ProtectedRoute>} 
       />
       
       {/* Catch-all for not found routes */}

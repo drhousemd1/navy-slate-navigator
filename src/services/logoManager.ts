@@ -1,5 +1,6 @@
 import { LOGO_CONFIG } from '@/config/logoConfig';
 import { logger } from '@/lib/logger';
+import { uploadFile } from '@/data/storageService';
 
 export class LogoManager {
   private static instance: LogoManager;
@@ -15,7 +16,9 @@ export class LogoManager {
    * Get the current logo URL
    */
   public getCurrentLogo(): string {
-    return LOGO_CONFIG.currentLogoPath;
+    // Check if we have a custom logo stored
+    const customLogo = localStorage.getItem('app_logo_url');
+    return customLogo || LOGO_CONFIG.currentLogoPath;
   }
 
   /**
@@ -135,7 +138,7 @@ export class LogoManager {
     if (!LOGO_CONFIG.allowedFormats.includes(file.type as any)) {
       return { 
         valid: false, 
-        error: 'Only SVG files are allowed' 
+        error: 'Only PNG, JPEG, WebP, and SVG files are allowed' 
       };
     }
 
@@ -144,7 +147,7 @@ export class LogoManager {
     if (!LOGO_CONFIG.allowedExtensions.includes(extension as any)) {
       return { 
         valid: false, 
-        error: 'Only .svg files are allowed' 
+        error: 'Only .png, .jpg, .jpeg, .webp, and .svg files are allowed' 
       };
     }
 
@@ -166,10 +169,24 @@ export class LogoManager {
   }
 
   private async saveLogoFile(file: File): Promise<string> {
-    // This would save the new logo file
-    // Implementation would depend on file system access
-    logger.info('Saving new logo file', { fileName: file.name });
-    return LOGO_CONFIG.currentLogoPath;
+    try {
+      // Generate unique filename with timestamp
+      const timestamp = Date.now();
+      const extension = file.name.split('.').pop() || 'png';
+      const fileName = `app-logo-${timestamp}.${extension}`;
+      
+      // Upload to Supabase Storage
+      const result = await uploadFile('logos', fileName, file, { upsert: true });
+      
+      // Store the new logo URL in localStorage
+      localStorage.setItem('app_logo_url', result.publicUrl);
+      
+      logger.info('Logo uploaded successfully', { fileName, url: result.publicUrl });
+      return result.publicUrl;
+    } catch (error) {
+      logger.error('Failed to save logo file', { error, fileName: file.name });
+      throw error;
+    }
   }
 
   private async checkFileExists(path: string): Promise<boolean> {

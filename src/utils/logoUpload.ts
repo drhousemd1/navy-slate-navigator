@@ -59,20 +59,22 @@ export const validateLogoFile = (file: File): { valid: boolean; error?: string }
   }
 
   // Check file type
-  if (!file.type.includes('svg')) {
-    return { valid: false, error: 'Only SVG files are supported' };
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'];
+  if (!allowedTypes.includes(file.type)) {
+    return { valid: false, error: 'Only PNG, JPEG, WebP, and SVG files are supported' };
   }
 
-  // Check file size (5MB limit)
-  const maxSize = 5 * 1024 * 1024;
+  // Check file size (10MB limit)
+  const maxSize = 10 * 1024 * 1024;
   if (file.size > maxSize) {
-    return { valid: false, error: 'File size must be less than 5MB' };
+    return { valid: false, error: 'File size must be less than 10MB' };
   }
 
   // Check file extension
   const extension = file.name.split('.').pop()?.toLowerCase();
-  if (extension !== 'svg') {
-    return { valid: false, error: 'File must have .svg extension' };
+  const allowedExtensions = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
+  if (!extension || !allowedExtensions.includes(extension)) {
+    return { valid: false, error: 'File must have .png, .jpg, .jpeg, .webp, or .svg extension' };
   }
 
   return { valid: true };
@@ -86,7 +88,7 @@ export const createLogoFileInput = (
 ): HTMLInputElement => {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.svg,image/svg+xml';
+  input.accept = '.png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml';
   input.style.display = 'none';
   
   input.addEventListener('change', (event) => {

@@ -32,7 +32,7 @@ export const useLogoManager = (): UseLogoManagerReturn => {
       toast({
         variant: "destructive",
         title: "Invalid File",
-        description: validation.error || "Please select a valid SVG file"
+        description: validation.error || "Please select a valid image file"
       });
       return;
     }
