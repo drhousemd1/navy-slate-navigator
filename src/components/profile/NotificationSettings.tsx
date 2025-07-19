@@ -34,6 +34,8 @@ export const NotificationSettings: React.FC = () => {
   };
 
   const getNotificationTypeInfo = (type: keyof typeof preferences.types) => {
+    console.log('🔍 DEBUG: type received:', type, 'typeof:', typeof type);
+    
     const typeInfo: Record<string, { title: string; description: string }> = {
       ruleBroken: {
         title: 'Rule Broken',
@@ -69,7 +71,14 @@ export const NotificationSettings: React.FC = () => {
       }
     };
     
-    return typeInfo[type] || { title: type, description: '' };
+    console.log('🔍 DEBUG: looking up key:', type, 'in typeInfo');
+    console.log('🔍 DEBUG: typeInfo has messages?', 'messages' in typeInfo);
+    console.log('🔍 DEBUG: typeInfo[type]:', typeInfo[type]);
+    
+    const result = typeInfo[type] || { title: type, description: '' };
+    console.log('🔍 DEBUG: final result:', result);
+    
+    return result;
   };
 
   // Filter out wellnessCheckin since it has its own section
