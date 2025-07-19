@@ -1,22 +1,24 @@
-
 // Logo configuration and paths
 export const LOGO_CONFIG = {
-  // Supabase Storage bucket for logos
-  bucketName: 'logos',
+  // Current logo path
+  currentLogoPath: '/app-assets/logos/current/logo.svg',
   
-  // Current logo file name in storage
-  currentLogoFileName: 'current-logo',
+  // Archive directory
+  archiveDirectory: '/app-assets/logos/archive',
   
-  // File settings - now supports all common image formats
-  maxFileSize: 10 * 1024 * 1024, // 10MB
-  allowedFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'],
-  allowedExtensions: ['.png', '.jpg', '.jpeg', '.svg', '.webp'],
+  // Fallback logo path
+  fallbackLogoPath: '/app-assets/logos/fallback/default-logo.svg',
+  
+  // File settings
+  maxFileSize: 5 * 1024 * 1024, // 5MB
+  allowedFormats: ['image/svg+xml'],
+  allowedExtensions: ['.svg'],
   
   // Version tracking
   currentVersion: '1.0.0',
   
-  // Default fallback when no logo is uploaded
-  fallbackLogoPath: '/app-assets/logos/fallback/default-logo.svg'
+  // Timestamp format for archives
+  timestampFormat: 'YYYY-MM-DD_HH-mm-ss'
 } as const;
 
 export type LogoSize = 'small' | 'medium' | 'large' | 'responsive';

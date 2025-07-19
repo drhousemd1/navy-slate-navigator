@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { logoManager } from '@/services/logoManager';
 import { uploadLogo, validateLogoFile } from '@/utils/logoUpload';
@@ -8,18 +7,23 @@ import { logger } from '@/lib/logger';
 export interface UseLogoManagerReturn {
   isUploading: boolean;
   uploadProgress: number;
+  currentLogoUrl: string;
+  archivedLogos: string[];
   
   // Actions
   handleLogoUpload: (file: File) => Promise<void>;
+  revertToArchive: (timestamp: string) => Promise<void>;
+  refreshArchivedLogos: () => Promise<void>;
   checkLogoExists: () => Promise<boolean>;
-  refreshLogo: () => void;
 }
 
 export const useLogoManager = (): UseLogoManagerReturn => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [archivedLogos, setArchivedLogos] = useState<string[]>([]);
   const { toast } = useToast();
+
+  const currentLogoUrl = logoManager.getCurrentLogo();
 
   const handleLogoUpload = useCallback(async (file: File) => {
     // Validate file first
@@ -28,7 +32,7 @@ export const useLogoManager = (): UseLogoManagerReturn => {
       toast({
         variant: "destructive",
         title: "Invalid File",
-        description: validation.error || "Please select a valid image file"
+        description: validation.error || "Please select a valid SVG file"
       });
       return;
     }
@@ -47,8 +51,6 @@ export const useLogoManager = (): UseLogoManagerReturn => {
             description: "Your logo has been successfully updated"
           });
           logger.info('Logo upload successful', { logoUrl });
-          // Trigger a refresh of the logo display
-          setRefreshKey(prev => prev + 1);
         },
         onError: (error) => {
           toast({
@@ -78,6 +80,41 @@ export const useLogoManager = (): UseLogoManagerReturn => {
     }
   }, [toast]);
 
+  const revertToArchive = useCallback(async (timestamp: string) => {
+    try {
+      const result = await logoManager.revertToArchive(timestamp);
+      
+      if (result.success) {
+        toast({
+          title: "Logo Reverted",
+          description: "Successfully reverted to previous logo"
+        });
+        logger.info('Logo reverted successfully', { timestamp });
+      } else {
+        throw new Error(result.message);
+      }
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Revert failed';
+      toast({
+        variant: "destructive",
+        title: "Revert Failed",
+        description: errorMessage
+      });
+      logger.error('Logo revert failed', { error, timestamp });
+    }
+  }, [toast]);
+
+  const refreshArchivedLogos = useCallback(async () => {
+    try {
+      const archived = await logoManager.getArchivedLogos();
+      setArchivedLogos(archived);
+      logger.info('Archived logos refreshed', { count: archived.length });
+    } catch (error) {
+      logger.error('Failed to refresh archived logos', { error });
+    }
+  }, []);
+
   const checkLogoExists = useCallback(async (): Promise<boolean> => {
     try {
       return await logoManager.checkLogoExists();
@@ -87,16 +124,15 @@ export const useLogoManager = (): UseLogoManagerReturn => {
     }
   }, []);
 
-  const refreshLogo = useCallback(() => {
-    setRefreshKey(prev => prev + 1);
-  }, []);
-
   return {
     isUploading,
     uploadProgress,
+    currentLogoUrl,
+    archivedLogos,
     
     handleLogoUpload,
-    checkLogoExists,
-    refreshLogo
+    revertToArchive,
+    refreshArchivedLogos,
+    checkLogoExists
   };
 };

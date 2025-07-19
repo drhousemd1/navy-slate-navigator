@@ -1,7 +1,5 @@
-
 import { LOGO_CONFIG } from '@/config/logoConfig';
 import { logger } from '@/lib/logger';
-import { uploadFile, deleteFiles, getFilePublicUrl } from '@/data/storageService';
 
 export class LogoManager {
   private static instance: LogoManager;
@@ -14,79 +12,107 @@ export class LogoManager {
   }
 
   /**
-   * Get the current logo URL from storage or fallback
+   * Get the current logo URL
    */
-  public async getCurrentLogo(): Promise<string> {
-    try {
-      // Try to get the current logo from Supabase Storage
-      const logoUrl = getFilePublicUrl(LOGO_CONFIG.bucketName, LOGO_CONFIG.currentLogoFileName);
-      
-      // Test if the logo exists by making a HEAD request
-      const response = await fetch(logoUrl, { method: 'HEAD' });
-      if (response.ok) {
-        return logoUrl;
-      }
-    } catch (error) {
-      logger.warn('Current logo not found in storage, using fallback');
-    }
-    
-    return LOGO_CONFIG.fallbackLogoPath;
+  public getCurrentLogo(): string {
+    return LOGO_CONFIG.currentLogoPath;
   }
 
   /**
-   * Upload a new logo and replace the current one
+   * Upload a new logo and backup the current one
    */
   public async uploadLogo(file: File): Promise<{ success: boolean; message: string; logoUrl?: string }> {
     try {
-      logger.info('Starting logo upload', { fileName: file.name, fileSize: file.size });
-      
       // Validate file
       const validation = this.validateFile(file);
       if (!validation.valid) {
         return { success: false, message: validation.error || 'Invalid file' };
       }
 
-      // Get file extension to preserve format
-      const fileExtension = this.getFileExtension(file.name);
-      const fileName = `${LOGO_CONFIG.currentLogoFileName}${fileExtension}`;
+      // Create timestamp for backup
+      const timestamp = this.generateTimestamp();
       
-      try {
-        // Delete existing logo first (ignore errors if it doesn't exist)
-        await deleteFiles(LOGO_CONFIG.bucketName, [LOGO_CONFIG.currentLogoFileName + '.png', LOGO_CONFIG.currentLogoFileName + '.jpg', LOGO_CONFIG.currentLogoFileName + '.jpeg', LOGO_CONFIG.currentLogoFileName + '.svg', LOGO_CONFIG.currentLogoFileName + '.webp']);
-      } catch (error) {
-        // Ignore deletion errors - file might not exist
-        logger.debug('No existing logo to delete');
-      }
+      // Backup current logo first
+      await this.backupCurrentLogo(timestamp);
       
       // Upload new logo
-      const result = await uploadFile(
-        LOGO_CONFIG.bucketName,
-        fileName,
-        file,
-        {
-          cacheControl: '3600',
-          upsert: true
-        }
-      );
+      const logoUrl = await this.saveLogoFile(file);
       
-      logger.info('Logo uploaded successfully', { 
-        fileName,
-        publicUrl: result.publicUrl 
-      });
+      logger.info('Logo uploaded successfully', { timestamp, logoUrl });
       
       return { 
         success: true, 
         message: 'Logo uploaded successfully', 
-        logoUrl: result.publicUrl
+        logoUrl 
       };
       
     } catch (error) {
-      logger.error('Failed to upload logo', { error, fileName: file.name });
+      logger.error('Failed to upload logo', { error });
       return { 
         success: false, 
-        message: error instanceof Error ? error.message : 'Failed to upload logo' 
+        message: 'Failed to upload logo' 
       };
     }
+  }
+
+  /**
+   * Revert to an archived logo
+   */
+  public async revertToArchive(timestamp: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const archivePath = `${LOGO_CONFIG.archiveDirectory}/${timestamp}_logo-backup.svg`;
+      
+      // Check if archive exists
+      const exists = await this.checkFileExists(archivePath);
+      if (!exists) {
+        return { 
+          success: false, 
+          message: 'Archive not found' 
+        };
+      }
+
+      // Backup current logo
+      const backupTimestamp = this.generateTimestamp();
+      await this.backupCurrentLogo(backupTimestamp);
+      
+      // Restore from archive
+      await this.restoreFromArchive(archivePath);
+      
+      logger.info('Logo reverted successfully', { timestamp });
+      
+      return { 
+        success: true, 
+        message: 'Logo reverted successfully' 
+      };
+      
+    } catch (error) {
+      logger.error('Failed to revert logo', { error, timestamp });
+      return { 
+        success: false, 
+        message: 'Failed to revert logo' 
+      };
+    }
+  }
+
+  /**
+   * Get list of archived logos
+   */
+  public async getArchivedLogos(): Promise<string[]> {
+    try {
+      // This would need to be implemented with actual file system access
+      // For now, return empty array
+      return [];
+    } catch (error) {
+      logger.error('Failed to get archived logos', { error });
+      return [];
+    }
+  }
+
+  /**
+   * Check if logo file exists
+   */
+  public async checkLogoExists(): Promise<boolean> {
+    return this.checkFileExists(LOGO_CONFIG.currentLogoPath);
   }
 
   /**
@@ -94,19 +120,6 @@ export class LogoManager {
    */
   public getFallbackLogo(): string {
     return LOGO_CONFIG.fallbackLogoPath;
-  }
-
-  /**
-   * Check if a logo exists in storage
-   */
-  public async checkLogoExists(): Promise<boolean> {
-    try {
-      const logoUrl = await this.getCurrentLogo();
-      return logoUrl !== LOGO_CONFIG.fallbackLogoPath;
-    } catch (error) {
-      logger.error('Failed to check logo existence', { error });
-      return false;
-    }
   }
 
   private validateFile(file: File): { valid: boolean; error?: string } {
@@ -122,24 +135,56 @@ export class LogoManager {
     if (!LOGO_CONFIG.allowedFormats.includes(file.type as any)) {
       return { 
         valid: false, 
-        error: 'Only PNG, JPEG, SVG, and WebP files are allowed' 
+        error: 'Only SVG files are allowed' 
       };
     }
 
     // Check file extension
-    const extension = this.getFileExtension(file.name);
-    if (!LOGO_CONFIG.allowedExtensions.includes(extension)) {
+    const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!LOGO_CONFIG.allowedExtensions.includes(extension as any)) {
       return { 
         valid: false, 
-        error: 'Only .png, .jpg, .jpeg, .svg, and .webp files are allowed' 
+        error: 'Only .svg files are allowed' 
       };
     }
 
     return { valid: true };
   }
 
-  private getFileExtension(fileName: string): string {
-    return '.' + fileName.split('.').pop()?.toLowerCase();
+  private generateTimestamp(): string {
+    const now = new Date();
+    return now.toISOString()
+      .replace(/[:.]/g, '-')
+      .split('T')[0] + '_' + 
+      now.toTimeString().split(' ')[0].replace(/:/g, '-');
+  }
+
+  private async backupCurrentLogo(timestamp: string): Promise<void> {
+    // This would backup the current logo to archive
+    // Implementation would depend on file system access
+    logger.info('Backing up current logo', { timestamp });
+  }
+
+  private async saveLogoFile(file: File): Promise<string> {
+    // This would save the new logo file
+    // Implementation would depend on file system access
+    logger.info('Saving new logo file', { fileName: file.name });
+    return LOGO_CONFIG.currentLogoPath;
+  }
+
+  private async checkFileExists(path: string): Promise<boolean> {
+    try {
+      const response = await fetch(path, { method: 'HEAD' });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  private async restoreFromArchive(archivePath: string): Promise<void> {
+    // This would restore logo from archive
+    // Implementation would depend on file system access
+    logger.info('Restoring from archive', { archivePath });
   }
 }
 

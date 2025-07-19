@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { logoManager } from '@/services/logoManager';
 import { LOGO_SIZES, LogoSize } from '@/config/logoConfig';
@@ -16,40 +16,24 @@ interface AppLogoProps {
 export const AppLogo: React.FC<AppLogoProps> = ({
   size = 'responsive',
   className,
-  alt = 'App Logo',
+  alt = 'Playful Obedience Logo',
   onClick,
   loading = false
 }) => {
-  const [logoUrl, setLogoUrl] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
-
-  useEffect(() => {
-    const loadLogo = async () => {
-      try {
-        const url = await logoManager.getCurrentLogo();
-        setLogoUrl(url);
-      } catch (error) {
-        logger.error('Failed to load logo', { error });
-        setLogoUrl(logoManager.getFallbackLogo());
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadLogo();
-  }, []);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleImageError = () => {
     logger.warn('Logo failed to load, using fallback');
     setImageError(true);
-    setLogoUrl(logoManager.getFallbackLogo());
+    setIsLoading(false);
   };
 
   const handleImageLoad = () => {
-    setImageError(false);
+    setIsLoading(false);
   };
 
+  const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
   const sizeStyle = LOGO_SIZES[size];
 
   if (loading || isLoading) {
@@ -79,12 +63,13 @@ export const AppLogo: React.FC<AppLogoProps> = ({
       <img
         src={logoUrl}
         alt={alt}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-contain drop-shadow-lg"
         onError={handleImageError}
         onLoad={handleImageLoad}
         style={{ 
           maxWidth: '100%', 
-          maxHeight: '100%' 
+          maxHeight: '100%',
+          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
         }}
       />
     </div>
