@@ -7,7 +7,6 @@ import { toast } from '@/hooks/use-toast';
 
 export const NotificationSettings: React.FC = () => {
   const { preferences, isLoading, isSaving, updateNotificationType, toggleNotifications } = useNotificationSettings();
-  console.log('🔍 RAW PREFERENCES OBJECT:', JSON.stringify(preferences, null, 2));
   const { isSubscribed, isSupported } = usePushSubscription();
 
   const handleTypeToggle = async (type: keyof typeof preferences.types, enabled: boolean) => {
@@ -35,8 +34,6 @@ export const NotificationSettings: React.FC = () => {
   };
 
   const getNotificationTypeInfo = (type: keyof typeof preferences.types) => {
-    console.log('🔍 DEBUG: type received:', type, 'typeof:', typeof type);
-    
     const typeInfo: Record<string, { title: string; description: string }> = {
       ruleBroken: {
         title: 'Rule Broken',
@@ -72,19 +69,10 @@ export const NotificationSettings: React.FC = () => {
       }
     };
     
-    console.log('🔍 DEBUG: looking up key:', type, 'in typeInfo');
-    console.log('🔍 DEBUG: typeInfo has messages?', 'messages' in typeInfo);
-    console.log('🔍 DEBUG: typeInfo[type]:', typeInfo[type]);
-    
-    const result = typeInfo[type] || { title: type, description: '' };
-    console.log('🔍 DEBUG: final result:', result);
-    
-    return result;
+    return typeInfo[type] || { title: type, description: '' };
   };
 
   // Filter out wellnessCheckin since it has its own section
-  console.log('🔍 ACTUAL preferences.types:', preferences.types);
-  console.log('🔍 KEYS in preferences.types:', Object.keys(preferences.types));
   const notificationTypes = Object.entries(preferences.types).filter(([type]) => type !== 'wellnessCheckin');
 
   return (
@@ -124,7 +112,6 @@ export const NotificationSettings: React.FC = () => {
           <div className="space-y-4">
             {notificationTypes.map(([type, enabled]) => {
               const typeInfo = getNotificationTypeInfo(type as keyof typeof preferences.types);
-              console.log('Debug - type:', type, 'typeInfo:', typeInfo); // Debug log
               return (
                 <div key={type} className="flex items-center justify-between">
                   <div className="flex-1">

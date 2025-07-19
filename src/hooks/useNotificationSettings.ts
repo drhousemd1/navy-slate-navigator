@@ -62,19 +62,23 @@ export const useNotificationSettings = () => {
       }
 
       if (data?.preferences) {
-        // Ensure the loaded preferences include all required fields, merging with defaults
-        const loadedPreferences = data.preferences as unknown as NotificationPreferences;
-        const mergedPreferences = {
-          ...defaultPreferences,
-          ...loadedPreferences,
+        // Ensure the loaded preferences include all required fields
+        const loadedPreferences = data.preferences as any;
+        const updatedPreferences = {
+          enabled: loadedPreferences.enabled ?? defaultPreferences.enabled,
           types: {
-            ...defaultPreferences.types,
-            ...loadedPreferences.types,
+            ruleBroken: loadedPreferences.types?.ruleBroken ?? true,
+            taskCompleted: loadedPreferences.types?.taskCompleted ?? true,
+            rewardPurchased: loadedPreferences.types?.rewardPurchased ?? true,
+            rewardRedeemed: loadedPreferences.types?.rewardRedeemed ?? true,
+            punishmentPerformed: loadedPreferences.types?.punishmentPerformed ?? true,
+            wellnessUpdated: loadedPreferences.types?.wellnessUpdated ?? true,
+            wellnessCheckin: loadedPreferences.types?.wellnessCheckin ?? true,
+            messages: loadedPreferences.types?.messages ?? true, // This ensures messages is always there
           }
         };
-        setPreferences(mergedPreferences);
+        setPreferences(updatedPreferences);
       } else {
-        // Set default preferences in state only, save will happen on first update
         setPreferences(defaultPreferences);
       }
     } catch (error) {
