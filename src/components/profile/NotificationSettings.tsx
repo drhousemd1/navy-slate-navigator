@@ -34,42 +34,33 @@ export const NotificationSettings: React.FC = () => {
   };
 
   const getNotificationTypeInfo = (type: keyof typeof preferences.types) => {
-    const typeInfo: Record<string, { title: string; description: string }> = {
-      ruleBroken: {
-        title: 'Rule Broken',
-        description: 'Get notified when your partner marks a rule as broken'
-      },
-      taskCompleted: {
-        title: 'Task Completed',
-        description: 'Get notified when your partner completes a task'
-      },
-      rewardPurchased: {
-        title: 'Reward Purchased',
-        description: 'Get notified when your partner purchases a reward'
-      },
-      rewardRedeemed: {
-        title: 'Reward Redeemed',
-        description: 'Get notified when your partner redeems a reward'
-      },
-      punishmentPerformed: {
-        title: 'Punishment Performed',
-        description: 'Get notified when your partner applies a punishment'
-      },
-      wellnessUpdated: {
-        title: 'Wellness Updated',
-        description: 'Get notified when your partner updates their wellness score'
-      },
-      wellnessCheckin: {
-        title: 'Wellness Check-in',
-        description: 'Get notified for wellness check-in reminders'
-      },
-      messages: {
-        title: 'Messages',
-        description: 'Get notified when you receive a new message from your partner'
-      }
-    };
+    // Direct key mapping like the other working toggles
+    if (type === 'ruleBroken') {
+      return { title: 'Rule Broken', description: 'Get notified when your partner marks a rule as broken' };
+    }
+    if (type === 'taskCompleted') {
+      return { title: 'Task Completed', description: 'Get notified when your partner completes a task' };
+    }
+    if (type === 'rewardPurchased') {
+      return { title: 'Reward Purchased', description: 'Get notified when your partner purchases a reward' };
+    }
+    if (type === 'rewardRedeemed') {
+      return { title: 'Reward Redeemed', description: 'Get notified when your partner redeems a reward' };
+    }
+    if (type === 'punishmentPerformed') {
+      return { title: 'Punishment Performed', description: 'Get notified when your partner applies a punishment' };
+    }
+    if (type === 'wellnessUpdated') {
+      return { title: 'Wellness Updated', description: 'Get notified when your partner updates their wellness score' };
+    }
+    if (type === 'wellnessCheckin') {
+      return { title: 'Wellness Check-in', description: 'Get notified for wellness check-in reminders' };
+    }
+    if (type === 'messages') {
+      return { title: 'Messages', description: 'Get notified when you receive a new message from your partner' };
+    }
     
-    return typeInfo[type] || { title: type, description: '' };
+    return { title: type, description: '' };
   };
 
   // Filter out wellnessCheckin since it has its own section
