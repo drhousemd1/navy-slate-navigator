@@ -12,13 +12,9 @@ export class LogoManager {
     return LogoManager.instance;
   }
 
-  /**
-   * Get the current logo URL
-   */
   public getCurrentLogo(): string {
-    // Check if we have a custom logo stored
-    const customLogo = localStorage.getItem('app_logo_url');
-    return customLogo || LOGO_CONFIG.currentLogoPath;
+    // Use the uploaded image as default
+    return '/lovable-uploads/dcc2780c-ff8b-4d04-85f0-aef8a8ea62d8.png';
   }
 
   /**

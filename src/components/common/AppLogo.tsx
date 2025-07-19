@@ -19,8 +19,12 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   onClick,
   loading = false
 }) => {
+  // Set your uploaded image as the default logo immediately
   const [imageError, setImageError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Changed to false to prevent flashing
+  
+  // Use your uploaded image as the logo
+  const logoUrl = imageError ? logoManager.getFallbackLogo() : '/lovable-uploads/dcc2780c-ff8b-4d04-85f0-aef8a8ea62d8.png';
 
   const handleImageError = () => {
     logger.warn('Logo failed to load, using fallback');
@@ -32,7 +36,6 @@ export const AppLogo: React.FC<AppLogoProps> = ({
     setIsLoading(false);
   };
 
-  const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
   const sizeStyle = LOGO_SIZES[size];
 
   if (loading || isLoading) {
