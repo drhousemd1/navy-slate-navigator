@@ -21,29 +21,43 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   loading = false
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [logoUrl, setLogoUrl] = useState<string>('');
 
-  const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
   const sizeStyle = LOGO_SIZES[size];
+
+  // Load logo on component mount
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        await logoManager.loadCurrentLogo();
+        const currentLogo = logoManager.getCurrentLogo();
+        setLogoUrl(currentLogo);
+        setIsLoading(false);
+      } catch (error) {
+        logger.error('Failed to load logo', { error });
+        setLogoUrl(logoManager.getFallbackLogo());
+        setIsLoading(false);
+      }
+    };
+
+    loadLogo();
+  }, []);
 
   const handleImageError = () => {
     logger.warn('Logo failed to load, using fallback');
     setImageError(true);
+    setLogoUrl(logoManager.getFallbackLogo());
     setIsLoading(false);
   };
 
   const handleImageLoad = () => {
     logger.info('Logo loaded successfully');
     setIsLoading(false);
+    setImageError(false);
   };
 
-  const handleImageLoadStart = () => {
-    if (loading) {
-      setIsLoading(true);
-    }
-  };
-
-  if (loading || isLoading) {
+  if (loading || (isLoading && !logoUrl)) {
     return (
       <div 
         className={cn(
@@ -73,7 +87,6 @@ export const AppLogo: React.FC<AppLogoProps> = ({
         className="w-full h-full object-contain drop-shadow-lg"
         onError={handleImageError}
         onLoad={handleImageLoad}
-        onLoadStart={handleImageLoadStart}
         style={{ 
           maxWidth: '100%', 
           maxHeight: '100%',
