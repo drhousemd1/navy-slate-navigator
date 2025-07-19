@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { logoManager } from '@/services/logoManager';
 import { LOGO_SIZES, LogoSize } from '@/config/logoConfig';
@@ -19,20 +20,36 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   onClick,
   loading = false
 }) => {
-  const [imageError, setImageError] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const url = await logoManager.getCurrentLogo();
+        setLogoUrl(url);
+      } catch (error) {
+        logger.error('Failed to load logo', { error });
+        setLogoUrl(logoManager.getFallbackLogo());
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadLogo();
+  }, []);
 
   const handleImageError = () => {
     logger.warn('Logo failed to load, using fallback');
     setImageError(true);
-    setIsLoading(false);
+    setLogoUrl(logoManager.getFallbackLogo());
   };
 
   const handleImageLoad = () => {
-    setIsLoading(false);
+    setImageError(false);
   };
 
-  const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
   const sizeStyle = LOGO_SIZES[size];
 
   if (loading || isLoading) {

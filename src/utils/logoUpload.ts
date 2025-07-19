@@ -1,3 +1,4 @@
+
 import { logoManager } from '@/services/logoManager';
 import { logger } from '@/lib/logger';
 
@@ -58,21 +59,23 @@ export const validateLogoFile = (file: File): { valid: boolean; error?: string }
     return { valid: false, error: 'No file selected' };
   }
 
-  // Check file type
-  if (!file.type.includes('svg')) {
-    return { valid: false, error: 'Only SVG files are supported' };
+  // Check file type - now supports all common image formats
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    return { valid: false, error: 'Only PNG, JPEG, SVG, and WebP files are supported' };
   }
 
-  // Check file size (5MB limit)
-  const maxSize = 5 * 1024 * 1024;
+  // Check file size (10MB limit)
+  const maxSize = 10 * 1024 * 1024;
   if (file.size > maxSize) {
-    return { valid: false, error: 'File size must be less than 5MB' };
+    return { valid: false, error: 'File size must be less than 10MB' };
   }
 
   // Check file extension
   const extension = file.name.split('.').pop()?.toLowerCase();
-  if (extension !== 'svg') {
-    return { valid: false, error: 'File must have .svg extension' };
+  const allowedExtensions = ['png', 'jpg', 'jpeg', 'svg', 'webp'];
+  if (!extension || !allowedExtensions.includes(extension)) {
+    return { valid: false, error: 'File must have a valid image extension (.png, .jpg, .jpeg, .svg, .webp)' };
   }
 
   return { valid: true };
@@ -86,7 +89,7 @@ export const createLogoFileInput = (
 ): HTMLInputElement => {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.svg,image/svg+xml';
+  input.accept = '.png,.jpg,.jpeg,.svg,.webp,image/png,image/jpeg,image/svg+xml,image/webp';
   input.style.display = 'none';
   
   input.addEventListener('change', (event) => {
