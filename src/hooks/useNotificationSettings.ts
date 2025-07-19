@@ -62,7 +62,17 @@ export const useNotificationSettings = () => {
       }
 
       if (data?.preferences) {
-        setPreferences(data.preferences as unknown as NotificationPreferences);
+        // Ensure the loaded preferences include all required fields, merging with defaults
+        const loadedPreferences = data.preferences as unknown as NotificationPreferences;
+        const mergedPreferences = {
+          ...defaultPreferences,
+          ...loadedPreferences,
+          types: {
+            ...defaultPreferences.types,
+            ...loadedPreferences.types,
+          }
+        };
+        setPreferences(mergedPreferences);
       } else {
         // Set default preferences in state only, save will happen on first update
         setPreferences(defaultPreferences);
