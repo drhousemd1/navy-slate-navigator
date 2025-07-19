@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { logoManager } from '@/services/logoManager';
@@ -21,29 +22,9 @@ export const AppLogo: React.FC<AppLogoProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
   const sizeStyle = LOGO_SIZES[size];
-
-  // Set up a timeout to prevent infinite loading
-  useEffect(() => {
-    if (isLoading) {
-      const timeout = setTimeout(() => {
-        logger.warn('Logo loading timeout, showing image anyway');
-        setIsLoading(false);
-      }, 3000); // 3 second timeout for PNG files
-      
-      setLoadingTimeout(timeout);
-      
-      return () => {
-        if (timeout) clearTimeout(timeout);
-      };
-    } else if (loadingTimeout) {
-      clearTimeout(loadingTimeout);
-      setLoadingTimeout(null);
-    }
-  }, [isLoading]);
 
   const handleImageError = () => {
     logger.warn('Logo failed to load, using fallback');
@@ -57,7 +38,6 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   };
 
   const handleImageLoadStart = () => {
-    // Show loading for all image types if explicitly requested
     if (loading) {
       setIsLoading(true);
     }
