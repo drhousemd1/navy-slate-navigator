@@ -82,6 +82,8 @@ export const NotificationSettings: React.FC = () => {
   };
 
   // Filter out wellnessCheckin since it has its own section
+  console.log('🔍 ACTUAL preferences.types:', preferences.types);
+  console.log('🔍 KEYS in preferences.types:', Object.keys(preferences.types));
   const notificationTypes = Object.entries(preferences.types).filter(([type]) => type !== 'wellnessCheckin');
 
   return (
