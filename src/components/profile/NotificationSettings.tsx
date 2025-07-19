@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 
 export const NotificationSettings: React.FC = () => {
   const { preferences, isLoading, isSaving, updateNotificationType, toggleNotifications } = useNotificationSettings();
+  console.log('🔍 RAW PREFERENCES OBJECT:', JSON.stringify(preferences, null, 2));
   const { isSubscribed, isSupported } = usePushSubscription();
 
   const handleTypeToggle = async (type: keyof typeof preferences.types, enabled: boolean) => {
