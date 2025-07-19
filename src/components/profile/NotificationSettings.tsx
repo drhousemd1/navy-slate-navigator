@@ -112,6 +112,7 @@ export const NotificationSettings: React.FC = () => {
           <div className="space-y-4">
             {notificationTypes.map(([type, enabled]) => {
               const typeInfo = getNotificationTypeInfo(type as keyof typeof preferences.types);
+              console.log('Debug - type:', type, 'typeInfo:', typeInfo); // Debug log
               return (
                 <div key={type} className="flex items-center justify-between">
                   <div className="flex-1">
