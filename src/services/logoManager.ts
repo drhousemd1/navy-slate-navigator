@@ -131,20 +131,20 @@ export class LogoManager {
       };
     }
 
-    // Check file type - updated to support PNG
+    // Check file type
     if (!LOGO_CONFIG.allowedFormats.includes(file.type as any)) {
       return { 
         valid: false, 
-        error: 'Only SVG, PNG, and JPEG files are allowed' 
+        error: 'Only SVG files are allowed' 
       };
     }
 
-    // Check file extension - updated to support PNG
+    // Check file extension
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!LOGO_CONFIG.allowedExtensions.includes(extension as any)) {
       return { 
         valid: false, 
-        error: 'Only .svg, .png, .jpg, and .jpeg files are allowed' 
+        error: 'Only .svg files are allowed' 
       };
     }
 

@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { logoManager } from '@/services/logoManager';
 import { LOGO_SIZES, LogoSize } from '@/config/logoConfig';
@@ -16,15 +15,12 @@ interface AppLogoProps {
 export const AppLogo: React.FC<AppLogoProps> = ({
   size = 'responsive',
   className,
-  alt = 'Playful Obedience Logo',
+  alt = 'App Logo',
   onClick,
   loading = false
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
-  const sizeStyle = LOGO_SIZES[size];
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleImageError = () => {
     logger.warn('Logo failed to load, using fallback');
@@ -33,15 +29,11 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   };
 
   const handleImageLoad = () => {
-    logger.info('Logo loaded successfully');
     setIsLoading(false);
   };
 
-  const handleImageLoadStart = () => {
-    if (loading) {
-      setIsLoading(true);
-    }
-  };
+  const logoUrl = imageError ? logoManager.getFallbackLogo() : logoManager.getCurrentLogo();
+  const sizeStyle = LOGO_SIZES[size];
 
   if (loading || isLoading) {
     return (
@@ -70,14 +62,12 @@ export const AppLogo: React.FC<AppLogoProps> = ({
       <img
         src={logoUrl}
         alt={alt}
-        className="w-full h-full object-contain drop-shadow-lg"
+        className="w-full h-full object-contain"
         onError={handleImageError}
         onLoad={handleImageLoad}
-        onLoadStart={handleImageLoadStart}
         style={{ 
           maxWidth: '100%', 
-          maxHeight: '100%',
-          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
+          maxHeight: '100%' 
         }}
       />
     </div>
