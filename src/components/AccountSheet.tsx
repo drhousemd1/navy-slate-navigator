@@ -16,13 +16,8 @@ import { logger } from '@/lib/logger';
 const AccountSheet = () => {
   const navigate = useNavigate();
   const { user, getNickname, getProfileImage, getUserRoleSync, signOut, isAdmin } = useAuth();
-  const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-
-  const toggleProfileOptions = () => {
-    setShowProfileOptions(!showProfileOptions);
-  };
   
   const handleProfileClick = () => {
     navigate('/profile');
@@ -138,24 +133,12 @@ const AccountSheet = () => {
             <Button 
               variant="ghost" 
               className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
-              onClick={toggleProfileOptions}
+              onClick={handleProfileClick}
               disabled={!user} // Disable if no user
             >
-              <User className="w-5 h-5 mr-3" /> {/* Increased mr for icon spacing */}
+              <User className="w-5 h-5 mr-3" />
               Account
             </Button>
-            
-            {showProfileOptions && user && ( // Only show if user exists
-              <div className="ml-8 space-y-1 animate-fade-in"> {/* Increased ml, reduced space-y */}
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-gray-300 hover:text-cyan-300 hover:bg-light-navy/70 py-1.5" // Adjusted padding
-                  onClick={handleProfileClick}
-                >
-                  Profile
-                </Button>
-              </div>
-            )}
             
             <Button 
               variant="ghost" 
