@@ -102,7 +102,7 @@ class NativePushManager implements PushNotificationManager {
       // Store the token in the user's profile or a dedicated table
       const { error } = await supabase
         .from('profiles')
-        .update({ push_token: token })
+        .update({ push_token: token } as any)
         .eq('id', (await supabase.auth.getUser()).data.user?.id);
 
       if (error) {

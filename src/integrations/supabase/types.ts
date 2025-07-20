@@ -159,6 +159,7 @@ export type Database = {
           nickname: string | null
           partner_link_code: string | null
           points: number
+          push_token: string | null
           role: string
           updated_at: string
         }
@@ -171,6 +172,7 @@ export type Database = {
           nickname?: string | null
           partner_link_code?: string | null
           points?: number
+          push_token?: string | null
           role: string
           updated_at?: string
         }
@@ -183,6 +185,7 @@ export type Database = {
           nickname?: string | null
           partner_link_code?: string | null
           points?: number
+          push_token?: string | null
           role?: string
           updated_at?: string
         }
