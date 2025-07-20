@@ -21,7 +21,6 @@ const mapRewardDataToFormValues = (reward: Reward): RewardFormValues => {
     title: reward.title,
     description: reward.description || '',
     cost: reward.cost,
-    supply: reward.supply,
     is_dom_reward: reward.is_dom_reward ?? false,
     icon_name: reward.icon_name,
     icon_color: reward.icon_color || '#9b87f5',

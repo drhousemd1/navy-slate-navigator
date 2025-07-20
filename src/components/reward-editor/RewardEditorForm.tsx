@@ -214,16 +214,6 @@ const RewardFormContent: React.FC<RewardFormContentProps> = ({
     }
   };
 
-  const incrementSupply = () => {
-    form.setValue('supply', (form.watch('supply') || 0) + 1);
-  };
-
-  const decrementSupply = () => {
-    const currentSupply = form.watch('supply') || 0;
-    if (currentSupply > 0) {
-      form.setValue('supply', currentSupply - 1);
-    }
-  };
 
   return (
     <>
@@ -231,8 +221,6 @@ const RewardFormContent: React.FC<RewardFormContentProps> = ({
         control={form.control}
         incrementCost={incrementCost}
         decrementCost={decrementCost}
-        incrementSupply={incrementSupply}
-        decrementSupply={decrementSupply}
       />
       
       <RewardImageSection 

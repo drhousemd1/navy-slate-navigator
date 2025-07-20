@@ -39,7 +39,6 @@ export interface RewardFormValues {
   title: string;
   description: string;
   cost: number;
-  supply: number;
   is_dom_reward: boolean;
   icon_name: string | null;
   icon_color: string;
@@ -58,7 +57,6 @@ export interface RewardFormValues {
 export type CreateRewardVariables = {
   title: string;
   cost: number;
-  supply: number;
   is_dom_reward: boolean;
   description?: string | null;
   background_image_url?: string | null;

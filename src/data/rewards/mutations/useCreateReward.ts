@@ -30,7 +30,7 @@ export const useCreateRewardMutation = () => {
         title: variables.title,
         description: variables.description,
         cost: variables.cost,
-        supply: variables.supply,
+        supply: 0, // Supply starts at 0 and is managed automatically
         is_dom_reward: variables.is_dom_reward,
         background_image_url: processedUrl,
         background_opacity: variables.background_opacity,
@@ -66,6 +66,7 @@ export const useCreateRewardMutation = () => {
     createOptimisticItem: (variables, optimisticId) => ({
       ...variables,
       id: optimisticId,
+      supply: 0, // Supply starts at 0 and is managed automatically
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       user_id: subUserId || '',

@@ -122,15 +122,14 @@ export const useRewardsData = () => {
       result = await updateRewardMutation.mutateAsync(updateVariables);
     } else { 
       // Ensure all required fields for CreateRewardVariables are present
-      if (rewardData.title === undefined || rewardData.cost === undefined || rewardData.supply === undefined || rewardData.is_dom_reward === undefined) {
-        toast({ title: "Missing required fields for creation", description: "Title, cost, supply, and DOM status are required.", variant: "destructive" });
+      if (rewardData.title === undefined || rewardData.cost === undefined || rewardData.is_dom_reward === undefined) {
+        toast({ title: "Missing required fields for creation", description: "Title, cost, and DOM status are required.", variant: "destructive" });
         throw new Error("Missing required fields for creation");
       }
 
       const createVariables: CreateRewardVariables = {
         title: rewardData.title,
         cost: rewardData.cost,
-        supply: rewardData.supply,
         is_dom_reward: rewardData.is_dom_reward,
         description: rewardData.description || null,
         background_image_url: rewardData.background_image_url || null,
