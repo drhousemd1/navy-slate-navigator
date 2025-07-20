@@ -1,7 +1,7 @@
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
 import { notificationQueue, type QueuedNotification } from '@/services/notificationQueue';
+import { getPushNotificationManager } from '@/services/pushNotificationManager';
 
 export type NotificationType = 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin' | 'messages';
 
@@ -15,6 +15,7 @@ interface SendNotificationParams {
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
+  const pushManager = getPushNotificationManager();
 
   const sendNotificationImmediately = async (notification: QueuedNotification): Promise<boolean> => {
     if (!user) {
@@ -23,25 +24,9 @@ export const usePushNotifications = () => {
     }
 
     try {
-      const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
-        body: {
-          targetUserId: notification.targetUserId,
-          type: notification.type,
-          title: notification.title,
-          body: notification.body,
-          data: notification.data || {},
-        },
-      });
-
-      if (error) {
-        logger.error('Error sending push notification:', error);
-        return false;
-      }
-
-      logger.info('Push notification sent successfully:', result);
-      return true;
+      return await pushManager.sendNotification(notification);
     } catch (error) {
-      logger.error('Error invoking push notification function:', error);
+      logger.error('Error sending push notification via manager:', error);
       return false;
     }
   };
@@ -217,10 +202,27 @@ export const usePushNotifications = () => {
     });
   };
 
+  // Platform detection and initialization
+  const initializePushNotifications = async (): Promise<boolean> => {
+    try {
+      await pushManager.initialize();
+      return await pushManager.requestPermissions();
+    } catch (error) {
+      logger.error('Error initializing push notifications:', error);
+      return false;
+    }
+  };
+
+  const getPlatform = () => pushManager.platform;
+
   return {
     // Core methods
     sendNotification,
     queueNotification,
+    
+    // Platform management
+    initializePushNotifications,
+    getPlatform,
     
     // Immediate notification methods (critical)
     sendRuleBrokenNotification,
