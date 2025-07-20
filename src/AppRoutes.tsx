@@ -18,6 +18,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import AppStorePrep from './pages/AppStorePrep';
 
 const AppRoutes = () => {
   return (
@@ -84,6 +85,7 @@ const AppRoutes = () => {
         path="/logo-upload" 
         element={<ProtectedRoute><ErrorBoundary><LogoUpload /></ErrorBoundary></ProtectedRoute>} 
       />
+      <Route path="/app-store-prep" element={<AppStorePrep />} />
       
       {/* Catch-all for not found routes */}
       <Route path="*" element={<ErrorBoundary><NotFound /></ErrorBoundary>} />

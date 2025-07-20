@@ -1,7 +1,7 @@
 
 {
-  "name": "Navy Slate Navigator",
-  "short_name": "Navigator",
+  "name": "Playful Obedience",
+  "short_name": "Playful Obedience",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A1F44",
@@ -10,13 +10,13 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/lovable-uploads/dcc2780c-ff8b-4d04-85f0-aef8a8ea62d8.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/lovable-uploads/dcc2780c-ff8b-4d04-85f0-aef8a8ea62d8.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
