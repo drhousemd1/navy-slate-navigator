@@ -7,7 +7,7 @@ import {
   SheetTitle,
   SheetTrigger
 } from '@/components/ui/sheet';
-import { UserCircle2, User, LogOut, BookOpen, ShieldCheck, Activity, Palette, Bell, Home } from 'lucide-react';
+import { UserCircle2, User, LogOut, BookOpen, ShieldCheck, Activity, Palette, Bell, Home, CreditCard } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -58,6 +58,11 @@ const AccountSheet = () => {
 
   const handleHomeClick = () => {
     navigate('/');
+    setSheetOpen(false);
+  };
+
+  const handleSubscriptionClick = () => {
+    navigate('/subscription');
     setSheetOpen(false);
   };
   
@@ -187,6 +192,16 @@ const AccountSheet = () => {
             >
               <Bell className="w-5 h-5 mr-3" />
               Notifications
+            </Button>
+
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              onClick={handleSubscriptionClick}
+              disabled={!user} 
+            >
+              <CreditCard className="w-5 h-5 mr-3" />
+              Subscription
             </Button>
 
             {isAdmin && user && ( // Show Admin Panel button if user is admin
