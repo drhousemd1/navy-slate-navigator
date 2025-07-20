@@ -1,18 +1,27 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Crown, CreditCard, Calendar, AlertTriangle } from 'lucide-react';
+import { Crown, CreditCard, Calendar, AlertTriangle, X } from 'lucide-react';
+import AppLayout from '@/components/AppLayout';
 
 const Subscription = () => {
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    navigate(-1); // Go back to previous page
+  };
+
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">Subscription Management</h1>
-          <p className="text-muted-foreground">Manage your app subscription and billing</p>
-        </div>
+    <AppLayout>
+      <div className="p-4">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold text-foreground">Subscription Management</h1>
+            <p className="text-muted-foreground">Manage your app subscription and billing</p>
+          </div>
 
         {/* Current Plan */}
         <Card>
@@ -189,8 +198,21 @@ const Subscription = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Close Button */}
+        <div className="flex justify-center pt-4">
+          <Button 
+            variant="outline" 
+            onClick={handleClose}
+            className="w-full max-w-xs flex items-center gap-2"
+          >
+            <X className="w-4 h-4" />
+            Close
+          </Button>
+        </div>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 };
 
