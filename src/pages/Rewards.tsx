@@ -60,7 +60,13 @@ const RewardsContent: React.FC<{
 
   const handleSaveRewardEditor = async (formData: RewardFormValues): Promise<Reward> => {
     const rewardIndex = rewardBeingEdited ? rewards.findIndex(r => r.id === rewardBeingEdited.id) : null;
-    const savedRewardId = await handleSaveReward(formData, rewardIndex);
+    
+    // Include the existing reward ID if we're editing
+    const rewardDataWithId = rewardBeingEdited ? 
+      { ...formData, id: rewardBeingEdited.id } : 
+      formData;
+    
+    const savedRewardId = await handleSaveReward(rewardDataWithId, rewardIndex);
     
     if (!savedRewardId) {
       throw new Error("Failed to save reward");
