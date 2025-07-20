@@ -1,14 +1,18 @@
 
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth';
-import { useUserIds } from '@/contexts/UserIdsContext';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-import { Home, Plus, Users, Gift, Settings, LogOut, User, Smartphone } from 'lucide-react';
-import AppLogo from './common/AppLogo';
+import React, { ReactNode } from 'react';
 import MobileNavbar from './MobileNavbar';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Plus, MessageSquare, Crown } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { useAuth } from '@/contexts/auth';
+import AccountSheet from './AccountSheet';
+import PartnerDisplay from './PartnerDisplay';
+import UserHealthBar from './header/UserHealthBar';
+import AvatarPreviewPopover from './AvatarPreviewPopover';
+import { logger } from '@/lib/logger';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
+import { NotificationBadge } from '@/components/common/NotificationBadge';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,181 +20,152 @@ interface AppLayoutProps {
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
-  const { user, signOut } = useAuth();
-  const { subUserId, domUserId } = useUserIds();
   const location = useLocation();
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const { getNickname, getProfileImage, getUserRoleSync } = useAuth();
+  const { unreadCount } = useUnreadMessages();
 
-  useEffect(() => {
-    setIsMobileNavOpen(false); // Close mobile nav on route change
-  }, [location]);
+  // Only show "Add" button for specific routes
+  const shouldShowAddButton = 
+    location.pathname === '/tasks' || 
+    location.pathname === '/rules' || 
+    location.pathname === '/rewards' || 
+    location.pathname === '/punishments';
+    
+  // Don't add bottom padding on messages page
+  const isMessagesPage = location.pathname === '/messages';
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/auth');
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Logout failed",
-        description: error.message || "Failed to logout. Please try again.",
-      });
+  const handleMessagingClick = () => {
+    if (isMessagesPage) {
+      // If we're on messages page, go back to home
+      navigate('/');
+    } else {
+      // If we're not on messages page, go to messages
+      navigate('/messages');
     }
   };
 
+  const handleAddNewItem = () => {
+    if (onAddNewItem) {
+      onAddNewItem();
+    }
+  };
+  
+  // Get profile image and nickname for the avatar directly from context
+  const nickname = getNickname();
+  const userRole = getUserRoleSync(); // Use synchronous version for UI
+  const profileImage = getProfileImage();
+
+  // Determine if we're on the rewards page, tasks page, punishments page, or rules page for special styling
+  const isRewardsPage = location.pathname === '/rewards';
+  const isTasksPage = location.pathname === '/tasks';
+  const isPunishmentsPage = location.pathname === '/punishments';
+  const isRulesPage = location.pathname === '/rules';
+  const isThroneRoomPage = location.pathname === '/throne-room';
+  const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage || isRulesPage;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-16 md:pb-0">
-      {/* Header */}
-      <header className="bg-navy text-white p-4 shadow-lg">
-        <div className="container mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full overflow-hidden">
-              <AppLogo size="small" alt="App Logo" />
+    <div className="flex flex-col h-full bg-dark-navy prevent-overscroll overflow-x-hidden">
+      {/* Top header section with account and settings icons - NOW WITH SAFE AREA */}
+      <div className="fixed top-0 left-0 right-0 w-full bg-navy border-b border-light-navy pt-safe-top py-2 px-4 z-50 prevent-mobile-scroll overflow-x-hidden">
+        <div className="max-w-screen-lg mx-auto flex justify-between items-center w-full">
+          <div className="flex items-center flex-1 min-w-0">
+            {/* User's own wellbeing health bar - positioned to the left of avatar */}
+            <UserHealthBar />
+            
+            {/* Left side user avatar and info */}
+            <AvatarPreviewPopover
+              avatarUrl={profileImage}
+              nickname={nickname || 'Guest'}
+              fallbackLetter={nickname ? nickname.charAt(0).toUpperCase() : 'G'}
+            >
+              <Avatar className="h-7 w-7 cursor-pointer flex-shrink-0">
+                {profileImage ? (
+                  <AvatarImage 
+                    src={profileImage} 
+                    alt={nickname ?? "User Avatar"}
+                    onError={(e) => {
+                      logger.error('Failed to load avatar image:', profileImage);
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : null}
+                <AvatarFallback className="bg-light-navy text-nav-active text-xs">
+                  {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
+                </AvatarFallback>
+              </Avatar>
+            </AvatarPreviewPopover>
+            
+            {/* Username and role display */}
+            <div className="ml-2 min-w-0 flex-shrink">
+              <p className="text-white text-sm font-medium leading-tight break-words truncate">{nickname}</p>
+              <p className="text-gray-400 text-xs leading-tight break-words truncate">{userRole}</p>
             </div>
-            <span className="font-bold text-lg">Playful Obedience</span>
-          </Link>
 
-          {/* Mobile Navigation Button */}
-          <button
-            onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-            className="md:hidden text-white focus:outline-none"
-          >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 6h16M4 12h16M4 18h16"
-              ></path>
-            </svg>
-          </button>
+            {/* Partner display - shows when user has a linked partner - now inline */}
+            <PartnerDisplay />
+          </div>
+          
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* Character icon for account/login using our new AccountSheet component */}
+            <AccountSheet />
+            
+            {/* Throne Room icon */}
+            <Crown 
+              className={`w-5 h-5 cursor-pointer transition-colors ${
+                isThroneRoomPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
+              }`}
+              onClick={() => navigate('/throne-room')}
+            />
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-4">
-            <Link
-              to="/app-store-prep"
-              className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-sm hover:bg-accent-hover transition-colors flex items-center gap-2"
-            >
-              <Smartphone size={16} />
-              App Store Prep
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-700 text-white rounded-md px-3 py-1 text-sm transition-colors"
-            >
-              Logout
-            </button>
-          </nav>
+            
+            {/* Notification Center */}
+            <NotificationBadge />
+
+            {/* Messaging icon with unread count */}
+            <div className="relative">
+              <MessageSquare 
+                className={`w-5 h-5 cursor-pointer transition-colors ${
+                  isMessagesPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
+                }`}
+                onClick={handleMessagingClick}
+              />
+              {unreadCount > 0 && (
+                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex flex-1">
-        {/* Desktop Sidebar Navigation */}
-        <aside
-          className={cn(
-            "bg-navy w-64 flex-shrink-0 p-4 space-y-2 hidden md:flex flex-col",
-            isMobileNavOpen && "hidden"
-          )}
-        >
-          <Link
-            to="/"
-            className={cn(
-              "flex items-center justify-center w-full h-14 rounded-lg transition-colors",
-              location.pathname === "/"
-                ? "bg-nav-active text-white"
-                : "text-nav-inactive hover:text-white hover:bg-nav-hover"
-            )}
-          >
-            <Home size={24} />
-            <span className="sr-only">Home</span>
-          </Link>
-
-          {onAddNewItem && (
-            <button
-              onClick={onAddNewItem}
-              className="flex items-center justify-center w-full h-14 rounded-lg text-nav-inactive hover:text-white hover:bg-nav-hover transition-colors"
-            >
-              <Plus size={24} />
-              <span className="sr-only">Add New Item</span>
-            </button>
-          )}
-
-          <Link
-            to="/rewards"
-            className={cn(
-              "flex items-center justify-center w-full h-14 rounded-lg transition-colors",
-              location.pathname === '/rewards'
-                ? "bg-nav-active text-white"
-                : "text-nav-inactive hover:text-white hover:bg-nav-hover"
-            )}
-          >
-            <Gift size={24} />
-            <span className="sr-only">Rewards</span>
-          </Link>
-
-          <Link
-            to="/app-store-prep"
-            className={cn(
-              "flex items-center justify-center w-full h-14 rounded-lg transition-colors",
-              location.pathname === '/app-store-prep'
-                ? "bg-nav-active text-white"
-                : "text-nav-inactive hover:text-white hover:bg-nav-hover"
-            )}
-          >
-            <Smartphone size={24} />
-            <span className="sr-only">App Store Prep</span>
-          </Link>
-        </aside>
-
-        {/* Mobile Navigation Overlay */}
-        <div
-          className={cn(
-            "fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex-col items-center justify-center hidden",
-            isMobileNavOpen ? "flex" : "hidden"
-          )}
-        >
-          <nav className="flex flex-col items-center space-y-4">
-            <Link to="/" className="text-lg text-white" onClick={() => setIsMobileNavOpen(false)}>
-              Home
-            </Link>
-            {onAddNewItem && (
-              <button onClick={() => { onAddNewItem(); setIsMobileNavOpen(false); }} className="text-lg text-white">
-                Add New Item
-              </button>
-            )}
-            <Link to="/rewards" className="text-lg text-white" onClick={() => setIsMobileNavOpen(false)}>
-              Rewards
-            </Link>
-            <Link to="/app-store-prep" className="text-lg text-white" onClick={() => setIsMobileNavOpen(false)}>
-              App Store Prep
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-700 text-white rounded-md px-3 py-1 text-sm transition-colors"
-            >
-              Logout
-            </button>
-          </nav>
-        </div>
-
-        {/* Page Content */}
-        <main className="flex-1 p-4 container mx-auto">{children}</main>
       </div>
-
-      {/* Mobile Bottom Navigation */}
+      
+      {/* Main content with adjusted padding to account for safe area header */}
+      <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-16 overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full">
+        <div className="w-full max-w-full overflow-x-hidden h-full">
+          {children}
+        </div>
+      </main>
+      
+      {shouldShowAddButton && !isMessagesPage && (
+        <div className={`fixed left-0 right-0 flex justify-center z-40`} style={{bottom: `calc(3rem + env(safe-area-inset-bottom))`}}>
+          <Button 
+            className={`${useCircleButton 
+              ? 'bg-green-500 hover:bg-green-600 w-10 h-10 rounded-full shadow-xl p-0 flex items-center justify-center' 
+              : 'bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6'}`}
+            onClick={handleAddNewItem}
+          >
+            {useCircleButton ? (
+              <Plus className="w-6 h-6 text-white" />
+            ) : (
+              <>
+                <Plus className="w-5 h-5 mr-2" /> Add New Item
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+      
       <MobileNavbar />
     </div>
   );
