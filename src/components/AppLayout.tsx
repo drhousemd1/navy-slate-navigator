@@ -1,12 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Home, Plus, Users, Gift, Settings, LogOut, User, Smartphone } from 'lucide-react';
 import AppLogo from './common/AppLogo';
+import MobileNavbar from './MobileNavbar';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -14,8 +16,8 @@ interface AppLayoutProps {
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
-  const { user, logout } = useAuth();
-  const { subUserId, domUserId, setSubUserId, setDomUserId } = useUserIds();
+  const { user, signOut } = useAuth();
+  const { subUserId, domUserId } = useUserIds();
   const location = useLocation();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -27,10 +29,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
   const handleLogout = async () => {
     try {
-      await logout();
-      setSubUserId('');
-      setDomUserId('');
-      navigate('/login');
+      await signOut();
+      navigate('/auth');
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -44,30 +44,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
     }
   };
 
-  const handleUserSwitch = () => {
-    if (location.pathname === '/rewards') {
-      // Refresh the page after switching users
-      const newUserId = subUserId === user?.id ? domUserId : user?.id;
-      if (newUserId) {
-        if (subUserId === user?.id) {
-          setSubUserId(domUserId);
-        } else {
-          setSubUserId(user?.id);
-        }
-      }
-    } else {
-      if (subUserId === user?.id) {
-        setSubUserId(domUserId);
-      } else {
-        setSubUserId(user?.id);
-      }
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col pb-16 md:pb-0">
       {/* Header */}
-      <header className="bg-primary text-white p-4">
+      <header className="bg-navy text-white p-4 shadow-lg">
         <div className="container mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 rounded-full overflow-hidden">
@@ -81,7 +61,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
             className="md:hidden text-white focus:outline-none"
           >
-            {/* Hamburger icon (replace with your preferred icon) */}
             <svg
               className="h-6 w-6"
               fill="none"
@@ -100,14 +79,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-4">
-            {user && domUserId && (
-              <button
-                onClick={handleUserSwitch}
-                className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-sm hover:bg-accent-hover transition-colors"
-              >
-                Switch User
-              </button>
-            )}
+            <Link
+              to="/app-store-prep"
+              className="bg-accent text-accent-foreground rounded-md px-3 py-1 text-sm hover:bg-accent-hover transition-colors flex items-center gap-2"
+            >
+              <Smartphone size={16} />
+              App Store Prep
+            </Link>
             <button
               onClick={handleLogout}
               className="bg-red-500 hover:bg-red-700 text-white rounded-md px-3 py-1 text-sm transition-colors"
@@ -120,7 +98,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
 
       {/* Main Content */}
       <div className="flex flex-1">
-        {/* Sidebar Navigation */}
+        {/* Desktop Sidebar Navigation */}
         <aside
           className={cn(
             "bg-navy w-64 flex-shrink-0 p-4 space-y-2 hidden md:flex flex-col",
@@ -151,19 +129,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
           )}
 
           <Link
-            to="/users"
-            className={cn(
-              "flex items-center justify-center w-full h-14 rounded-lg transition-colors",
-              location.pathname === "/users"
-                ? "bg-nav-active text-white"
-                : "text-nav-inactive hover:text-white hover:bg-nav-hover"
-            )}
-          >
-            <Users size={24} />
-            <span className="sr-only">Users</span>
-          </Link>
-
-          <Link
             to="/rewards"
             className={cn(
               "flex items-center justify-center w-full h-14 rounded-lg transition-colors",
@@ -177,46 +142,20 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
           </Link>
 
           <Link
-            to="/settings"
+            to="/app-store-prep"
             className={cn(
               "flex items-center justify-center w-full h-14 rounded-lg transition-colors",
-              location.pathname === '/settings'
+              location.pathname === '/app-store-prep'
                 ? "bg-nav-active text-white"
                 : "text-nav-inactive hover:text-white hover:bg-nav-hover"
             )}
           >
-            <Settings size={24} />
-            <span className="sr-only">Settings</span>
+            <Smartphone size={24} />
+            <span className="sr-only">App Store Prep</span>
           </Link>
-
-          <Link
-            to="/logo-upload"
-            className={cn(
-              "flex items-center justify-center w-full h-14 rounded-lg transition-colors",
-              location.pathname === '/logo-upload'
-                ? "bg-nav-active text-white"
-                : "text-nav-inactive hover:text-white hover:bg-nav-hover"
-            )}
-          >
-            <User size={24} />
-            <span className="sr-only">Logo Upload</span>
-          </Link>
-            
-            <Link
-              to="/app-store-prep"
-              className={cn(
-                "flex items-center justify-center w-full h-14 rounded-lg transition-colors",
-                location.pathname === '/app-store-prep'
-                  ? "bg-nav-active text-white"
-                  : "text-nav-inactive hover:text-white hover:bg-nav-hover"
-              )}
-            >
-              <Smartphone size={24} />
-              <span className="sr-only">App Store Prep</span>
-            </Link>
         </aside>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation Overlay */}
         <div
           className={cn(
             "fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex-col items-center justify-center hidden",
@@ -224,22 +163,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
           )}
         >
           <nav className="flex flex-col items-center space-y-4">
-            <Link to="/" className="text-lg text-white">
+            <Link to="/" className="text-lg text-white" onClick={() => setIsMobileNavOpen(false)}>
               Home
             </Link>
             {onAddNewItem && (
-              <button onClick={onAddNewItem} className="text-lg text-white">
+              <button onClick={() => { onAddNewItem(); setIsMobileNavOpen(false); }} className="text-lg text-white">
                 Add New Item
               </button>
             )}
-            <Link to="/users" className="text-lg text-white">
-              Users
-            </Link>
-            <Link to="/rewards" className="text-lg text-white">
+            <Link to="/rewards" className="text-lg text-white" onClick={() => setIsMobileNavOpen(false)}>
               Rewards
             </Link>
-            <Link to="/settings" className="text-lg text-white">
-              Settings
+            <Link to="/app-store-prep" className="text-lg text-white" onClick={() => setIsMobileNavOpen(false)}>
+              App Store Prep
             </Link>
             <button
               onClick={handleLogout}
@@ -253,6 +189,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
         {/* Page Content */}
         <main className="flex-1 p-4 container mx-auto">{children}</main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileNavbar />
     </div>
   );
 };
