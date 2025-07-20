@@ -2,6 +2,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
 import { notificationQueue, type QueuedNotification } from '@/services/notificationQueue';
 import { getPushNotificationManager } from '@/services/pushNotificationManager';
+import { smartNotificationFilter } from '@/services/smartNotificationFilter';
+import { notificationHistory } from '@/services/notificationHistory';
 
 export type NotificationType = 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin' | 'messages';
 
@@ -23,11 +25,59 @@ export const usePushNotifications = () => {
       return false;
     }
 
+    // Determine priority based on notification type
+    const priority = getNotificationPriority(notification.type);
+    
+    // Check smart filtering
+    const filterResult = smartNotificationFilter.shouldFilterNotification(priority);
+    if (filterResult.shouldFilter) {
+      logger.info('Notification filtered:', filterResult.reason);
+      // Still add to history even if filtered
+      notificationHistory.addNotification({
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        data: notification.data,
+        priority
+      });
+      return true; // Return true as the notification was "handled"
+    }
+
     try {
-      return await pushManager.sendNotification(notification);
+      const success = await pushManager.sendNotification(notification);
+      
+      // Add to notification history
+      notificationHistory.addNotification({
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        data: notification.data,
+        priority
+      });
+      
+      return success;
     } catch (error) {
       logger.error('Error sending push notification via manager:', error);
       return false;
+    }
+  };
+
+  const getNotificationPriority = (type: NotificationType): 'low' | 'normal' | 'high' | 'critical' => {
+    switch (type) {
+      case 'ruleBroken':
+        return 'critical';
+      case 'wellnessCheckin':
+        return 'high';
+      case 'taskCompleted':
+      case 'rewardPurchased':
+      case 'punishmentPerformed':
+        return 'normal';
+      case 'rewardRedeemed':
+      case 'wellnessUpdated':
+      case 'messages':
+        return 'low';
+      default:
+        return 'normal';
     }
   };
 
