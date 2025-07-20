@@ -24,7 +24,7 @@ export function useToggleTaskCompletionMutation() {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   const { getPartnerId } = usePartnerHelper();
-  const { sendTaskCompletedNotification } = usePushNotifications();
+  const { queueTaskCompletedNotification } = usePushNotifications();
 
   return useMutation<void, Error, ToggleTaskCompletionVariables, { previousTasks?: TaskWithId[] }>(
     {
@@ -217,7 +217,7 @@ export function useToggleTaskCompletionMutation() {
           const partnerId = await getPartnerId();
           if (partnerId) {
             try {
-              await sendTaskCompletedNotification(
+              queueTaskCompletedNotification(
                 partnerId, 
                 variables.task.title, 
                 variables.pointsValue

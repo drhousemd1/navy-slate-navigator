@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger';
 
 export const useSmartMessageNotifications = () => {
   const { isAppActive } = useAppVisibility();
-  const { sendMessageNotification } = usePushNotifications();
+  const { queueMessageNotification } = usePushNotifications();
   const { preferences } = useNotificationSettings();
   const { user } = useAuth();
   const location = useLocation();
@@ -50,9 +50,10 @@ export const useSmartMessageNotifications = () => {
       ? `${messageContent.substring(0, 50)}...`
       : messageContent;
 
-    logger.info(`[SmartMessageNotifications] Sending message notification to ${receiverId}`);
+    logger.info(`[SmartMessageNotifications] Queueing message notification to ${receiverId}`);
     
-    return await sendMessageNotification(receiverId, senderName, messagePreview || '📱 New message');
+    queueMessageNotification(receiverId, senderName, messagePreview || '📱 New message');
+    return true;
   };
 
   return {

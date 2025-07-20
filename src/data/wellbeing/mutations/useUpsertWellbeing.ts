@@ -13,7 +13,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 export const useUpsertWellbeing = (userId: string | null) => {
   const queryClient = useQueryClient();
   const { getPartnerId } = usePartnerHelper();
-  const { sendWellnessUpdatedNotification } = usePushNotifications();
+  const { queueWellnessUpdatedNotification } = usePushNotifications();
 
   return useMutation<WellbeingSnapshot, Error, CreateWellbeingData>({
     mutationFn: async (variables: CreateWellbeingData) => {
@@ -93,7 +93,7 @@ export const useUpsertWellbeing = (userId: string | null) => {
         const partnerId = await getPartnerId();
         if (partnerId) {
           try {
-            await sendWellnessUpdatedNotification(partnerId, wellbeingData.overall_score);
+            queueWellnessUpdatedNotification(partnerId, wellbeingData.overall_score);
           } catch (error) {
             logger.error('Failed to send wellness update notification:', error);
           }

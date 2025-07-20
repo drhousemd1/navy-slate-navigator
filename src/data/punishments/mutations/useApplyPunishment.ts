@@ -22,7 +22,7 @@ export const useApplyPunishment = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   const { getPartnerId } = usePartnerHelper();
-  const { sendPunishmentPerformedNotification } = usePushNotifications();
+  const { queuePunishmentPerformedNotification } = usePushNotifications();
 
   const historyQueryKey = [...PUNISHMENT_HISTORY_QUERY_KEY, subUserId, domUserId];
 
@@ -132,7 +132,7 @@ export const useApplyPunishment = () => {
       const partnerId = await getPartnerId();
       if (partnerId) {
         try {
-          await sendPunishmentPerformedNotification(
+          queuePunishmentPerformedNotification(
             partnerId, 
             variables.punishmentTitle || 'A punishment', 
             variables.pointsDeducted
