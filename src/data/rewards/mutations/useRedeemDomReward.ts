@@ -96,9 +96,10 @@ export const useRedeemDomReward = () => {
       queryClient.invalidateQueries({ queryKey: ['reward-usage', variables.rewardId] });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
+      // Only invalidate reward usage queries, NOT the rewards cache
       queryClient.invalidateQueries({ queryKey: ['reward-usage'] });
       queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
+      // REMOVED: queryClient.invalidateQueries({ queryKey: rewardsQueryKey }) - this was causing supply reset
     },
   });
 };

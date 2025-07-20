@@ -20,7 +20,6 @@ export const useRewardOperations = () => {
   const buyDomRewardMutation = useBuyDomReward();
   const redeemSubRewardMutation = useRedeemSubReward();
   const redeemDomRewardMutation = useRedeemDomReward();
-  const { handleSaveReward } = useRewards();
 
   const buyDomReward = useCallback(async (rewardId: string, cost: number) => {
     if (!domUserId) {

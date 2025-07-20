@@ -135,7 +135,7 @@ export const useBuySubReward = () => {
     },
     onSettled: async (data, error, variables) => {
       await queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
-      await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
+      // REMOVED: queryClient.invalidateQueries({ queryKey: rewardsQueryKey }) - this was causing supply reset
     }
   });
 };

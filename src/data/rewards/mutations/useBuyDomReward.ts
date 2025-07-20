@@ -116,7 +116,7 @@ export const useBuyDomReward = () => {
     },
     onSettled: async (data, error, variables) => {
       await queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
-      await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
+      // REMOVED: queryClient.invalidateQueries({ queryKey: rewardsQueryKey }) - this was causing supply reset
     }
   });
 };
