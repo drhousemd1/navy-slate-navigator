@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import webpush from "https://esm.sh/web-push@3.6.6";
@@ -252,21 +253,84 @@ async function sendNativePushNotification(
     );
   }
 
-  // For now, we'll log that native push would be sent
-  // In a real implementation, you would use FCM for Android and APNs for iOS
-  console.log('Would send native push notification to token:', profile.push_token);
-  console.log('Notification:', { title, body, data: notificationData });
+  // Basic FCM implementation for Android
+  const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
+  
+  if (!fcmServerKey) {
+    console.log('FCM server key not configured - native push not available');
+    return new Response(
+      JSON.stringify({ message: 'Native push not configured' }),
+      { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      }
+    );
+  }
 
-  // TODO: Implement actual FCM/APNs sending logic here
-  // This requires setting up Firebase/Apple credentials
+  try {
+    // Send FCM notification
+    const fcmPayload = {
+      to: profile.push_token,
+      notification: {
+        title,
+        body,
+        icon: '/icons/icon-192.png',
+        click_action: 'FLUTTER_NOTIFICATION_CLICK'
+      },
+      data: notificationData || {}
+    };
 
-  return new Response(
-    JSON.stringify({ success: true, message: 'Native notification queued (not implemented yet)' }),
-    { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+    const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `key=${fcmServerKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(fcmPayload)
+    });
+
+    const fcmResult = await fcmResponse.json();
+    
+    if (fcmResponse.ok && fcmResult.success === 1) {
+      console.log('Native push notification sent successfully:', fcmResult);
+      return new Response(
+        JSON.stringify({ success: true, message: 'Native notification sent', result: fcmResult }),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    } else {
+      console.error('FCM send failed:', fcmResult);
+      
+      // If token is invalid, remove it
+      if (fcmResult.results?.[0]?.error === 'InvalidRegistration' || 
+          fcmResult.results?.[0]?.error === 'NotRegistered') {
+        await supabase
+          .from('profiles')
+          .update({ push_token: null })
+          .eq('id', targetUserId);
+        console.log(`Removed invalid push token for user ${targetUserId}`);
+      }
+      
+      return new Response(
+        JSON.stringify({ success: false, message: 'FCM send failed', error: fcmResult }),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
     }
-  );
-};
+  } catch (error) {
+    console.error('Error sending native push notification:', error);
+    return new Response(
+      JSON.stringify({ success: false, message: 'Native notification failed', error: error.message }),
+      { 
+        status: 500, 
+        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      }
+    );
+  }
+}
 
 serve(serve_handler);
