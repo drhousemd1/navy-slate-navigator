@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { sendNotification } from "https://deno.land/x/web_push@0.0.6/mod.ts";
+import { sendNotification } from "jsr:@negrel/webpush";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -140,9 +140,18 @@ const serve_handler = async (req: Request): Promise<Response> => {
           throw new Error('Invalid subscription: missing endpoint, p256dh, or auth');
         }
 
-        // Convert VAPID keys from base64
-        const publicKeyBytes = Uint8Array.from(atob(vapidPublicKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
-        const privateKeyBytes = Uint8Array.from(atob(vapidPrivateKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+        // Convert VAPID private key from base64url to raw bytes
+        const privateKeyBase64 = vapidPrivateKey.replace(/-/g, '+').replace(/_/g, '/');
+        const privateKeyBytes = Uint8Array.from(atob(privateKeyBase64), c => c.charCodeAt(0));
+        
+        // Import the private key for ES256 signing
+        const privateKey = await crypto.subtle.importKey(
+          'pkcs8',
+          privateKeyBytes,
+          { name: 'ECDSA', namedCurve: 'P-256' },
+          false,
+          ['sign']
+        );
 
         // Create subscription object in the format expected by the library
         const webPushSubscription = {
@@ -154,21 +163,21 @@ const serve_handler = async (req: Request): Promise<Response> => {
         };
 
         // Use the web push library to send notification
-        const response = await sendNotification({
+        await sendNotification({
           subscription: webPushSubscription,
           payload,
+          vapidDetails: {
+            subject: 'mailto:support@navy-slate-navigator.com',
+            publicKey: vapidPublicKey,
+            privateKey: privateKey
+          },
           options: {
-            vapidDetails: {
-              subject: 'mailto:support@navy-slate-navigator.com',
-              publicKey: publicKeyBytes,
-              privateKey: privateKeyBytes
-            },
             TTL: 86400, // 24 hours
           }
         });
         
         console.log(`Push notification sent successfully`);
-        return response;
+        return true;
       } catch (error) {
         console.error('Push notification error:', error);
         throw error;
