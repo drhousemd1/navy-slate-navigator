@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { sendNotification } from "https://deno.land/x/web_push@0.0.6/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -129,75 +130,48 @@ const serve_handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Simplified push notification implementation
+    // Proper Web Push implementation using library
     async function sendWebPushNotification(subscription: any, payload: string) {
       try {
         console.log(`Sending push notification to endpoint: ${subscription.endpoint}`);
-        console.log(`Subscription data - p256dh: ${subscription.p256dh ? 'present' : 'missing'}, auth: ${subscription.auth ? 'present' : 'missing'}`);
         
         // Validate subscription data
         if (!subscription.endpoint || !subscription.p256dh || !subscription.auth) {
           throw new Error('Invalid subscription: missing endpoint, p256dh, or auth');
         }
 
-        // Try simplified approach first - many services support unencrypted push
-        const vapidToken = await generateVAPIDToken(subscription.endpoint);
-        
-        const response = await fetch(subscription.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `vapid t=${vapidToken}, k=${vapidPublicKey}`,
-            'TTL': '86400', // 24 hours
-          },
-          body: payload,
+        // Convert VAPID keys from base64
+        const publicKeyBytes = Uint8Array.from(atob(vapidPublicKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+        const privateKeyBytes = Uint8Array.from(atob(vapidPrivateKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+
+        // Create subscription object in the format expected by the library
+        const webPushSubscription = {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: subscription.p256dh,
+            auth: subscription.auth
+          }
+        };
+
+        // Use the web push library to send notification
+        const response = await sendNotification({
+          subscription: webPushSubscription,
+          payload,
+          options: {
+            vapidDetails: {
+              subject: 'mailto:support@navy-slate-navigator.com',
+              publicKey: publicKeyBytes,
+              privateKey: privateKeyBytes
+            },
+            TTL: 86400, // 24 hours
+          }
         });
         
-        console.log(`Push response status: ${response.status}`);
-        
-        if (!response.ok) {
-          const responseText = await response.text();
-          console.error(`Push failed with status ${response.status}: ${responseText}`);
-          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${responseText}`);
-        }
-        
+        console.log(`Push notification sent successfully`);
         return response;
       } catch (error) {
         console.error('Push notification error:', error);
         throw error;
-      }
-    }
-    
-    async function generateVAPIDToken(audience: string) {
-      try {
-        const audienceUrl = new URL(audience);
-        const origin = audienceUrl.origin;
-        
-        const header = {
-          typ: 'JWT',
-          alg: 'ES256'
-        };
-        
-        const payload = {
-          aud: origin,
-          exp: Math.floor(Date.now() / 1000) + (12 * 60 * 60), // 12 hours from now
-          sub: 'mailto:support@your-domain.com'
-        };
-        
-        // Create the token parts
-        const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-        const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-        
-        // For now, use a simple signature. In production, this should use the actual VAPID private key
-        const signature = btoa('simplified-signature').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-        
-        const token = `${encodedHeader}.${encodedPayload}.${signature}`;
-        console.log(`Generated VAPID token for audience: ${origin}`);
-        
-        return token;
-      } catch (error) {
-        console.error('Error generating VAPID token:', error);
-        throw new Error('Failed to generate VAPID token');
       }
     }
 
@@ -230,7 +204,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
             console.log(`Removed invalid subscription ${subscription.id}`);
           }
           
-          return { subscriptionId: subscription.id, success: false, error: error.message };
+          return { subscriptionId: subscription.id, success: false, error: error.message || 'Unknown error' };
         }
       })
     );
