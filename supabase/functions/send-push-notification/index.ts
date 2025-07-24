@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.3";
-import { sendNotification } from "https://jsr.io/@negrel/webpush";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -131,7 +130,89 @@ serve(async (req) => {
       );
     }
 
-    // VAPID keys for the new library (no setup needed, passed directly to sendNotification)
+    // Helper functions for Web Push Protocol implementation
+    const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    };
+
+    const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    };
+
+    const createVapidJWT = async (vapidPublicKey: string, vapidPrivateKey: string, endpoint: string): Promise<string> => {
+      const header = {
+        typ: 'JWT',
+        alg: 'ES256'
+      };
+
+      const now = Math.floor(Date.now() / 1000);
+      const payload = {
+        aud: new URL(endpoint).origin,
+        exp: now + 24 * 60 * 60, // 24 hours
+        sub: 'mailto:admin@example.com'
+      };
+
+      const encodedHeader = arrayBufferToBase64(new TextEncoder().encode(JSON.stringify(header)));
+      const encodedPayload = arrayBufferToBase64(new TextEncoder().encode(JSON.stringify(payload)));
+      const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+
+      // Import VAPID private key
+      const privateKeyBuffer = urlBase64ToUint8Array(vapidPrivateKey);
+      const cryptoKey = await crypto.subtle.importKey(
+        'pkcs8',
+        privateKeyBuffer,
+        {
+          name: 'ECDSA',
+          namedCurve: 'P-256'
+        },
+        false,
+        ['sign']
+      );
+
+      // Sign the token
+      const signature = await crypto.subtle.sign(
+        {
+          name: 'ECDSA',
+          hash: 'SHA-256'
+        },
+        cryptoKey,
+        new TextEncoder().encode(unsignedToken)
+      );
+
+      const encodedSignature = arrayBufferToBase64(signature);
+      return `${unsignedToken}.${encodedSignature}`;
+    };
+
+    const sendWebPushNotification = async (subscription: any, payload: string, vapidPublicKey: string, vapidPrivateKey: string): Promise<void> => {
+      const jwt = await createVapidJWT(vapidPublicKey, vapidPrivateKey, subscription.endpoint);
+      
+      const response = await fetch(subscription.endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
+          'Content-Type': 'application/octet-stream',
+          'Content-Encoding': 'aes128gcm',
+          'TTL': '86400'
+        },
+        body: payload
+      });
+
+      if (!response.ok) {
+        throw new Error(`Push service responded with status: ${response.status}`);
+      }
+    };
 
     // Send push notifications
     const results = await Promise.allSettled(
@@ -146,7 +227,7 @@ serve(async (req) => {
             data: notificationData
           });
 
-          // Format subscription for web-push library
+          // Format subscription for web-push
           const webPushSubscription = {
             endpoint: subscription.endpoint,
             keys: {
@@ -155,12 +236,8 @@ serve(async (req) => {
             }
           };
 
-          // Use new Deno-compatible webpush library to send notification
-          await sendNotification(webPushSubscription, payload, {
-            vapidPublicKey,
-            vapidPrivateKey,
-            vapidSubject: 'mailto:admin@example.com'
-          });
+          // Send notification using native Web Push Protocol
+          await sendWebPushNotification(webPushSubscription, payload, vapidPublicKey, vapidPrivateKey);
           
           console.log(`Push notification sent successfully to subscription ${subscription.id}`);
           return { subscriptionId: subscription.id, success: true };
