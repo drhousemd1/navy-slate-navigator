@@ -151,8 +151,17 @@ serve(async (req) => {
             data: notificationData
           });
 
+          // Format subscription for web-push library
+          const webPushSubscription = {
+            endpoint: subscription.endpoint,
+            keys: {
+              p256dh: subscription.p256dh,
+              auth: subscription.auth
+            }
+          };
+
           // Use web-push library to send notification
-          await webpush.sendNotification(subscription, payload);
+          await webpush.sendNotification(webPushSubscription, payload);
           
           console.log(`Push notification sent successfully to subscription ${subscription.id}`);
           return { subscriptionId: subscription.id, success: true };
