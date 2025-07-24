@@ -225,7 +225,7 @@ serve(async (req) => {
         const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
         const unsignedToken = `${encodedHeader}.${encodedPayload}`;
 
-        console.log('🔒 Converting VAPID private key to JWK format...');
+        console.log('🔒 Generating complete VAPID key pair with public components...');
         
         // Convert VAPID private key from URL-safe base64 to raw bytes
         const privateKeyBytes = urlBase64ToUint8Array(vapidPrivateKey);
@@ -235,24 +235,116 @@ serve(async (req) => {
           throw new Error(`Invalid VAPID private key length: ${privateKeyBytes.length}, expected 32 bytes`);
         }
 
-        // Convert private key to base64url for JWK
-        const d = arrayBufferToBase64(privateKeyBytes);
-        console.log('🔑 Private key (d) component length:', d.length);
+        // First, generate a temporary key pair to understand the format and derive public key
+        console.log('🔧 Generating temporary key pair to derive public key structure...');
+        const tempKeyPair = await crypto.subtle.generateKey(
+          { name: 'ECDSA', namedCurve: 'P-256' },
+          true,
+          ['sign', 'verify']
+        );
 
-        // Create JWK object for ES256 signing
-        const jwk: JsonWebKey = {
+        // For P-256, we need to derive the public key point from the private key
+        // This involves elliptic curve point multiplication: Q = d * G
+        // Where d is our private key and G is the generator point
+        
+        // P-256 parameters (secp256r1)
+        const p = BigInt('0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff');
+        const a = BigInt('0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc');
+        const b = BigInt('0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b');
+        const gx = BigInt('0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296');
+        const gy = BigInt('0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5');
+        const n = BigInt('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551');
+
+        // Convert private key bytes to BigInt
+        const d = privateKeyBytes.reduce((acc, byte, i) => acc + BigInt(byte) * (256n ** BigInt(31 - i)), 0n);
+        console.log('🔢 Private key as BigInt (first 32 chars):', d.toString(16).substring(0, 32) + '...');
+
+        // Elliptic curve point multiplication: Q = d * G
+        // Using double-and-add algorithm for scalar multiplication
+        const modInverse = (a: bigint, m: bigint): bigint => {
+          if (a < 0n) a = ((a % m) + m) % m;
+          let [old_r, r] = [a, m];
+          let [old_s, s] = [1n, 0n];
+          while (r !== 0n) {
+            const quotient = old_r / r;
+            [old_r, r] = [r, old_r - quotient * r];
+            [old_s, s] = [s, old_s - quotient * s];
+          }
+          return old_s < 0n ? old_s + m : old_s;
+        };
+
+        const pointDouble = (px: bigint, py: bigint): [bigint, bigint] => {
+          const s = ((3n * px * px + a) * modInverse(2n * py, p)) % p;
+          const rx = (s * s - 2n * px) % p;
+          const ry = (s * (px - rx) - py) % p;
+          return [(rx + p) % p, (ry + p) % p];
+        };
+
+        const pointAdd = (px: bigint, py: bigint, qx: bigint, qy: bigint): [bigint, bigint] => {
+          if (px === qx) return pointDouble(px, py);
+          const s = ((qy - py) * modInverse(qx - px, p)) % p;
+          const rx = (s * s - px - qx) % p;
+          const ry = (s * (px - rx) - py) % p;
+          return [(rx + p) % p, (ry + p) % p];
+        };
+
+        const scalarMult = (k: bigint, px: bigint, py: bigint): [bigint, bigint] => {
+          if (k === 0n) throw new Error('Cannot multiply by zero');
+          if (k === 1n) return [px, py];
+          
+          let [rx, ry] = [px, py];
+          let remaining = k - 1n;
+          
+          while (remaining > 0n) {
+            if (remaining & 1n) {
+              [rx, ry] = pointAdd(rx, ry, px, py);
+            }
+            [px, py] = pointDouble(px, py);
+            remaining >>= 1n;
+          }
+          
+          return [rx, ry];
+        };
+
+        console.log('🧮 Computing public key point (Q = d * G)...');
+        const [qx, qy] = scalarMult(d, gx, gy);
+        console.log('✅ Public key point computed');
+
+        // Convert coordinates to 32-byte arrays (big-endian)
+        const xBytes = new Uint8Array(32);
+        const yBytes = new Uint8Array(32);
+        
+        for (let i = 0; i < 32; i++) {
+          xBytes[31 - i] = Number((qx >> (BigInt(i) * 8n)) & 0xffn);
+          yBytes[31 - i] = Number((qy >> (BigInt(i) * 8n)) & 0xffn);
+        }
+
+        // Convert to base64url for JWK
+        const x = arrayBufferToBase64(xBytes.buffer);
+        const y = arrayBufferToBase64(yBytes.buffer);
+        const privateKeyB64 = arrayBufferToBase64(privateKeyBytes.buffer);
+
+        console.log('🔑 JWK components:');
+        console.log('- x length:', x.length);
+        console.log('- y length:', y.length);
+        console.log('- d length:', privateKeyB64.length);
+
+        // Create complete JWK with both private and public key components
+        const completeJwk: JsonWebKey = {
           kty: 'EC',
           crv: 'P-256',
-          d: d,
+          d: privateKeyB64,
+          x: x,
+          y: y,
           use: 'sig',
           key_ops: ['sign']
         };
 
-        console.log('🔧 JWK object created');
+        console.log('🔧 Complete JWK object created with public key components');
 
         const cryptoKey = await crypto.subtle.importKey(
           'jwk',
-          jwk,
+          completeJwk,
           {
             name: 'ECDSA',
             namedCurve: 'P-256'
