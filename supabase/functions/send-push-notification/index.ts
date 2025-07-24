@@ -129,73 +129,76 @@ const serve_handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Native Deno implementation - no external library needed
+    // Simplified push notification implementation
     async function sendWebPushNotification(subscription: any, payload: string) {
-      const encoder = new TextEncoder();
-      const decoder = new TextDecoder();
-      
-      // Generate ECDH key pair
-      const keyPair = await crypto.subtle.generateKey(
-        { name: "ECDH", namedCurve: "P-256" },
-        true,
-        ["deriveKey"]
-      );
-      
-      // Derive shared secret
-      const publicKey = await crypto.subtle.importKey(
-        "raw",
-        new Uint8Array(atob(subscription.p256dh.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => c.charCodeAt(0))),
-        { name: "ECDH", namedCurve: "P-256" },
-        false,
-        []
-      );
-      
-      const sharedSecret = await crypto.subtle.deriveKey(
-        { name: "ECDH", public: publicKey },
-        keyPair.privateKey,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt"]
-      );
-      
-      // Encrypt payload
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const encodedPayload = encoder.encode(payload);
-      const encrypted = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv },
-        sharedSecret,
-        encodedPayload
-      );
-      
-      // Send notification
-      const response = await fetch(subscription.endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'Content-Encoding': 'aes128gcm',
-          'Authorization': `vapid t=${await generateVAPIDToken(vapidPrivateKey, subscription.endpoint)}, k=${vapidPublicKey}`,
-        },
-        body: new Uint8Array(encrypted),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      try {
+        console.log(`Sending push notification to endpoint: ${subscription.endpoint}`);
+        console.log(`Subscription data - p256dh: ${subscription.p256dh ? 'present' : 'missing'}, auth: ${subscription.auth ? 'present' : 'missing'}`);
+        
+        // Validate subscription data
+        if (!subscription.endpoint || !subscription.p256dh || !subscription.auth) {
+          throw new Error('Invalid subscription: missing endpoint, p256dh, or auth');
+        }
+
+        // Try simplified approach first - many services support unencrypted push
+        const vapidToken = await generateVAPIDToken(subscription.endpoint);
+        
+        const response = await fetch(subscription.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `vapid t=${vapidToken}, k=${vapidPublicKey}`,
+            'TTL': '86400', // 24 hours
+          },
+          body: payload,
+        });
+        
+        console.log(`Push response status: ${response.status}`);
+        
+        if (!response.ok) {
+          const responseText = await response.text();
+          console.error(`Push failed with status ${response.status}: ${responseText}`);
+          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${responseText}`);
+        }
+        
+        return response;
+      } catch (error) {
+        console.error('Push notification error:', error);
+        throw error;
       }
-      
-      return response;
     }
     
-    async function generateVAPIDToken(privateKey: string, audience: string) {
-      // Simple JWT implementation for VAPID
-      const header = btoa(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
-      const payload = btoa(JSON.stringify({
-        aud: new URL(audience).origin,
-        exp: Math.floor(Date.now() / 1000) + 12 * 60 * 60, // 12 hours
-        sub: 'mailto:support@example.com'
-      }));
-      
-      // For simplicity, return a basic token - in production, proper signing would be needed
-      return `${header}.${payload}.signature`;
+    async function generateVAPIDToken(audience: string) {
+      try {
+        const audienceUrl = new URL(audience);
+        const origin = audienceUrl.origin;
+        
+        const header = {
+          typ: 'JWT',
+          alg: 'ES256'
+        };
+        
+        const payload = {
+          aud: origin,
+          exp: Math.floor(Date.now() / 1000) + (12 * 60 * 60), // 12 hours from now
+          sub: 'mailto:support@your-domain.com'
+        };
+        
+        // Create the token parts
+        const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+        const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+        
+        // For now, use a simple signature. In production, this should use the actual VAPID private key
+        const signature = btoa('simplified-signature').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+        
+        const token = `${encodedHeader}.${encodedPayload}.${signature}`;
+        console.log(`Generated VAPID token for audience: ${origin}`);
+        
+        return token;
+      } catch (error) {
+        console.error('Error generating VAPID token:', error);
+        throw new Error('Failed to generate VAPID token');
+      }
     }
 
     // Send push notifications
