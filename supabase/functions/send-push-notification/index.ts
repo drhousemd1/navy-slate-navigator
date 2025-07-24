@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.3";
+import webpush from "https://esm.sh/web-push@3.6.6";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,61 +15,6 @@ interface NotificationRequest {
   data?: Record<string, any>;
 }
 
-// Helper function to convert URL-safe base64 to Uint8Array
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-// Generate JWT for VAPID authentication
-async function generateVAPIDJWT(audience: string, subject: string, privateKeyB64: string): Promise<string> {
-  const header = {
-    typ: 'JWT',
-    alg: 'ES256'
-  };
-  
-  const payload = {
-    aud: audience,
-    exp: Math.floor(Date.now() / 1000) + (12 * 60 * 60), // 12 hours
-    sub: subject
-  };
-  
-  const encoder = new TextEncoder();
-  const headerB64 = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  const payloadB64 = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  
-  const data = encoder.encode(`${headerB64}.${payloadB64}`);
-  
-  // Import private key
-  const keyData = urlBase64ToUint8Array(privateKeyB64);
-  const key = await crypto.subtle.importKey(
-    'pkcs8',
-    keyData,
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    false,
-    ['sign']
-  );
-  
-  // Sign the data
-  const signature = await crypto.subtle.sign(
-    { name: 'ECDSA', hash: 'SHA-256' },
-    key,
-    data
-  );
-  
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-  
-  return `${headerB64}.${payloadB64}.${signatureB64}`;
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -185,36 +131,12 @@ serve(async (req) => {
       );
     }
 
-    // Simplified Web Push implementation
-    const sendWebPushNotification = async (subscription: any, payload: string) => {
-      try {
-        const endpoint = subscription.endpoint;
-        const url = new URL(endpoint);
-        
-        // Generate VAPID Authorization header
-        const audience = `${url.protocol}//${url.host}`;
-        const subject = 'mailto:admin@example.com';
-        
-        // Generate proper VAPID JWT
-        const jwt = await generateVAPIDJWT(audience, subject, vapidPrivateKey);
-        
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
-            'Content-Type': 'application/json',
-            'TTL': '86400' // 24 hours
-          },
-          body: payload
-        });
-        
-        console.log(`Push notification sent to ${endpoint}: ${response.status}`);
-        return { success: response.ok, status: response.status };
-      } catch (error) {
-        console.error('Error sending web push notification:', error);
-        return { success: false, error: error.message };
-      }
-    };
+    // Configure web-push library
+    webpush.setVapidDetails(
+      'mailto:admin@example.com',
+      vapidPublicKey,
+      vapidPrivateKey
+    );
 
     // Send push notifications
     const results = await Promise.allSettled(
@@ -229,27 +151,24 @@ serve(async (req) => {
             data: notificationData
           });
 
-          const result = await sendWebPushNotification(subscription, payload);
+          // Use web-push library to send notification
+          await webpush.sendNotification(subscription, payload);
           
-          if (result.success) {
-            console.log(`Push notification sent successfully to subscription ${subscription.id}`);
-            return { subscriptionId: subscription.id, success: true };
-          } else {
-            console.error(`Failed to send to subscription ${subscription.id}: ${result.status}`);
-            
-            // If subscription is invalid (410 or 404), remove it
-            if (result.status === 410 || result.status === 404) {
-              await supabase
-                .from('user_push_subscriptions')
-                .delete()
-                .eq('id', subscription.id);
-              console.log(`Removed invalid subscription ${subscription.id}`);
-            }
-            
-            return { subscriptionId: subscription.id, success: false, error: result.error || 'Unknown error' };
-          }
+          console.log(`Push notification sent successfully to subscription ${subscription.id}`);
+          return { subscriptionId: subscription.id, success: true };
+          
         } catch (error) {
           console.error(`Error sending to subscription ${subscription.id}:`, error);
+          
+          // If subscription is invalid (410 or 404), remove it
+          if (error.statusCode === 410 || error.statusCode === 404) {
+            await supabase
+              .from('user_push_subscriptions')
+              .delete()
+              .eq('id', subscription.id);
+            console.log(`Removed invalid subscription ${subscription.id}`);
+          }
+          
           return { subscriptionId: subscription.id, success: false, error: error.message || 'Unknown error' };
         }
       })
