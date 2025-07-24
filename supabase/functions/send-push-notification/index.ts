@@ -22,13 +22,21 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Push notification function started');
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
 
+    console.log('🔧 Environment check:');
+    console.log('- Supabase URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
+    console.log('- Service Role Key:', supabaseKey ? '✅ Set' : '❌ Missing');
+    console.log('- VAPID Public Key:', vapidPublicKey ? `✅ Set (${vapidPublicKey.length} chars)` : '❌ Missing');
+    console.log('- VAPID Private Key:', vapidPrivateKey ? `✅ Set (${vapidPrivateKey.length} chars)` : '❌ Missing');
+
     if (!vapidPublicKey || !vapidPrivateKey) {
-      console.error('VAPID keys not configured');
+      console.error('❌ VAPID keys not configured');
       return new Response(
         JSON.stringify({ error: 'Push notifications not configured' }),
         { 
@@ -65,8 +73,16 @@ serve(async (req) => {
     }
 
     const { targetUserId, type, title, body, data: notificationData }: NotificationRequest = await req.json();
+    
+    console.log('📨 Notification request details:');
+    console.log('- Target User:', targetUserId);
+    console.log('- Type:', type);
+    console.log('- Title:', title);
+    console.log('- Body:', body);
+    console.log('- Sender:', user.id);
 
     // Check if sender is authorized to send notifications to target user
+    console.log('🔍 Checking authorization...');
     const { data: senderProfile } = await supabase
       .from('profiles')
       .select('linked_partner_id')
@@ -79,12 +95,19 @@ serve(async (req) => {
       .eq('id', targetUserId)
       .single();
 
+    console.log('👤 Profile data:');
+    console.log('- Sender profile:', senderProfile);
+    console.log('- Target profile:', targetProfile);
+
     // Verify authorization: user can send to themselves or their linked partner
     const isAuthorized = user.id === targetUserId || 
                         senderProfile?.linked_partner_id === targetUserId ||
                         targetProfile?.linked_partner_id === user.id;
+    
+    console.log('🔐 Authorization check:', isAuthorized ? '✅ Authorized' : '❌ Not authorized');
 
     if (!isAuthorized) {
+      console.error('❌ Authorization failed');
       return new Response(
         JSON.stringify({ error: 'Not authorized to send notifications to this user' }),
         { 
@@ -95,15 +118,25 @@ serve(async (req) => {
     }
 
     // Get user's notification preferences
+    console.log('⚙️ Checking notification preferences...');
     const { data: preferences } = await supabase
       .from('user_notification_preferences')
       .select('preferences')
       .eq('user_id', targetUserId)
       .single();
 
+    console.log('📋 User preferences:', preferences);
+
     // Check if notifications are enabled and type is allowed
-    if (!preferences?.preferences?.enabled || !preferences?.preferences?.types?.[type]) {
-      console.log(`Notifications disabled for user ${targetUserId} or type ${type}`);
+    const isEnabled = preferences?.preferences?.enabled;
+    const isTypeAllowed = preferences?.preferences?.types?.[type];
+    
+    console.log('✅ Preferences check:');
+    console.log('- Notifications enabled:', isEnabled);
+    console.log('- Type allowed:', isTypeAllowed);
+    
+    if (!isEnabled || !isTypeAllowed) {
+      console.log(`❌ Notifications disabled for user ${targetUserId} or type ${type}`);
       return new Response(
         JSON.stringify({ message: 'Notification not sent - user preferences' }),
         { 
@@ -114,13 +147,19 @@ serve(async (req) => {
     }
 
     // Get user's push subscriptions
+    console.log('📱 Fetching push subscriptions...');
     const { data: subscriptions, error: subsError } = await supabase
       .from('user_push_subscriptions')
       .select('*')
       .eq('user_id', targetUserId);
 
+    console.log('📋 Subscriptions result:');
+    console.log('- Error:', subsError);
+    console.log('- Count:', subscriptions?.length || 0);
+    console.log('- Subscriptions:', subscriptions);
+
     if (subsError || !subscriptions || subscriptions.length === 0) {
-      console.log(`No push subscriptions found for user ${targetUserId}`);
+      console.log(`❌ No push subscriptions found for user ${targetUserId}`);
       return new Response(
         JSON.stringify({ message: 'No push subscriptions found' }),
         { 
@@ -163,6 +202,10 @@ serve(async (req) => {
     };
 
     const createVapidJWT = async (vapidPublicKey: string, vapidPrivateKey: string, endpoint: string): Promise<string> => {
+      console.log('🔐 Creating VAPID JWT...');
+      console.log('📍 Endpoint origin:', new URL(endpoint).origin);
+      console.log('🔑 VAPID private key length:', vapidPrivateKey.length);
+      
       try {
         const header = {
           typ: 'JWT',
@@ -176,41 +219,51 @@ serve(async (req) => {
           sub: 'mailto:admin@example.com'
         };
 
+        console.log('📄 JWT payload:', payload);
+
         const encodedHeader = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
         const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
         const unsignedToken = `${encodedHeader}.${encodedPayload}`;
 
-        // Convert VAPID private key from URL-safe base64 to PKCS#8 format
-        const privateKeyBytes = urlBase64ToUint8Array(vapidPrivateKey);
+        console.log('🔒 Converting VAPID private key to PKCS#8 format...');
         
-        // VAPID keys are 32-byte raw P-256 private keys that need to be wrapped in PKCS#8
-        const pkcs8Header = new Uint8Array([
-          0x30, 0x81, 0x87, // SEQUENCE (135 bytes)
-          0x02, 0x01, 0x00, // INTEGER 0 (version)
-          0x30, 0x13, // SEQUENCE (19 bytes) - AlgorithmIdentifier
-          0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, // OID for EC public key
-          0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, // OID for P-256
+        // Convert VAPID private key from URL-safe base64 to raw bytes
+        const privateKeyBytes = urlBase64ToUint8Array(vapidPrivateKey);
+        console.log('🔑 Private key bytes length:', privateKeyBytes.length);
+        
+        if (privateKeyBytes.length !== 32) {
+          throw new Error(`Invalid VAPID private key length: ${privateKeyBytes.length}, expected 32 bytes`);
+        }
+
+        // Create proper PKCS#8 wrapper for raw P-256 private key
+        const pkcs8Wrapper = new Uint8Array([
+          // SEQUENCE tag and length
+          0x30, 0x81, 0x87, // SEQUENCE (135 bytes total)
+          // Version
+          0x02, 0x01, 0x00, // INTEGER 0
+          // Algorithm identifier 
+          0x30, 0x13, // SEQUENCE (19 bytes)
+          0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, // ecPublicKey OID
+          0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, // secp256r1 OID
+          // Private key
           0x04, 0x6d, // OCTET STRING (109 bytes)
           0x30, 0x6b, // SEQUENCE (107 bytes)
           0x02, 0x01, 0x01, // INTEGER 1 (version)
-          0x04, 0x20 // OCTET STRING (32 bytes) - private key follows
-        ]);
-        
-        const pkcs8Suffix = new Uint8Array([
-          0xa1, 0x44, // [1] (68 bytes) - public key (optional, but included for completeness)
+          0x04, 0x20, // OCTET STRING (32 bytes for private key)
+          ...privateKeyBytes, // The actual private key bytes
+          // Optional public key (we'll skip this to keep it simple)
+          0xa1, 0x44, // [1] EXPLICIT (68 bytes)
           0x03, 0x42, 0x00, // BIT STRING (66 bytes)
-          0x04 // uncompressed point indicator
-          // 64 bytes of public key would follow, but we'll skip it for now
+          0x04, // Uncompressed point format
+          // 64 bytes of public key data would go here, but we'll fill with zeros
+          ...new Array(64).fill(0)
         ]);
-        
-        // Create PKCS#8 format: header + private key + minimal suffix
-        const pkcs8Key = new Uint8Array(pkcs8Header.length + privateKeyBytes.length);
-        pkcs8Key.set(pkcs8Header);
-        pkcs8Key.set(privateKeyBytes, pkcs8Header.length);
-        
+
+        console.log('🔧 PKCS#8 wrapper created, length:', pkcs8Wrapper.length);
+
         const cryptoKey = await crypto.subtle.importKey(
           'pkcs8',
-          pkcs8Key.buffer,
+          pkcs8Wrapper.buffer,
           {
             name: 'ECDSA',
             namedCurve: 'P-256'
@@ -219,7 +272,10 @@ serve(async (req) => {
           ['sign']
         );
 
+        console.log('✅ Private key imported successfully');
+
         // Sign the token
+        console.log('✍️ Signing JWT token...');
         const signature = await crypto.subtle.sign(
           {
             name: 'ECDSA',
@@ -230,9 +286,16 @@ serve(async (req) => {
         );
 
         const encodedSignature = arrayBufferToBase64(signature);
-        return `${unsignedToken}.${encodedSignature}`;
+        const jwt = `${unsignedToken}.${encodedSignature}`;
+        
+        console.log('✅ VAPID JWT created successfully, length:', jwt.length);
+        return jwt;
+        
       } catch (error) {
-        console.error('Error creating VAPID JWT:', error);
+        console.error('❌ Error creating VAPID JWT:', error);
+        console.error('❌ Error name:', error.name);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
         throw error;
       }
     };
@@ -245,11 +308,19 @@ serve(async (req) => {
     };
 
     const sendWebPushNotification = async (subscription: any, payload: string, vapidPublicKey: string, vapidPrivateKey: string): Promise<void> => {
+      console.log('📤 Starting web push notification...');
+      console.log('- Endpoint:', subscription.endpoint);
+      console.log('- Payload length:', payload.length);
+      
       try {
+        console.log('🔑 Creating VAPID JWT for endpoint...');
         const jwt = await createVapidJWT(vapidPublicKey, vapidPrivateKey, subscription.endpoint);
+        console.log('✅ VAPID JWT created for push service');
         
         // Encrypt the payload (simplified for now)
+        console.log('🔒 Encrypting payload...');
         const encryptedPayload = await encryptPayload(payload, subscription.keys.p256dh, subscription.keys.auth);
+        console.log('✅ Payload encrypted, size:', encryptedPayload.byteLength, 'bytes');
         
         const headers: Record<string, string> = {
           'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
@@ -263,8 +334,11 @@ serve(async (req) => {
           headers['Content-Encoding'] = 'aes128gcm';
         }
 
-        console.log(`Sending push notification to endpoint: ${subscription.endpoint}`);
-        console.log(`Headers:`, headers);
+        console.log('📡 Sending HTTP request to push service...');
+        console.log('- Endpoint:', subscription.endpoint);
+        console.log('- Method: POST');
+        console.log('- Headers:', JSON.stringify(headers, null, 2));
+        console.log('- Body size:', encryptedPayload.byteLength, 'bytes');
         
         const response = await fetch(subscription.endpoint, {
           method: 'POST',
@@ -272,24 +346,50 @@ serve(async (req) => {
           body: encryptedPayload
         });
 
-        console.log(`Push service response status: ${response.status}`);
+        console.log('📨 Push service response received:');
+        console.log('- Status:', response.status);
+        console.log('- Status Text:', response.statusText);
+        console.log('- Headers:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
         
         if (!response.ok) {
           const responseText = await response.text();
-          console.error(`Push service error response: ${responseText}`);
-          throw new Error(`Push service responded with status: ${response.status} - ${responseText}`);
+          console.error('❌ Push service returned error:');
+          console.error('- Status:', response.status);
+          console.error('- Response:', responseText);
+          
+          // Create error with status code for proper handling
+          const error = new Error(`Push service responded with status: ${response.status} - ${responseText}`);
+          (error as any).statusCode = response.status;
+          throw error;
         }
         
-        console.log('Push notification sent successfully');
+        const responseText = await response.text();
+        console.log('✅ Push notification sent successfully');
+        console.log('- Response body:', responseText);
+        
       } catch (error) {
-        console.error('Error in sendWebPushNotification:', error);
+        console.error('❌ Error in sendWebPushNotification:', error);
+        console.error('- Error type:', error.constructor.name);
+        console.error('- Error message:', error.message);
+        console.error('- Error stack:', error.stack);
+        
+        // Re-throw with additional context
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          throw new Error(`Network error while sending push notification: ${error.message}`);
+        }
         throw error;
       }
     };
 
     // Send push notifications
+    console.log('🚀 Starting to send push notifications to', subscriptions.length, 'subscriptions...');
+    
     const results = await Promise.allSettled(
-      subscriptions.map(async (subscription) => {
+      subscriptions.map(async (subscription, index) => {
+        console.log(`\n📱 Processing subscription ${index + 1}/${subscriptions.length}:`);
+        console.log('- ID:', subscription.id);
+        console.log('- Endpoint:', subscription.endpoint);
+        
         try {
           const payload = JSON.stringify({
             title,
@@ -300,6 +400,8 @@ serve(async (req) => {
             data: notificationData
           });
 
+          console.log('📦 Payload created:', payload);
+
           // Format subscription for web-push
           const webPushSubscription = {
             endpoint: subscription.endpoint,
@@ -309,22 +411,35 @@ serve(async (req) => {
             }
           };
 
+          console.log('🔧 Formatted subscription for web-push protocol');
+
           // Send notification using native Web Push Protocol
           await sendWebPushNotification(webPushSubscription, payload, vapidPublicKey, vapidPrivateKey);
           
-          console.log(`Push notification sent successfully to subscription ${subscription.id}`);
+          console.log(`✅ Push notification sent successfully to subscription ${subscription.id}`);
           return { subscriptionId: subscription.id, success: true };
           
         } catch (error) {
-          console.error(`Error sending to subscription ${subscription.id}:`, error);
+          console.error(`❌ Error sending to subscription ${subscription.id}:`, error);
+          console.error('- Error details:', {
+            name: error.name,
+            message: error.message,
+            statusCode: (error as any).statusCode,
+            stack: error.stack
+          });
           
           // If subscription is invalid (410 or 404), remove it
-          if (error.statusCode === 410 || error.statusCode === 404) {
-            await supabase
-              .from('user_push_subscriptions')
-              .delete()
-              .eq('id', subscription.id);
-            console.log(`Removed invalid subscription ${subscription.id}`);
+          if ((error as any).statusCode === 410 || (error as any).statusCode === 404) {
+            console.log(`🗑️ Removing invalid subscription ${subscription.id}...`);
+            try {
+              await supabase
+                .from('user_push_subscriptions')
+                .delete()
+                .eq('id', subscription.id);
+              console.log(`✅ Removed invalid subscription ${subscription.id}`);
+            } catch (deleteError) {
+              console.error(`❌ Failed to remove subscription ${subscription.id}:`, deleteError);
+            }
           }
           
           return { subscriptionId: subscription.id, success: false, error: error.message || 'Unknown error' };
@@ -332,10 +447,23 @@ serve(async (req) => {
       })
     );
 
+    console.log('\n📊 Processing results...');
     const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
     const failed = results.length - successful;
 
-    console.log(`Push notifications sent: ${successful} successful, ${failed} failed`);
+    console.log('📈 Final Results:');
+    console.log(`- ✅ Successful: ${successful}`);
+    console.log(`- ❌ Failed: ${failed}`);
+    console.log(`- 📊 Total: ${results.length}`);
+    
+    // Log detailed results for debugging
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(`❌ Promise ${index} rejected:`, result.reason);
+      } else if (!result.value.success) {
+        console.error(`❌ Notification ${index} failed:`, result.value.error);
+      }
+    });
 
     return new Response(
       JSON.stringify({ 
