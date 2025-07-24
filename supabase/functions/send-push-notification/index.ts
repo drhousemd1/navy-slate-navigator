@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.3";
-import webpush from "https://esm.sh/web-push@3.6.6";
+import { sendNotification } from "https://jsr.io/@negrel/webpush";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -131,12 +131,7 @@ serve(async (req) => {
       );
     }
 
-    // Configure web-push library
-    webpush.setVapidDetails(
-      'mailto:admin@example.com',
-      vapidPublicKey,
-      vapidPrivateKey
-    );
+    // VAPID keys for the new library (no setup needed, passed directly to sendNotification)
 
     // Send push notifications
     const results = await Promise.allSettled(
@@ -160,8 +155,12 @@ serve(async (req) => {
             }
           };
 
-          // Use web-push library to send notification
-          await webpush.sendNotification(webPushSubscription, payload);
+          // Use new Deno-compatible webpush library to send notification
+          await sendNotification(webPushSubscription, payload, {
+            vapidPublicKey,
+            vapidPrivateKey,
+            vapidSubject: 'mailto:admin@example.com'
+          });
           
           console.log(`Push notification sent successfully to subscription ${subscription.id}`);
           return { subscriptionId: subscription.id, success: true };
