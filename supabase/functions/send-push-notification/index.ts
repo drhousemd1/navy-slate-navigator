@@ -225,7 +225,7 @@ serve(async (req) => {
         const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
         const unsignedToken = `${encodedHeader}.${encodedPayload}`;
 
-        console.log('🔒 Converting VAPID private key to PKCS#8 format...');
+        console.log('🔒 Converting VAPID private key to JWK format...');
         
         // Convert VAPID private key from URL-safe base64 to raw bytes
         const privateKeyBytes = urlBase64ToUint8Array(vapidPrivateKey);
@@ -235,35 +235,24 @@ serve(async (req) => {
           throw new Error(`Invalid VAPID private key length: ${privateKeyBytes.length}, expected 32 bytes`);
         }
 
-        // Create proper PKCS#8 wrapper for raw P-256 private key
-        const pkcs8Wrapper = new Uint8Array([
-          // SEQUENCE tag and length
-          0x30, 0x81, 0x87, // SEQUENCE (135 bytes total)
-          // Version
-          0x02, 0x01, 0x00, // INTEGER 0
-          // Algorithm identifier 
-          0x30, 0x13, // SEQUENCE (19 bytes)
-          0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, // ecPublicKey OID
-          0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, // secp256r1 OID
-          // Private key
-          0x04, 0x6d, // OCTET STRING (109 bytes)
-          0x30, 0x6b, // SEQUENCE (107 bytes)
-          0x02, 0x01, 0x01, // INTEGER 1 (version)
-          0x04, 0x20, // OCTET STRING (32 bytes for private key)
-          ...privateKeyBytes, // The actual private key bytes
-          // Optional public key (we'll skip this to keep it simple)
-          0xa1, 0x44, // [1] EXPLICIT (68 bytes)
-          0x03, 0x42, 0x00, // BIT STRING (66 bytes)
-          0x04, // Uncompressed point format
-          // 64 bytes of public key data would go here, but we'll fill with zeros
-          ...new Array(64).fill(0)
-        ]);
+        // Convert private key to base64url for JWK
+        const d = arrayBufferToBase64(privateKeyBytes);
+        console.log('🔑 Private key (d) component length:', d.length);
 
-        console.log('🔧 PKCS#8 wrapper created, length:', pkcs8Wrapper.length);
+        // Create JWK object for ES256 signing
+        const jwk: JsonWebKey = {
+          kty: 'EC',
+          crv: 'P-256',
+          d: d,
+          use: 'sig',
+          key_ops: ['sign']
+        };
+
+        console.log('🔧 JWK object created');
 
         const cryptoKey = await crypto.subtle.importKey(
-          'pkcs8',
-          pkcs8Wrapper.buffer,
+          'jwk',
+          jwk,
           {
             name: 'ECDSA',
             namedCurve: 'P-256'
