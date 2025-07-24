@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { logger } from '@/lib/logger';
+import { NotificationSettings } from '@/components/profile/NotificationSettings';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
@@ -93,7 +94,7 @@ const AccountSheet = () => {
       </SheetTrigger>
       <SheetContent 
         side="left" 
-        className="w-[75vw] sm:w-[300px] bg-navy border-r border-light-navy text-white"
+        className="w-[75vw] sm:w-[350px] bg-navy border-r border-light-navy text-white overflow-y-auto"
       >
         <SheetHeader>
           <SheetTitle className="text-white">Account</SheetTitle>
@@ -213,6 +214,13 @@ const AccountSheet = () => {
                 <ShieldCheck className="w-5 h-5 mr-3 text-cyan-400" />
                 Admin Panel
               </Button>
+            )}
+
+            {/* Embedded Notification Settings */}
+            {user && (
+              <div className="mt-6">
+                <NotificationSettings />
+              </div>
             )}
             
             {user && ( // Only show logout if user is logged in

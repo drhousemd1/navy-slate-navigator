@@ -67,12 +67,12 @@ export const NotificationSettings: React.FC = () => {
   const notificationTypes = Object.entries(preferences.types).filter(([type]) => type !== 'wellnessCheckin');
 
   return (
-    <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
+    <div className="space-y-4">
       {/* Header like Wellness section */}
-      <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
         <Bell className="w-5 h-5" />
         Push Notifications
-      </h2>
+      </h3>
       
       <div className="bg-navy p-4 rounded border border-light-navy space-y-4">
         {/* Master Toggle */}
