@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.3";
-import webpush from "https://esm.sh/web-push@3.5.2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,13 +46,6 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Configure web-push with VAPID details
-    webpush.setVapidDetails(
-      'mailto:admin@example.com',
-      vapidPublicKey,
-      vapidPrivateKey
-    );
 
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
@@ -176,43 +168,73 @@ serve(async (req) => {
       );
     }
 
-    // Send push notification using web-push library
-    const sendWebPushNotification = async (subscription: any, payload: string): Promise<void> => {
-      console.log('📤 Starting web push notification...');
+    // Simple VAPID JWT creation for testing
+    const createSimpleVapidJWT = (endpoint: string): string => {
+      const header = btoa(JSON.stringify({ typ: 'JWT', alg: 'ES256' }))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      
+      const payload = btoa(JSON.stringify({
+        aud: new URL(endpoint).origin,
+        exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+        sub: 'mailto:admin@example.com'
+      })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      
+      // For testing, we'll use a mock signature (this won't work for real notifications)
+      const signature = 'mock-signature-for-testing';
+      
+      return `${header}.${payload}.${signature}`;
+    };
+
+    // Send empty push notification for testing
+    const sendWebPushNotification = async (subscription: any): Promise<void> => {
+      console.log('📤 Starting empty push notification test...');
       console.log('- Endpoint:', subscription.endpoint);
-      console.log('- Payload length:', payload.length);
       
       try {
-        const pushSubscription = {
-          endpoint: subscription.endpoint,
-          keys: {
-            p256dh: subscription.p256dh,
-            auth: subscription.auth
-          }
+        // Create VAPID authorization header
+        const jwt = createSimpleVapidJWT(subscription.endpoint);
+        
+        const headers: Record<string, string> = {
+          'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
+          'TTL': '86400'
         };
 
-        console.log('🔧 Formatted subscription for web-push protocol');
-        console.log('- Endpoint:', pushSubscription.endpoint);
+        console.log('📡 Sending empty push notification (testing delivery)...');
+        console.log('- Method: POST');
+        console.log('- Headers:', headers);
+        console.log('- Body: empty (no payload)');
+        
+        const response = await fetch(subscription.endpoint, {
+          method: 'POST',
+          headers
+          // No body - sending empty notification to test delivery
+        });
 
-        await webpush.sendNotification(pushSubscription, payload);
-        console.log('✅ Push notification sent successfully via web-push library');
+        console.log('📨 Push service response:');
+        console.log('- Status:', response.status);
+        console.log('- Status Text:', response.statusText);
+        
+        if (!response.ok) {
+          const responseText = await response.text();
+          console.error('❌ Push service error:', response.status, responseText);
+          
+          // Handle expired/invalid subscriptions
+          if (response.status === 410 || response.status === 404) {
+            console.log('🗑️ Subscription appears invalid, removing...');
+            await supabase
+              .from('user_push_subscriptions')
+              .delete()
+              .eq('id', subscription.id);
+            console.log('✅ Invalid subscription removed');
+          }
+          
+          throw new Error(`Push service error: ${response.status} - ${responseText}`);
+        }
+        
+        console.log('✅ Empty push notification sent successfully (testing delivery)');
         
       } catch (error: any) {
         console.error('❌ Error sending push notification:', error);
-        console.error('- Error name:', error.name);
-        console.error('- Error message:', error.message);
-        console.error('- Status code:', error.statusCode);
-        
-        // Handle expired/invalid subscriptions
-        if (error.statusCode === 410 || error.statusCode === 404) {
-          console.log('🗑️ Subscription appears to be invalid, removing from database...');
-          await supabase
-            .from('user_push_subscriptions')
-            .delete()
-            .eq('id', subscription.id);
-          console.log('✅ Invalid subscription removed');
-        }
-        
         throw error;
       }
     };
@@ -223,27 +245,20 @@ serve(async (req) => {
     let successCount = 0;
     let failedCount = 0;
 
-    const payloadString = JSON.stringify({
-      title,
-      body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      tag: type,
-      data: notificationData
-    });
-
-    console.log('📦 Payload created:', payloadString);
+    console.log('🧪 Testing empty push notifications (no payload) to verify delivery...');
+    console.log('📋 Expected behavior: Service worker should show default notification');
 
     for (let i = 0; i < subscriptions.length; i++) {
       const subscription = subscriptions[i];
       
       console.log(`\n📱 Processing subscription ${i + 1}/${subscriptions.length}:`);
       console.log('- ID:', subscription.id);
+      console.log('- Endpoint:', subscription.endpoint);
       
       try {
-        await sendWebPushNotification(subscription, payloadString);
+        await sendWebPushNotification(subscription);
         successCount++;
-        console.log(`✅ Notification ${i + 1} sent successfully`);
+        console.log(`✅ Empty notification ${i + 1} sent successfully`);
       } catch (error: any) {
         failedCount++;
         console.error(`❌ Failed to send notification ${i + 1}:`, error.message);
