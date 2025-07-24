@@ -180,60 +180,18 @@ serve(async (req) => {
         const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
         const unsignedToken = `${encodedHeader}.${encodedPayload}`;
 
-        // Try different approaches to handle the VAPID private key
-        let cryptoKey: CryptoKey;
-        
-        try {
-          // Method 1: Try as raw PKCS#8
-          const privateKeyBuffer = base64ToArrayBuffer(vapidPrivateKey);
-          cryptoKey = await crypto.subtle.importKey(
-            'pkcs8',
-            privateKeyBuffer,
-            {
-              name: 'ECDSA',
-              namedCurve: 'P-256'
-            },
-            false,
-            ['sign']
-          );
-        } catch (firstError) {
-          console.log('First method failed, trying alternative approach:', firstError.message);
-          
-          try {
-            // Method 2: Try as raw private key material
-            const privateKeyBuffer = urlBase64ToUint8Array(vapidPrivateKey);
-            cryptoKey = await crypto.subtle.importKey(
-              'raw',
-              privateKeyBuffer,
-              {
-                name: 'ECDSA',
-                namedCurve: 'P-256'
-              },
-              false,
-              ['sign']
-            );
-          } catch (secondError) {
-            console.log('Second method failed, trying JWK format:', secondError.message);
-            
-            // Method 3: Try as JWK format (if the key is in JWK format)
-            try {
-              const jwk = JSON.parse(atob(vapidPrivateKey));
-              cryptoKey = await crypto.subtle.importKey(
-                'jwk',
-                jwk,
-                {
-                  name: 'ECDSA',
-                  namedCurve: 'P-256'
-                },
-                false,
-                ['sign']
-              );
-            } catch (thirdError) {
-              console.error('All import methods failed:', { firstError: firstError.message, secondError: secondError.message, thirdError: thirdError.message });
-              throw new Error(`Failed to import VAPID private key: ${thirdError.message}`);
-            }
-          }
-        }
+        // Import VAPID private key - use URL-safe base64 format directly
+        const privateKeyBuffer = urlBase64ToUint8Array(vapidPrivateKey);
+        const cryptoKey = await crypto.subtle.importKey(
+          'raw',
+          privateKeyBuffer,
+          {
+            name: 'ECDSA',
+            namedCurve: 'P-256'
+          },
+          false,
+          ['sign']
+        );
 
         // Sign the token
         const signature = await crypto.subtle.sign(
