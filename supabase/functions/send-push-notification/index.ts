@@ -144,7 +144,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
       // Derive shared secret
       const publicKey = await crypto.subtle.importKey(
         "raw",
-        new Uint8Array(atob(subscription.keys.p256dh.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => c.charCodeAt(0))),
+        new Uint8Array(atob(subscription.p256dh.replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => c.charCodeAt(0))),
         { name: "ECDH", namedCurve: "P-256" },
         false,
         []
