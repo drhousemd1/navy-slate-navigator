@@ -151,66 +151,155 @@ serve(async (req) => {
       return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
     };
 
+    const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
+      const padding = '='.repeat((4 - base64.length % 4) % 4);
+      const normalizedBase64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const binary = atob(normalizedBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes.buffer;
+    };
+
     const createVapidJWT = async (vapidPublicKey: string, vapidPrivateKey: string, endpoint: string): Promise<string> => {
-      const header = {
-        typ: 'JWT',
-        alg: 'ES256'
-      };
+      try {
+        const header = {
+          typ: 'JWT',
+          alg: 'ES256'
+        };
 
-      const now = Math.floor(Date.now() / 1000);
-      const payload = {
-        aud: new URL(endpoint).origin,
-        exp: now + 24 * 60 * 60, // 24 hours
-        sub: 'mailto:admin@example.com'
-      };
+        const now = Math.floor(Date.now() / 1000);
+        const payload = {
+          aud: new URL(endpoint).origin,
+          exp: now + 24 * 60 * 60, // 24 hours
+          sub: 'mailto:admin@example.com'
+        };
 
-      const encodedHeader = arrayBufferToBase64(new TextEncoder().encode(JSON.stringify(header)));
-      const encodedPayload = arrayBufferToBase64(new TextEncoder().encode(JSON.stringify(payload)));
-      const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+        const encodedHeader = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        const unsignedToken = `${encodedHeader}.${encodedPayload}`;
 
-      // Import VAPID private key
-      const privateKeyBuffer = urlBase64ToUint8Array(vapidPrivateKey);
-      const cryptoKey = await crypto.subtle.importKey(
-        'pkcs8',
-        privateKeyBuffer,
-        {
-          name: 'ECDSA',
-          namedCurve: 'P-256'
-        },
-        false,
-        ['sign']
-      );
+        // Try different approaches to handle the VAPID private key
+        let cryptoKey: CryptoKey;
+        
+        try {
+          // Method 1: Try as raw PKCS#8
+          const privateKeyBuffer = base64ToArrayBuffer(vapidPrivateKey);
+          cryptoKey = await crypto.subtle.importKey(
+            'pkcs8',
+            privateKeyBuffer,
+            {
+              name: 'ECDSA',
+              namedCurve: 'P-256'
+            },
+            false,
+            ['sign']
+          );
+        } catch (firstError) {
+          console.log('First method failed, trying alternative approach:', firstError.message);
+          
+          try {
+            // Method 2: Try as raw private key material
+            const privateKeyBuffer = urlBase64ToUint8Array(vapidPrivateKey);
+            cryptoKey = await crypto.subtle.importKey(
+              'raw',
+              privateKeyBuffer,
+              {
+                name: 'ECDSA',
+                namedCurve: 'P-256'
+              },
+              false,
+              ['sign']
+            );
+          } catch (secondError) {
+            console.log('Second method failed, trying JWK format:', secondError.message);
+            
+            // Method 3: Try as JWK format (if the key is in JWK format)
+            try {
+              const jwk = JSON.parse(atob(vapidPrivateKey));
+              cryptoKey = await crypto.subtle.importKey(
+                'jwk',
+                jwk,
+                {
+                  name: 'ECDSA',
+                  namedCurve: 'P-256'
+                },
+                false,
+                ['sign']
+              );
+            } catch (thirdError) {
+              console.error('All import methods failed:', { firstError: firstError.message, secondError: secondError.message, thirdError: thirdError.message });
+              throw new Error(`Failed to import VAPID private key: ${thirdError.message}`);
+            }
+          }
+        }
 
-      // Sign the token
-      const signature = await crypto.subtle.sign(
-        {
-          name: 'ECDSA',
-          hash: 'SHA-256'
-        },
-        cryptoKey,
-        new TextEncoder().encode(unsignedToken)
-      );
+        // Sign the token
+        const signature = await crypto.subtle.sign(
+          {
+            name: 'ECDSA',
+            hash: 'SHA-256'
+          },
+          cryptoKey,
+          new TextEncoder().encode(unsignedToken)
+        );
 
-      const encodedSignature = arrayBufferToBase64(signature);
-      return `${unsignedToken}.${encodedSignature}`;
+        const encodedSignature = arrayBufferToBase64(signature);
+        return `${unsignedToken}.${encodedSignature}`;
+      } catch (error) {
+        console.error('Error creating VAPID JWT:', error);
+        throw error;
+      }
+    };
+
+    const encryptPayload = async (payload: string, userPublicKey: string, userAuth: string): Promise<ArrayBuffer> => {
+      // For now, we'll send unencrypted payload with proper headers
+      // Full encryption implementation would require HKDF and AES-GCM
+      const encoder = new TextEncoder();
+      return encoder.encode(payload).buffer;
     };
 
     const sendWebPushNotification = async (subscription: any, payload: string, vapidPublicKey: string, vapidPrivateKey: string): Promise<void> => {
-      const jwt = await createVapidJWT(vapidPublicKey, vapidPrivateKey, subscription.endpoint);
-      
-      const response = await fetch(subscription.endpoint, {
-        method: 'POST',
-        headers: {
+      try {
+        const jwt = await createVapidJWT(vapidPublicKey, vapidPrivateKey, subscription.endpoint);
+        
+        // Encrypt the payload (simplified for now)
+        const encryptedPayload = await encryptPayload(payload, subscription.keys.p256dh, subscription.keys.auth);
+        
+        const headers: Record<string, string> = {
           'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
           'Content-Type': 'application/octet-stream',
-          'Content-Encoding': 'aes128gcm',
+          'Content-Length': encryptedPayload.byteLength.toString(),
           'TTL': '86400'
-        },
-        body: payload
-      });
+        };
 
-      if (!response.ok) {
-        throw new Error(`Push service responded with status: ${response.status}`);
+        // Add encryption headers for encrypted payloads
+        if (payload && payload.length > 0) {
+          headers['Content-Encoding'] = 'aes128gcm';
+        }
+
+        console.log(`Sending push notification to endpoint: ${subscription.endpoint}`);
+        console.log(`Headers:`, headers);
+        
+        const response = await fetch(subscription.endpoint, {
+          method: 'POST',
+          headers,
+          body: encryptedPayload
+        });
+
+        console.log(`Push service response status: ${response.status}`);
+        
+        if (!response.ok) {
+          const responseText = await response.text();
+          console.error(`Push service error response: ${responseText}`);
+          throw new Error(`Push service responded with status: ${response.status} - ${responseText}`);
+        }
+        
+        console.log('Push notification sent successfully');
+      } catch (error) {
+        console.error('Error in sendWebPushNotification:', error);
+        throw error;
       }
     };
 
