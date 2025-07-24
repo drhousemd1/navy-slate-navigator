@@ -15,3 +15,6 @@ redirect_urls = [
   "http://localhost:5173/auth",
   "http://localhost:5173/reset-password"
 ]
+
+[functions.get-vapid-public-key]
+verify_jwt = false

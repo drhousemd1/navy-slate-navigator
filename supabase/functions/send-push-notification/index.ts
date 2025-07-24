@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +14,63 @@ interface NotificationRequest {
   data?: Record<string, any>;
 }
 
-const serve_handler = async (req: Request): Promise<Response> => {
+// Helper function to convert URL-safe base64 to Uint8Array
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// Generate JWT for VAPID authentication
+async function generateVAPIDJWT(audience: string, subject: string, privateKeyB64: string): Promise<string> {
+  const header = {
+    typ: 'JWT',
+    alg: 'ES256'
+  };
+  
+  const payload = {
+    aud: audience,
+    exp: Math.floor(Date.now() / 1000) + (12 * 60 * 60), // 12 hours
+    sub: subject
+  };
+  
+  const encoder = new TextEncoder();
+  const headerB64 = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const payloadB64 = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  
+  const data = encoder.encode(`${headerB64}.${payloadB64}`);
+  
+  // Import private key
+  const keyData = urlBase64ToUint8Array(privateKeyB64);
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    keyData,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+  
+  // Sign the data
+  const signature = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    key,
+    data
+  );
+  
+  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+  
+  return `${headerB64}.${payloadB64}.${signatureB64}`;
+}
+
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -129,180 +185,36 @@ const serve_handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Manual Web Push implementation since libraries are unreliable in Deno
-    async function sendWebPushNotification(subscription: any, payload: string) {
+    // Simplified Web Push implementation
+    const sendWebPushNotification = async (subscription: any, payload: string) => {
       try {
-        console.log(`Sending push notification to endpoint: ${subscription.endpoint}`);
+        const endpoint = subscription.endpoint;
+        const url = new URL(endpoint);
         
-        // Validate subscription data
-        if (!subscription.endpoint || !subscription.p256dh || !subscription.auth) {
-          throw new Error('Invalid subscription: missing endpoint, p256dh, or auth');
-        }
-
-        // Create JWT for VAPID
-        const header = {
-          "typ": "JWT",
-          "alg": "ES256"
-        };
-
-        const now = Math.floor(Date.now() / 1000);
-        const exp = now + 86400; // 24 hours
-
-        const claims = {
-          "aud": new URL(subscription.endpoint).origin,
-          "exp": exp,
-          "sub": "mailto:support@navy-slate-navigator.com"
-        };
-
-        // Encode header and payload
-        const encodedHeader = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        const encodedPayload = btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        const unsignedToken = `${encodedHeader}.${encodedPayload}`;
-
-        // Import VAPID private key
-        const privateKeyBytes = Uint8Array.from(atob(vapidPrivateKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
-        const privateKey = await crypto.subtle.importKey(
-          'pkcs8',
-          privateKeyBytes,
-          { name: 'ECDSA', namedCurve: 'P-256' },
-          false,
-          ['sign']
-        );
-
-        // Sign the JWT
-        const signature = await crypto.subtle.sign(
-          { name: 'ECDSA', hash: 'SHA-256' },
-          privateKey,
-          new TextEncoder().encode(unsignedToken)
-        );
-
-        const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
-          .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-
-        const jwt = `${unsignedToken}.${encodedSignature}`;
-
-        // Prepare headers
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/octet-stream',
-          'Content-Encoding': 'aes128gcm',
-          'TTL': '86400',
-          'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`
-        };
-
-        // Encrypt payload
-        const textEncoder = new TextEncoder();
-        const payloadBytes = textEncoder.encode(payload);
-
-        // Generate salt (16 bytes)
-        const salt = crypto.getRandomValues(new Uint8Array(16));
+        // Generate VAPID Authorization header
+        const audience = `${url.protocol}//${url.host}`;
+        const subject = 'mailto:admin@example.com';
         
-        // Convert keys from base64url
-        const p256dhBytes = Uint8Array.from(atob(subscription.p256dh.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
-        const authBytes = Uint8Array.from(atob(subscription.auth.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
-
-        // Generate local key pair
-        const localKeyPair = await crypto.subtle.generateKey(
-          { name: 'ECDH', namedCurve: 'P-256' },
-          true,
-          ['deriveKey']
-        );
-
-        // Export local public key
-        const localPublicKeyBuffer = await crypto.subtle.exportKey('raw', localKeyPair.publicKey);
-        const localPublicKey = new Uint8Array(localPublicKeyBuffer);
-
-        // Import user's public key
-        const userPublicKey = await crypto.subtle.importKey(
-          'raw',
-          p256dhBytes,
-          { name: 'ECDH', namedCurve: 'P-256' },
-          false,
-          []
-        );
-
-        // Derive shared secret
-        const sharedSecret = await crypto.subtle.deriveKey(
-          { name: 'ECDH', public: userPublicKey },
-          localKeyPair.privateKey,
-          { name: 'AES-GCM', length: 256 },
-          false,
-          ['encrypt']
-        );
-
-        // Create encryption context
-        const context = textEncoder.encode('Content-Encoding: aes128gcm\0');
+        // Generate proper VAPID JWT
+        const jwt = await generateVAPIDJWT(audience, subject, vapidPrivateKey);
         
-        // Derive encryption key
-        const keyInfo = new Uint8Array([
-          ...context,
-          ...new Uint8Array([0, 1])
-        ]);
-
-        const prk = await crypto.subtle.importKey(
-          'raw',
-          await crypto.subtle.deriveBits(
-            { name: 'ECDH', public: userPublicKey },
-            localKeyPair.privateKey,
-            256
-          ),
-          { name: 'HMAC', hash: 'SHA-256' },
-          false,
-          ['sign']
-        );
-
-        const encryptionKey = await crypto.subtle.importKey(
-          'raw',
-          (await crypto.subtle.sign('HMAC', prk, new Uint8Array([...salt, ...authBytes, ...keyInfo]))).slice(0, 16),
-          { name: 'AES-GCM', length: 128 },
-          false,
-          ['encrypt']
-        );
-
-        // Create nonce
-        const nonceInfo = new Uint8Array([
-          ...context,
-          ...new Uint8Array([0, 1])
-        ]);
-        
-        const nonce = (await crypto.subtle.sign('HMAC', prk, new Uint8Array([...salt, ...authBytes, ...nonceInfo]))).slice(0, 12);
-
-        // Encrypt payload
-        const paddedPayload = new Uint8Array([...payloadBytes, 2]); // Add padding delimiter
-        const encryptedPayload = await crypto.subtle.encrypt(
-          { name: 'AES-GCM', iv: new Uint8Array(nonce) },
-          encryptionKey,
-          paddedPayload
-        );
-
-        // Create final payload
-        const finalPayload = new Uint8Array([
-          ...salt,
-          ...new Uint8Array([0, 0, 16, 0]), // rs=4096 as uint32be
-          65, // public key length
-          ...localPublicKey,
-          ...new Uint8Array(encryptedPayload)
-        ]);
-
-        // Send the request
-        const response = await fetch(subscription.endpoint, {
+        const response = await fetch(endpoint, {
           method: 'POST',
-          headers,
-          body: finalPayload
+          headers: {
+            'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
+            'Content-Type': 'application/json',
+            'TTL': '86400' // 24 hours
+          },
+          body: payload
         });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Push service error: ${response.status} ${response.statusText} - ${errorText}`);
-          throw new Error(`Push service error: ${response.status} ${response.statusText}`);
-        }
         
-        console.log(`Push notification sent successfully to ${subscription.endpoint}`);
-        return true;
+        console.log(`Push notification sent to ${endpoint}: ${response.status}`);
+        return { success: response.ok, status: response.status };
       } catch (error) {
-        console.error('Push notification error:', error);
-        throw error;
+        console.error('Error sending web push notification:', error);
+        return { success: false, error: error.message };
       }
-    }
+    };
 
     // Send push notifications
     const results = await Promise.allSettled(
@@ -317,22 +229,27 @@ const serve_handler = async (req: Request): Promise<Response> => {
             data: notificationData
           });
 
-          await sendWebPushNotification(subscription, payload);
+          const result = await sendWebPushNotification(subscription, payload);
           
-          console.log(`Push notification sent successfully to subscription ${subscription.id}`);
-          return { subscriptionId: subscription.id, success: true };
+          if (result.success) {
+            console.log(`Push notification sent successfully to subscription ${subscription.id}`);
+            return { subscriptionId: subscription.id, success: true };
+          } else {
+            console.error(`Failed to send to subscription ${subscription.id}: ${result.status}`);
+            
+            // If subscription is invalid (410 or 404), remove it
+            if (result.status === 410 || result.status === 404) {
+              await supabase
+                .from('user_push_subscriptions')
+                .delete()
+                .eq('id', subscription.id);
+              console.log(`Removed invalid subscription ${subscription.id}`);
+            }
+            
+            return { subscriptionId: subscription.id, success: false, error: result.error || 'Unknown error' };
+          }
         } catch (error) {
           console.error(`Error sending to subscription ${subscription.id}:`, error);
-          
-          // If subscription is invalid (410 or 404), remove it
-          if (error.status === 410 || error.status === 404) {
-            await supabase
-              .from('user_push_subscriptions')
-              .delete()
-              .eq('id', subscription.id);
-            console.log(`Removed invalid subscription ${subscription.id}`);
-          }
-          
           return { subscriptionId: subscription.id, success: false, error: error.message || 'Unknown error' };
         }
       })
@@ -366,6 +283,4 @@ const serve_handler = async (req: Request): Promise<Response> => {
       }
     );
   }
-};
-
-serve(serve_handler);
+});

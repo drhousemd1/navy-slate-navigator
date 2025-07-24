@@ -9,17 +9,43 @@ export const usePushSubscription = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [vapidPublicKey, setVapidPublicKey] = useState<string | null>(null);
 
   useEffect(() => {
-    const initializePushNotifications = async () => {
-      await checkPushSupport();
-      if (user) {
-        await checkSubscriptionStatus();
-      }
-    };
-    
-    initializePushNotifications();
+    if (user) {
+      fetchVapidPublicKey();
+    }
   }, [user]);
+
+  useEffect(() => {
+    if (vapidPublicKey && user) {
+      checkPushSupport();
+      checkSubscriptionStatus();
+    }
+  }, [vapidPublicKey, user]);
+
+  // Fetch VAPID public key from server
+  const fetchVapidPublicKey = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-vapid-public-key');
+      
+      if (error) {
+        console.error('Failed to fetch VAPID public key:', error);
+        setIsLoading(false);
+        return;
+      }
+
+      if (data?.publicKey) {
+        setVapidPublicKey(data.publicKey);
+      } else {
+        console.error('No public key received from server');
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Error fetching VAPID public key:', error);
+      setIsLoading(false);
+    }
+  };
 
   const checkPushSupport = async () => {
     logger.info('Checking push notification support...');
@@ -158,13 +184,16 @@ export const usePushSubscription = () => {
       ]);
       logger.info('Service worker ready for subscription');
 
+      if (!vapidPublicKey) {
+        logger.error('VAPID public key not available');
+        return false;
+      }
+
       // Subscribe to push notifications with VAPID public key
       logger.info('Attempting to subscribe to push manager...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          'BNJ0CsNmafO-1kRpFNHV7bnLWH8hbBaLSKKPKCU3-6m-0OJo1OfNmQNZ_EaUJqjvRdFPsevKZzQ_K7LgJ5BL8-k'
-        ),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
       logger.info('Push subscription created successfully');
 
