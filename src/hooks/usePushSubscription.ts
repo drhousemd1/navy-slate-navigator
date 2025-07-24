@@ -163,7 +163,7 @@ export const usePushSubscription = () => {
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
-          'BCRZq1g3uH8yvR-54dWzDIwq5jC-zRFnrrsGd2urb4QSgmwE6EkURTD7N4AoTRkdGAAvtqsfGP80vL2JRO8alMc'
+          'BNJ0CsNmafO-1kRpFNHV7bnLWH8hbBaLSKKPKCU3-6m-0OJo1OfNmQNZ_EaUJqjvRdFPsevKZzQ_K7LgJ5BL8-k'
         ),
       });
       logger.info('Push subscription created successfully');

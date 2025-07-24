@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { sendNotification } from "jsr:@negrel/webpush";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -130,7 +129,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Proper Web Push implementation using library
+    // Manual Web Push implementation since libraries are unreliable in Deno
     async function sendWebPushNotification(subscription: any, payload: string) {
       try {
         console.log(`Sending push notification to endpoint: ${subscription.endpoint}`);
@@ -140,11 +139,28 @@ const serve_handler = async (req: Request): Promise<Response> => {
           throw new Error('Invalid subscription: missing endpoint, p256dh, or auth');
         }
 
-        // Convert VAPID private key from base64url to raw bytes
-        const privateKeyBase64 = vapidPrivateKey.replace(/-/g, '+').replace(/_/g, '/');
-        const privateKeyBytes = Uint8Array.from(atob(privateKeyBase64), c => c.charCodeAt(0));
-        
-        // Import the private key for ES256 signing
+        // Create JWT for VAPID
+        const header = {
+          "typ": "JWT",
+          "alg": "ES256"
+        };
+
+        const now = Math.floor(Date.now() / 1000);
+        const exp = now + 86400; // 24 hours
+
+        const claims = {
+          "aud": new URL(subscription.endpoint).origin,
+          "exp": exp,
+          "sub": "mailto:support@navy-slate-navigator.com"
+        };
+
+        // Encode header and payload
+        const encodedHeader = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        const encodedPayload = btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+
+        // Import VAPID private key
+        const privateKeyBytes = Uint8Array.from(atob(vapidPrivateKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
         const privateKey = await crypto.subtle.importKey(
           'pkcs8',
           privateKeyBytes,
@@ -153,30 +169,134 @@ const serve_handler = async (req: Request): Promise<Response> => {
           ['sign']
         );
 
-        // Create subscription object in the format expected by the library
-        const webPushSubscription = {
-          endpoint: subscription.endpoint,
-          keys: {
-            p256dh: subscription.p256dh,
-            auth: subscription.auth
-          }
+        // Sign the JWT
+        const signature = await crypto.subtle.sign(
+          { name: 'ECDSA', hash: 'SHA-256' },
+          privateKey,
+          new TextEncoder().encode(unsignedToken)
+        );
+
+        const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+          .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+        const jwt = `${unsignedToken}.${encodedSignature}`;
+
+        // Prepare headers
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/octet-stream',
+          'Content-Encoding': 'aes128gcm',
+          'TTL': '86400',
+          'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`
         };
 
-        // Use the web push library to send notification
-        await sendNotification({
-          subscription: webPushSubscription,
-          payload,
-          vapidDetails: {
-            subject: 'mailto:support@navy-slate-navigator.com',
-            publicKey: vapidPublicKey,
-            privateKey: privateKey
-          },
-          options: {
-            TTL: 86400, // 24 hours
-          }
-        });
+        // Encrypt payload
+        const textEncoder = new TextEncoder();
+        const payloadBytes = textEncoder.encode(payload);
+
+        // Generate salt (16 bytes)
+        const salt = crypto.getRandomValues(new Uint8Array(16));
         
-        console.log(`Push notification sent successfully`);
+        // Convert keys from base64url
+        const p256dhBytes = Uint8Array.from(atob(subscription.p256dh.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+        const authBytes = Uint8Array.from(atob(subscription.auth.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+
+        // Generate local key pair
+        const localKeyPair = await crypto.subtle.generateKey(
+          { name: 'ECDH', namedCurve: 'P-256' },
+          true,
+          ['deriveKey']
+        );
+
+        // Export local public key
+        const localPublicKeyBuffer = await crypto.subtle.exportKey('raw', localKeyPair.publicKey);
+        const localPublicKey = new Uint8Array(localPublicKeyBuffer);
+
+        // Import user's public key
+        const userPublicKey = await crypto.subtle.importKey(
+          'raw',
+          p256dhBytes,
+          { name: 'ECDH', namedCurve: 'P-256' },
+          false,
+          []
+        );
+
+        // Derive shared secret
+        const sharedSecret = await crypto.subtle.deriveKey(
+          { name: 'ECDH', public: userPublicKey },
+          localKeyPair.privateKey,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt']
+        );
+
+        // Create encryption context
+        const context = textEncoder.encode('Content-Encoding: aes128gcm\0');
+        
+        // Derive encryption key
+        const keyInfo = new Uint8Array([
+          ...context,
+          ...new Uint8Array([0, 1])
+        ]);
+
+        const prk = await crypto.subtle.importKey(
+          'raw',
+          await crypto.subtle.deriveBits(
+            { name: 'ECDH', public: userPublicKey },
+            localKeyPair.privateKey,
+            256
+          ),
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign']
+        );
+
+        const encryptionKey = await crypto.subtle.importKey(
+          'raw',
+          (await crypto.subtle.sign('HMAC', prk, new Uint8Array([...salt, ...authBytes, ...keyInfo]))).slice(0, 16),
+          { name: 'AES-GCM', length: 128 },
+          false,
+          ['encrypt']
+        );
+
+        // Create nonce
+        const nonceInfo = new Uint8Array([
+          ...context,
+          ...new Uint8Array([0, 1])
+        ]);
+        
+        const nonce = (await crypto.subtle.sign('HMAC', prk, new Uint8Array([...salt, ...authBytes, ...nonceInfo]))).slice(0, 12);
+
+        // Encrypt payload
+        const paddedPayload = new Uint8Array([...payloadBytes, 2]); // Add padding delimiter
+        const encryptedPayload = await crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv: new Uint8Array(nonce) },
+          encryptionKey,
+          paddedPayload
+        );
+
+        // Create final payload
+        const finalPayload = new Uint8Array([
+          ...salt,
+          ...new Uint8Array([0, 0, 16, 0]), // rs=4096 as uint32be
+          65, // public key length
+          ...localPublicKey,
+          ...new Uint8Array(encryptedPayload)
+        ]);
+
+        // Send the request
+        const response = await fetch(subscription.endpoint, {
+          method: 'POST',
+          headers,
+          body: finalPayload
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Push service error: ${response.status} ${response.statusText} - ${errorText}`);
+          throw new Error(`Push service error: ${response.status} ${response.statusText}`);
+        }
+        
+        console.log(`Push notification sent successfully to ${subscription.endpoint}`);
         return true;
       } catch (error) {
         console.error('Push notification error:', error);
