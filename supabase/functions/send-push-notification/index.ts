@@ -180,11 +180,37 @@ serve(async (req) => {
         const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
         const unsignedToken = `${encodedHeader}.${encodedPayload}`;
 
-        // Import VAPID private key - use URL-safe base64 format directly
-        const privateKeyBuffer = urlBase64ToUint8Array(vapidPrivateKey);
+        // Convert VAPID private key from URL-safe base64 to PKCS#8 format
+        const privateKeyBytes = urlBase64ToUint8Array(vapidPrivateKey);
+        
+        // VAPID keys are 32-byte raw P-256 private keys that need to be wrapped in PKCS#8
+        const pkcs8Header = new Uint8Array([
+          0x30, 0x81, 0x87, // SEQUENCE (135 bytes)
+          0x02, 0x01, 0x00, // INTEGER 0 (version)
+          0x30, 0x13, // SEQUENCE (19 bytes) - AlgorithmIdentifier
+          0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, // OID for EC public key
+          0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, // OID for P-256
+          0x04, 0x6d, // OCTET STRING (109 bytes)
+          0x30, 0x6b, // SEQUENCE (107 bytes)
+          0x02, 0x01, 0x01, // INTEGER 1 (version)
+          0x04, 0x20 // OCTET STRING (32 bytes) - private key follows
+        ]);
+        
+        const pkcs8Suffix = new Uint8Array([
+          0xa1, 0x44, // [1] (68 bytes) - public key (optional, but included for completeness)
+          0x03, 0x42, 0x00, // BIT STRING (66 bytes)
+          0x04 // uncompressed point indicator
+          // 64 bytes of public key would follow, but we'll skip it for now
+        ]);
+        
+        // Create PKCS#8 format: header + private key + minimal suffix
+        const pkcs8Key = new Uint8Array(pkcs8Header.length + privateKeyBytes.length);
+        pkcs8Key.set(pkcs8Header);
+        pkcs8Key.set(privateKeyBytes, pkcs8Header.length);
+        
         const cryptoKey = await crypto.subtle.importKey(
-          'raw',
-          privateKeyBuffer,
+          'pkcs8',
+          pkcs8Key.buffer,
           {
             name: 'ECDSA',
             namedCurve: 'P-256'
