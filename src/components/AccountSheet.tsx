@@ -7,20 +7,17 @@ import {
   SheetTitle,
   SheetTrigger
 } from '@/components/ui/sheet';
-import { UserCircle2, User, LogOut, BookOpen, ShieldCheck, Activity, Palette, Bell, Home, CreditCard } from 'lucide-react';
+import { UserCircle2, User, LogOut, BookOpen, ShieldCheck, Activity, Palette, Bell, Home } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { logger } from '@/lib/logger';
-import { NotificationSettings } from '@/components/profile/NotificationSettings';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
   const { user, getNickname, getProfileImage, getUserRoleSync, signOut, isAdmin } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [notificationsExpanded, setNotificationsExpanded] = useState(false);
   
   const handleProfileClick = () => {
     navigate('/profile');
@@ -55,16 +52,12 @@ const AccountSheet = () => {
   };
 
   const handleNotificationsClick = () => {
-    setNotificationsExpanded(!notificationsExpanded);
+    navigate('/profile/notifications');
+    setSheetOpen(false);
   };
 
   const handleHomeClick = () => {
     navigate('/');
-    setSheetOpen(false);
-  };
-
-  const handleSubscriptionClick = () => {
-    navigate('/subscription');
     setSheetOpen(false);
   };
   
@@ -95,7 +88,7 @@ const AccountSheet = () => {
       </SheetTrigger>
       <SheetContent 
         side="left" 
-        className="w-[75vw] sm:w-[350px] bg-navy border-r border-light-navy text-white overflow-y-auto"
+        className="w-[75vw] sm:w-[300px] bg-navy border-r border-light-navy text-white"
       >
         <SheetHeader>
           <SheetTitle className="text-white">Account</SheetTitle>
@@ -187,32 +180,13 @@ const AccountSheet = () => {
               Color Scheme
             </Button>
 
-            <Collapsible open={notificationsExpanded} onOpenChange={setNotificationsExpanded}>
-              <CollapsibleTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
-                  onClick={handleNotificationsClick}
-                >
-                  <Bell className="w-5 h-5 mr-3" />
-                  Notifications
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
-                <div className="pl-4">
-                  <NotificationSettings />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
             <Button 
               variant="ghost" 
               className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
-              onClick={handleSubscriptionClick}
-              disabled={!user} 
+              onClick={handleNotificationsClick}
             >
-              <CreditCard className="w-5 h-5 mr-3" />
-              Subscription
+              <Bell className="w-5 h-5 mr-3" />
+              Notifications
             </Button>
 
             {isAdmin && user && ( // Show Admin Panel button if user is admin
@@ -225,7 +199,6 @@ const AccountSheet = () => {
                 Admin Panel
               </Button>
             )}
-
             
             {user && ( // Only show logout if user is logged in
               <Button 

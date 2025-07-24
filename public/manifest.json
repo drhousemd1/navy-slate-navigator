@@ -2,16 +2,12 @@
 {
   "name": "Navy Slate Navigator",
   "short_name": "Navigator",
-  "description": "Task and reward management app for personal productivity",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A1F44",
   "theme_color": "#0A1F44",
-  "orientation": "portrait-primary",
+  "orientation": "portrait",
   "scope": "/",
-  "categories": ["productivity", "lifestyle"],
-  "lang": "en-US",
-  "dir": "ltr",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -26,16 +22,7 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ],
   "permissions": [
     "notifications"
-  ],
-  "prefer_related_applications": false
+  ]
 }

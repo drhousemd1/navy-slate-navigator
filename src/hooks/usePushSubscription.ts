@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -157,12 +158,12 @@ export const usePushSubscription = () => {
       ]);
       logger.info('Service worker ready for subscription');
 
-      // Subscribe to push notifications with the correct VAPID public key
+      // Subscribe to push notifications with VAPID public key
       logger.info('Attempting to subscribe to push manager...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
-          'BJD5WZFzafCE_k0yfPyxOE5l3qQpGJKTvdxUOGvAFKCu8M-M8C7m0aJVQsL7M7gF1nFdVgKk9LpNQQmPj0F5O_4'
+          'BCRZq1g3uH8yvR-54dWzDIwq5jC-zRFnrrsGd2urb4QSgmwE6EkURTD7N4AoTRkdGAAvtqsfGP80vL2JRO8alMc'
         ),
       });
       logger.info('Push subscription created successfully');

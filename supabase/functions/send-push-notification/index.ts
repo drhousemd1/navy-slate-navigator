@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import webpush from "https://esm.sh/web-push@3.6.6";
@@ -14,7 +13,6 @@ interface NotificationRequest {
   title: string;
   body: string;
   data?: Record<string, any>;
-  platform?: 'web' | 'native';
 }
 
 const serve_handler = async (req: Request): Promise<Response> => {
@@ -66,7 +64,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { targetUserId, type, title, body, data: notificationData, platform = 'web' }: NotificationRequest = await req.json();
+    const { targetUserId, type, title, body, data: notificationData }: NotificationRequest = await req.json();
 
     // Check if sender is authorized to send notifications to target user
     const { data: senderProfile } = await supabase
@@ -115,11 +113,90 @@ const serve_handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (platform === 'native') {
-      return await sendNativePushNotification(supabase, targetUserId, title, body, notificationData);
-    } else {
-      return await sendWebPushNotification(supabase, targetUserId, title, body, notificationData, type, vapidPublicKey, vapidPrivateKey);
+    // Get user's push subscriptions
+    const { data: subscriptions, error: subsError } = await supabase
+      .from('user_push_subscriptions')
+      .select('*')
+      .eq('user_id', targetUserId);
+
+    if (subsError || !subscriptions || subscriptions.length === 0) {
+      console.log(`No push subscriptions found for user ${targetUserId}`);
+      return new Response(
+        JSON.stringify({ message: 'No push subscriptions found' }),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
     }
+
+    // Configure VAPID details for web-push
+    webpush.setVapidDetails(
+      'mailto:support@example.com', // Replace with your support email
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+
+    // Send push notifications
+    const results = await Promise.allSettled(
+      subscriptions.map(async (subscription) => {
+        try {
+          const pushSubscription = {
+            endpoint: subscription.endpoint,
+            keys: {
+              p256dh: subscription.p256dh,
+              auth: subscription.auth
+            }
+          };
+
+          const payload = JSON.stringify({
+            title,
+            body,
+            icon: '/icons/icon-192.png',
+            badge: '/icons/icon-192.png',
+            tag: type,
+            data: notificationData
+          });
+
+          // Use web-push library for proper encryption and delivery
+          await webpush.sendNotification(pushSubscription, payload);
+          
+          console.log(`Push notification sent successfully to subscription ${subscription.id}`);
+          return { subscriptionId: subscription.id, success: true };
+        } catch (error) {
+          console.error(`Error sending to subscription ${subscription.id}:`, error);
+          
+          // If subscription is invalid (410 or 404), remove it
+          if (error.statusCode === 410 || error.statusCode === 404) {
+            await supabase
+              .from('user_push_subscriptions')
+              .delete()
+              .eq('id', subscription.id);
+            console.log(`Removed invalid subscription ${subscription.id}`);
+          }
+          
+          return { subscriptionId: subscription.id, success: false, error: error.message };
+        }
+      })
+    );
+
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const failed = results.length - successful;
+
+    console.log(`Push notifications sent: ${successful} successful, ${failed} failed`);
+
+    return new Response(
+      JSON.stringify({ 
+        message: 'Push notifications processed',
+        successful,
+        failed,
+        total: results.length
+      }),
+      { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      }
+    );
 
   } catch (error) {
     console.error('Error in send-push-notification function:', error);
@@ -132,205 +209,5 @@ const serve_handler = async (req: Request): Promise<Response> => {
     );
   }
 };
-
-async function sendWebPushNotification(
-  supabase: any,
-  targetUserId: string,
-  title: string,
-  body: string,
-  notificationData: any,
-  type: string,
-  vapidPublicKey: string,
-  vapidPrivateKey: string
-) {
-  // Get user's push subscriptions
-  const { data: subscriptions, error: subsError } = await supabase
-    .from('user_push_subscriptions')
-    .select('*')
-    .eq('user_id', targetUserId);
-
-  if (subsError || !subscriptions || subscriptions.length === 0) {
-    console.log(`No web push subscriptions found for user ${targetUserId}`);
-    return new Response(
-      JSON.stringify({ message: 'No web push subscriptions found' }),
-      { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      }
-    );
-  }
-
-  // Configure VAPID details for web-push
-  webpush.setVapidDetails(
-    'mailto:support@example.com',
-    vapidPublicKey,
-    vapidPrivateKey
-  );
-
-  // Send push notifications
-  const results = await Promise.allSettled(
-    subscriptions.map(async (subscription) => {
-      try {
-        const pushSubscription = {
-          endpoint: subscription.endpoint,
-          keys: {
-            p256dh: subscription.p256dh,
-            auth: subscription.auth
-          }
-        };
-
-        const payload = JSON.stringify({
-          title,
-          body,
-          icon: '/icons/icon-192.png',
-          badge: '/icons/icon-192.png',
-          tag: type,
-          data: notificationData
-        });
-
-        await webpush.sendNotification(pushSubscription, payload);
-        
-        console.log(`Web push notification sent successfully to subscription ${subscription.id}`);
-        return { subscriptionId: subscription.id, success: true };
-      } catch (error) {
-        console.error(`Error sending to subscription ${subscription.id}:`, error);
-        
-        // If subscription is invalid, remove it
-        if (error.statusCode === 410 || error.statusCode === 404) {
-          await supabase
-            .from('user_push_subscriptions')
-            .delete()
-            .eq('id', subscription.id);
-          console.log(`Removed invalid subscription ${subscription.id}`);
-        }
-        
-        return { subscriptionId: subscription.id, success: false, error: error.message };
-      }
-    })
-  );
-
-  const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-  const failed = results.length - successful;
-
-  console.log(`Web push notifications sent: ${successful} successful, ${failed} failed`);
-
-  return new Response(
-    JSON.stringify({ 
-      message: 'Web push notifications processed',
-      successful,
-      failed,
-      total: results.length
-    }),
-    { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-    }
-  );
-}
-
-async function sendNativePushNotification(
-  supabase: any,
-  targetUserId: string,
-  title: string,
-  body: string,
-  notificationData: any
-) {
-  // Get user's native push token
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('push_token')
-    .eq('id', targetUserId)
-    .single();
-
-  if (profileError || !profile?.push_token) {
-    console.log(`No native push token found for user ${targetUserId}`);
-    return new Response(
-      JSON.stringify({ message: 'No native push token found' }),
-      { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      }
-    );
-  }
-
-  // Basic FCM implementation for Android
-  const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
-  
-  if (!fcmServerKey) {
-    console.log('FCM server key not configured - native push not available');
-    return new Response(
-      JSON.stringify({ message: 'Native push not configured' }),
-      { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      }
-    );
-  }
-
-  try {
-    // Send FCM notification
-    const fcmPayload = {
-      to: profile.push_token,
-      notification: {
-        title,
-        body,
-        icon: '/icons/icon-192.png',
-        click_action: 'FLUTTER_NOTIFICATION_CLICK'
-      },
-      data: notificationData || {}
-    };
-
-    const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `key=${fcmServerKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(fcmPayload)
-    });
-
-    const fcmResult = await fcmResponse.json();
-    
-    if (fcmResponse.ok && fcmResult.success === 1) {
-      console.log('Native push notification sent successfully:', fcmResult);
-      return new Response(
-        JSON.stringify({ success: true, message: 'Native notification sent', result: fcmResult }),
-        { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
-    } else {
-      console.error('FCM send failed:', fcmResult);
-      
-      // If token is invalid, remove it
-      if (fcmResult.results?.[0]?.error === 'InvalidRegistration' || 
-          fcmResult.results?.[0]?.error === 'NotRegistered') {
-        await supabase
-          .from('profiles')
-          .update({ push_token: null })
-          .eq('id', targetUserId);
-        console.log(`Removed invalid push token for user ${targetUserId}`);
-      }
-      
-      return new Response(
-        JSON.stringify({ success: false, message: 'FCM send failed', error: fcmResult }),
-        { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
-    }
-  } catch (error) {
-    console.error('Error sending native push notification:', error);
-    return new Response(
-      JSON.stringify({ success: false, message: 'Native notification failed', error: error.message }),
-      { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      }
-    );
-  }
-}
 
 serve(serve_handler);

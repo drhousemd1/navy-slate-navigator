@@ -28,7 +28,7 @@ export const useBuySubReward = () => {
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   const { getPartnerId } = usePartnerHelper();
-  const { queueRewardPurchasedNotification } = usePushNotifications();
+  const { sendRewardPurchasedNotification } = usePushNotifications();
 
   const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
 
@@ -112,7 +112,7 @@ export const useBuySubReward = () => {
       const partnerId = await getPartnerId();
       if (partnerId) {
         try {
-          queueRewardPurchasedNotification(
+          await sendRewardPurchasedNotification(
             partnerId, 
             variables.rewardTitle || 'A reward', 
             variables.cost

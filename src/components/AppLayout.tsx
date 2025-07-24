@@ -12,7 +12,7 @@ import UserHealthBar from './header/UserHealthBar';
 import AvatarPreviewPopover from './AvatarPreviewPopover';
 import { logger } from '@/lib/logger';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
-import { NotificationBadge } from '@/components/common/NotificationBadge';
+import { NotificationBadge } from '@/components/ui/notification-badge';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -118,11 +118,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               onClick={() => navigate('/throne-room')}
             />
 
-            
-            {/* Notification Center */}
-            <NotificationBadge />
-
-            {/* Messaging icon with unread count */}
+            {/* Messaging icon with notification badge */}
             <div className="relative">
               <MessageSquare 
                 className={`w-5 h-5 cursor-pointer transition-colors ${
@@ -130,11 +126,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
                 }`}
                 onClick={handleMessagingClick}
               />
-              {unreadCount > 0 && (
-                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </div>
-              )}
+              <NotificationBadge count={unreadCount} />
             </div>
           </div>
         </div>

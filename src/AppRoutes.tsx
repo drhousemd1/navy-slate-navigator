@@ -11,8 +11,7 @@ import Messages from './pages/Messages';
 import Encyclopedia from './pages/Encyclopedia';
 import Wellbeing from './pages/Wellbeing';
 import ColorScheme from './pages/ColorScheme';
-import Subscription from './pages/Subscription';
-import { NotificationCenter } from './pages/NotificationCenter';
+import Notifications from './pages/Notifications';
 import LogoUpload from './pages/LogoUpload';
 import Auth from './pages/auth';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
@@ -74,20 +73,12 @@ const AppRoutes = () => {
         element={<ProtectedRoute><ErrorBoundary><ColorScheme /></ErrorBoundary></ProtectedRoute>} 
       />
       <Route 
-        path="/notifications" 
-        element={<ProtectedRoute><ErrorBoundary><NotificationCenter /></ErrorBoundary></ProtectedRoute>} 
-      />
-      <Route 
         path="/profile/notifications" 
-        element={<ProtectedRoute><ErrorBoundary><NotificationCenter /></ErrorBoundary></ProtectedRoute>} 
+        element={<ProtectedRoute><ErrorBoundary><Notifications /></ErrorBoundary></ProtectedRoute>} 
       />
       <Route 
         path="/logo-upload" 
         element={<ProtectedRoute><ErrorBoundary><LogoUpload /></ErrorBoundary></ProtectedRoute>} 
-      />
-      <Route 
-        path="/subscription" 
-        element={<ProtectedRoute><ErrorBoundary><Subscription /></ErrorBoundary></ProtectedRoute>} 
       />
       
       {/* Catch-all for not found routes */}

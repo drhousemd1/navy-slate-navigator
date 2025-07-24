@@ -1,9 +1,6 @@
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
-import { notificationQueue, type QueuedNotification } from '@/services/notificationQueue';
-import { getPushNotificationManager } from '@/services/pushNotificationManager';
-import { smartNotificationFilter } from '@/services/smartNotificationFilter';
-import { notificationHistory } from '@/services/notificationHistory';
 
 export type NotificationType = 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin' | 'messages';
 
@@ -17,69 +14,6 @@ interface SendNotificationParams {
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
-  const pushManager = getPushNotificationManager();
-
-  const sendNotificationImmediately = async (notification: QueuedNotification): Promise<boolean> => {
-    if (!user) {
-      logger.error('User not authenticated');
-      return false;
-    }
-
-    // Determine priority based on notification type
-    const priority = getNotificationPriority(notification.type);
-    
-    // Check smart filtering
-    const filterResult = smartNotificationFilter.shouldFilterNotification(priority);
-    if (filterResult.shouldFilter) {
-      logger.info('Notification filtered:', filterResult.reason);
-      // Still add to history even if filtered
-      notificationHistory.addNotification({
-        type: notification.type,
-        title: notification.title,
-        body: notification.body,
-        data: notification.data,
-        priority
-      });
-      return true; // Return true as the notification was "handled"
-    }
-
-    try {
-      const success = await pushManager.sendNotification(notification);
-      
-      // Add to notification history
-      notificationHistory.addNotification({
-        type: notification.type,
-        title: notification.title,
-        body: notification.body,
-        data: notification.data,
-        priority
-      });
-      
-      return success;
-    } catch (error) {
-      logger.error('Error sending push notification via manager:', error);
-      return false;
-    }
-  };
-
-  const getNotificationPriority = (type: NotificationType): 'low' | 'normal' | 'high' | 'critical' => {
-    switch (type) {
-      case 'ruleBroken':
-        return 'critical';
-      case 'wellnessCheckin':
-        return 'high';
-      case 'taskCompleted':
-      case 'rewardPurchased':
-      case 'punishmentPerformed':
-        return 'normal';
-      case 'rewardRedeemed':
-      case 'wellnessUpdated':
-      case 'messages':
-        return 'low';
-      default:
-        return 'normal';
-    }
-  };
 
   const sendNotification = async ({
     targetUserId,
@@ -88,28 +22,35 @@ export const usePushNotifications = () => {
     body,
     data = {}
   }: SendNotificationParams): Promise<boolean> => {
-    // For backward compatibility - immediate send
-    return sendNotificationImmediately({
-      targetUserId,
-      type,
-      title,
-      body,
-      data,
-      timestamp: Date.now()
-    });
+    if (!user) {
+      logger.error('User not authenticated');
+      return false;
+    }
+
+    try {
+      const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          targetUserId,
+          type,
+          title,
+          body,
+          data,
+        },
+      });
+
+      if (error) {
+        logger.error('Error sending push notification:', error);
+        return false;
+      }
+
+      logger.info('Push notification sent successfully:', result);
+      return true;
+    } catch (error) {
+      logger.error('Error invoking push notification function:', error);
+      return false;
+    }
   };
 
-  const queueNotification = (params: SendNotificationParams): void => {
-    const queuedNotification: QueuedNotification = {
-      ...params,
-      data: params.data || {},
-      timestamp: Date.now()
-    };
-
-    notificationQueue.queueNotification(queuedNotification, sendNotificationImmediately);
-  };
-
-  // Immediate notification methods (critical notifications)
   const sendRuleBrokenNotification = async (targetUserId: string, ruleName: string) => {
     return sendNotification({
       targetUserId,
@@ -120,78 +61,6 @@ export const usePushNotifications = () => {
     });
   };
 
-  const sendWellnessCheckinNotification = async (targetUserId: string) => {
-    return sendNotification({
-      targetUserId,
-      type: 'wellnessCheckin',
-      title: 'Wellness Check-in Reminder',
-      body: 'Time for your daily wellness check-in!',
-      data: { type: 'wellness_checkin' },
-    });
-  };
-
-  // Queued notification methods (batchable notifications)
-  const queueTaskCompletedNotification = (targetUserId: string, taskName: string, points: number) => {
-    queueNotification({
-      targetUserId,
-      type: 'taskCompleted',
-      title: 'Task Completed',
-      body: `Task completed: ${taskName} (+${points} points)`,
-      data: { type: 'task_completed', taskName, points },
-    });
-  };
-
-  const queueRewardPurchasedNotification = (targetUserId: string, rewardName: string, cost: number) => {
-    queueNotification({
-      targetUserId,
-      type: 'rewardPurchased',
-      title: 'Reward Purchased',
-      body: `Reward purchased: ${rewardName} (-${cost} points)`,
-      data: { type: 'reward_purchased', rewardName, cost },
-    });
-  };
-
-  const queueRewardRedeemedNotification = (targetUserId: string, rewardName: string) => {
-    queueNotification({
-      targetUserId,
-      type: 'rewardRedeemed',
-      title: 'Reward Redeemed',
-      body: `Reward redeemed: ${rewardName}`,
-      data: { type: 'reward_redeemed', rewardName },
-    });
-  };
-
-  const queuePunishmentPerformedNotification = (targetUserId: string, punishmentName: string, points: number) => {
-    queueNotification({
-      targetUserId,
-      type: 'punishmentPerformed',
-      title: 'Punishment Applied',
-      body: `Punishment applied: ${punishmentName} (-${points} points)`,
-      data: { type: 'punishment_performed', punishmentName, points },
-    });
-  };
-
-  const queueWellnessUpdatedNotification = (targetUserId: string, overallScore: number) => {
-    queueNotification({
-      targetUserId,
-      type: 'wellnessUpdated',
-      title: 'Wellness Updated',
-      body: `Wellness score updated: ${overallScore}/100`,
-      data: { type: 'wellness_updated', overallScore },
-    });
-  };
-
-  const queueMessageNotification = (targetUserId: string, senderName: string, messagePreview: string) => {
-    queueNotification({
-      targetUserId,
-      type: 'messages',
-      title: `New message from ${senderName}`,
-      body: messagePreview,
-      data: { type: 'message', senderName },
-    });
-  };
-
-  // Backward compatibility - legacy immediate methods
   const sendTaskCompletedNotification = async (targetUserId: string, taskName: string, points: number) => {
     return sendNotification({
       targetUserId,
@@ -242,6 +111,16 @@ export const usePushNotifications = () => {
     });
   };
 
+  const sendWellnessCheckinNotification = async (targetUserId: string) => {
+    return sendNotification({
+      targetUserId,
+      type: 'wellnessCheckin',
+      title: 'Wellness Check-in Reminder',
+      body: 'Time for your daily wellness check-in!',
+      data: { type: 'wellness_checkin' },
+    });
+  };
+
   const sendMessageNotification = async (targetUserId: string, senderName: string, messagePreview: string) => {
     return sendNotification({
       targetUserId,
@@ -252,46 +131,15 @@ export const usePushNotifications = () => {
     });
   };
 
-  // Platform detection and initialization
-  const initializePushNotifications = async (): Promise<boolean> => {
-    try {
-      await pushManager.initialize();
-      return await pushManager.requestPermissions();
-    } catch (error) {
-      logger.error('Error initializing push notifications:', error);
-      return false;
-    }
-  };
-
-  const getPlatform = () => pushManager.platform;
-
   return {
-    // Core methods
     sendNotification,
-    queueNotification,
-    
-    // Platform management
-    initializePushNotifications,
-    getPlatform,
-    
-    // Immediate notification methods (critical)
     sendRuleBrokenNotification,
-    sendWellnessCheckinNotification,
-    
-    // Queued notification methods (batchable)
-    queueTaskCompletedNotification,
-    queueRewardPurchasedNotification,
-    queueRewardRedeemedNotification,
-    queuePunishmentPerformedNotification,
-    queueWellnessUpdatedNotification,
-    queueMessageNotification,
-    
-    // Backward compatibility (legacy immediate methods)
     sendTaskCompletedNotification,
     sendRewardPurchasedNotification,
     sendRewardRedeemedNotification,
     sendPunishmentPerformedNotification,
     sendWellnessUpdatedNotification,
+    sendWellnessCheckinNotification,
     sendMessageNotification,
   };
 };
