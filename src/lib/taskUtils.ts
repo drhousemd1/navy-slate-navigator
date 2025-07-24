@@ -124,22 +124,30 @@ export const checkAndPerformTaskResets = async (): Promise<boolean> => {
     const lastDaily = localStorage.getItem("lastDaily");
     const currentDaily = todayKey();
     
-    if (lastDaily !== currentDaily) {
+    // Only reset if we have a previous day recorded AND it's different from today
+    if (lastDaily && lastDaily !== currentDaily) {
       logger.debug(`[checkAndPerformTaskResets] Performing daily reset: ${lastDaily} -> ${currentDaily}`);
       await resetTaskCompletions("daily");
       localStorage.setItem("lastDaily", currentDaily);
       resetPerformed = true;
+    } else if (!lastDaily) {
+      // First time - just set the current day without resetting
+      localStorage.setItem("lastDaily", currentDaily);
     }
     
     // Check weekly reset
     const lastWeekly = localStorage.getItem("lastWeek");
     const currentWeekly = currentWeekKey();
     
-    if (lastWeekly !== currentWeekly) {
+    // Only reset if we have a previous week recorded AND it's different from current week
+    if (lastWeekly && lastWeekly !== currentWeekly) {
       logger.debug(`[checkAndPerformTaskResets] Performing weekly reset: ${lastWeekly} -> ${currentWeekly}`);
       await resetTaskCompletions("weekly");
       localStorage.setItem("lastWeek", currentWeekly);
       resetPerformed = true;
+    } else if (!lastWeekly) {
+      // First time - just set the current week without resetting
+      localStorage.setItem("lastWeek", currentWeekly);
     }
     
     return resetPerformed;
