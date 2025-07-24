@@ -76,7 +76,7 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
       .update({ 
         completed: false,
         last_completed_date: null,
-        usage_data: [] // Clear the usage tracking data
+        usage_data: [0, 0, 0, 0, 0, 0, 0] // Reset to 7 zeros (Mon-Sun) instead of clearing
       })
       .in('id', tasks.map(task => task.id))
       .eq('user_id', session.user.id) // Ensure user-scoped update
