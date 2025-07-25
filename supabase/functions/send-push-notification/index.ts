@@ -108,7 +108,7 @@ async function buildVapidJWT() {
   const signature = signatureToJose(sigBytes);
   const jwt = `${signingInput}.${signature}`;
   console.log("[VAPID] JWT built length:", jwt.length);
-  return { jwt, publicKey: pubKeyB64 };
+  return { jwt, publicKey: bytesToB64url(pubBytes) };
 }
 
 /* ================= SEND EMPTY PUSH ================= */
