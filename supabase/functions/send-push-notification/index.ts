@@ -28,22 +28,29 @@ function bytesToB64url(bytes: Uint8Array): string {
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/,"");
 }
 
-/* ================= DER PARSER ================= */
-function derToJose(der: Uint8Array): string {
-  console.log("[DER] Raw length:", der.length);
-  if (der[0] !== 0x30) throw new Error("Invalid DER: missing 0x30");
+/* ================= SIGNATURE NORMALIZER (DER or RAW) ================= */
+// Accepts either DER (starts 0x30) or raw 64-byte r||s. Returns base64url(r||s).
+function signatureToJose(sig: Uint8Array): string {
+  // RAW path
+  if (sig.length === 64 && sig[0] !== 0x30) {
+    console.log("[SIG] Detected raw 64-byte signature");
+    return bytesToB64url(sig);
+  }
+  // DER path
+  console.log("[SIG] Attempting DER parse, length:", sig.length);
+  if (sig[0] !== 0x30) throw new Error("Invalid signature: neither raw(64) nor DER(0x30)");
   let offset = 1;
-  let seqLen = der[offset++];
+  let seqLen = sig[offset++];
   if (seqLen & 0x80) {
     const n = seqLen & 0x7f;
     if (n === 0 || n > 2) throw new Error("Invalid DER: bad length");
     seqLen = 0;
-    for (let i=0;i<n;i++) seqLen = (seqLen<<8) | der[offset++];
+    for (let i=0;i<n;i++) seqLen = (seqLen<<8) | sig[offset++];
   }
-  if (der[offset++] !== 0x02) throw new Error("Invalid DER: missing INTEGER r");
-  const rLen = der[offset++]; const r = der.slice(offset, offset+rLen); offset += rLen;
-  if (der[offset++] !== 0x02) throw new Error("Invalid DER: missing INTEGER s");
-  const sLen = der[offset++]; const s = der.slice(offset, offset+sLen);
+  if (sig[offset++] !== 0x02) throw new Error("Invalid DER: missing INTEGER r");
+  const rLen = sig[offset++]; const r = sig.slice(offset, offset+rLen); offset += rLen;
+  if (sig[offset++] !== 0x02) throw new Error("Invalid DER: missing INTEGER s");
+  const sLen = sig[offset++]; const s = sig.slice(offset, offset+sLen);
 
   const normalize = (buf: Uint8Array) => {
     let b = buf[0] === 0x00 ? buf.slice(1) : buf;
@@ -91,14 +98,14 @@ async function buildVapidJWT() {
   const payload = bytesToB64url(new TextEncoder().encode(JSON.stringify({aud,exp,sub:"mailto:admin@example.com"})));
   const signingInput = `${header}.${payload}`;
 
-  const sigDer = new Uint8Array(await crypto.subtle.sign(
+  const sigBytes = new Uint8Array(await crypto.subtle.sign(
     {name:"ECDSA", hash:"SHA-256"},
     key,
     new TextEncoder().encode(signingInput)
   ));
-  console.log("[VAPID] sign() DER length:", sigDer.length);
+  console.log("[VAPID] sign() returned length:", sigBytes.length, "firstByte:", sigBytes[0]);
 
-  const signature = derToJose(sigDer);
+  const signature = signatureToJose(sigBytes);
   const jwt = `${signingInput}.${signature}`;
   console.log("[VAPID] JWT built length:", jwt.length);
   return { jwt, publicKey: pubKeyB64 };
