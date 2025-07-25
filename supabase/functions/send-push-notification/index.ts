@@ -178,25 +178,52 @@ serve(async (req) => {
     }
 
     function derToJose(der: Uint8Array): string {
-      // Minimal ASN.1 parser for ECDSA signature
-      let offset = 2; // skip 0x30, length
-      if (der[offset] !== 0x02) throw new Error('Bad DER');
-      offset++;
-      const rLen = der[offset++];
-      const r = der.slice(offset, offset + rLen);
-      offset += rLen;
-      if (der[offset++] !== 0x02) throw new Error('Bad DER');
-      const sLen = der[offset++];
-      const s = der.slice(offset, offset + sLen);
+      // Optional debug — keep while testing
+      console.log("DER signature hex:", Array.from(der).map(b => b.toString(16).padStart(2,'0')).join(''));
 
-      const pad = (arr: Uint8Array) => arr[0] === 0 ? arr.slice(1) : arr;
-      const rPad = pad(r);
-      const sPad = pad(s);
-      const rOut = new Uint8Array(32);
-      rOut.set(rPad, 32 - rPad.length);
-      const sOut = new Uint8Array(32);
-      sOut.set(sPad, 32 - sPad.length);
-      return bytesToB64url(new Uint8Array([...rOut, ...sOut]));
+      if (der[0] !== 0x30) throw new Error('Invalid DER: missing 0x30');
+      let offset = 2;
+      let lengthByte = der[1];
+      if (lengthByte & 0x80) {
+        // Long-form length
+        const numLenBytes = lengthByte & 0x7f;
+        if (numLenBytes === 0 || numLenBytes > 2) throw new Error('Invalid DER: length field too large');
+        let totalLen = 0;
+        for (let i = 0; i < numLenBytes; i++) {
+          totalLen = (totalLen << 8) | der[2 + i];
+        }
+        offset = 2 + numLenBytes;
+        // (We don't really need totalLen for parsing r/s; trusting structure)
+      }
+
+      if (der[offset] !== 0x02) throw new Error('Invalid DER: missing INTEGER for r');
+      const rLen = der[offset + 1];
+      const rStart = offset + 2;
+      const rEnd = rStart + rLen;
+      const r = der.slice(rStart, rEnd);
+      offset = rEnd;
+
+      if (der[offset] !== 0x02) throw new Error('Invalid DER: missing INTEGER for s');
+      const sLen = der[offset + 1];
+      const sStart = offset + 2;
+      const sEnd = sStart + sLen;
+      const s = der.slice(sStart, sEnd);
+
+      const normalize = (buf: Uint8Array) => {
+        // Strip leading 0x00 if present
+        let b = buf[0] === 0x00 ? buf.slice(1) : buf;
+        if (b.length > 32) throw new Error('Invalid DER: component too long');
+        const out = new Uint8Array(32);
+        out.set(b, 32 - b.length);
+        return out;
+      };
+
+      const rOut = normalize(r);
+      const sOut = normalize(s);
+      const raw = new Uint8Array(64);
+      raw.set(rOut, 0);
+      raw.set(sOut, 32);
+      return bytesToB64url(raw);
     }
 
     // Create real VAPID JWT using WebCrypto ES256 signing
