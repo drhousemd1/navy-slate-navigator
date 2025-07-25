@@ -15,20 +15,24 @@ interface NotificationRequest {
 }
 
 serve(async (req) => {
+  console.log('=== PUSH NOTIFICATION FUNCTION START ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Timestamp:', new Date().toISOString());
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🚀 Push notification function started');
-    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
 
-    console.log('🔧 Environment check:');
+    console.log('Environment check:');
     console.log('- Supabase URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
     console.log('- Service Role Key:', supabaseKey ? '✅ Set' : '❌ Missing');
     console.log('- VAPID Public Key:', vapidPublicKey ? `✅ Set (${vapidPublicKey.length} chars)` : '❌ Missing');
@@ -50,6 +54,7 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('No authorization header');
       return new Response(
         JSON.stringify({ error: 'Authorization required' }),
         { 
@@ -61,7 +66,10 @@ serve(async (req) => {
 
     // Verify the user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    console.log('Auth result:', { hasUser: !!user, authError });
+    
     if (authError || !user) {
+      console.error('Authentication failed:', authError);
       return new Response(
         JSON.stringify({ error: 'Invalid authentication' }),
         { 
@@ -73,15 +81,14 @@ serve(async (req) => {
 
     const { targetUserId, type, title, body, data: notificationData }: NotificationRequest = await req.json();
     
-    console.log('📨 Notification request details:');
+    console.log('Notification request:');
     console.log('- Target User:', targetUserId);
     console.log('- Type:', type);
     console.log('- Title:', title);
     console.log('- Body:', body);
     console.log('- Sender:', user.id);
 
-    // Check if sender is authorized to send notifications to target user
-    console.log('🔍 Checking authorization...');
+    // Check authorization
     const { data: senderProfile } = await supabase
       .from('profiles')
       .select('linked_partner_id')
@@ -94,16 +101,13 @@ serve(async (req) => {
       .eq('id', targetUserId)
       .single();
 
-    console.log('👤 Profile data:');
-    console.log('- Sender profile:', senderProfile);
-    console.log('- Target profile:', targetProfile);
+    console.log('Profile data:', { senderProfile, targetProfile });
 
-    // Verify authorization: user can send to themselves or their linked partner
     const isAuthorized = user.id === targetUserId || 
                         senderProfile?.linked_partner_id === targetUserId ||
                         targetProfile?.linked_partner_id === user.id;
     
-    console.log('🔐 Authorization check:', isAuthorized ? '✅ Authorized' : '❌ Not authorized');
+    console.log('Authorization check:', isAuthorized ? '✅ Authorized' : '❌ Not authorized');
 
     if (!isAuthorized) {
       console.error('❌ Authorization failed');
@@ -116,23 +120,19 @@ serve(async (req) => {
       );
     }
 
-    // Get user's notification preferences
-    console.log('⚙️ Checking notification preferences...');
+    // Get notification preferences
     const { data: preferences } = await supabase
       .from('user_notification_preferences')
       .select('preferences')
       .eq('user_id', targetUserId)
       .single();
 
-    console.log('📋 User preferences:', preferences);
+    console.log('User preferences:', preferences);
 
-    // Check if notifications are enabled and type is allowed
     const isEnabled = preferences?.preferences?.enabled;
     const isTypeAllowed = preferences?.preferences?.types?.[type];
     
-    console.log('✅ Preferences check:');
-    console.log('- Notifications enabled:', isEnabled);
-    console.log('- Type allowed:', isTypeAllowed);
+    console.log('Preferences check - enabled:', isEnabled, 'type allowed:', isTypeAllowed);
     
     if (!isEnabled || !isTypeAllowed) {
       console.log(`❌ Notifications disabled for user ${targetUserId} or type ${type}`);
@@ -145,17 +145,13 @@ serve(async (req) => {
       );
     }
 
-    // Get user's push subscriptions
-    console.log('📱 Fetching push subscriptions...');
+    // Get push subscriptions
     const { data: subscriptions, error: subsError } = await supabase
       .from('user_push_subscriptions')
       .select('*')
       .eq('user_id', targetUserId);
 
-    console.log('📋 Subscriptions result:');
-    console.log('- Error:', subsError);
-    console.log('- Count:', subscriptions?.length || 0);
-    console.log('- Subscriptions:', subscriptions);
+    console.log('Subscriptions result:', { error: subsError, count: subscriptions?.length || 0 });
 
     if (subsError || !subscriptions || subscriptions.length === 0) {
       console.log(`❌ No push subscriptions found for user ${targetUserId}`);
@@ -168,125 +164,174 @@ serve(async (req) => {
       );
     }
 
-    // Simple VAPID JWT creation for testing
-    const createSimpleVapidJWT = (endpoint: string): string => {
-      const header = btoa(JSON.stringify({ typ: 'JWT', alg: 'ES256' }))
-        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-      
-      const payload = btoa(JSON.stringify({
-        aud: new URL(endpoint).origin,
-        exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
-        sub: 'mailto:admin@example.com'
-      })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-      
-      // For testing, we'll use a mock signature (this won't work for real notifications)
-      const signature = 'mock-signature-for-testing';
-      
-      return `${header}.${payload}.${signature}`;
-    };
-
-    // Send empty push notification for testing
-    const sendWebPushNotification = async (subscription: any): Promise<void> => {
-      console.log('📤 Starting empty push notification test...');
-      console.log('- Endpoint:', subscription.endpoint);
-      
-      try {
-        // Create VAPID authorization header
-        const jwt = createSimpleVapidJWT(subscription.endpoint);
-        
-        const headers: Record<string, string> = {
-          'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
-          'TTL': '86400'
-        };
-
-        console.log('📡 Sending empty push notification (testing delivery)...');
-        console.log('- Method: POST');
-        console.log('- Headers:', headers);
-        console.log('- Body: empty (no payload)');
-        
-        const response = await fetch(subscription.endpoint, {
-          method: 'POST',
-          headers
-          // No body - sending empty notification to test delivery
-        });
-
-        console.log('📨 Push service response:');
-        console.log('- Status:', response.status);
-        console.log('- Status Text:', response.statusText);
-        
-        if (!response.ok) {
-          const responseText = await response.text();
-          console.error('❌ Push service error:', response.status, responseText);
-          
-          // Handle expired/invalid subscriptions
-          if (response.status === 410 || response.status === 404) {
-            console.log('🗑️ Subscription appears invalid, removing...');
-            await supabase
-              .from('user_push_subscriptions')
-              .delete()
-              .eq('id', subscription.id);
-            console.log('✅ Invalid subscription removed');
-          }
-          
-          throw new Error(`Push service error: ${response.status} - ${responseText}`);
-        }
-        
-        console.log('✅ Empty push notification sent successfully (testing delivery)');
-        
-      } catch (error: any) {
-        console.error('❌ Error sending push notification:', error);
-        throw error;
-      }
-    };
-
-    // Send push notifications
-    console.log('🚀 Starting to send push notifications to', subscriptions.length, 'subscriptions...');
-    
-    let successCount = 0;
-    let failedCount = 0;
-
-    console.log('🧪 Testing empty push notifications (no payload) to verify delivery...');
-    console.log('📋 Expected behavior: Service worker should show default notification');
-
-    for (let i = 0; i < subscriptions.length; i++) {
-      const subscription = subscriptions[i];
-      
-      console.log(`\n📱 Processing subscription ${i + 1}/${subscriptions.length}:`);
-      console.log('- ID:', subscription.id);
-      console.log('- Endpoint:', subscription.endpoint);
-      
-      try {
-        await sendWebPushNotification(subscription);
-        successCount++;
-        console.log(`✅ Empty notification ${i + 1} sent successfully`);
-      } catch (error: any) {
-        failedCount++;
-        console.error(`❌ Failed to send notification ${i + 1}:`, error.message);
-      }
+    // WebCrypto JWT signing implementation
+    function b64urlToBytes(b64: string): Uint8Array {
+      b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = b64.length % 4 ? 4 - (b64.length % 4) : 0;
+      const bin = atob(b64 + '='.repeat(pad));
+      return Uint8Array.from(bin, c => c.charCodeAt(0));
     }
 
-    console.log('\n📈 Final Results:');
-    console.log(`- ✅ Successful: ${successCount}`);
-    console.log(`- ❌ Failed: ${failedCount}`);
-    console.log(`- 📊 Total: ${subscriptions.length}`);
+    function bytesToB64url(bytes: Uint8Array): string {
+      let s = btoa(String.fromCharCode(...bytes));
+      return s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
 
-    return new Response(
-      JSON.stringify({ 
-        message: 'Push notifications processed',
-        successful: successCount,
-        failed: failedCount,
-        total: subscriptions.length
-      }),
-      { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+    function derToJose(der: Uint8Array): string {
+      // Minimal ASN.1 parser for ECDSA signature
+      let offset = 2; // skip 0x30, length
+      if (der[offset] !== 0x02) throw new Error('Bad DER');
+      offset++;
+      const rLen = der[offset++];
+      const r = der.slice(offset, offset + rLen);
+      offset += rLen;
+      if (der[offset++] !== 0x02) throw new Error('Bad DER');
+      const sLen = der[offset++];
+      const s = der.slice(offset, offset + sLen);
+
+      const pad = (arr: Uint8Array) => arr[0] === 0 ? arr.slice(1) : arr;
+      const rPad = pad(r);
+      const sPad = pad(s);
+      const rOut = new Uint8Array(32);
+      rOut.set(rPad, 32 - rPad.length);
+      const sOut = new Uint8Array(32);
+      sOut.set(sPad, 32 - sPad.length);
+      return bytesToB64url(new Uint8Array([...rOut, ...sOut]));
+    }
+
+    // Create real VAPID JWT using WebCrypto ES256 signing
+    console.log('Creating VAPID JWT with WebCrypto ES256 signing...');
+    
+    try {
+      // Derive x,y from uncompressed public key (65 bytes, first byte 0x04)
+      const pubBytes = b64urlToBytes(vapidPublicKey);
+      console.log('Public key bytes length:', pubBytes.length);
+      
+      const x = bytesToB64url(pubBytes.slice(1, 33));
+      const y = bytesToB64url(pubBytes.slice(33, 65));
+      const d = vapidPrivateKey; // already base64url
+
+      // Import private key for ES256 signing
+      const key = await crypto.subtle.importKey(
+        'jwk',
+        { kty: 'EC', crv: 'P-256', d, x, y, ext: true },
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        false,
+        ['sign']
+      );
+
+      console.log('Private key imported successfully');
+
+      // Build JWT with proper audience for Apple's service
+      const aud = 'https://web.push.apple.com';
+      const exp = Math.floor(Date.now() / 1000) + 12 * 60 * 60; // 12 hours
+      const jwtHeader = bytesToB64url(new TextEncoder().encode(JSON.stringify({ alg: 'ES256', typ: 'JWT' })));
+      const jwtPayload = bytesToB64url(new TextEncoder().encode(JSON.stringify({ 
+        aud, 
+        exp, 
+        sub: 'mailto:admin@example.com' 
+      })));
+      
+      const toSign = new TextEncoder().encode(`${jwtHeader}.${jwtPayload}`);
+      const sigDer = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, toSign));
+
+      // Convert DER signature to JOSE format (raw R||S)
+      const sig = derToJose(sigDer);
+      const jwt = `${jwtHeader}.${jwtPayload}.${sig}`;
+
+      console.log('VAPID JWT created and signed successfully');
+
+      // Send notifications with proper WebPush headers
+      let successCount = 0;
+      let failedCount = 0;
+
+      console.log('🧪 Testing empty push notifications with real ES256 VAPID JWT...');
+
+      for (let i = 0; i < subscriptions.length; i++) {
+        const subscription = subscriptions[i];
+        
+        console.log(`\n📱 Processing subscription ${i + 1}/${subscriptions.length}:`);
+        console.log('- ID:', subscription.id);
+        console.log('- Endpoint:', subscription.endpoint);
+        
+        try {
+          // Headers for empty push notification with proper VAPID auth
+          const headers = {
+            'Authorization': `WebPush ${jwt}`,
+            'Crypto-Key': `p256ecdsa=${vapidPublicKey}`,
+            'TTL': '86400'
+          };
+
+          console.log('Request headers:', headers);
+
+          const response = await fetch(subscription.endpoint, {
+            method: 'POST',
+            headers
+            // No body for empty push test
+          });
+
+          console.log(`Push response: ${response.status} ${response.statusText}`);
+          
+          if (response.ok || response.status === 201) {
+            successCount++;
+            console.log(`✅ Empty notification ${i + 1} sent successfully`);
+          } else {
+            failedCount++;
+            const errorText = await response.text();
+            console.error(`❌ Failed notification ${i + 1}:`, response.status, errorText);
+            
+            // Remove invalid subscriptions
+            if (response.status === 410 || response.status === 404) {
+              console.log('🗑️ Removing invalid subscription');
+              await supabase
+                .from('user_push_subscriptions')
+                .delete()
+                .eq('id', subscription.id);
+            }
+          }
+        } catch (error: any) {
+          failedCount++;
+          console.error(`❌ Error sending notification ${i + 1}:`, error.message);
+        }
       }
-    );
+
+      console.log('\n=== FINAL RESULTS ===');
+      console.log(`✅ Successful: ${successCount}`);
+      console.log(`❌ Failed: ${failedCount}`);
+      console.log(`📊 Total: ${subscriptions.length}`);
+
+      return new Response(
+        JSON.stringify({ 
+          message: 'Empty push notifications processed with real VAPID JWT',
+          successful: successCount,
+          failed: failedCount,
+          total: subscriptions.length,
+          jwtCreated: true
+        }),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+
+    } catch (jwtError) {
+      console.error('❌ JWT creation failed:', jwtError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to create VAPID JWT',
+          details: jwtError.message 
+        }),
+        { 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
 
   } catch (error) {
-    console.error('Error in send-push-notification function:', error);
+    console.error('=== FUNCTION ERROR ===', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: error.message }),
       { 
         status: 500, 
         headers: { 'Content-Type': 'application/json', ...corsHeaders } 
