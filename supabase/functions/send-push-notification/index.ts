@@ -164,55 +164,47 @@ serve(async (req) => {
       );
     }
 
-    // WebCrypto JWT signing implementation
-    function b64urlToBytes(b64: string): Uint8Array {
-      b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+    // ---------------------- BASE64 HELPERS ----------------------
+    function b64urlToBytes(input: string): Uint8Array {
+      if (!input) throw new Error('Empty base64 input');
+      let b64 = input.replace(/-/g, '+').replace(/_/g, '/');
       const pad = b64.length % 4 ? 4 - (b64.length % 4) : 0;
-      const bin = atob(b64 + '='.repeat(pad));
+      b64 += '='.repeat(pad);
+      const bin = atob(b64);
       return Uint8Array.from(bin, c => c.charCodeAt(0));
     }
-
     function bytesToB64url(bytes: Uint8Array): string {
-      let s = btoa(String.fromCharCode(...bytes));
-      return s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const bin = String.fromCharCode(...bytes);
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
     }
 
+    // ---------------------- DER PARSER (ROBUST) ----------------------
     function derToJose(der: Uint8Array): string {
-      // Optional debug — keep while testing
-      console.log("DER signature hex:", Array.from(der).map(b => b.toString(16).padStart(2,'0')).join(''));
+      console.log('[DER] Raw length:', der.length);
+      console.log('[DER] Hex:', Array.from(der).map(b => b.toString(16).padStart(2,'0')).join(''));
 
-      if (der[0] !== 0x30) throw new Error('Invalid DER: missing 0x30');
-      let offset = 2;
-      let lengthByte = der[1];
-      if (lengthByte & 0x80) {
-        // Long-form length
-        const numLenBytes = lengthByte & 0x7f;
-        if (numLenBytes === 0 || numLenBytes > 2) throw new Error('Invalid DER: length field too large');
-        let totalLen = 0;
-        for (let i = 0; i < numLenBytes; i++) {
-          totalLen = (totalLen << 8) | der[2 + i];
-        }
-        offset = 2 + numLenBytes;
-        // (We don't really need totalLen for parsing r/s; trusting structure)
+      if (der[0] !== 0x30) throw new Error('Invalid DER: missing 0x30 sequence tag');
+      let offset = 1;
+      let seqLen = der[offset++];
+      if (seqLen & 0x80) { // long-form length
+        const numLenBytes = seqLen & 0x7f;
+        if (numLenBytes === 0 || numLenBytes > 2) throw new Error('Invalid DER: bad sequence length');
+        seqLen = 0;
+        for (let i = 0; i < numLenBytes; i++) seqLen = (seqLen << 8) | der[offset++];
       }
 
-      if (der[offset] !== 0x02) throw new Error('Invalid DER: missing INTEGER for r');
-      const rLen = der[offset + 1];
-      const rStart = offset + 2;
-      const rEnd = rStart + rLen;
-      const r = der.slice(rStart, rEnd);
-      offset = rEnd;
+      if (der[offset++] !== 0x02) throw new Error('Invalid DER: missing INTEGER tag for r');
+      const rLen = der[offset++];
+      const r = der.slice(offset, offset + rLen);
+      offset += rLen;
 
-      if (der[offset] !== 0x02) throw new Error('Invalid DER: missing INTEGER for s');
-      const sLen = der[offset + 1];
-      const sStart = offset + 2;
-      const sEnd = sStart + sLen;
-      const s = der.slice(sStart, sEnd);
+      if (der[offset++] !== 0x02) throw new Error('Invalid DER: missing INTEGER tag for s');
+      const sLen = der[offset++];
+      const s = der.slice(offset, offset + sLen);
 
       const normalize = (buf: Uint8Array) => {
-        // Strip leading 0x00 if present
         let b = buf[0] === 0x00 ? buf.slice(1) : buf;
-        if (b.length > 32) throw new Error('Invalid DER: component too long');
+        if (b.length > 32) throw new Error('Invalid DER: component longer than 32 bytes');
         const out = new Uint8Array(32);
         out.set(b, 32 - b.length);
         return out;
@@ -220,105 +212,147 @@ serve(async (req) => {
 
       const rOut = normalize(r);
       const sOut = normalize(s);
+      console.log('[DER] r length (normalized):', rOut.length, 's length:', sOut.length);
       const raw = new Uint8Array(64);
       raw.set(rOut, 0);
       raw.set(sOut, 32);
       return bytesToB64url(raw);
     }
 
-    // Create real VAPID JWT using WebCrypto ES256 signing
-    console.log('Creating VAPID JWT with WebCrypto ES256 signing...');
-    
-    try {
-      // Derive x,y from uncompressed public key (65 bytes, first byte 0x04)
-      const pubBytes = b64urlToBytes(vapidPublicKey);
-      console.log('Public key bytes length:', pubBytes.length);
-      
+    // ---------------------- VAPID BUILD ----------------------
+    async function buildVapidJWT() {
+      console.log('--- VAPID JWT BUILD START ---');
+
+      const pubKeyB64 = Deno.env.get('VAPID_PUBLIC_KEY');
+      const privKeyB64 = Deno.env.get('VAPID_PRIVATE_KEY');
+      if (!pubKeyB64 || !privKeyB64) {
+        throw new Error('Missing VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY environment variables');
+      }
+
+      // Decode
+      let pubBytes: Uint8Array;
+      let privBytes: Uint8Array;
+      try {
+        pubBytes = b64urlToBytes(pubKeyB64);
+        privBytes = b64urlToBytes(privKeyB64);
+      } catch (e) {
+        console.error('[VAPID] Base64 decode failed:', e);
+        throw e;
+      }
+      console.log('[VAPID] Public key bytes length:', pubBytes.length);
+      console.log('[VAPID] Private key bytes length:', privBytes.length);
+
+      // Validate lengths
+      if (pubBytes.length !== 65 || pubBytes[0] !== 0x04) {
+        throw new Error('Public key must be 65 bytes uncompressed starting with 0x04');
+      }
+      if (privBytes.length !== 32) {
+        throw new Error('Private key must be exactly 32 bytes');
+      }
+
+      // Derive JWK coordinates
       const x = bytesToB64url(pubBytes.slice(1, 33));
       const y = bytesToB64url(pubBytes.slice(33, 65));
-      const d = vapidPrivateKey; // already base64url
+      const d = privKeyB64.replace(/=/g,''); // treat as already base64url
+      console.log('[VAPID] Derived x,y lengths:', x.length, y.length);
 
-      // Import private key for ES256 signing
-      const key = await crypto.subtle.importKey(
-        'jwk',
-        { kty: 'EC', crv: 'P-256', d, x, y, ext: true },
-        { name: 'ECDSA', namedCurve: 'P-256' },
-        false,
-        ['sign']
-      );
+      // Import private key
+      let key: CryptoKey;
+      try {
+        key = await crypto.subtle.importKey(
+          'jwk',
+          { kty: 'EC', crv: 'P-256', d, x, y, ext: true },
+          { name: 'ECDSA', namedCurve: 'P-256' },
+          false,
+          ['sign']
+        );
+        console.log('[VAPID] Private key import OK');
+      } catch (e) {
+        console.error('[VAPID] importKey failed:', e);
+        throw e;
+      }
 
-      console.log('Private key imported successfully');
-
-      // Build JWT with proper audience for Apple's service
+      // Build header/payload
       const aud = 'https://web.push.apple.com';
-      const exp = Math.floor(Date.now() / 1000) + 12 * 60 * 60; // 12 hours
-      const jwtHeader = bytesToB64url(new TextEncoder().encode(JSON.stringify({ alg: 'ES256', typ: 'JWT' })));
-      const jwtPayload = bytesToB64url(new TextEncoder().encode(JSON.stringify({ 
-        aud, 
-        exp, 
-        sub: 'mailto:admin@example.com' 
-      })));
-      
-      const toSign = new TextEncoder().encode(`${jwtHeader}.${jwtPayload}`);
-      const sigDer = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, toSign));
+      const exp = Math.floor(Date.now() / 1000) + 12 * 60 * 60;
+      const header = bytesToB64url(new TextEncoder().encode(JSON.stringify({ alg: 'ES256', typ: 'JWT' })));
+      const payload = bytesToB64url(new TextEncoder().encode(JSON.stringify({ aud, exp, sub: 'mailto:admin@example.com' })));
+      const signingInput = `${header}.${payload}`;
 
-      // Convert DER signature to JOSE format (raw R||S)
-      const sig = derToJose(sigDer);
-      const jwt = `${jwtHeader}.${jwtPayload}.${sig}`;
+      // Sign
+      let sigDer: Uint8Array;
+      try {
+        sigDer = new Uint8Array(
+          await crypto.subtle.sign(
+            { name: 'ECDSA', hash: 'SHA-256' },
+            key,
+            new TextEncoder().encode(signingInput)
+          )
+        );
+        console.log('[VAPID] sign() produced DER length:', sigDer.length);
+      } catch (e) {
+        console.error('[VAPID] sign() failed:', e);
+        throw e;
+      }
 
-      console.log('VAPID JWT created and signed successfully');
+      // DER -> raw signature
+      let signatureB64url: string;
+      try {
+        signatureB64url = derToJose(sigDer);
+      } catch (e) {
+        console.error('[VAPID] DER parse failed:', e);
+        throw e;
+      }
 
-      // Send notifications with proper WebPush headers
+      const jwt = `${signingInput}.${signatureB64url}`;
+      console.log('[VAPID] JWT created successfully (length):', jwt.length);
+      return { jwt, publicKey: pubKeyB64 };
+    }
+
+    // ---------------------- SEND EMPTY PUSH (CALL THIS) ----------------------
+    async function sendEmptyPush(subscription: { endpoint: string }) {
+      console.log('--- SEND EMPTY PUSH START ---');
+      const { jwt, publicKey } = await buildVapidJWT();
+
+      const headers: Record<string, string> = {
+        'Authorization': `WebPush ${jwt}`,
+        'Crypto-Key': `p256ecdsa=${publicKey}`,
+        'TTL': '86400'
+      };
+      console.log('[PUSH] Headers prepared:', headers);
+
+      const resp = await fetch(subscription.endpoint, { method: 'POST', headers });
+      const text = await resp.text().catch(() => '');
+      console.log('[PUSH] Service response status:', resp.status, 'body:', text.slice(0, 200));
+      if (resp.status >= 400) {
+        throw new Error(`Push service returned HTTP ${resp.status}`);
+      }
+      console.log('--- SEND EMPTY PUSH END (SUCCESS) ---');
+    }
+
+    // ---------------------- MAIN HANDLER ----------------------
+    try {
       let successCount = 0;
       let failedCount = 0;
+      
+      console.log('🧪 Testing empty push notifications with ChatGPT DROP-IN PATCH...');
 
-      console.log('🧪 Testing empty push notifications with real ES256 VAPID JWT...');
-
-      for (let i = 0; i < subscriptions.length; i++) {
-        const subscription = subscriptions[i];
-        
-        console.log(`\n📱 Processing subscription ${i + 1}/${subscriptions.length}:`);
-        console.log('- ID:', subscription.id);
-        console.log('- Endpoint:', subscription.endpoint);
-        
+      for (const subscription of subscriptions) {
         try {
-          // Headers for empty push notification with proper VAPID auth
-          const headers = {
-            'Authorization': `WebPush ${jwt}`,
-            'Crypto-Key': `p256ecdsa=${vapidPublicKey}`,
-            'TTL': '86400'
-          };
-
-          console.log('Request headers:', headers);
-
-          const response = await fetch(subscription.endpoint, {
-            method: 'POST',
-            headers
-            // No body for empty push test
-          });
-
-          console.log(`Push response: ${response.status} ${response.statusText}`);
-          
-          if (response.ok || response.status === 201) {
-            successCount++;
-            console.log(`✅ Empty notification ${i + 1} sent successfully`);
-          } else {
-            failedCount++;
-            const errorText = await response.text();
-            console.error(`❌ Failed notification ${i + 1}:`, response.status, errorText);
-            
-            // Remove invalid subscriptions
-            if (response.status === 410 || response.status === 404) {
-              console.log('🗑️ Removing invalid subscription');
-              await supabase
-                .from('user_push_subscriptions')
-                .delete()
-                .eq('id', subscription.id);
-            }
-          }
+          await sendEmptyPush(subscription);
+          successCount++;
         } catch (error: any) {
           failedCount++;
-          console.error(`❌ Error sending notification ${i + 1}:`, error.message);
+          console.error('[MAIN] Push failed:', error.message);
+          
+          // Remove invalid subscriptions on 410/404
+          if (error.message.includes('410') || error.message.includes('404')) {
+            console.log('🗑️ Removing invalid subscription');
+            await supabase
+              .from('user_push_subscriptions')
+              .delete()
+              .eq('endpoint', subscription.endpoint);
+          }
         }
       }
 
@@ -329,11 +363,11 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
-          message: 'Empty push notifications processed with real VAPID JWT',
+          message: 'Empty push notifications processed with ChatGPT DROP-IN PATCH',
           successful: successCount,
           failed: failedCount,
           total: subscriptions.length,
-          jwtCreated: true
+          patchVersion: 'ChatGPT-DROP-IN-PATCH'
         }),
         { 
           status: 200, 
@@ -341,12 +375,12 @@ serve(async (req) => {
         }
       );
 
-    } catch (jwtError) {
-      console.error('❌ JWT creation failed:', jwtError);
+    } catch (mainError) {
+      console.error('[MAIN] FATAL ERROR:', mainError);
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to create VAPID JWT',
-          details: jwtError.message 
+          error: 'Main handler failed',
+          details: String(mainError) 
         }),
         { 
           status: 500, 
