@@ -119,9 +119,14 @@ async function sendEmptyPush(endpoint: string) {
     "Authorization": `WebPush ${jwt}`,
     "Crypto-Key": `p256ecdsa=${publicKey}`,
     "TTL": "86400",
+    "Content-Length": "0"
   };
   console.log("[PUSH] Headers:", headers);
-  const resp = await fetch(endpoint, { method:"POST", headers });
+  const resp = await fetch(endpoint, { 
+    method: "POST", 
+    headers,
+    body: ""
+  });
   const text = await resp.text().catch(()=> "");
   console.log("[PUSH] Response status:", resp.status, "body:", text.slice(0,200));
   if (resp.status >= 400) throw new Error("Push service HTTP "+resp.status);
