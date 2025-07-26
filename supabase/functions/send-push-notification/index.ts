@@ -14,6 +14,14 @@ function jsonResponse(body: any, status = 200) {
   });
 }
 
+interface PushNotificationPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  data?: any;
+}
+
 /* ================= BASE64 HELPERS ================= */
 function b64urlToBytes(input: string): Uint8Array {
   if (!input) throw new Error("Empty base64 input");
@@ -111,26 +119,210 @@ async function buildVapidJWT() {
   return { jwt, publicKey: bytesToB64url(pubBytes) };
 }
 
-/* ================= SEND EMPTY PUSH ================= */
-async function sendEmptyPush(endpoint: string) {
-  console.log("--- SEND EMPTY PUSH START ---");
-  const { jwt, publicKey } = await buildVapidJWT();
-  const headers: Record<string,string> = {
-    "Authorization": `WebPush ${jwt}`,
-    "Crypto-Key": `p256ecdsa=${publicKey}`,
-    "TTL": "86400",
-    "Content-Length": "0"
+/* ================= WEB PUSH ENCRYPTION ================= */
+async function generateKeys() {
+  const keyPair = await crypto.subtle.generateKey(
+    { name: "ECDH", namedCurve: "P-256" },
+    true,
+    ["deriveKey"]
+  );
+  
+  const publicKey = await crypto.subtle.exportKey("raw", keyPair.publicKey);
+  const privateKey = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
+  
+  return {
+    publicKey: new Uint8Array(publicKey),
+    privateKey: keyPair.privateKey,
+    publicKeyBytes: new Uint8Array(publicKey)
   };
+}
+
+async function deriveEncryptionKeys(
+  serverPrivateKey: CryptoKey,
+  clientPublicKey: Uint8Array,
+  auth: Uint8Array,
+  salt: Uint8Array
+) {
+  // Import client public key
+  const clientKey = await crypto.subtle.importKey(
+    "raw",
+    clientPublicKey,
+    { name: "ECDH", namedCurve: "P-256" },
+    false,
+    []
+  );
+
+  // Derive shared secret
+  const sharedSecret = await crypto.subtle.deriveKey(
+    { name: "ECDH", public: clientKey },
+    serverPrivateKey,
+    { name: "HKDF", hash: "SHA-256" },
+    false,
+    ["deriveKey"]
+  );
+
+  // Create auth_info and key_info for HKDF
+  const authInfo = new TextEncoder().encode("Content-Encoding: auth\0");
+  const keyInfo = new TextEncoder().encode("Content-Encoding: aesgcm\0");
+
+  // Derive auth key
+  const authKey = await crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: auth,
+      info: authInfo
+    },
+    sharedSecret,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  // Derive content encryption key
+  const contentKey = await crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: salt,
+      info: keyInfo
+    },
+    sharedSecret,
+    { name: "AES-GCM", length: 128 },
+    false,
+    ["encrypt"]
+  );
+
+  return { authKey, contentKey };
+}
+
+async function encryptPayload(
+  payload: string,
+  clientPublicKey: Uint8Array,
+  auth: Uint8Array
+): Promise<{
+  encryptedData: Uint8Array;
+  salt: Uint8Array;
+  serverPublicKey: Uint8Array;
+}> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const serverKeys = await generateKeys();
+  
+  const { contentKey } = await deriveEncryptionKeys(
+    serverKeys.privateKey,
+    clientPublicKey,
+    auth,
+    salt
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const payloadBuffer = new TextEncoder().encode(payload);
+  
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    contentKey,
+    payloadBuffer
+  );
+
+  // Combine salt + record size + server public key + encrypted data
+  const recordSize = new Uint8Array(4);
+  new DataView(recordSize.buffer).setUint32(0, payloadBuffer.length + 16, false);
+  
+  const result = new Uint8Array(salt.length + recordSize.length + serverKeys.publicKeyBytes.length + encrypted.byteLength);
+  let offset = 0;
+  result.set(salt, offset); offset += salt.length;
+  result.set(recordSize, offset); offset += recordSize.length;
+  result.set(serverKeys.publicKeyBytes, offset); offset += serverKeys.publicKeyBytes.length;
+  result.set(new Uint8Array(encrypted), offset);
+
+  return {
+    encryptedData: result,
+    salt,
+    serverPublicKey: serverKeys.publicKeyBytes
+  };
+}
+
+/* ================= SEND RICH PUSH NOTIFICATION ================= */
+async function sendPushNotification(
+  endpoint: string, 
+  payload: PushNotificationPayload,
+  clientPublicKey?: Uint8Array,
+  auth?: Uint8Array
+) {
+  console.log("--- SEND PUSH NOTIFICATION START ---");
+  console.log("[PUSH] Payload:", JSON.stringify(payload));
+  
+  const { jwt, publicKey: vapidPublicKey } = await buildVapidJWT();
+  
+  const headers: Record<string, string> = {
+    "Authorization": `WebPush ${jwt}`,
+    "TTL": "86400",
+  };
+
+  let body: Uint8Array | string = "";
+  
+  // If we have client keys, encrypt the payload
+  if (clientPublicKey && auth && payload.title && payload.body) {
+    try {
+      const payloadJson = JSON.stringify({
+        title: payload.title,
+        body: payload.body,
+        icon: payload.icon || "/icons/icon-192.png",
+        badge: payload.badge || "/icons/icon-192.png",
+        data: payload.data || {}
+      });
+      
+      const { encryptedData, salt, serverPublicKey } = await encryptPayload(
+        payloadJson,
+        clientPublicKey,
+        auth
+      );
+      
+      headers["Content-Type"] = "application/octet-stream";
+      headers["Content-Encoding"] = "aesgcm";
+      headers["Crypto-Key"] = `dh=${bytesToB64url(serverPublicKey)};p256ecdsa=${vapidPublicKey}`;
+      headers["Encryption"] = `salt=${bytesToB64url(salt)}`;
+      headers["Content-Length"] = encryptedData.length.toString();
+      
+      body = encryptedData;
+      console.log("[PUSH] Sending encrypted payload, size:", encryptedData.length);
+    } catch (e) {
+      console.error("[PUSH] Encryption failed, falling back to empty push:", e);
+      headers["Crypto-Key"] = `p256ecdsa=${vapidPublicKey}`;
+      headers["Content-Length"] = "0";
+      body = "";
+    }
+  } else {
+    // Fallback to empty push
+    console.log("[PUSH] No client keys, sending empty push");
+    headers["Crypto-Key"] = `p256ecdsa=${vapidPublicKey}`;
+    headers["Content-Length"] = "0";
+    body = "";
+  }
+
   console.log("[PUSH] Headers:", headers);
-  const resp = await fetch(endpoint, { 
-    method: "POST", 
+  
+  const resp = await fetch(endpoint, {
+    method: "POST",
     headers,
-    body: ""
+    body
   });
-  const text = await resp.text().catch(()=> "");
-  console.log("[PUSH] Response status:", resp.status, "body:", text.slice(0,200));
-  if (resp.status >= 400) throw new Error("Push service HTTP "+resp.status);
-  console.log("--- SEND EMPTY PUSH END SUCCESS ---");
+  
+  const responseText = await resp.text().catch(() => "");
+  console.log("[PUSH] Response status:", resp.status, "body:", responseText.slice(0, 200));
+  
+  if (resp.status >= 400) {
+    throw new Error(`Push service HTTP ${resp.status}: ${responseText}`);
+  }
+  
+  console.log("--- SEND PUSH NOTIFICATION END SUCCESS ---");
+  return { success: true, status: resp.status };
+}
+
+/* ================= FALLBACK EMPTY PUSH ================= */
+async function sendEmptyPush(endpoint: string) {
+  const emptyPayload: PushNotificationPayload = { title: "", body: "" };
+  return sendPushNotification(endpoint, emptyPayload);
 }
 
 /* ================= MAIN HANDLER ================= */
@@ -171,10 +363,21 @@ serve(async (req: Request) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
-    // Look up subscriptions
+    // Extract notification payload from request
+    const notificationPayload: PushNotificationPayload = {
+      title: body.title || "Notification",
+      body: body.body || "You have a new notification",
+      icon: body.icon || "/icons/icon-192.png",
+      badge: body.badge || "/icons/icon-192.png",
+      data: body.data || { type: notifType }
+    };
+
+    console.log("[MAIN] Extracted payload:", JSON.stringify(notificationPayload));
+
+    // Look up subscriptions with encryption keys
     const { data: subs, error: subErr } = await admin
       .from("user_push_subscriptions")
-      .select("endpoint")
+      .select("endpoint, p256dh, auth")
       .eq("user_id", targetUserId);
 
     if (subErr) {
@@ -199,17 +402,38 @@ serve(async (req: Request) => {
       return jsonResponse({ ok:false, reason:"disabled" }, 200);
     }
 
-    // Send empty push to each subscription (payload encryption later)
+    // Send rich push notification to each subscription
+    let sentCount = 0;
     for (const sub of subs) {
       try {
-        await sendEmptyPush(sub.endpoint);
+        let clientPublicKey: Uint8Array | undefined;
+        let auth: Uint8Array | undefined;
+        
+        // Try to decode encryption keys if available
+        if (sub.p256dh && sub.auth) {
+          try {
+            clientPublicKey = b64urlToBytes(sub.p256dh);
+            auth = b64urlToBytes(sub.auth);
+            console.log("[MAIN] Using encryption for endpoint:", sub.endpoint.slice(0, 50) + "...");
+          } catch (e) {
+            console.warn("[MAIN] Failed to decode encryption keys:", e);
+          }
+        }
+        
+        await sendPushNotification(
+          sub.endpoint, 
+          notificationPayload, 
+          clientPublicKey, 
+          auth
+        );
+        sentCount++;
       } catch (e) {
-        console.error("Send failed for endpoint:", sub.endpoint, e);
+        console.error("Send failed for endpoint:", sub.endpoint.slice(0, 50) + "...", e);
       }
     }
 
     console.log("=== PUSH NOTIFICATION FUNCTION END ===");
-    return jsonResponse({ ok:true, sent: subs.length });
+    return jsonResponse({ ok:true, sent: sentCount, total: subs.length });
   } catch (e) {
     console.error("FATAL ERROR:", e);
     return jsonResponse({ error:String(e) }, 500);
