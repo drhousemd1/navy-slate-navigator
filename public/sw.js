@@ -60,30 +60,63 @@ self.addEventListener('fetch', (event) => {
 // Push event - handle incoming push notifications
 self.addEventListener('push', (event) => {
   console.log('Push event received:', event);
+  console.log('Push data available:', !!event.data);
   
-  let notificationData;
-  try {
-    notificationData = event.data ? event.data.json() : {};
-  } catch (error) {
-    console.error('Failed to parse push data:', error);
-    notificationData = { title: 'Navy Slate Navigator', body: 'New notification' };
+  let notificationData = {
+    title: 'Navy Slate Navigator',
+    body: 'New notification',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: {}
+  };
+  
+  // Handle encrypted push data
+  if (event.data) {
+    try {
+      // Try to parse as JSON first (for encrypted payloads)
+      const jsonData = event.data.json();
+      console.log('Parsed push data:', jsonData);
+      notificationData = {
+        title: jsonData.title || notificationData.title,
+        body: jsonData.body || notificationData.body,
+        icon: jsonData.icon || notificationData.icon,
+        badge: jsonData.badge || notificationData.badge,
+        data: jsonData.data || notificationData.data
+      };
+    } catch (jsonError) {
+      console.log('Failed to parse as JSON, trying text:', jsonError);
+      try {
+        // Try to parse as text
+        const textData = event.data.text();
+        console.log('Push text data:', textData);
+        if (textData) {
+          try {
+            const parsedText = JSON.parse(textData);
+            notificationData = {
+              title: parsedText.title || notificationData.title,
+              body: parsedText.body || notificationData.body,
+              icon: parsedText.icon || notificationData.icon,
+              badge: parsedText.badge || notificationData.badge,
+              data: parsedText.data || notificationData.data
+            };
+          } catch (parseError) {
+            console.log('Failed to parse text as JSON, using as body');
+            notificationData.body = textData;
+          }
+        }
+      } catch (textError) {
+        console.error('Failed to parse push data as text:', textError);
+        // Use default notification data
+      }
+    }
   }
 
-  const {
-    title = 'Navy Slate Navigator',
-    body = 'New notification',
-    icon = '/icons/icon-192.png',
-    badge = '/icons/icon-192.png',
-    tag,
-    data = {}
-  } = notificationData;
-
   const notificationOptions = {
-    body,
-    icon,
-    badge,
-    tag,
-    data,
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    tag: notificationData.data?.type || 'default',
+    data: notificationData.data,
     requireInteraction: true,
     actions: [
       {
@@ -97,8 +130,10 @@ self.addEventListener('push', (event) => {
     ]
   };
 
+  console.log('Showing notification:', notificationData.title, notificationOptions);
+
   event.waitUntil(
-    self.registration.showNotification(title, notificationOptions)
+    self.registration.showNotification(notificationData.title, notificationOptions)
   );
 });
 

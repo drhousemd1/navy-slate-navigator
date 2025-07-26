@@ -74,7 +74,7 @@ function signatureToJose(sig: Uint8Array): string {
 }
 
 /* ================= VAPID JWT BUILDER ================= */
-async function buildVapidJWT() {
+async function buildVapidJWT(endpoint: string) {
   console.log("--- VAPID JWT BUILD START ---");
   const pubKeyB64 = Deno.env.get("VAPID_PUBLIC_KEY");
   const privKeyB64 = Deno.env.get("VAPID_PRIVATE_KEY");
@@ -100,7 +100,29 @@ async function buildVapidJWT() {
   );
   console.log("[VAPID] importKey OK");
 
-  const aud = "https://web.push.apple.com";
+  // Dynamic audience based on endpoint
+  let aud: string;
+  if (endpoint.includes("fcm.googleapis.com") || endpoint.includes("android.googleapis.com")) {
+    aud = "https://fcm.googleapis.com";
+    console.log("[VAPID] Using Google FCM audience");
+  } else if (endpoint.includes("web.push.apple.com")) {
+    aud = "https://web.push.apple.com";
+    console.log("[VAPID] Using Apple Push audience");
+  } else if (endpoint.includes("push.mozilla.org")) {
+    aud = "https://push.mozilla.org";
+    console.log("[VAPID] Using Mozilla Push audience");
+  } else {
+    // Extract origin from endpoint
+    try {
+      const url = new URL(endpoint);
+      aud = `${url.protocol}//${url.hostname}`;
+      console.log("[VAPID] Using extracted audience:", aud);
+    } catch {
+      aud = "https://web.push.apple.com";
+      console.log("[VAPID] Fallback to Apple audience");
+    }
+  }
+
   const exp = Math.floor(Date.now()/1000) + 12*60*60;
   const header = bytesToB64url(new TextEncoder().encode(JSON.stringify({alg:"ES256",typ:"JWT"})));
   const payload = bytesToB64url(new TextEncoder().encode(JSON.stringify({aud,exp,sub:"mailto:admin@example.com"})));
@@ -161,9 +183,9 @@ async function deriveEncryptionKeys(
     ["deriveKey"]
   );
 
-  // Create auth_info and key_info for HKDF
+  // Create auth_info and key_info for HKDF (RFC 8291)
   const authInfo = new TextEncoder().encode("Content-Encoding: auth\0");
-  const keyInfo = new TextEncoder().encode("Content-Encoding: aesgcm\0");
+  const keyInfo = new TextEncoder().encode("Content-Encoding: aes128gcm\0");
 
   // Derive auth key
   const authKey = await crypto.subtle.deriveKey(
@@ -215,24 +237,34 @@ async function encryptPayload(
     salt
   );
 
-  const iv = crypto.getRandomValues(new Uint8Array(12));
+  // Use a 12-byte nonce (IV) for AES-GCM
+  const nonce = crypto.getRandomValues(new Uint8Array(12));
   const payloadBuffer = new TextEncoder().encode(payload);
   
+  // Add padding to payload (RFC 8291 requires padding)
+  const paddingLength = 0; // Minimal padding for now
+  const paddedPayload = new Uint8Array(payloadBuffer.length + paddingLength + 2);
+  paddedPayload.set(payloadBuffer, 0);
+  // Set padding length in last 2 bytes (big-endian)
+  new DataView(paddedPayload.buffer).setUint16(paddedPayload.length - 2, paddingLength, false);
+  
   const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-GCM", iv: nonce },
     contentKey,
-    payloadBuffer
+    paddedPayload
   );
 
-  // Combine salt + record size + server public key + encrypted data
-  const recordSize = new Uint8Array(4);
-  new DataView(recordSize.buffer).setUint32(0, payloadBuffer.length + 16, false);
+  // RFC 8291 format: salt(16) + record_size(4) + key_id_length(1) + key_id(65) + ciphertext
+  const recordSize = 4096; // Standard record size
+  const keyIdLength = serverKeys.publicKeyBytes.length;
   
-  const result = new Uint8Array(salt.length + recordSize.length + serverKeys.publicKeyBytes.length + encrypted.byteLength);
+  const result = new Uint8Array(16 + 4 + 1 + keyIdLength + encrypted.byteLength);
   let offset = 0;
-  result.set(salt, offset); offset += salt.length;
-  result.set(recordSize, offset); offset += recordSize.length;
-  result.set(serverKeys.publicKeyBytes, offset); offset += serverKeys.publicKeyBytes.length;
+  
+  result.set(salt, offset); offset += 16;
+  new DataView(result.buffer).setUint32(offset, recordSize, false); offset += 4;
+  result[offset++] = keyIdLength;
+  result.set(serverKeys.publicKeyBytes, offset); offset += keyIdLength;
   result.set(new Uint8Array(encrypted), offset);
 
   return {
@@ -250,9 +282,10 @@ async function sendPushNotification(
   auth?: Uint8Array
 ) {
   console.log("--- SEND PUSH NOTIFICATION START ---");
+  console.log("[PUSH] Endpoint type:", endpoint.includes("fcm.googleapis.com") ? "FCM" : endpoint.includes("web.push.apple.com") ? "Apple" : "Other");
   console.log("[PUSH] Payload:", JSON.stringify(payload));
   
-  const { jwt, publicKey: vapidPublicKey } = await buildVapidJWT();
+  const { jwt, publicKey: vapidPublicKey } = await buildVapidJWT(endpoint);
   
   const headers: Record<string, string> = {
     "Authorization": `WebPush ${jwt}`,
@@ -279,28 +312,25 @@ async function sendPushNotification(
       );
       
       headers["Content-Type"] = "application/octet-stream";
-      headers["Content-Encoding"] = "aesgcm";
+      headers["Content-Encoding"] = "aes128gcm";
       headers["Crypto-Key"] = `dh=${bytesToB64url(serverPublicKey)};p256ecdsa=${vapidPublicKey}`;
       headers["Encryption"] = `salt=${bytesToB64url(salt)}`;
-      headers["Content-Length"] = encryptedData.length.toString();
       
       body = encryptedData;
       console.log("[PUSH] Sending encrypted payload, size:", encryptedData.length);
     } catch (e) {
       console.error("[PUSH] Encryption failed, falling back to empty push:", e);
       headers["Crypto-Key"] = `p256ecdsa=${vapidPublicKey}`;
-      headers["Content-Length"] = "0";
       body = "";
     }
   } else {
     // Fallback to empty push
     console.log("[PUSH] No client keys, sending empty push");
     headers["Crypto-Key"] = `p256ecdsa=${vapidPublicKey}`;
-    headers["Content-Length"] = "0";
     body = "";
   }
 
-  console.log("[PUSH] Headers:", headers);
+  console.log("[PUSH] Headers:", JSON.stringify(headers, null, 2));
   
   const resp = await fetch(endpoint, {
     method: "POST",
@@ -310,6 +340,12 @@ async function sendPushNotification(
   
   const responseText = await resp.text().catch(() => "");
   console.log("[PUSH] Response status:", resp.status, "body:", responseText.slice(0, 200));
+  
+  // Handle subscription cleanup for invalid endpoints
+  if (resp.status === 404 || resp.status === 410) {
+    console.log("[PUSH] Endpoint invalid, should remove subscription");
+    return { success: false, status: resp.status, shouldRemove: true };
+  }
   
   if (resp.status >= 400) {
     throw new Error(`Push service HTTP ${resp.status}: ${responseText}`);
@@ -404,6 +440,8 @@ serve(async (req: Request) => {
 
     // Send rich push notification to each subscription
     let sentCount = 0;
+    const subscriptionsToRemove: string[] = [];
+    
     for (const sub of subs) {
       try {
         let clientPublicKey: Uint8Array | undefined;
@@ -420,15 +458,37 @@ serve(async (req: Request) => {
           }
         }
         
-        await sendPushNotification(
+        const result = await sendPushNotification(
           sub.endpoint, 
           notificationPayload, 
           clientPublicKey, 
           auth
         );
-        sentCount++;
+        
+        if (result.shouldRemove) {
+          subscriptionsToRemove.push(sub.endpoint);
+        } else if (result.success) {
+          sentCount++;
+        }
       } catch (e) {
         console.error("Send failed for endpoint:", sub.endpoint.slice(0, 50) + "...", e);
+        // Check if it's a 404/410 error indicating stale subscription
+        if (e.message.includes("HTTP 404") || e.message.includes("HTTP 410")) {
+          subscriptionsToRemove.push(sub.endpoint);
+        }
+      }
+    }
+    
+    // Clean up stale subscriptions
+    if (subscriptionsToRemove.length > 0) {
+      console.log("[CLEANUP] Removing", subscriptionsToRemove.length, "stale subscriptions");
+      try {
+        await admin
+          .from("user_push_subscriptions")
+          .delete()
+          .in("endpoint", subscriptionsToRemove);
+      } catch (e) {
+        console.error("[CLEANUP] Failed to remove stale subscriptions:", e);
       }
     }
 
