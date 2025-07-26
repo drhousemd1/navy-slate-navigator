@@ -84,7 +84,7 @@ async function buildVapidJWT(endpoint: string, userEmail: string) {
 
   try {
     // Try to import as PKCS8 private key first (new format)
-    const privBytes = b64urlToBytes(privKeyB64);
+    const privBytes = Uint8Array.from(atob(privKeyB64), c => c.charCodeAt(0));
     console.log("[VAPID] Attempting PKCS8 import, private key bytes:", privBytes.length);
     
     const privateKey = await crypto.subtle.importKey(
@@ -97,7 +97,7 @@ async function buildVapidJWT(endpoint: string, userEmail: string) {
     console.log("[VAPID] PKCS8 private key import successful");
 
     // For public key, check if it's raw format or needs conversion
-    const pubBytes = b64urlToBytes(pubKeyB64);
+    const pubBytes = Uint8Array.from(atob(pubKeyB64), c => c.charCodeAt(0));
     console.log("[VAPID] Public key bytes:", pubBytes.length, "first byte:", pubBytes[0]?.toString(16));
     
     let vapidPublicKeyForHeader: string;
