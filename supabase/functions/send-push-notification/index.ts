@@ -73,72 +73,149 @@ function signatureToJose(sig: Uint8Array): string {
   return bytesToB64url(raw);
 }
 
-/* ================= VAPID JWT BUILDER ================= */
+/* ================= VAPID JWT BUILDER (FIXED FOR APPLE) ================= */
 async function buildVapidJWT(endpoint: string) {
   console.log("--- VAPID JWT BUILD START ---");
   const pubKeyB64 = Deno.env.get("VAPID_PUBLIC_KEY");
   const privKeyB64 = Deno.env.get("VAPID_PRIVATE_KEY");
   if (!pubKeyB64 || !privKeyB64) throw new Error("Missing VAPID env vars");
 
-  const pubBytes = b64urlToBytes(pubKeyB64);
-  const privBytes = b64urlToBytes(privKeyB64);
-  console.log("[VAPID] Public key length:", pubBytes.length);
-  console.log("[VAPID] Private key length:", privBytes.length);
-  if (pubBytes.length !== 65 || pubBytes[0] !== 0x04) throw new Error("Public key must be 65 bytes starting 0x04");
-  if (privBytes.length !== 32) throw new Error("Private key must be 32 bytes");
+  console.log("[VAPID] Raw key lengths - Public:", pubKeyB64.length, "Private:", privKeyB64.length);
 
-  const x = bytesToB64url(pubBytes.slice(1,33));
-  const y = bytesToB64url(pubBytes.slice(33,65));
-  const d = privKeyB64.replace(/=/g,"");
+  try {
+    // Try to import as PKCS8 private key first (new format)
+    const privBytes = b64urlToBytes(privKeyB64);
+    console.log("[VAPID] Attempting PKCS8 import, private key bytes:", privBytes.length);
+    
+    const privateKey = await crypto.subtle.importKey(
+      "pkcs8",
+      privBytes,
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["sign"]
+    );
+    console.log("[VAPID] PKCS8 private key import successful");
 
-  const key = await crypto.subtle.importKey(
-    "jwk",
-    { kty:"EC", crv:"P-256", d, x, y, ext:true },
-    { name:"ECDSA", namedCurve:"P-256" },
-    false,
-    ["sign"]
-  );
-  console.log("[VAPID] importKey OK");
-
-  // Dynamic audience based on endpoint
-  let aud: string;
-  if (endpoint.includes("fcm.googleapis.com") || endpoint.includes("android.googleapis.com")) {
-    aud = "https://fcm.googleapis.com";
-    console.log("[VAPID] Using Google FCM audience");
-  } else if (endpoint.includes("web.push.apple.com")) {
-    aud = "https://web.push.apple.com";
-    console.log("[VAPID] Using Apple Push audience");
-  } else if (endpoint.includes("push.mozilla.org")) {
-    aud = "https://push.mozilla.org";
-    console.log("[VAPID] Using Mozilla Push audience");
-  } else {
-    // Extract origin from endpoint
-    try {
-      const url = new URL(endpoint);
-      aud = `${url.protocol}//${url.hostname}`;
-      console.log("[VAPID] Using extracted audience:", aud);
-    } catch {
-      aud = "https://web.push.apple.com";
-      console.log("[VAPID] Fallback to Apple audience");
+    // For public key, check if it's raw format or needs conversion
+    const pubBytes = b64urlToBytes(pubKeyB64);
+    console.log("[VAPID] Public key bytes:", pubBytes.length, "first byte:", pubBytes[0]?.toString(16));
+    
+    let vapidPublicKeyForHeader: string;
+    if (pubBytes.length === 65 && pubBytes[0] === 0x04) {
+      // Raw uncompressed format, use as-is
+      vapidPublicKeyForHeader = pubKeyB64;
+      console.log("[VAPID] Using raw public key format");
+    } else {
+      throw new Error("Public key must be 65 bytes in uncompressed format (starting with 0x04)");
     }
+
+    // Dynamic audience based on endpoint
+    let aud: string;
+    if (endpoint.includes("fcm.googleapis.com") || endpoint.includes("android.googleapis.com")) {
+      aud = "https://fcm.googleapis.com";
+      console.log("[VAPID] Using Google FCM audience");
+    } else if (endpoint.includes("web.push.apple.com")) {
+      aud = "https://web.push.apple.com";
+      console.log("[VAPID] Using Apple Push audience");
+    } else if (endpoint.includes("push.mozilla.org")) {
+      aud = "https://push.mozilla.org";
+      console.log("[VAPID] Using Mozilla Push audience");
+    } else {
+      // Extract origin from endpoint
+      try {
+        const url = new URL(endpoint);
+        aud = `${url.protocol}//${url.hostname}`;
+        console.log("[VAPID] Using extracted audience:", aud);
+      } catch {
+        aud = "https://web.push.apple.com";
+        console.log("[VAPID] Fallback to Apple audience");
+      }
+    }
+
+    const exp = Math.floor(Date.now()/1000) + 12*60*60;
+    const header = bytesToB64url(new TextEncoder().encode(JSON.stringify({alg:"ES256",typ:"JWT"})));
+    // Use valid contact email for Apple compliance
+    const payload = bytesToB64url(new TextEncoder().encode(JSON.stringify({
+      aud,
+      exp,
+      sub:"mailto:support@pushnotifications.app"
+    })));
+    const signingInput = `${header}.${payload}`;
+
+    console.log("[VAPID] Signing JWT with PKCS8 key...");
+    const sigBytes = new Uint8Array(await crypto.subtle.sign(
+      {name:"ECDSA", hash:"SHA-256"},
+      privateKey,
+      new TextEncoder().encode(signingInput)
+    ));
+    console.log("[VAPID] sign() returned length:", sigBytes.length, "firstByte:", sigBytes[0]);
+
+    const signature = signatureToJose(sigBytes);
+    const jwt = `${signingInput}.${signature}`;
+    console.log("[VAPID] JWT built successfully, length:", jwt.length);
+    return { jwt, publicKey: vapidPublicKeyForHeader };
+
+  } catch (error) {
+    console.error("[VAPID] PKCS8 import failed, error:", error);
+    
+    // Fallback to old JWK method if PKCS8 fails
+    console.log("[VAPID] Falling back to JWK import method...");
+    const pubBytes = b64urlToBytes(pubKeyB64);
+    const privBytes = b64urlToBytes(privKeyB64);
+    
+    if (pubBytes.length !== 65 || pubBytes[0] !== 0x04) throw new Error("Public key must be 65 bytes starting 0x04");
+    if (privBytes.length !== 32) throw new Error("Private key must be 32 bytes for JWK");
+
+    const x = bytesToB64url(pubBytes.slice(1,33));
+    const y = bytesToB64url(pubBytes.slice(33,65));
+    const d = privKeyB64.replace(/=/g,"");
+
+    const key = await crypto.subtle.importKey(
+      "jwk",
+      { kty:"EC", crv:"P-256", d, x, y, ext:true },
+      { name:"ECDSA", namedCurve:"P-256" },
+      false,
+      ["sign"]
+    );
+    console.log("[VAPID] JWK importKey OK");
+
+    // Same audience logic and signing as above
+    let aud: string;
+    if (endpoint.includes("fcm.googleapis.com") || endpoint.includes("android.googleapis.com")) {
+      aud = "https://fcm.googleapis.com";
+    } else if (endpoint.includes("web.push.apple.com")) {
+      aud = "https://web.push.apple.com";
+    } else if (endpoint.includes("push.mozilla.org")) {
+      aud = "https://push.mozilla.org";
+    } else {
+      try {
+        const url = new URL(endpoint);
+        aud = `${url.protocol}//${url.hostname}`;
+      } catch {
+        aud = "https://web.push.apple.com";
+      }
+    }
+
+    const exp = Math.floor(Date.now()/1000) + 12*60*60;
+    const header = bytesToB64url(new TextEncoder().encode(JSON.stringify({alg:"ES256",typ:"JWT"})));
+    const payload = bytesToB64url(new TextEncoder().encode(JSON.stringify({
+      aud,
+      exp,
+      sub:"mailto:support@pushnotifications.app"
+    })));
+    const signingInput = `${header}.${payload}`;
+
+    const sigBytes = new Uint8Array(await crypto.subtle.sign(
+      {name:"ECDSA", hash:"SHA-256"},
+      key,
+      new TextEncoder().encode(signingInput)
+    ));
+
+    const signature = signatureToJose(sigBytes);
+    const jwt = `${signingInput}.${signature}`;
+    console.log("[VAPID] JWT built with JWK fallback, length:", jwt.length);
+    return { jwt, publicKey: pubKeyB64 };
   }
-
-  const exp = Math.floor(Date.now()/1000) + 12*60*60;
-  const header = bytesToB64url(new TextEncoder().encode(JSON.stringify({alg:"ES256",typ:"JWT"})));
-  const payload = bytesToB64url(new TextEncoder().encode(JSON.stringify({aud,exp,sub:"mailto:admin@example.com"})));
-  const signingInput = `${header}.${payload}`;
-
-  const sigBytes = new Uint8Array(await crypto.subtle.sign(
-    {name:"ECDSA", hash:"SHA-256"},
-    key,
-    new TextEncoder().encode(signingInput)
-  ));
-  console.log("[VAPID] sign() returned length:", sigBytes.length, "firstByte:", sigBytes[0]);
-
-  const signature = signatureToJose(sigBytes);
-  const jwt = `${signingInput}.${signature}`;
-  console.log("[VAPID] JWT built length:", jwt.length);
-  return { jwt, publicKey: bytesToB64url(pubBytes) };
 }
 
 /* ================= WEB PUSH ENCRYPTION ================= */
