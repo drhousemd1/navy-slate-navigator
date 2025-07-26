@@ -74,7 +74,7 @@ function signatureToJose(sig: Uint8Array): string {
 }
 
 /* ================= VAPID JWT BUILDER (FIXED FOR APPLE) ================= */
-async function buildVapidJWT(endpoint: string) {
+async function buildVapidJWT(endpoint: string, userEmail: string) {
   console.log("--- VAPID JWT BUILD START ---");
   const pubKeyB64 = Deno.env.get("VAPID_PUBLIC_KEY");
   const privKeyB64 = Deno.env.get("VAPID_PRIVATE_KEY");
@@ -134,11 +134,11 @@ async function buildVapidJWT(endpoint: string) {
 
     const exp = Math.floor(Date.now()/1000) + 12*60*60;
     const header = bytesToB64url(new TextEncoder().encode(JSON.stringify({alg:"ES256",typ:"JWT"})));
-    // Use valid contact email for Apple compliance
+    // Use dynamic user email for Apple compliance
     const payload = bytesToB64url(new TextEncoder().encode(JSON.stringify({
       aud,
       exp,
-      sub:"mailto:support@pushnotifications.app"
+      sub: "mailto:" + userEmail
     })));
     const signingInput = `${header}.${payload}`;
 
@@ -201,7 +201,7 @@ async function buildVapidJWT(endpoint: string) {
     const payload = bytesToB64url(new TextEncoder().encode(JSON.stringify({
       aud,
       exp,
-      sub:"mailto:support@pushnotifications.app"
+      sub: "mailto:" + userEmail
     })));
     const signingInput = `${header}.${payload}`;
 
@@ -355,6 +355,7 @@ async function encryptPayload(
 async function sendPushNotification(
   endpoint: string, 
   payload: PushNotificationPayload,
+  userEmail: string,
   clientPublicKey?: Uint8Array,
   auth?: Uint8Array
 ) {
@@ -362,7 +363,7 @@ async function sendPushNotification(
   console.log("[PUSH] Endpoint type:", endpoint.includes("fcm.googleapis.com") ? "FCM" : endpoint.includes("web.push.apple.com") ? "Apple" : "Other");
   console.log("[PUSH] Payload:", JSON.stringify(payload));
   
-  const { jwt, publicKey: vapidPublicKey } = await buildVapidJWT(endpoint);
+  const { jwt, publicKey: vapidPublicKey } = await buildVapidJWT(endpoint, userEmail);
   
   const headers: Record<string, string> = {
     "Authorization": `WebPush ${jwt}`,
@@ -433,9 +434,9 @@ async function sendPushNotification(
 }
 
 /* ================= FALLBACK EMPTY PUSH ================= */
-async function sendEmptyPush(endpoint: string) {
+async function sendEmptyPush(endpoint: string, userEmail: string) {
   const emptyPayload: PushNotificationPayload = { title: "", body: "" };
-  return sendPushNotification(endpoint, emptyPayload);
+  return sendPushNotification(endpoint, emptyPayload, userEmail);
 }
 
 /* ================= MAIN HANDLER ================= */
@@ -461,7 +462,7 @@ serve(async (req: Request) => {
     const body = await req.json().catch(()=> ({}));
     if (body.mode === "ping" && body.endpoint) {
       console.log("PING MODE DIRECT ENDPOINT TEST");
-      await sendEmptyPush(body.endpoint);
+      await sendEmptyPush(body.endpoint, "test@example.com");
       return jsonResponse({ ok:true, mode:"ping" });
     }
 
@@ -475,6 +476,16 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+
+    // Fetch user's email from auth
+    const { data: userData, error: userError } = await admin.auth.admin.getUserById(targetUserId);
+    if (userError) {
+      console.error("Failed to fetch user email:", userError);
+      return jsonResponse({ error: "failed to fetch user" }, 500);
+    }
+    
+    const userEmail = userData.user?.email || "support@pushnotifications.app";
+    console.log("[MAIN] Using email for VAPID:", userEmail);
 
     // Extract notification payload from request
     const notificationPayload: PushNotificationPayload = {
@@ -538,6 +549,7 @@ serve(async (req: Request) => {
         const result = await sendPushNotification(
           sub.endpoint, 
           notificationPayload, 
+          userEmail,
           clientPublicKey, 
           auth
         );
