@@ -18,7 +18,7 @@ export interface NotificationPreferences {
 }
 
 const defaultPreferences: NotificationPreferences = {
-  enabled: false,
+  enabled: true, // Changed to true - enable notifications by default
   types: {
     ruleBroken: true,
     taskCompleted: true,

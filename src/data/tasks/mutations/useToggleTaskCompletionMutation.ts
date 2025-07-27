@@ -214,17 +214,24 @@ export function useToggleTaskCompletionMutation() {
 
         // Send push notification to partner when task is completed
         if (variables.completed) {
+          logger.info('[useToggleTaskCompletionMutation] Task completed, attempting to send notification');
           const partnerId = await getPartnerId();
+          logger.info('[useToggleTaskCompletionMutation] Partner ID retrieved:', partnerId);
+          
           if (partnerId) {
             try {
-              await sendTaskCompletedNotification(
+              logger.info('[useToggleTaskCompletionMutation] Sending task completion notification');
+              const notificationSent = await sendTaskCompletedNotification(
                 partnerId, 
                 variables.task.title, 
                 variables.pointsValue
               );
+              logger.info('[useToggleTaskCompletionMutation] Notification result:', notificationSent);
             } catch (error) {
-              logger.error('Failed to send task completion notification:', error);
+              logger.error('[useToggleTaskCompletionMutation] Failed to send task completion notification:', error);
             }
+          } else {
+            logger.warn('[useToggleTaskCompletionMutation] No partner ID found, skipping notification');
           }
         }
 

@@ -15,7 +15,7 @@ interface SendNotificationParams {
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
-  const { preferences } = useNotificationSettings();
+  const { preferences, isLoading: preferencesLoading } = useNotificationSettings();
 
   const sendNotification = async ({
     targetUserId,
@@ -24,21 +24,31 @@ export const usePushNotifications = () => {
     body,
     data = {}
   }: SendNotificationParams): Promise<boolean> => {
+    logger.info('[usePushNotifications] sendNotification called:', { targetUserId, type, title, body });
+    
     if (!user) {
-      logger.error('User not authenticated');
+      logger.error('[usePushNotifications] User not authenticated');
+      return false;
+    }
+
+    // Wait for preferences to load before making decisions
+    if (preferencesLoading) {
+      logger.info('[usePushNotifications] Preferences still loading, skipping notification');
       return false;
     }
 
     // Check notification preferences before sending
     if (!preferences.enabled) {
-      logger.info('Push notifications are disabled globally');
+      logger.info('[usePushNotifications] Push notifications are disabled globally');
       return false;
     }
 
     if (!preferences.types[type]) {
-      logger.info(`Push notifications are disabled for type: ${type}`);
+      logger.info(`[usePushNotifications] Push notifications are disabled for type: ${type}`);
       return false;
     }
+
+    logger.info('[usePushNotifications] Preference checks passed, calling edge function');
 
     try {
       const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
@@ -52,14 +62,14 @@ export const usePushNotifications = () => {
       });
 
       if (error) {
-        logger.error('Error sending push notification:', error);
+        logger.error('[usePushNotifications] Error sending push notification:', error);
         return false;
       }
 
-      logger.info('Push notification sent successfully:', result);
+      logger.info('[usePushNotifications] Push notification sent successfully:', result);
       return true;
     } catch (error) {
-      logger.error('Error invoking push notification function:', error);
+      logger.error('[usePushNotifications] Error invoking push notification function:', error);
       return false;
     }
   };
