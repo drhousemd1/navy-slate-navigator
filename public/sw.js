@@ -7,31 +7,31 @@ const urlsToCache = [
   '/icons/icon-512.png'
 ];
 
-// Install event - cache app shell
+// Install event
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...');
+  console.log('[SW] Service Worker installing…');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Caching app shell');
+        console.log('[SW] Caching app shell');
         return cache.addAll(urlsToCache);
       })
       .catch((error) => {
-        console.error('Cache install failed:', error);
+        console.error('[SW] Cache install failed:', error);
       })
   );
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
+  console.log('[SW] Service Worker activating…');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
+            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -39,85 +39,78 @@ self.addEventListener('activate', (event) => {
     })
   );
   self.clients.claim();
-  console.log('Service Worker activated and ready');
+  console.log('[SW] Service Worker activated and ready');
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Return cached version or fetch from network
         return response || fetch(event.request);
       })
       .catch(() => {
-        // If both cache and network fail, could return a fallback page
         return caches.match('/index.html');
       })
   );
 });
 
-// Push event - handle incoming push notifications
+// FIXED: Push event handler
 self.addEventListener('push', (event) => {
-  console.log('Push event received:', event);
-  console.log('Push data available:', !!event.data);
-  
+  console.log('[SW] Push event received');
+
   let notificationData = {
     title: 'Navy Slate Navigator',
     body: 'New notification',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    data: {}
+    data: {},
+    tag: 'default'
   };
-  
-  // Handle encrypted push data
+
+  // Handle push data - could be encrypted or plain text
   if (event.data) {
     try {
-      // Try to parse as JSON first (for encrypted payloads)
-      const jsonData = event.data.json();
-      console.log('Parsed push data:', jsonData);
-      notificationData = {
-        title: jsonData.title || notificationData.title,
-        body: jsonData.body || notificationData.body,
-        icon: jsonData.icon || notificationData.icon,
-        badge: jsonData.badge || notificationData.badge,
-        data: jsonData.data || notificationData.data
-      };
-    } catch (jsonError) {
-      console.log('Failed to parse as JSON, trying text:', jsonError);
-      try {
-        // Try to parse as text
-        const textData = event.data.text();
-        console.log('Push text data:', textData);
-        if (textData) {
-          try {
-            const parsedText = JSON.parse(textData);
-            notificationData = {
-              title: parsedText.title || notificationData.title,
-              body: parsedText.body || notificationData.body,
-              icon: parsedText.icon || notificationData.icon,
-              badge: parsedText.badge || notificationData.badge,
-              data: parsedText.data || notificationData.data
-            };
-          } catch (parseError) {
-            console.log('Failed to parse text as JSON, using as body');
-            notificationData.body = textData;
-          }
+      // First, try to get as text (this works for both encrypted and unencrypted)
+      const dataText = event.data.text();
+      console.log('[SW] Push data as text:', dataText);
+
+      if (dataText) {
+        try {
+          // Try to parse as JSON
+          const jsonData = JSON.parse(dataText);
+          console.log('[SW] Parsed push data:', jsonData);
+          
+          notificationData = {
+            title: jsonData.title || notificationData.title,
+            body: jsonData.body || notificationData.body,
+            icon: jsonData.icon || notificationData.icon,
+            badge: jsonData.badge || notificationData.badge,
+            data: jsonData.data || notificationData.data,
+            tag: jsonData.data?.type || 'default'
+          };
+        } catch (parseError) {
+          console.log('[SW] Failed to parse as JSON, using text as body');
+          notificationData.body = dataText;
         }
-      } catch (textError) {
-        console.error('Failed to parse push data as text:', textError);
-        // Use default notification data
       }
+    } catch (textError) {
+      console.log('[SW] Failed to get data as text:', textError);
+      // For encrypted data that can't be decrypted here, use defaults
+      console.log('[SW] Using default notification data for encrypted push');
     }
+  } else {
+    console.log('[SW] No push data, using defaults');
   }
 
   const notificationOptions = {
     body: notificationData.body,
     icon: notificationData.icon,
     badge: notificationData.badge,
-    tag: notificationData.data?.type || 'default',
+    tag: notificationData.tag,
     data: notificationData.data,
-    requireInteraction: true,
+    requireInteraction: false, // Changed from true to false
+    silent: false,
     actions: [
       {
         action: 'open',
@@ -130,17 +123,23 @@ self.addEventListener('push', (event) => {
     ]
   };
 
-  console.log('Showing notification:', notificationData.title, notificationOptions);
+  console.log('[SW] Showing notification:', notificationData.title, notificationOptions);
 
   event.waitUntil(
     self.registration.showNotification(notificationData.title, notificationOptions)
+      .then(() => {
+        console.log('[SW] Notification shown successfully');
+      })
+      .catch((error) => {
+        console.error('[SW] Failed to show notification:', error);
+      })
   );
 });
 
-// Notification click event - handle user interaction
+// Notification click event
 self.addEventListener('notificationclick', (event) => {
-  console.log('Notification clicked:', event);
-  
+  console.log('[SW] Notification clicked:', event.notification.data);
+
   event.notification.close();
 
   if (event.action === 'close') {
@@ -149,32 +148,36 @@ self.addEventListener('notificationclick', (event) => {
 
   // Open or focus the app
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
         // Try to focus existing window
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
+            console.log('[SW] Focusing existing window');
             return client.focus();
           }
         }
-        
+
         // If no window exists, open a new one
-        if (clients.openWindow) {
+        if (self.clients.openWindow) {
           const targetUrl = event.notification.data?.url || '/';
-          return clients.openWindow(targetUrl);
+          console.log('[SW] Opening new window:', targetUrl);
+          return self.clients.openWindow(targetUrl);
         }
+      })
+      .catch((error) => {
+        console.error('[SW] Error handling notification click:', error);
       })
   );
 });
 
-// Background sync event (if needed for offline support)
+// Background sync event
 self.addEventListener('sync', (event) => {
-  console.log('Background sync:', event.tag);
-  
+  console.log('[SW] Background sync:', event.tag);
+
   if (event.tag === 'background-sync') {
-    event.waitUntil(
-      // Handle background sync tasks
-      Promise.resolve()
-    );
+    event.waitUntil(Promise.resolve());
   }
 });
+
+console.log('[SW] Service worker loaded successfully');
