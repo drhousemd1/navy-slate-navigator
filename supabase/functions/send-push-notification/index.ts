@@ -141,6 +141,7 @@ async function sendPushNotification(
   endpoint: string,
   title: string,
   body: string,
+  userEmail: string,
   data: Record<string, any> = {}
 ): Promise<{ success: boolean; shouldRemove?: boolean }> {
   console.log("[PUSH] Sending to endpoint:", endpoint.substring(0, 50) + "…");
@@ -163,9 +164,8 @@ async function sendPushNotification(
 
     console.log(`[PUSH] Push service: ${pushService}`);
 
-    // Build VAPID JWT - trim email to prevent whitespace issues with Apple APNs
-    const vapidEmail = (Deno.env.get('VAPID_EMAIL') || 'noreply@example.com').trim();
-    const vapidJWT = await buildVapidJWT(audience, `mailto:${vapidEmail}`);
+    // Build VAPID JWT using the user's email
+    const vapidJWT = await buildVapidJWT(audience, `mailto:${userEmail.trim()}`);
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!;
 
     // Create payload based on push service
@@ -279,6 +279,34 @@ serve(async (req) => {
     console.log(`[MAIN] Title: ${title}`);
     console.log(`[MAIN] Body: ${body}`);
 
+    // Get user's email for VAPID JWT
+    const { data: userProfile, error: userError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', targetUserId)
+      .single();
+
+    if (userError) {
+      console.error('[MAIN] Error fetching user profile:', userError);
+      return jsonResponse({ error: 'Failed to fetch user profile' }, 500);
+    }
+
+    if (!userProfile) {
+      console.error('[MAIN] User profile not found');
+      return jsonResponse({ error: 'User not found' }, 404);
+    }
+
+    // Get user's email from auth.users
+    const { data: { user }, error: authError } = await supabase.auth.admin.getUserById(targetUserId);
+    
+    if (authError || !user?.email) {
+      console.error('[MAIN] Error fetching user email:', authError);
+      return jsonResponse({ error: 'Failed to fetch user email' }, 500);
+    }
+
+    const userEmail = user.email;
+    console.log(`[MAIN] Using email for VAPID JWT: ${userEmail}`);
+
     // Get user's push subscriptions
     const { data: subscriptions, error: subscriptionsError } = await supabase
       .from('user_push_subscriptions')
@@ -307,6 +335,7 @@ serve(async (req) => {
           subscription.endpoint,
           title || 'Navy Slate Navigator',
           body || 'New notification',
+          userEmail,
           { type, ...data }
         );
         
