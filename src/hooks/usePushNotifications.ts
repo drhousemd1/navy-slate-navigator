@@ -31,21 +31,20 @@ export const usePushNotifications = () => {
       return false;
     }
 
-    // Wait for preferences to load before making decisions
-    if (preferencesLoading) {
-      logger.info('[usePushNotifications] Preferences still loading, skipping notification');
-      return false;
-    }
+    // Check notification preferences - assume enabled while loading to avoid race condition
+    if (!preferencesLoading) {
+      // Only check preferences when they're fully loaded
+      if (!preferences.enabled) {
+        logger.info('[usePushNotifications] Push notifications are disabled globally');
+        return false;
+      }
 
-    // Check notification preferences before sending
-    if (!preferences.enabled) {
-      logger.info('[usePushNotifications] Push notifications are disabled globally');
-      return false;
-    }
-
-    if (!preferences.types[type]) {
-      logger.info(`[usePushNotifications] Push notifications are disabled for type: ${type}`);
-      return false;
+      if (!preferences.types[type]) {
+        logger.info(`[usePushNotifications] Push notifications are disabled for type: ${type}`);
+        return false;
+      }
+    } else {
+      logger.info('[usePushNotifications] Preferences still loading, assuming notifications enabled');
     }
 
     logger.info('[usePushNotifications] Preference checks passed, calling edge function');
