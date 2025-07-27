@@ -163,30 +163,58 @@ async function sendPushNotification(
 
     console.log(`[PUSH] Push service: ${pushService}`);
 
-    // Create notification payload
-    const notificationPayload = {
-      title,
-      body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      data
-    };
-
     // Build VAPID JWT
     const vapidEmail = Deno.env.get('VAPID_EMAIL') || 'noreply@example.com';
     const vapidJWT = await buildVapidJWT(audience, `mailto:${vapidEmail}`);
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!;
 
-    // Prepare headers
-    const headers: Record<string, string> = {
-      'Authorization': `WebPush ${vapidJWT}`,
-      'Crypto-Key': `p256ecdsa=${vapidPublicKey}`,
-      'Content-Type': 'application/json',
-      'TTL': '86400'
-    };
+    // Create payload based on push service
+    let payloadString: string;
+    let headers: Record<string, string>;
 
-    // Send as plain JSON (no encryption)
-    const payloadString = JSON.stringify(notificationPayload);
+    if (pushService === 'Apple') {
+      // Apple Push Service requires wrapped payload
+      const applePayload = {
+        aps: {
+          alert: {
+            title,
+            body
+          },
+          badge: 1,
+          sound: 'default'
+        },
+        data: {
+          ...data,
+          icon: '/icons/icon-192.png'
+        }
+      };
+      payloadString = JSON.stringify(applePayload);
+      
+      headers = {
+        'Authorization': `Bearer ${vapidJWT}`,
+        'Content-Type': 'application/json',
+        'apns-topic': 'web.push',
+        'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400),
+        'apns-priority': '10'
+      };
+    } else {
+      // Standard Web Push format for other services
+      const notificationPayload = {
+        title,
+        body,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        data
+      };
+      payloadString = JSON.stringify(notificationPayload);
+      
+      headers = {
+        'Authorization': `WebPush ${vapidJWT}`,
+        'Crypto-Key': `p256ecdsa=${vapidPublicKey}`,
+        'Content-Type': 'application/json',
+        'TTL': '86400'
+      };
+    }
     console.log(`[PUSH] Payload: ${payloadString}`);
 
     const response = await fetch(endpoint, {
