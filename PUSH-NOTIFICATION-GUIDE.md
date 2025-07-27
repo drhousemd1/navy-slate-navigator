@@ -448,9 +448,10 @@ const { data: result, error } = await supabase.functions.invoke('send-push-notif
 - `get-vapid-public-key`: Returns VAPID public key for subscription
 
 ### VAPID Configuration:
-- Public key: Stored in edge function secrets
-- Private key: Stored in edge function secrets
+- **VAPID_PUBLIC_KEY**: `BKb6DMKLd5GRPaTyquPkYhoUVK2KvW13Pg5OBMZDJfvT01KXs3rCBuVyILB8Jv4B-ErXdlhdZ6Bg1zwPZwMTY1g`
+- **VAPID_PRIVATE_KEY**: `MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMibT9NDHu9ftBKwgfM7RTJY_HEP9HdsXOB3H9Bbb0SKhRANCAASm-gzCi3eRkT2k8qrj5GIaFFStir1tdz4OTgTGQyX709NSl7N6wgblciCwfCb-AfhK13ZYXWegYNc8D2cDE2NY`
 - JWT: Generated using user's email address
+- Keys stored in Supabase edge function secrets
 
 ### Push Services Supported:
 - Firefox (Mozilla)
