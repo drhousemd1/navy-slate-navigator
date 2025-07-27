@@ -163,8 +163,8 @@ async function sendPushNotification(
 
     console.log(`[PUSH] Push service: ${pushService}`);
 
-    // Build VAPID JWT
-    const vapidEmail = Deno.env.get('VAPID_EMAIL') || 'noreply@example.com';
+    // Build VAPID JWT - trim email to prevent whitespace issues with Apple APNs
+    const vapidEmail = (Deno.env.get('VAPID_EMAIL') || 'noreply@example.com').trim();
     const vapidJWT = await buildVapidJWT(audience, `mailto:${vapidEmail}`);
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!;
 
@@ -173,7 +173,8 @@ async function sendPushNotification(
     let headers: Record<string, string>;
 
     if (pushService === 'Apple') {
-      // Apple Push Service requires wrapped payload
+      // Apple Push Service requires specific payload format and headers
+      // Reference: https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-safari-and-other-browsers
       const applePayload = {
         aps: {
           alert: {
@@ -183,10 +184,8 @@ async function sendPushNotification(
           badge: 1,
           sound: 'default'
         },
-        data: {
-          ...data,
-          icon: '/icons/icon-192.png'
-        }
+        // Custom data without icon - Apple ignores custom icons for web push
+        data
       };
       payloadString = JSON.stringify(applePayload);
       
@@ -195,7 +194,9 @@ async function sendPushNotification(
         'Content-Type': 'application/json',
         'apns-topic': 'web.push',
         'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400),
-        'apns-priority': '10'
+        'apns-priority': '10',
+        // Required for alert notifications - tells APNs this is an interactive alert
+        'apns-push-type': 'alert'
       };
     } else {
       // Standard Web Push format for other services
