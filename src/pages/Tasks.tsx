@@ -31,7 +31,6 @@ const Tasks: React.FC = () => {
     refetch: refetchTasks
   } = useTasksData();
 
-  // Debug logging for development
   useEffect(() => {
     logger.debug('[Tasks] Component state:', {
       user: user?.id,
@@ -44,7 +43,6 @@ const Tasks: React.FC = () => {
     });
   }, [user, subUserId, domUserId, isLoadingUserIds, tasks, isLoading, error]);
 
-  // Check for task resets on page load when user is available
   useEffect(() => {
     if (user) {
       checkAndReloadTasks();

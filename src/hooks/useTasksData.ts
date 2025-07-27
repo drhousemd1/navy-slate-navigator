@@ -13,8 +13,6 @@ import { useUpdateTask } from '@/data/tasks/mutations/useUpdateTask';
 import { getErrorMessage } from '@/lib/errors';
 import { checkAndPerformTaskResets } from '@/lib/taskUtils';
 
-// Define a type for the data saveTask might receive
-// This will now be more specific: CreateTaskVariables or UpdateTaskVariables
 type SaveTaskInput = CreateTaskVariables | UpdateTaskVariables;
 
 export const useTasksData = () => {
@@ -31,7 +29,6 @@ export const useTasksData = () => {
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
 
-  // Enhanced task loading with reset check and complete cache invalidation
   const checkAndReloadTasks = useCallback(async () => {
     try {
       logger.debug('[useTasksData] Checking for task resets');
@@ -63,20 +60,10 @@ export const useTasksData = () => {
 
   const saveTask = async (taskData: SaveTaskInput): Promise<TaskWithId | null> => {
     try {
-      
-      // Discriminate between CreateTaskVariables and UpdateTaskVariables
-      // UpdateTaskVariables will have an 'id' property.
       if ('id' in taskData && taskData.id) {
-        // This is UpdateTaskVariables
         const updatePayload: UpdateTaskVariables = taskData;
         return await updateTaskMutation.mutateAsync(updatePayload);
-
       } else {
-        // This is CreateTaskVariables.
-        // The incoming taskData, when 'id' is not present or falsy,
-        // is expected to conform to CreateTaskVariables based on how it's constructed
-        // (e.g., in Tasks.tsx from TaskFormValues).
-        // The 'as CreateTaskVariables' cast assures TypeScript of this specific shape.
         const createPayload: CreateTaskVariables = taskData as CreateTaskVariables;
         return await createTaskMutation.mutateAsync(createPayload);
       }
