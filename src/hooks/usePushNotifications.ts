@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
+import { useNotificationSettings } from './useNotificationSettings';
 
 export type NotificationType = 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin' | 'messages';
 
@@ -14,6 +15,7 @@ interface SendNotificationParams {
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
+  const { preferences } = useNotificationSettings();
 
   const sendNotification = async ({
     targetUserId,
@@ -24,6 +26,17 @@ export const usePushNotifications = () => {
   }: SendNotificationParams): Promise<boolean> => {
     if (!user) {
       logger.error('User not authenticated');
+      return false;
+    }
+
+    // Check notification preferences before sending
+    if (!preferences.enabled) {
+      logger.info('Push notifications are disabled globally');
+      return false;
+    }
+
+    if (!preferences.types[type]) {
+      logger.info(`Push notifications are disabled for type: ${type}`);
       return false;
     }
 

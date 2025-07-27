@@ -279,6 +279,40 @@ serve(async (req) => {
     console.log(`[MAIN] Title: ${title}`);
     console.log(`[MAIN] Body: ${body}`);
 
+    // Check user notification preferences (server-side backup)
+    const { data: notificationPrefs, error: prefsError } = await supabase
+      .from('user_notification_preferences')
+      .select('preferences')
+      .eq('user_id', targetUserId)
+      .maybeSingle();
+
+    if (prefsError) {
+      console.error('[MAIN] Error fetching notification preferences:', prefsError);
+    }
+
+    // If preferences exist, check them
+    if (notificationPrefs?.preferences) {
+      const prefs = notificationPrefs.preferences as any;
+      
+      if (!prefs.enabled) {
+        console.log('[MAIN] Notifications disabled globally for user');
+        return jsonResponse({ 
+          message: 'Notifications disabled globally for user', 
+          sent: false,
+          reason: 'disabled_globally'
+        });
+      }
+
+      if (type && prefs.types && !prefs.types[type]) {
+        console.log(`[MAIN] Notifications disabled for type '${type}' for user`);
+        return jsonResponse({ 
+          message: `Notifications disabled for type '${type}' for user`, 
+          sent: false,
+          reason: 'disabled_type'
+        });
+      }
+    }
+
     // Get user's email for VAPID JWT
     const { data: userProfile, error: userError } = await supabase
       .from('profiles')

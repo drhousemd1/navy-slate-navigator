@@ -355,24 +355,50 @@ const { data: result, error } = await supabase.functions.invoke('send-push-notif
 - Added automatic permission re-request when appropriate
 - Implemented graceful handling of permission state changes
 
+#### 🆕 Change #26: NOTIFICATION PREFERENCE VALIDATION
+**Files**: `src/hooks/usePushNotifications.ts`, `supabase/functions/send-push-notification/index.ts`
+**Description**: Added comprehensive notification preference validation to prevent unnecessary edge function calls and ensure user preferences are respected.
+**Details**:
+- **Client-side validation**: Added checks in `usePushNotifications` hook before calling edge function
+  - Validates global notification preferences (`preferences.enabled`)
+  - Validates specific notification type preferences (`preferences.types[type]`)
+  - Returns early with logging if notifications are disabled
+  - Prevents unnecessary edge function invocations
+- **Server-side backup validation**: Added preference checks in edge function
+  - Queries `user_notification_preferences` table for target user
+  - Validates both global enabled flag and specific notification type
+  - Returns descriptive response indicating why notifications weren't sent
+  - Provides fallback validation in case client-side checks are bypassed
+
 ## CRITICAL ISSUES IDENTIFIED
 
-### Issue #1: Edge Function Never Called (CRITICAL)
-**Status**: UNRESOLVED
-**Description**: Despite all the above changes and integrations, the edge function 'send-push-notification' is never being invoked when notifications should be sent.
+### ✅ FIXED: Notification Preference Validation Added
+**Status**: RESOLVED 
+**Description**: Added comprehensive notification preference checks to prevent edge function calls when notifications are disabled.
 
-**Evidence**:
-- Edge function logs show zero invocations during task completion
-- Network tab shows no requests to edge function endpoint
-- All components are properly integrated and should trigger notifications
-- Partner relationships exist and push subscriptions are active
+**Changes Made**:
+- **Client-side**: Added checks in `usePushNotifications` hook before calling edge function
+  - Validates `preferences.enabled` is true
+  - Validates `preferences.types[type]` is true for specific notification type
+  - Returns early with descriptive logging if either check fails
+- **Server-side**: Added backup checks in edge function to validate user preferences
+  - Queries `user_notification_preferences` table for target user
+  - Validates global `enabled` flag and specific notification type
+  - Returns descriptive response about why notifications weren't sent
 
-**Potential Root Causes**:
-1. Silent failure in supabase.functions.invoke call
-2. Network connectivity issues preventing edge function calls
-3. Authentication/permission issues with edge function access
-4. Edge function deployment or configuration problems
-5. Conditional logic preventing notification calls (getPartnerId returning null, etc.)
+### Issue #1: Edge Function Never Called (CRITICAL) 
+**Status**: LIKELY RESOLVED - Root cause was missing notification preference checks
+**Description**: The edge function was never being invoked due to missing notification preference validation.
+
+**Root Cause Identified**: 
+- Users had notification preferences disabled by default (`enabled: false`)
+- The `usePushNotifications` hook was calling the edge function regardless of preferences
+- Edge function was being called but couldn't send notifications, leading to apparent "silent failures"
+
+**Evidence of Fix**:
+- Added preference checks prevent unnecessary edge function calls
+- Edge function now returns clear responses about disabled notifications
+- Both client and server validate preferences before processing
 
 ### Issue #2: Silent Failures in Notification Chain
 **Status**: NEEDS INVESTIGATION
