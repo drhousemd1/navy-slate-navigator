@@ -164,8 +164,8 @@ async function sendPushNotification(
 
     console.log(`[PUSH] Push service: ${pushService}`);
 
-    // Build VAPID JWT using the user's email
-    const vapidJWT = await buildVapidJWT(audience, `mailto:${userEmail.trim()}`);
+    // Build VAPID JWT using a static admin email (not user's email)
+    const vapidJWT = await buildVapidJWT(audience, `mailto:admin@navy-slate-navigator.com`);
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!;
 
     // Create payload based on push service
