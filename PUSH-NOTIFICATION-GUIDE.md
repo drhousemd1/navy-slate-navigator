@@ -106,35 +106,284 @@ const { data: result, error } = await supabase.functions.invoke('send-push-notif
 
 **Resolution**: Updated to use target user's email from auth.users table.
 
-## CHANGE LOG - LAST 72 HOURS
+## ATTEMPTED FIXES/CHANGES - LAST 72 HOURS
 
-### Changes Made to Push Notification System:
+### Complete Change Log of Push Notification System Modifications:
 
-#### Change #1: VAPID Email Fix
+#### Change #1: Complete Edge Function Rewrite
 **File**: `supabase/functions/send-push-notification/index.ts`
-**Date**: Recent (based on conversation)
-**Description**: 
-- Replaced hardcoded VAPID email with dynamic user email
-- Added user email fetching from auth.users table
-- Updated `sendPushNotification` function signature to include `userEmail` parameter
+**Description**: Completely rewrote the edge function from an encrypted notification system to a simplified unencrypted system.
+**Details**: 
+- Removed encryption/decryption logic that was causing payload issues
+- Simplified notification payload structure
+- Switched to standard Web Push API format
+- Removed dependency on crypto libraries for notification content
 
-**Code Changes**:
-```typescript
-// BEFORE:
-const vapidEmail = (Deno.env.get('VAPID_EMAIL') || 'noreply@example.com').trim();
-const vapidJWT = await buildVapidJWT(audience, `mailto:${vapidEmail}`);
-
-// AFTER:
-const vapidJWT = await buildVapidJWT(audience, `mailto:${userEmail.trim()}`);
-```
-
-#### Change #2: Enhanced Edge Function Logging
+#### Change #2: Dynamic VAPID Email Fetching
 **File**: `supabase/functions/send-push-notification/index.ts`
-**Description**: Added comprehensive logging throughout the edge function for better debugging.
+**Description**: Replaced hardcoded VAPID email with dynamic user email fetching from auth.users table.
+**Details**:
+- Added user email query: `SELECT email FROM auth.users WHERE id = $1`
+- Updated `sendPushNotification` function signature to include userEmail parameter
+- Ensured VAPID JWT uses actual user email instead of placeholder
+- Added error handling for missing user emails
 
-#### Change #3: User Email Retrieval
+#### Change #3: Apple Push Service Support
 **File**: `supabase/functions/send-push-notification/index.ts`
-**Description**: Added code to fetch user's email from Supabase Auth for VAPID JWT generation.
+**Description**: Added specific support for Apple Push Service with proper payload format and headers.
+**Details**:
+- Added Apple Push Service endpoint detection
+- Implemented Apple-specific payload structure with `aps` wrapper
+- Added proper headers including `apns-topic` and `apns-priority`
+- Configured Apple-specific alert format with title and body
+
+#### Change #4: Enhanced Error Handling and Logging
+**File**: `supabase/functions/send-push-notification/index.ts`
+**Description**: Added comprehensive error handling and logging throughout the entire edge function.
+**Details**:
+- Added structured logging for each step of the notification process
+- Implemented proper error responses with CORS headers
+- Added validation for required parameters (targetUserId, type, title, body)
+- Added detailed logging for push service detection and payload construction
+
+#### Change #5: Push Service Detection System
+**File**: `supabase/functions/send-push-notification/index.ts`
+**Description**: Implemented automatic detection of different push services based on endpoint URLs.
+**Details**:
+- Added detection for FCM (Google Chrome/Edge)
+- Added detection for Apple Push Service (Safari)
+- Added detection for WNS (Windows Push Service)
+- Added detection for Mozilla (Firefox)
+- Implemented service-specific payload formatting
+
+#### Change #6: Subscription Management with Expiration Handling
+**File**: `supabase/functions/send-push-notification/index.ts`
+**Description**: Added automatic removal of expired or invalid push subscriptions.
+**Details**:
+- Added handling for 410 Gone and 404 Not Found responses
+- Implemented automatic subscription cleanup from database
+- Added batch removal of expired subscriptions
+- Added logging for subscription cleanup operations
+
+#### Change #7: JWT Signature Handling for VAPID
+**File**: `supabase/functions/send-push-notification/index.ts`
+**Description**: Implemented proper VAPID JWT generation with ES256 signature algorithm.
+**Details**:
+- Added base64url encoding/decoding utilities
+- Implemented ES256 JWT signing using VAPID private key
+- Added proper JWT header and payload structure
+- Ensured compliance with Web Push Protocol RFC 8292
+
+#### Change #8: Task Completion Push Notification Integration
+**File**: `src/data/tasks/mutations/useToggleTaskCompletionMutation.ts`
+**Description**: Integrated push notifications into the task completion flow.
+**Details**:
+- Added push notification call in onSuccess callback (lines 259-275)
+- Implemented partner ID resolution using usePartnerHelper
+- Added conditional notification sending only for completed tasks
+- Added success/failure logging for notification attempts
+- Integrated with sendTaskCompletedNotification hook
+
+#### Change #9: Punishment Application Notifications
+**File**: `src/data/punishments/mutations/useApplyPunishment.ts`
+**Description**: Added push notifications for punishment applications.
+**Details**:
+- Integrated sendPunishmentPerformedNotification into punishment flow
+- Added partner notification when punishments are applied
+- Included points deduction information in notification payload
+- Added error handling for notification failures during punishment application
+
+#### Change #10: Rule Violation Notifications
+**File**: `src/data/rules/mutations/useCreateRuleViolation.ts`
+**Description**: Added push notifications for rule violations.
+**Details**:
+- Integrated sendRuleBrokenNotification into rule violation creation
+- Added notification to partner when rules are broken
+- Included rule name and violation details in notification
+- Added async notification handling in rule violation flow
+
+#### Change #11: Wellness Update Notifications
+**File**: `src/data/wellbeing/mutations/useUpsertWellbeing.ts`
+**Description**: Added push notifications for wellness score updates.
+**Details**:
+- Integrated sendWellnessUpdatedNotification into wellness upsert flow
+- Added partner notification when wellness scores are updated
+- Included overall wellness score in notification payload
+- Added conditional notification only when partner exists
+
+#### Change #12: Reward Purchase and Redemption Notifications
+**Files**: `src/data/rewards/mutations/useBuySubReward.ts`, `src/data/rewards/mutations/useRedeemSubReward.ts`, `src/data/rewards/mutations/useBuyDomReward.ts`, `src/data/rewards/mutations/useRedeemDomReward.ts`
+**Description**: Added push notifications for all reward-related actions.
+**Details**:
+- Integrated sendRewardPurchasedNotification for reward purchases
+- Integrated sendRewardRedeemedNotification for reward redemptions
+- Added cost information in purchase notifications
+- Added reward name and type information in all reward notifications
+- Implemented notifications for both Dom and Sub reward types
+
+#### Change #13: Message Sending Smart Notifications
+**File**: `src/hooks/messages/useMessageSend.ts`
+**Description**: Integrated smart message notifications into message sending flow.
+**Details**:
+- Added useSmartMessageNotifications hook integration
+- Implemented conditional notification based on app visibility and user location
+- Added message content preview in notifications
+- Added sender name and message preview in notification payload
+- Implemented smart logic to avoid notifications when user is active on messages page
+
+#### Change #14: Enhanced Push Subscription Management
+**File**: `src/hooks/usePushSubscription.ts`
+**Description**: Enhanced push subscription management with better error handling and state management.
+**Details**:
+- Improved subscription status checking and validation
+- Enhanced permission request handling
+- Added better error handling for subscription failures
+- Improved service worker integration and ready state checking
+- Added automatic subscription verification against database
+
+#### Change #15: Notification Settings Integration
+**File**: `src/hooks/useNotificationSettings.ts`
+**Description**: Created comprehensive notification settings management system.
+**Details**:
+- Implemented user notification preferences management
+- Added settings for each notification type (taskCompleted, rewardPurchased, etc.)
+- Integrated with user_notification_preferences database table
+- Added real-time settings updates and synchronization
+- Implemented default notification preference values
+
+#### Change #16: Service Worker Updates
+**File**: `public/sw.js`
+**Description**: Enhanced service worker for better push notification handling.
+**Details**:
+- Updated push event listener for better notification display
+- Added proper notification action handling
+- Improved notification click handling and app focus logic
+- Added support for notification data payload processing
+- Enhanced offline capability and background sync
+
+#### Change #17: Core Push Notifications Hook Centralization
+**File**: `src/hooks/usePushNotifications.ts`
+**Description**: Centralized all push notification logic into a single comprehensive hook.
+**Details**:
+- Created sendTaskCompletedNotification function
+- Created sendRewardPurchasedNotification function
+- Created sendRewardRedeemedNotification function
+- Created sendPunishmentPerformedNotification function
+- Created sendWellnessUpdatedNotification function
+- Created sendWellnessCheckinNotification function
+- Created sendMessageNotification function
+- Created sendRuleBrokenNotification function
+- Added unified error handling and logging for all notification types
+
+#### Change #18: Partner Helper Integration
+**File**: `src/hooks/usePartnerHelper.ts`
+**Description**: Enhanced partner helper for reliable partner ID resolution.
+**Details**:
+- Improved error handling in getPartnerId function
+- Added comprehensive logging for partner ID resolution
+- Enhanced database query for linked_partner_id retrieval
+- Added null safety and validation for partner relationships
+- Improved async handling and error propagation
+
+#### Change #19: Smart Message Notifications System
+**File**: `src/hooks/useSmartMessageNotifications.ts`
+**Description**: Created intelligent message notification system based on user activity and preferences.
+**Details**:
+- Implemented shouldSendNotification logic based on app visibility
+- Added check for current route to avoid notifications on messages page
+- Integrated user notification preferences for message notifications
+- Added sender name and message content preview
+- Implemented smart notification logic to reduce notification spam
+
+#### Change #20: Database Schema Updates
+**Description**: Updated database tables for push notification support.
+**Details**:
+- Created user_push_subscriptions table with endpoint, p256dh, auth fields
+- Created user_notification_preferences table with JSON preferences field
+- Added RLS policies for push subscription and preference management
+- Added proper indexes and constraints for push notification tables
+- Integrated push token storage in profiles table
+
+#### Change #21: Comprehensive Logging System
+**Files**: Multiple files across the system
+**Description**: Added extensive logging throughout the entire push notification chain.
+**Details**:
+- Added logger integration using src/lib/logger.ts
+- Implemented structured logging for debugging push notification flow
+- Added success/failure logging for each notification step
+- Added error logging with proper error object handling
+- Implemented development-only logging to avoid production noise
+
+#### Change #22: Network Error Handling
+**Files**: Multiple notification-related files
+**Description**: Enhanced network error handling for push notification failures.
+**Details**:
+- Added retry logic for failed edge function calls
+- Improved error propagation and user feedback
+- Added graceful degradation when push notifications fail
+- Implemented proper error boundaries for notification failures
+- Added network connectivity checks before sending notifications
+
+#### Change #23: Browser Compatibility Improvements
+**File**: `src/hooks/usePushSubscription.ts`
+**Description**: Enhanced browser compatibility for push notifications across different browsers.
+**Details**:
+- Added Safari push notification support detection
+- Improved Chrome/Edge FCM integration
+- Added Firefox Mozilla push service compatibility
+- Implemented proper feature detection for push API support
+- Added fallback handling for unsupported browsers
+
+#### Change #24: Push Notification Testing Utilities
+**File**: `src/utils/pushNotificationTest.ts`
+**Description**: Created comprehensive testing utilities for debugging push notifications.
+**Details**:
+- Added pushNotificationTest function for manual testing
+- Implemented service worker registration checking
+- Added VAPID key fetching and validation
+- Created manual subscription testing functions
+- Added manual push notification sending for testing
+- Implemented browser console testing commands
+
+#### Change #25: Notification Permission Management
+**Files**: Multiple push notification related files
+**Description**: Enhanced notification permission handling and user experience.
+**Details**:
+- Improved permission request timing and user experience
+- Added proper permission state checking and validation
+- Enhanced permission denied handling and user feedback
+- Added automatic permission re-request when appropriate
+- Implemented graceful handling of permission state changes
+
+## CRITICAL ISSUES IDENTIFIED
+
+### Issue #1: Edge Function Never Called (CRITICAL)
+**Status**: UNRESOLVED
+**Description**: Despite all the above changes and integrations, the edge function 'send-push-notification' is never being invoked when notifications should be sent.
+
+**Evidence**:
+- Edge function logs show zero invocations during task completion
+- Network tab shows no requests to edge function endpoint
+- All components are properly integrated and should trigger notifications
+- Partner relationships exist and push subscriptions are active
+
+**Potential Root Causes**:
+1. Silent failure in supabase.functions.invoke call
+2. Network connectivity issues preventing edge function calls
+3. Authentication/permission issues with edge function access
+4. Edge function deployment or configuration problems
+5. Conditional logic preventing notification calls (getPartnerId returning null, etc.)
+
+### Issue #2: Silent Failures in Notification Chain
+**Status**: NEEDS INVESTIGATION
+**Description**: There may be silent failures occurring at various points in the notification chain that prevent the edge function from being called.
+
+**Potential Failure Points**:
+1. Partner ID resolution failing silently
+2. Notification permission checks failing
+3. User preference checks blocking notifications
+4. Network timeout or connection issues
+5. Service worker not properly registered or active
 
 ## DEBUGGING STEPS
 
