@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate VAPID Keys</title>
+</head>
+<body>
+    <h1>Generate VAPID Keys</h1>
+    <button onclick="generateKeys()">Generate Keys</button>
+    <div id="results"></div>
+    
+    <script>
+        async function generateKeys() {
+            const results = document.getElementById('results');
+            results.innerHTML = 'Generating keys...';
+            
+            try {
+                const response = await fetch('https://ronqvzihpffgowyscgfm.supabase.co/functions/v1/generate-vapid-keys', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvbnF2emlocGZmZ293eXNjZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4NzM0NzIsImV4cCI6MjA1ODQ0OTQ3Mn0.28ftEjZYpnYOywnRdRbRRg5UKD31VPpuZ00mJH8IQtM'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    results.innerHTML = `
+                        <h2>VAPID Keys Generated Successfully!</h2>
+                        <h3>VAPID_PUBLIC_KEY:</h3>
+                        <code style="background: #f5f5f5; padding: 10px; display: block; word-break: break-all;">${data.publicKey}</code>
+                        
+                        <h3>VAPID_PRIVATE_KEY:</h3>
+                        <code style="background: #f5f5f5; padding: 10px; display: block; word-break: break-all;">${data.privateKey}</code>
+                        
+                        <p><strong>Public Key Length:</strong> ${data.publicKeyLength} bytes</p>
+                        <p><strong>Private Key Length:</strong> ${data.privateKeyLength} bytes</p>
+                        <p><strong>Format:</strong> ${data.format}</p>
+                    `;
+                } else {
+                    results.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                results.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
