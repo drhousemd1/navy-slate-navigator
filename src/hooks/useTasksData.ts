@@ -63,8 +63,6 @@ export const useTasksData = () => {
 
   const saveTask = async (taskData: SaveTaskInput): Promise<TaskWithId | null> => {
     try {
-      // Check for resets before saving
-      await checkAndReloadTasks();
       
       // Discriminate between CreateTaskVariables and UpdateTaskVariables
       // UpdateTaskVariables will have an 'id' property.
