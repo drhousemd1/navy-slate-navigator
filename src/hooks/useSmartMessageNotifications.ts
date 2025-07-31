@@ -17,17 +17,13 @@ export const useSmartMessageNotifications = () => {
       receiverId,
       currentUserId: user?.id,
       isAppActive,
-      currentPath: location.pathname,
-      preferencesEnabled: preferences?.enabled,
-      messagesEnabled: preferences?.types?.messages
+      currentPath: location.pathname
     });
     
-    // Don't send if notifications are disabled
-    if (!preferences.enabled || !preferences.types.messages) {
-      logger.info('[useSmartMessageNotifications] Not sending - notifications disabled');
-      return false;
-    }
-
+    // CRITICAL FIX: Do NOT check sender's notification preferences
+    // The edge function will check the RECEIVER's preferences on the server side
+    // This was causing messages to not be sent when sender had notifications disabled
+    
     // Don't send if this is the receiver (sending to yourself)
     if (user?.id === receiverId) {
       logger.info('[useSmartMessageNotifications] Not sending - message to self');

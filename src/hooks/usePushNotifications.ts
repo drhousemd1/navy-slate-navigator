@@ -29,10 +29,7 @@ export const usePushNotifications = () => {
       type, 
       title, 
       body,
-      sendingUserId: user?.id,
-      preferencesLoading,
-      preferencesEnabled: preferences?.enabled,
-      typeEnabled: preferences?.types?.[type]
+      sendingUserId: user?.id
     });
     
     if (!user) {
@@ -40,23 +37,10 @@ export const usePushNotifications = () => {
       return false;
     }
 
-    // Check notification preferences - assume enabled while loading to avoid race condition
-    if (!preferencesLoading) {
-      // Only check preferences when they're fully loaded
-      if (!preferences.enabled) {
-        logger.info('[usePushNotifications] Push notifications are disabled globally');
-        return false;
-      }
-
-      if (!preferences.types[type]) {
-        logger.info(`[usePushNotifications] Push notifications are disabled for type: ${type}`);
-        return false;
-      }
-    } else {
-      logger.info('[usePushNotifications] Preferences still loading, assuming notifications enabled');
-    }
-
-    logger.info('[usePushNotifications] All preference checks passed, invoking edge function');
+    // CRITICAL FIX: Do NOT check sender's notification preferences
+    // The edge function will check the TARGET user's preferences on the server side
+    // This was the main bug - sender's disabled notifications were blocking recipient notifications
+    logger.info('[usePushNotifications] Sender authenticated, proceeding to edge function (target user preferences checked server-side)');
 
     try {
       const requestPayload = {

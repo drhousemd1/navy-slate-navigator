@@ -141,7 +141,6 @@ async function sendPushNotification(
   endpoint: string,
   title: string,
   body: string,
-  userEmail: string,
   data: Record<string, any> = {}
 ): Promise<{ success: boolean; shouldRemove?: boolean }> {
   console.log("[PUSH] Sending to endpoint:", endpoint.substring(0, 50) + "…");
@@ -164,9 +163,9 @@ async function sendPushNotification(
 
     console.log(`[PUSH] Push service: ${pushService}`);
 
-    // Build VAPID JWT using environment variable or fallback to admin email
+    // Build VAPID JWT using proper domain email for Safari compatibility
     const envEmail = Deno.env.get('VAPID_EMAIL');
-    const subjectEmail = (envEmail && envEmail.trim()) ? envEmail.trim() : 'admin@navy-slate-navigator.com';
+    const subjectEmail = (envEmail && envEmail.trim()) ? envEmail.trim() : 'admin@navyslatenavigator.com';
     const vapidJWT = await buildVapidJWT(audience, `mailto:${subjectEmail}`);
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!;
 
@@ -194,7 +193,7 @@ async function sendPushNotification(
       headers = {
         'Authorization': `Bearer ${vapidJWT}`,
         'Content-Type': 'application/json',
-        'apns-topic': 'web.push',
+        'apns-topic': 'web.com.navyslatenavigator.app', // Proper Website Push ID format
         'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400),
         'apns-priority': '10',
         // Required for alert notifications - tells APNs this is an interactive alert
@@ -321,7 +320,7 @@ serve(async (req) => {
       }
     }
 
-    // Get user's email for VAPID JWT
+    // Simplified - only verify user exists, don't fetch unused email
     const { data: userProfile, error: userError } = await supabase
       .from('profiles')
       .select('id')
@@ -337,17 +336,6 @@ serve(async (req) => {
       console.error('[MAIN] User profile not found');
       return jsonResponse({ error: 'User not found' }, 404);
     }
-
-    // Get user's email from auth.users
-    const { data: { user }, error: authError } = await supabase.auth.admin.getUserById(targetUserId);
-    
-    if (authError || !user?.email) {
-      console.error('[MAIN] Error fetching user email:', authError);
-      return jsonResponse({ error: 'Failed to fetch user email' }, 500);
-    }
-
-    const userEmail = user.email;
-    console.log(`[MAIN] Using email for VAPID JWT: ${userEmail}`);
 
     // Get user's push subscriptions
     const { data: subscriptions, error: subscriptionsError } = await supabase
@@ -377,7 +365,6 @@ serve(async (req) => {
           subscription.endpoint,
           title || 'Navy Slate Navigator',
           body || 'New notification',
-          userEmail,
           { type, ...data }
         );
         
