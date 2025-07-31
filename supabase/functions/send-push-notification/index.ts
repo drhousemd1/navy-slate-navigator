@@ -148,9 +148,7 @@ async function sendPushNotification(
   endpoint: string,
   title: string,
   body: string,
-  data: Record<string, any> = {},
-  targetUserId: string,
-  supabase: any
+  data: Record<string, any> = {}
 ): Promise<{ success: boolean; shouldRemove?: boolean }> {
   console.log("[PUSH] Sending to endpoint:", endpoint.substring(0, 50) + "…");
 
@@ -172,18 +170,9 @@ async function sendPushNotification(
 
     console.log(`[PUSH] Push service: ${pushService}`);
 
-    // Get target user's email from auth.users table for VAPID JWT
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(targetUserId);
-    
-    if (authError || !authUser?.user?.email) {
-      console.error('[VAPID] Failed to fetch user email for VAPID JWT:', authError);
-      throw new Error('Failed to fetch user email for VAPID JWT');
-    }
-    
-    const userEmail = authUser.user.email;
-    console.log('[VAPID] Using user email for VAPID JWT:', userEmail);
-    
-    const vapidJWT = await buildVapidJWT(audience, `mailto:${userEmail}`);
+    // Use consistent domain email for VAPID JWT (as per ChatGPT guide)
+    // VAPID JWT requires a consistent sender identity, NOT dynamic per-user emails
+    const vapidJWT = await buildVapidJWT(audience, 'mailto:admin@navyslatenavigator.com');
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!;
 
     // Create payload based on push service
@@ -382,9 +371,7 @@ serve(async (req) => {
           subscription.endpoint,
           title || 'Navy Slate Navigator',
           body || 'New notification',
-          { type, ...data },
-          targetUserId,
-          supabase
+          { type, ...data }
         );
         
         results.push({

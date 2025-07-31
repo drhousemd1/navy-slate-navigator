@@ -13,7 +13,7 @@ export const usePartnerHelper = () => {
     }
 
     try {
-      logger.info('[usePartnerHelper] Fetching partner ID for user:', user.id);
+      logger.info('[usePartnerHelper] 🔍 Fetching partner ID for user:', user.id);
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('linked_partner_id')
@@ -21,15 +21,31 @@ export const usePartnerHelper = () => {
         .single();
 
       if (error) {
-        logger.error('[usePartnerHelper] Error fetching partner ID:', error);
+        logger.error('[usePartnerHelper] ❌ Error fetching partner ID:', error);
+        return null;
+      }
+
+      if (!profile) {
+        logger.warn('[usePartnerHelper] ⚠️ No profile found for user:', user.id);
         return null;
       }
 
       const partnerId = profile?.linked_partner_id || null;
-      logger.info('[usePartnerHelper] Partner ID retrieved:', partnerId ? 'found' : 'not found', { partnerId });
-      return partnerId;
+      logger.info('[usePartnerHelper] ✅ Partner ID retrieved:', partnerId ? 'FOUND' : 'NOT_FOUND', { 
+        userId: user.id,
+        partnerId: partnerId || 'null' 
+      });
+      
+      // Add validation
+      if (partnerId && typeof partnerId === 'string' && partnerId.length > 0) {
+        logger.info('[usePartnerHelper] ✅ Valid partner ID confirmed:', partnerId);
+        return partnerId;
+      } else {
+        logger.warn('[usePartnerHelper] ⚠️ Partner ID is null/empty/invalid');
+        return null;
+      }
     } catch (error) {
-      logger.error('[usePartnerHelper] Exception getting partner ID:', error);
+      logger.error('[usePartnerHelper] 💥 Exception getting partner ID:', error);
       return null;
     }
   }, [user]);
