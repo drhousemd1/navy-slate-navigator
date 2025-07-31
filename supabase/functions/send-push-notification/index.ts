@@ -172,7 +172,8 @@ async function sendPushNotification(
 
     // Use consistent domain email for VAPID JWT (as per ChatGPT guide)
     // VAPID JWT requires a consistent sender identity, NOT dynamic per-user emails
-    const vapidJWT = await buildVapidJWT(audience, 'mailto:admin@navyslatenavigator.com');
+    const vapidDomain = Deno.env.get('VAPID_DOMAIN') || 'admin@navyslatenavigator.com';
+    const vapidJWT = await buildVapidJWT(audience, `mailto:${vapidDomain}`);
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!;
 
     // Create payload based on push service
@@ -196,10 +197,14 @@ async function sendPushNotification(
       };
       payloadString = JSON.stringify(applePayload);
       
+      // Get Apple Website Push ID from environment variable
+      const appleWebsitePushId = Deno.env.get('APPLE_WEBSITE_PUSH_ID') || 'web.com.navyslatenavigator.app';
+      console.log(`[PUSH] Using Apple Website Push ID: ${appleWebsitePushId}`);
+      
       headers = {
         'Authorization': `Bearer ${vapidJWT}`,
         'Content-Type': 'application/json',
-        'apns-topic': 'web.com.navyslatenavigator.app', // Website Push ID from app registration
+        'apns-topic': appleWebsitePushId, // Website Push ID from Apple Developer account
         'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400),
         'apns-priority': '10',
         // Required for alert notifications - tells APNs this is an interactive alert
