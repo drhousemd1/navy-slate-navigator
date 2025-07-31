@@ -489,3 +489,297 @@ const { data: result, error } = await supabase.functions.invoke('send-push-notif
 
 **Last Updated**: Current session
 **Status**: CRITICAL ISSUE - Edge function not being called despite proper setup
+
+# GPT's Guide to building push notifications
+
+// guide_push_notifications.tsx
+// This file contains a comprehensive guide on how to implement push notifications in a modern web application.
+// The content is written in a style similar to the existing PUSH‑NOTIFICATION‑SYSTEM guide, using clear headings,
+// numbered steps, explanations, and annotated sample code blocks. It is intended for educational purposes only.
+
+import React from 'react';
+
+const GuidePushNotifications: React.FC = () => {
+  return (
+    <div style={{ padding: '1rem', fontFamily: 'Arial, sans-serif', lineHeight: 1.5 }}>
+      <h1>PUSH NOTIFICATION IMPLEMENTATION GUIDE</h1>
+      <p>
+        This document explains how to build and integrate a complete push notification system into your application.
+        It follows the same layout used in the existing app code guide. The focus is on clarity and completeness,
+        covering everything from architecture to sample implementation. Code snippets are provided only as examples
+        to illustrate concepts (<strong>do not copy them directly into production code</strong>).
+      </p>
+
+      <h2>1. SYSTEM ARCHITECTURE OVERVIEW</h2>
+      <p>
+        A robust push notification system involves several components working together. At a high level you need:
+      </p>
+      <ul>
+        <li>
+          <strong>Frontend Hooks/Services:</strong> React hooks or services to subscribe/unsubscribe, request permissions,
+          and invoke your backend when an event occurs.
+        </li>
+        <li>
+          <strong>Backend Functions:</strong> Serverless functions or API endpoints that handle sending push notifications
+          to the appropriate push service (Firebase Cloud Messaging, Apple Push Service, etc.).
+        </li>
+        <li>
+          <strong>Database Tables:</strong> Tables to store user subscriptions, notification preferences and any metadata
+          required to deliver messages.
+        </li>
+        <li>
+          <strong>Service Worker:</strong> A <code>sw.js</code> file registered in the browser to receive and display
+          notifications when the page is closed or in the background.
+        </li>
+      </ul>
+
+      <h2>2. FRONTEND INTEGRATION</h2>
+      <h3>2.1 Subscribing to Push Notifications</h3>
+      <p>
+        To subscribe a user, you must first request notification permission, then call
+        <code>PushManager.subscribe()</code> on your service worker registration. Store the resulting subscription
+        in your database so it can be used later. Ensure you handle cases where the user denies permission.
+      </p>
+      <pre>
+        {`
+// this is sample code formatting only, do not copy paste directly
+const subscribeToPush = async (vapidPublicKey: string) => {
+  if (!('serviceWorker' in navigator)) {
+    console.error('Service workers are not supported.');
+    return;
+  }
+  const registration = await navigator.serviceWorker.ready;
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    console.warn('Notifications permission not granted.');
+    return;
+  }
+  const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+  const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+  // Send subscription to your backend to save it in the database
+  await saveSubscriptionToBackend(subscription);
+};
+        `}
+      </pre>
+      <p>
+        <strong>Important:</strong> <em>Always</em> convert your base64 VAPID public key to a <code>Uint8Array</code>
+        before passing it to the browser's subscription API. Also, only request permission in response to a user
+        gesture (e.g., clicking a button) to comply with browser restrictions.
+      </p>
+
+      <h3>2.2 Managing Subscription State</h3>
+      <p>
+        Implement a hook to track whether the current browser instance has an active subscription and whether the user
+        has any subscriptions at all. Use this to update your UI (e.g., show "Subscribed" vs. "Not Subscribed").
+        Query your database for existing subscriptions to know if the user has subscribed from another device.
+      </p>
+      <pre>
+        {`
+// this is sample code formatting only, do not copy paste directly
+const usePushSubscription = () => {
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    // Check browser support
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    setIsSupported(supported);
+    if (!supported) {
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      setIsSubscribed(!!subscription);
+      setLoading(false);
+    })();
+  }, []);
+  return { isSubscribed, isSupported, loading };
+};
+        `}
+      </pre>
+
+      <h3>2.3 Service Worker</h3>
+      <p>
+        Your service worker should handle installation, activation, caching (optional) and, most importantly, the
+        <code>push</code> event. When a push event arrives, parse the payload (usually JSON) and display a notification
+        with <code>self.registration.showNotification()</code>. Also listen for <code>notificationclick</code> events
+        to focus or open your web app when the user interacts with the notification.
+      </p>
+      <pre>
+        {`
+// this is sample code formatting only, do not copy paste directly
+self.addEventListener('push', event => {
+  let data = { title: 'New Notification', body: 'Default message.' };
+  if (event.data) {
+    try {
+      data = JSON.parse(event.data.text());
+    } catch (e) {
+      console.warn('Push data was not valid JSON; using defaults');
+    }
+  }
+  const options = {
+    body: data.body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: data.data || {},
+  };
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if (client.url === '/' && 'focus' in client) return client.focus();
+      }
+      return self.clients.openWindow('/');
+    }),
+  );
+});
+        `}
+      </pre>
+
+      <h2>3. BACKEND INTEGRATION</h2>
+      <h3>3.1 Storing Subscriptions</h3>
+      <p>
+        Create a table (e.g., <code>user_push_subscriptions</code>) with columns for <code>user_id</code>,
+        <code>endpoint</code>, <code>p256dh</code>, <code>auth</code> and possibly <code>user_agent</code>. When a new
+        subscription is created, upsert it into this table. Remove expired or invalid subscriptions when you detect
+        them (for example, after receiving an HTTP 404 or 410 response from the push service).
+      </p>
+
+      <h3>3.2 Sending Push Notifications</h3>
+      <p>
+        The backend function that actually sends the push should:
+      </p>
+      <ol>
+        <li>Validate the request (ensure a target user ID, title and body are provided).</li>
+        <li>Check the target user's notification preferences to see if the notification is allowed. These preferences
+          should be stored in a <code>user_notification_preferences</code> table with an <code>enabled</code> flag
+          and separate flags for each type of notification.</li>
+        <li>Fetch all push subscriptions for the target user from the database.</li>
+        <li>Generate a VAPID JWT using your VAPID keys and domain email. For Safari you must also set
+          <code>apns-topic</code> to your registered Website Push ID.</li>
+        <li>Send the notification to each subscription endpoint, using service‑specific headers when necessary (e.g.,
+          special headers for Apple Push Service). If a subscription returns a 404 or 410 status, mark it for
+          removal.</li>
+        <li>Clean up expired subscriptions in the database.</li>
+      </ol>
+      <pre>
+        {`
+// this is sample code formatting only, do not copy paste directly
+async function sendPushNotification(subscription, payload) {
+  // Determine push service based on endpoint URL
+  const endpoint = subscription.endpoint;
+  const url = new URL(endpoint);
+  const audience = \`${url.protocol}//${url.host}\`;
+  const vapidJWT = await buildVapidJWT(audience, 'mailto:example@example.com');
+  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+  const payloadString = JSON.stringify(payload);
+  const headers = {
+    Authorization: \`WebPush ${vapidJWT}\`,
+    'Crypto-Key': \`p256ecdsa=${vapidPublicKey}\`,
+    TTL: '86400',
+    'Content-Type': 'application/json',
+  };
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    body: payloadString,
+  });
+  if (response.status === 410 || response.status === 404) {
+    // Flag subscription for removal
+  }
+}
+        `}
+      </pre>
+      <p>
+        <strong>Note:</strong> The above is only illustrative. In practice you'll need to handle Apple Push Service
+        differently by using the APS payload format and appropriate headers (e.g., <code>apns-topic</code> and
+        <code>apns-priority</code>).
+      </p>
+
+      <h2>4. TRIGGERING NOTIFICATIONS FOR VARIOUS EVENTS</h2>
+      <p>
+        Push notifications can be triggered by many events in your application, not just task completions. Here are
+        typical scenarios and how to handle them:
+      </p>
+      <h3>4.1 Task Completion</h3>
+      <p>
+        When a user completes a task, determine the partner ID (e.g., the linked dominant or submissive partner) and
+        send a <code>taskCompleted</code> notification. Make sure to check that the task completion actually happened
+        (e.g., you might only notify when a task crosses its completion threshold).
+      </p>
+      <h3>4.2 Rule Broken</h3>
+      <p>
+        If your app tracks rules, you might notify the dominant partner when a submissive breaks a rule. This is
+        similar to task completion: capture the event, look up the partner and call your push send function.
+      </p>
+      <h3>4.3 Reward Purchased / Redeemed</h3>
+      <p>
+        When a user buys or redeems a reward, inform their partner. Include details such as the reward name and how
+        many points were spent or gained. Use separate notification types (<code>rewardPurchased</code> and
+        <code>rewardRedeemed</code>) so that users can disable one without affecting the other.
+      </p>
+      <h3>4.4 Punishment Performed</h3>
+      <p>
+        When a punishment is applied, notify the relevant partner. Include details like the punishment name and how
+        many points were deducted. This encourages transparency and keeps both partners informed.
+      </p>
+      <h3>4.5 Wellness Updates</h3>
+      <p>
+        If your app includes wellness tracking, send notifications when a user completes a wellness check‑in or when
+        their wellness score changes. This can motivate regular check‑ins and communication between partners.
+      </p>
+      <h3>4.6 Messages</h3>
+      <p>
+        When a user sends a message, decide whether to send a push based on the recipient's current context. For
+        instance, you might suppress a notification if the recipient is actively viewing the messages page or if the
+        sender is the same user. Always check the recipient's preferences server‑side.
+      </p>
+
+      <h2>5. BEST PRACTICES & TIPS</h2>
+      <ul>
+        <li>
+          <strong>Request Permission Sparingly:</strong> Ask for notification permission only when the user initiates
+          an action that naturally leads to it (e.g., when enabling notifications in settings).
+        </li>
+        <li>
+          <strong>Respect User Preferences:</strong> Store per‑user preferences for each notification type and consult
+          them on the server before sending. Don't rely on the client's state alone.
+        </li>
+        <li>
+          <strong>Handle Multiple Devices:</strong> Users may subscribe from several browsers or devices. Treat a user
+          as subscribed if they have any valid subscription. Clean up expired subscriptions regularly.
+        </li>
+        <li>
+          <strong>Use Appropriate Icons & Badges:</strong> Use descriptive icons to help users quickly identify the
+          source of a notification. Keep badges minimal to avoid clutter.
+        </li>
+        <li>
+          <strong>Test Across Browsers:</strong> Web push behaves differently across Chrome, Firefox, Safari and Edge.
+          Test each platform thoroughly. For Safari, register a Website Push ID and ensure your payload meets Apple's
+          requirements.
+        </li>
+        <li>
+          <strong>Monitor Errors:</strong> Log errors from subscription creation and push sending. Use this data to
+          debug issues and improve reliability.
+        </li>
+      </ul>
+
+      <h2>6. CONCLUSION</h2>
+      <p>
+        Building a push notification system requires careful integration between the browser, your frontend code,
+        database and backend. By following the architectural pattern outlined here and using the sample code as a
+        reference, you can add push notifications for various events (tasks, rules, rewards, punishments, wellness,
+        messages and more) without confusing your application logic. Always respect user preferences and platform
+        requirements, and remember that sample code must be adapted to your specific environment.
+      </p>
+    </div>
+  );
+};
+
+export default GuidePushNotifications;
