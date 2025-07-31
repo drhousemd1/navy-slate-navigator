@@ -13,6 +13,7 @@ export const usePartnerHelper = () => {
     }
 
     try {
+      logger.info('[usePartnerHelper] Fetching partner ID for user:', user.id);
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('linked_partner_id')
@@ -24,7 +25,9 @@ export const usePartnerHelper = () => {
         return null;
       }
 
-      return profile?.linked_partner_id || null;
+      const partnerId = profile?.linked_partner_id || null;
+      logger.info('[usePartnerHelper] Partner ID retrieved:', partnerId ? 'found' : 'not found', { partnerId });
+      return partnerId;
     } catch (error) {
       logger.error('[usePartnerHelper] Exception getting partner ID:', error);
       return null;

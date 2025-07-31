@@ -24,7 +24,16 @@ export const usePushNotifications = () => {
     body,
     data = {}
   }: SendNotificationParams): Promise<boolean> => {
-    logger.info('[usePushNotifications] sendNotification called:', { targetUserId, type, title, body });
+    logger.info('[usePushNotifications] sendNotification called:', { 
+      targetUserId, 
+      type, 
+      title, 
+      body,
+      sendingUserId: user?.id,
+      preferencesLoading,
+      preferencesEnabled: preferences?.enabled,
+      typeEnabled: preferences?.types?.[type]
+    });
     
     if (!user) {
       logger.error('[usePushNotifications] User not authenticated');
@@ -47,28 +56,32 @@ export const usePushNotifications = () => {
       logger.info('[usePushNotifications] Preferences still loading, assuming notifications enabled');
     }
 
-    logger.info('[usePushNotifications] Preference checks passed, calling edge function');
+    logger.info('[usePushNotifications] All preference checks passed, invoking edge function');
 
     try {
+      const requestPayload = {
+        targetUserId,
+        type,
+        title,
+        body,
+        data,
+      };
+      
+      logger.info('[usePushNotifications] Calling edge function with payload:', requestPayload);
+      
       const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
-        body: {
-          targetUserId,
-          type,
-          title,
-          body,
-          data,
-        },
+        body: requestPayload,
       });
 
       if (error) {
-        logger.error('[usePushNotifications] Error sending push notification:', error);
+        logger.error('[usePushNotifications] Edge function returned error:', error);
         return false;
       }
 
-      logger.info('[usePushNotifications] Push notification sent successfully:', result);
+      logger.info('[usePushNotifications] Edge function call successful, result:', result);
       return true;
     } catch (error) {
-      logger.error('[usePushNotifications] Error invoking push notification function:', error);
+      logger.error('[usePushNotifications] Exception calling edge function:', error);
       return false;
     }
   };

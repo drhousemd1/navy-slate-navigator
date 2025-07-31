@@ -13,26 +13,35 @@ export const useSmartMessageNotifications = () => {
   const location = useLocation();
 
   const shouldSendNotification = (receiverId: string): boolean => {
+    logger.info('[useSmartMessageNotifications] Checking if should send notification:', {
+      receiverId,
+      currentUserId: user?.id,
+      isAppActive,
+      currentPath: location.pathname,
+      preferencesEnabled: preferences?.enabled,
+      messagesEnabled: preferences?.types?.messages
+    });
+    
     // Don't send if notifications are disabled
     if (!preferences.enabled || !preferences.types.messages) {
-      logger.debug('[SmartMessageNotifications] Notifications disabled for messages');
+      logger.info('[useSmartMessageNotifications] Not sending - notifications disabled');
       return false;
     }
 
     // Don't send if this is the receiver (sending to yourself)
     if (user?.id === receiverId) {
-      logger.debug('[SmartMessageNotifications] Not sending notification - message to self');
+      logger.info('[useSmartMessageNotifications] Not sending - message to self');
       return false;
     }
 
     // Don't send if app is active and user is on messages page
     if (isAppActive && location.pathname === '/messages') {
-      logger.debug('[SmartMessageNotifications] App is active and on messages page - not sending notification');
+      logger.info('[useSmartMessageNotifications] Not sending - app active and on messages page');
       return false;
     }
 
     // Send notification if app is not active or user is not on messages page
-    logger.debug('[SmartMessageNotifications] App conditions met - will send notification');
+    logger.info('[useSmartMessageNotifications] Should send notification: true');
     return true;
   };
 
@@ -41,7 +50,14 @@ export const useSmartMessageNotifications = () => {
     senderName: string,
     messageContent: string
   ): Promise<boolean> => {
+    logger.info('[useSmartMessageNotifications] sendNewMessageNotification called:', {
+      receiverId,
+      senderName,
+      messageLength: messageContent.length
+    });
+    
     if (!shouldSendNotification(receiverId)) {
+      logger.info('[useSmartMessageNotifications] Not sending notification - conditions not met');
       return false;
     }
 
@@ -50,9 +66,10 @@ export const useSmartMessageNotifications = () => {
       ? `${messageContent.substring(0, 50)}...`
       : messageContent;
 
-    logger.info(`[SmartMessageNotifications] Sending message notification to ${receiverId}`);
-    
-    return await sendMessageNotification(receiverId, senderName, messagePreview || '📱 New message');
+    logger.info('[useSmartMessageNotifications] Sending message notification');
+    const result = await sendMessageNotification(receiverId, senderName, messagePreview || '📱 New message');
+    logger.info('[useSmartMessageNotifications] Message notification result:', result);
+    return result;
   };
 
   return {

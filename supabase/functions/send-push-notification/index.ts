@@ -270,6 +270,12 @@ serve(async (req) => {
       console.log("[TEST] Test mode activated");
       return jsonResponse({ message: 'Test mode - no actual notifications sent', success: true });
     }
+    
+    // Enhanced test mode with actual user ID for debugging
+    if (title === 'DEBUG_TEST' && targetUserId) {
+      console.log("[DEBUG_TEST] Debug test mode for user:", targetUserId);
+      // Still process normally but with extra logging
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

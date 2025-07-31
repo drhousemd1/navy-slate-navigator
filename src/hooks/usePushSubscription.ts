@@ -86,43 +86,100 @@ export const usePushSubscription = () => {
 
   const checkSubscriptionStatus = async () => {
     if (!isSupported || !user) {
-      logger.info('Skipping subscription check - not supported or no user');
+      logger.info('[usePushSubscription] Skipping subscription check - not supported or no user');
       setIsLoading(false);
       return;
     }
 
     try {
-      logger.info('Checking subscription status...');
+      logger.info('[usePushSubscription] Checking subscription status for user:', user.id);
       const registration = await navigator.serviceWorker.ready;
-      logger.info('Got service worker registration for subscription check');
+      logger.info('[usePushSubscription] Got service worker registration for subscription check');
       
       const subscription = await registration.pushManager.getSubscription();
-      logger.info('Current subscription:', subscription ? 'exists' : 'none');
+      logger.info('[usePushSubscription] Current browser subscription:', subscription ? 'exists' : 'none');
       
       if (subscription) {
-        // Check if subscription exists in database
-        const { data, error } = await supabase
+        logger.info('[usePushSubscription] Checking database for subscriptions for user:', user.id);
+        
+        // CRITICAL FIX: Check for ANY valid subscription for this user, not just the current endpoint
+        // This fixes the multiple subscriptions issue where .maybeSingle() would fail
+        const { data: subscriptions, error } = await supabase
           .from('user_push_subscriptions')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('endpoint', subscription.endpoint)
-          .maybeSingle();
+          .select('id, endpoint')
+          .eq('user_id', user.id);
 
         if (error) {
-          logger.error('Database query error:', error);
+          logger.error('[usePushSubscription] Database query error:', error);
           setIsSubscribed(false);
         } else {
-          setIsSubscribed(!!data);
-          logger.info('Subscription status from DB:', !!data);
+          const hasValidSubscriptions = subscriptions && subscriptions.length > 0;
+          const currentEndpointExists = subscriptions?.some(sub => sub.endpoint === subscription.endpoint);
+          
+          logger.info('[usePushSubscription] Database subscription check:', {
+            totalSubscriptions: subscriptions?.length || 0,
+            currentEndpointExists,
+            hasValidSubscriptions,
+            userSubscriptions: subscriptions?.map(s => ({ id: s.id, endpoint: s.endpoint.substring(0, 50) + '...' }))
+          });
+          
+          // User is considered subscribed if they have ANY valid subscription in the database
+          setIsSubscribed(hasValidSubscriptions);
+          
+          // If current browser subscription doesn't exist in DB but user has others, add it
+          if (hasValidSubscriptions && !currentEndpointExists) {
+            logger.info('[usePushSubscription] Current browser subscription not in DB, adding it');
+            await addCurrentSubscriptionToDB(subscription);
+          }
         }
       } else {
-        setIsSubscribed(false);
+        logger.info('[usePushSubscription] No browser subscription found');
+        // Still check if user has subscriptions in DB from other devices/browsers
+        const { data: subscriptions, error } = await supabase
+          .from('user_push_subscriptions')
+          .select('id')
+          .eq('user_id', user.id);
+          
+        if (!error && subscriptions && subscriptions.length > 0) {
+          logger.info('[usePushSubscription] User has subscriptions from other devices:', subscriptions.length);
+          setIsSubscribed(true);
+        } else {
+          setIsSubscribed(false);
+        }
       }
     } catch (error) {
-      logger.error('Error checking subscription status:', error);
+      logger.error('[usePushSubscription] Error checking subscription status:', error);
       setIsSubscribed(false);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper function to add current browser subscription to database
+  const addCurrentSubscriptionToDB = async (subscription: PushSubscription) => {
+    try {
+      if (!user || !vapidPublicKey) return;
+      
+      const p256dh = arrayBufferToBase64(subscription.getKey('p256dh')!);
+      const auth = arrayBufferToBase64(subscription.getKey('auth')!);
+
+      const { error } = await supabase
+        .from('user_push_subscriptions')
+        .upsert({
+          user_id: user.id,
+          endpoint: subscription.endpoint,
+          p256dh,
+          auth,
+          user_agent: navigator.userAgent,
+        });
+
+      if (error) {
+        logger.error('[usePushSubscription] Error adding current subscription to DB:', error);
+      } else {
+        logger.info('[usePushSubscription] Successfully added current subscription to DB');
+      }
+    } catch (error) {
+      logger.error('[usePushSubscription] Exception adding current subscription to DB:', error);
     }
   };
 
