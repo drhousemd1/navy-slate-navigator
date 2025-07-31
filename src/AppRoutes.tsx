@@ -13,6 +13,7 @@ import Wellbeing from './pages/Wellbeing';
 import ColorScheme from './pages/ColorScheme';
 import Notifications from './pages/Notifications';
 import LogoUpload from './pages/LogoUpload';
+import Debug from './pages/Debug';
 import Auth from './pages/auth';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
@@ -79,6 +80,10 @@ const AppRoutes = () => {
       <Route 
         path="/logo-upload" 
         element={<ProtectedRoute><ErrorBoundary><LogoUpload /></ErrorBoundary></ProtectedRoute>} 
+      />
+      <Route 
+        path="/debug" 
+        element={<ProtectedRoute><ErrorBoundary><Debug /></ErrorBoundary></ProtectedRoute>} 
       />
       
       {/* Catch-all for not found routes */}

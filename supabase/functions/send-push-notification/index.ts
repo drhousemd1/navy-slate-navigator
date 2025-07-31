@@ -38,7 +38,14 @@ async function buildVapidJWT(audience: string, subject: string): Promise<string>
   const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
 
   if (!vapidPublicKey || !vapidPrivateKey) {
+    console.error('[VAPID] Missing VAPID keys - PUBLIC_KEY:', !!vapidPublicKey, 'PRIVATE_KEY:', !!vapidPrivateKey);
     throw new Error('Missing VAPID keys');
+  }
+
+  // Validate key formats
+  if (!vapidPublicKey.match(/^[A-Za-z0-9_-]+$/) || !vapidPrivateKey.match(/^[A-Za-z0-9_-]+$/)) {
+    console.error('[VAPID] VAPID keys appear to be in wrong format (should be base64url)');
+    throw new Error('Invalid VAPID key format');
   }
 
   // JWT header
@@ -165,7 +172,12 @@ async function sendPushNotification(
 
     // Build VAPID JWT using proper domain email for Safari compatibility
     const envEmail = Deno.env.get('VAPID_EMAIL');
-    const subjectEmail = (envEmail && envEmail.trim()) ? envEmail.trim() : 'admin@navyslatenavigator.com';
+    const envDomain = Deno.env.get('VAPID_DOMAIN');
+    const subjectEmail = (envEmail && envEmail.trim()) ? envEmail.trim() : 'admin@example.com';
+    
+    if (!envEmail || !envDomain) {
+      console.warn('[VAPID] Missing VAPID_EMAIL or VAPID_DOMAIN environment variables, using defaults');
+    }
     const vapidJWT = await buildVapidJWT(audience, `mailto:${subjectEmail}`);
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!;
 
@@ -193,7 +205,7 @@ async function sendPushNotification(
       headers = {
         'Authorization': `Bearer ${vapidJWT}`,
         'Content-Type': 'application/json',
-        'apns-topic': 'web.com.navyslatenavigator.app', // Proper Website Push ID format
+        'apns-topic': envDomain || 'web.com.example.app', // Use environment variable for Website Push ID
         'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400),
         'apns-priority': '10',
         // Required for alert notifications - tells APNs this is an interactive alert

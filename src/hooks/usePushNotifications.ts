@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
 import { useNotificationSettings } from './useNotificationSettings';
 
-export type NotificationType = 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin' | 'messages';
+export type NotificationType = 'ruleBroken' | 'taskCompleted' | 'rewardPurchased' | 'rewardRedeemed' | 'punishmentPerformed' | 'wellnessUpdated' | 'wellnessCheckin' | 'messages' | 'test';
 
 interface SendNotificationParams {
   targetUserId: string;
@@ -37,10 +37,8 @@ export const usePushNotifications = () => {
       return false;
     }
 
-    // CRITICAL FIX: Do NOT check sender's notification preferences
-    // The edge function will check the TARGET user's preferences on the server side
-    // This was the main bug - sender's disabled notifications were blocking recipient notifications
-    logger.info('[usePushNotifications] Sender authenticated, proceeding to edge function (target user preferences checked server-side)');
+    // Edge function will check the TARGET user's preferences on the server side
+    logger.info('[usePushNotifications] Sender authenticated, proceeding to edge function');
 
     try {
       const requestPayload = {

@@ -214,24 +214,31 @@ export function useToggleTaskCompletionMutation() {
 
         // Send push notification to partner when task is completed
         if (variables.completed) {
-          logger.info('[useToggleTaskCompletionMutation] Task completed, attempting to send notification');
-          const partnerId = await getPartnerId();
-          logger.info('[useToggleTaskCompletionMutation] Partner ID retrieved:', partnerId);
+          logger.info('[useToggleTaskCompletionMutation] ✅ Task completed, attempting to send notification');
+          logger.info('[useToggleTaskCompletionMutation] 🔍 Getting partner ID...');
           
-          if (partnerId) {
-            try {
-              logger.info('[useToggleTaskCompletionMutation] Sending task completion notification');
+          try {
+            const partnerId = await getPartnerId();
+            logger.info('[useToggleTaskCompletionMutation] 📋 Partner ID retrieved:', partnerId ? 'FOUND' : 'NOT_FOUND', { partnerId });
+            
+            if (partnerId) {
+              logger.info('[useToggleTaskCompletionMutation] 📤 Calling sendTaskCompletedNotification...');
               const notificationSent = await sendTaskCompletedNotification(
                 partnerId, 
                 variables.task.title, 
                 variables.pointsValue
               );
-              logger.info('[useToggleTaskCompletionMutation] Notification result:', notificationSent);
-            } catch (error) {
-              logger.error('[useToggleTaskCompletionMutation] Failed to send task completion notification:', error);
+              logger.info('[useToggleTaskCompletionMutation] 📬 Notification result:', notificationSent ? 'SUCCESS' : 'FAILED');
+              
+              if (!notificationSent) {
+                toastManager.warn('Notification Warning', 'Task completed but partner notification failed to send');
+              }
+            } else {
+              logger.warn('[useToggleTaskCompletionMutation] ⚠️ No partner ID found, skipping notification');
             }
-          } else {
-            logger.warn('[useToggleTaskCompletionMutation] No partner ID found, skipping notification');
+          } catch (error) {
+            logger.error('[useToggleTaskCompletionMutation] 💥 Exception in notification flow:', error);
+            toastManager.error('Notification Error', 'Task completed but notification system encountered an error');
           }
         }
 

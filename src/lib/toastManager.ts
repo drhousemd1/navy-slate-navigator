@@ -54,6 +54,17 @@ class ToastManager {
       description,
     });
   }
+
+  warn(title: string, description?: string) {
+    const message = `WARN: ${title}${description ? `: ${description}` : ''}`;
+    if (this.isDuplicate(message)) return;
+    
+    toast({
+      title,
+      description,
+      variant: 'destructive',
+    });
+  }
 }
 
 export const toastManager = new ToastManager();
