@@ -148,7 +148,9 @@ async function sendPushNotification(
   endpoint: string,
   title: string,
   body: string,
-  data: Record<string, any> = {}
+  data: Record<string, any> = {},
+  targetUserId: string,
+  supabase: any
 ): Promise<{ success: boolean; shouldRemove?: boolean }> {
   console.log("[PUSH] Sending to endpoint:", endpoint.substring(0, 50) + "…");
 
@@ -170,15 +172,18 @@ async function sendPushNotification(
 
     console.log(`[PUSH] Push service: ${pushService}`);
 
-    // Build VAPID JWT using proper domain email for Safari compatibility
-    const envEmail = Deno.env.get('VAPID_EMAIL');
-    const envDomain = Deno.env.get('VAPID_DOMAIN');
-    const subjectEmail = (envEmail && envEmail.trim()) ? envEmail.trim() : 'admin@example.com';
+    // Get target user's email from auth.users table for VAPID JWT
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(targetUserId);
     
-    if (!envEmail || !envDomain) {
-      console.warn('[VAPID] Missing VAPID_EMAIL or VAPID_DOMAIN environment variables, using defaults');
+    if (authError || !authUser?.user?.email) {
+      console.error('[VAPID] Failed to fetch user email for VAPID JWT:', authError);
+      throw new Error('Failed to fetch user email for VAPID JWT');
     }
-    const vapidJWT = await buildVapidJWT(audience, `mailto:${subjectEmail}`);
+    
+    const userEmail = authUser.user.email;
+    console.log('[VAPID] Using user email for VAPID JWT:', userEmail);
+    
+    const vapidJWT = await buildVapidJWT(audience, `mailto:${userEmail}`);
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!;
 
     // Create payload based on push service
@@ -205,7 +210,7 @@ async function sendPushNotification(
       headers = {
         'Authorization': `Bearer ${vapidJWT}`,
         'Content-Type': 'application/json',
-        'apns-topic': envDomain || 'web.com.example.app', // Use environment variable for Website Push ID
+        'apns-topic': 'web.com.navyslatenavigator.app', // Website Push ID from app registration
         'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400),
         'apns-priority': '10',
         // Required for alert notifications - tells APNs this is an interactive alert
@@ -377,7 +382,9 @@ serve(async (req) => {
           subscription.endpoint,
           title || 'Navy Slate Navigator',
           body || 'New notification',
-          { type, ...data }
+          { type, ...data },
+          targetUserId,
+          supabase
         );
         
         results.push({
