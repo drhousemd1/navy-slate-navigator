@@ -197,14 +197,10 @@ async function sendPushNotification(
       };
       payloadString = JSON.stringify(applePayload);
       
-      // Get Apple Website Push ID from environment variable
-      const appleWebsitePushId = Deno.env.get('APPLE_WEBSITE_PUSH_ID') || 'web.com.navyslatenavigator.app';
-      console.log(`[PUSH] Using Apple Website Push ID: ${appleWebsitePushId}`);
-      
       headers = {
         'Authorization': `Bearer ${vapidJWT}`,
         'Content-Type': 'application/json',
-        'apns-topic': appleWebsitePushId, // Website Push ID from Apple Developer account
+        'apns-topic': 'web.push', // Required for Safari 16.4+ Web Push API
         'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400),
         'apns-priority': '10',
         // Required for alert notifications - tells APNs this is an interactive alert
