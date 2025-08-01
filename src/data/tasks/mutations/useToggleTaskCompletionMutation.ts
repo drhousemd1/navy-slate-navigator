@@ -218,11 +218,27 @@ export function useToggleTaskCompletionMutation() {
           logger.info('[useToggleTaskCompletionMutation] 🔍 Getting partner ID...');
           
           try {
+            // Get current authenticated user
+            const { data: authUser } = await supabase.auth.getUser();
+            const currentUserId = authUser?.user?.id;
+            
             const partnerId = await getPartnerId();
-            logger.info('[useToggleTaskCompletionMutation] 📋 Partner ID retrieved:', partnerId ? 'FOUND' : 'NOT_FOUND', { partnerId });
+            logger.info('[useToggleTaskCompletionMutation] 📋 Partner ID retrieved:', partnerId ? 'FOUND' : 'NOT_FOUND', { 
+              partnerId,
+              taskTitle: variables.task.title,
+              points: variables.pointsValue,
+              userId: currentUserId
+            });
             
             if (partnerId) {
               logger.info('[useToggleTaskCompletionMutation] 📤 Calling sendTaskCompletedNotification...');
+              logger.info('[useToggleTaskCompletionMutation] 📋 Notification details:', {
+                targetUserId: partnerId,
+                taskTitle: variables.task.title,
+                points: variables.pointsValue,
+                senderId: currentUserId
+              });
+              
               const notificationSent = await sendTaskCompletedNotification(
                 partnerId, 
                 variables.task.title, 
@@ -232,6 +248,8 @@ export function useToggleTaskCompletionMutation() {
               
               if (!notificationSent) {
                 toastManager.warn('Notification Warning', 'Task completed but partner notification failed to send');
+              } else {
+                logger.info('[useToggleTaskCompletionMutation] ✅ Partner notification sent successfully');
               }
             } else {
               logger.warn('[useToggleTaskCompletionMutation] ⚠️ No partner ID found, skipping notification');

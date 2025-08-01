@@ -265,10 +265,14 @@ serve(async (req) => {
   console.log("=== PUSH NOTIFICATION FUNCTION START ===");
 
   try {
-    const { targetUserId, type, title, body, data } = await req.json();
+    const { targetUserId, type, title, body, data, senderId } = await req.json();
 
     if (!targetUserId) {
       return jsonResponse({ error: 'targetUserId is required' }, 400);
+    }
+
+    if (!senderId) {
+      return jsonResponse({ error: 'senderId is required for validation' }, 400);
     }
 
     // Test mode for quick debugging
@@ -289,9 +293,34 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log(`[MAIN] Processing notification for user: ${targetUserId}`);
+    console.log(`[MAIN] Sender: ${senderId}`);
     console.log(`[MAIN] Notification type: ${type}`);
     console.log(`[MAIN] Title: ${title}`);
     console.log(`[MAIN] Body: ${body}`);
+
+    // Validate sender-target relationship for security
+    console.log(`[VALIDATION] Checking if sender ${senderId} can notify target ${targetUserId}`);
+    const { data: canNotify, error: validationError } = await supabase
+      .rpc('can_notify_user', { 
+        sender_id: senderId, 
+        target_id: targetUserId 
+      });
+
+    if (validationError) {
+      console.error('[VALIDATION] Error checking notification permission:', validationError);
+      return jsonResponse({ error: 'Failed to validate notification permission' }, 500);
+    }
+
+    if (!canNotify) {
+      console.warn(`[VALIDATION] Sender ${senderId} not authorized to notify ${targetUserId}`);
+      return jsonResponse({ 
+        error: 'Not authorized to send notifications to this user',
+        sent: false,
+        reason: 'unauthorized_relationship'
+      }, 403);
+    }
+
+    console.log(`[VALIDATION] ✅ Sender authorized to notify target`);
 
     // Check user notification preferences (server-side backup)
     const { data: notificationPrefs, error: prefsError } = await supabase

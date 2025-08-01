@@ -14,29 +14,22 @@ export const usePartnerHelper = () => {
 
     try {
       logger.info('[usePartnerHelper] 🔍 Fetching partner ID for user:', user.id);
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('linked_partner_id')
-        .eq('id', user.id)
-        .single();
+      
+      // Use the database function for consistency
+      const { data: partnerId, error } = await supabase
+        .rpc('get_linked_partner_id', { user_id_param: user.id });
 
       if (error) {
         logger.error('[usePartnerHelper] ❌ Error fetching partner ID:', error);
         return null;
       }
 
-      if (!profile) {
-        logger.warn('[usePartnerHelper] ⚠️ No profile found for user:', user.id);
-        return null;
-      }
-
-      const partnerId = profile?.linked_partner_id || null;
       logger.info('[usePartnerHelper] ✅ Partner ID retrieved:', partnerId ? 'FOUND' : 'NOT_FOUND', { 
         userId: user.id,
         partnerId: partnerId || 'null' 
       });
       
-      // Add validation
+      // Validate the partner ID
       if (partnerId && typeof partnerId === 'string' && partnerId.length > 0) {
         logger.info('[usePartnerHelper] ✅ Valid partner ID confirmed:', partnerId);
         return partnerId;

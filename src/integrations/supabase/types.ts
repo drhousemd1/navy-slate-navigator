@@ -879,6 +879,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_notify_user: {
+        Args: { sender_id: string; target_id: string }
+        Returns: boolean
+      }
       delete_user_account: {
         Args: Record<PropertyKey, never>
         Returns: undefined

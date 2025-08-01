@@ -47,6 +47,7 @@ export const usePushNotifications = () => {
         title,
         body,
         data,
+        senderId: user.id, // Add sender ID for validation
       };
       
       logger.info('[usePushNotifications] Calling edge function with payload:', requestPayload);
