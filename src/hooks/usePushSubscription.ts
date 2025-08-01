@@ -163,9 +163,16 @@ export const usePushSubscription = () => {
       const p256dh = arrayBufferToBase64(subscription.getKey('p256dh')!);
       const auth = arrayBufferToBase64(subscription.getKey('auth')!);
 
+      // Delete existing subscriptions first to maintain only one subscription per user
+      await supabase
+        .from('user_push_subscriptions')
+        .delete()
+        .eq('user_id', user.id);
+
+      // Insert the current subscription
       const { error } = await supabase
         .from('user_push_subscriptions')
-        .upsert({
+        .insert({
           user_id: user.id,
           endpoint: subscription.endpoint,
           p256dh,
@@ -258,10 +265,17 @@ export const usePushSubscription = () => {
       const p256dh = arrayBufferToBase64(subscription.getKey('p256dh')!);
       const auth = arrayBufferToBase64(subscription.getKey('auth')!);
 
-      // Save subscription to database
+      // Delete any existing subscriptions for this user to ensure only one active subscription
+      logger.info('Removing any existing subscriptions for user before adding new one');
+      await supabase
+        .from('user_push_subscriptions')
+        .delete()
+        .eq('user_id', user.id);
+
+      // Insert the new subscription
       const { error } = await supabase
         .from('user_push_subscriptions')
-        .upsert({
+        .insert({
           user_id: user.id,
           endpoint: subscription.endpoint,
           p256dh,
@@ -300,22 +314,21 @@ export const usePushSubscription = () => {
       if (subscription) {
         // Unsubscribe from push manager
         await subscription.unsubscribe();
+      }
 
-        // Remove from database
-        const { error } = await supabase
-          .from('user_push_subscriptions')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('endpoint', subscription.endpoint);
+      // Remove ALL subscriptions for this user from database to ensure clean state
+      const { error } = await supabase
+        .from('user_push_subscriptions')
+        .delete()
+        .eq('user_id', user.id);
 
-        if (error) {
-          logger.error('Error removing push subscription:', error);
-          return false;
-        }
+      if (error) {
+        logger.error('Error removing push subscriptions:', error);
+        return false;
       }
 
       setIsSubscribed(false);
-      logger.info('Successfully unsubscribed from push notifications');
+      logger.info('Successfully unsubscribed from push notifications and removed all subscriptions');
       return true;
 
     } catch (error) {
