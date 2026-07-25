@@ -37,7 +37,7 @@ export const useUpdateTask = () => {
 
       const { data, error } = await supabase
         .from('tasks')
-        .update({ ...updatesForSupabase, updated_at: new Date().toISOString() })
+        .update({ ...updatesForSupabase, updated_at: new Date().toISOString() } as never)
         .eq('id', id)
         .select()
         .single();

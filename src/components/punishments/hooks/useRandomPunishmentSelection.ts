@@ -6,7 +6,7 @@ export const useRandomPunishmentSelection = (punishments: PunishmentData[], isOp
   const [selectedPunishment, setSelectedPunishment] = useState<PunishmentData | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const animationRef = useRef<NodeJS.Timeout | null>(null);
+  const animationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   useEffect(() => {
     if (isOpen) {

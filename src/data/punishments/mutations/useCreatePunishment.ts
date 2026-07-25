@@ -44,7 +44,7 @@ export const useCreatePunishment = () => {
       
       const { data, error } = await supabase
         .from('punishments')
-        .insert(dataToInsert)
+        .insert(dataToInsert as never)
         .select()
         .single();
       if (error) throw error;

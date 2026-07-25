@@ -32,7 +32,8 @@ const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   isInitialLoading: false,
   isPaused: false,
   refetch: async () => mockQueryResult,
-  promise: Promise.resolve([] as Reward[])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  promise: Promise.resolve([] as Reward[]) as any
 };
 
 const RewardsContext = createContext<RewardsContextType>({

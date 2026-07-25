@@ -18,7 +18,7 @@ export function useIsMobile() {
     }
     
     // Add resize event listener with throttling
-    let timeoutId: NodeJS.Timeout | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
     const handleResize = () => {
       if (timeoutId === null) {
         timeoutId = setTimeout(() => {
