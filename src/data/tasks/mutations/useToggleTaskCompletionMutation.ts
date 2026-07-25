@@ -146,7 +146,7 @@ export function useToggleTaskCompletionMutation() {
           
           const { error: updatePointsError } = await supabase
             .from('profiles')
-            .update(updateData)
+            .update(updateData as never)
             .eq('id', userId);
 
           if (updatePointsError) {

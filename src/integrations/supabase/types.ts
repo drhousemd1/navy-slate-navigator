@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -883,10 +883,7 @@ export type Database = {
         Args: { sender_id: string; target_id: string }
         Returns: boolean
       }
-      delete_user_account: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      delete_user_account: { Args: never; Returns: undefined }
       get_linked_partner_id: {
         Args: { user_id_param: string }
         Returns: string
@@ -894,14 +891,14 @@ export type Database = {
       get_task_completions_for_week: {
         Args: { week_start: string }
         Returns: {
-          completion_date: string
           completion_count: number
+          completion_date: string
         }[]
       }
       has_role: {
         Args: {
-          requested_user_id: string
           requested_role: Database["public"]["Enums"]["app_role"]
+          requested_user_id: string
         }
         Returns: boolean
       }

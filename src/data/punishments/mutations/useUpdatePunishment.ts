@@ -37,7 +37,7 @@ export const useUpdatePunishment = () => {
       
       const { data, error } = await supabase
         .from('punishments')
-        .update(updatesWithImage)
+        .update(updatesWithImage as never)
         .eq('id', id)
         .select()
         .single();

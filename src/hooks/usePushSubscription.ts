@@ -257,7 +257,7 @@ export const usePushSubscription = () => {
       logger.info('Attempting to subscribe to push manager...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
       });
       logger.info('Push subscription created successfully');
 
