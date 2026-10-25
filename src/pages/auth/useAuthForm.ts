@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth'; 
 import { toast } from '@/hooks/use-toast';
 import { AuthFormState, AuthError } from './types';
@@ -20,21 +19,15 @@ export function useAuthForm() {
     loginError: null
   });
   const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
 
+  // Post-login navigation is owned by the Auth page (src/pages/auth/index.tsx),
+  // which returns the user to the location they originally requested.
   useEffect(() => {
     logger.debug('Auth state in useAuthForm:', { 
       isAuthenticated, 
       authLoading
     });
   }, [isAuthenticated, authLoading]);
-
-  useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      logger.debug("User is authenticated, redirecting to home");
-      navigate('/');
-    }
-  }, [isAuthenticated, authLoading, navigate]);
 
   const updateFormState = (updates: Partial<AuthFormState>) => {
     setFormState(prevState => ({ ...prevState, ...updates }));
