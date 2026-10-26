@@ -1,6 +1,6 @@
 import {
-  decodeActionReceipt, decodeActionScope, decodeRewardCommand, scopeKey,
-  type ActionProblem, type ActionQueueScope, type CommandOutcome, type QueueEntry, type RewardIntent, type RewardTransport,
+  decodeActionReceipt, decodeActionScope, decodeActionCommand, scopeKey,
+  type ActionProblem, type ActionQueueScope, type CommandOutcome, type QueueEntry, type ActionIntent, type ActionTransport,
 } from './contracts';
 import type { ActionQueueStore } from './store';
 import { unknownProblem } from './transport';
@@ -19,7 +19,7 @@ export const browserQueueConnection: QueueConnection = {
 };
 export interface ActionQueueOptions {
   store: ActionQueueStore;
-  transport: RewardTransport;
+  transport: ActionTransport;
   connection?: QueueConnection;
   now?: () => number;
   uuid?: () => string;
@@ -40,7 +40,7 @@ export interface ActionQueueOptions {
  * Construct one per configured backend. Set context to null immediately on
  * identity loading/sign-out, then to the verified current account/period.
  */
-export class RewardCommandQueue {
+export class ActionCommandQueue {
   private context: ActionQueueScope | null = null;
   private generation = 0;
   private running: Promise<void> | null = null;
@@ -95,10 +95,10 @@ export class RewardCommandQueue {
     this.context = next; this.generation++; this.manualRetries.clear(); this.clearTimer(); this.activeRequest?.abort(); this.notify(); this.kick();
   }
 
-  async enqueue(intent: RewardIntent): Promise<QueueEntry> {
+  async enqueue(intent: ActionIntent): Promise<QueueEntry> {
     if (!this.context || this.disposed) throw new Error('Load the signed-in account and relationship before saving an action.');
     const scope = structuredClone(this.context);
-    const command = decodeRewardCommand({ ...intent, commandId: this.uuid(), expectedRelationshipId: scope.relationshipId });
+    const command = decodeActionCommand({ ...intent, commandId: this.uuid(), expectedRelationshipId: scope.relationshipId });
     const time = this.now();
     // Strict durable write completes before any send. No points/inventory are
     // changed until a server receipt is confirmed by a separate UI integration.
@@ -250,3 +250,6 @@ export class RewardCommandQueue {
     this.disposed = true; this.generation++; this.context = null; this.clearTimer(); this.activeRequest?.abort(); this.stopConnection(); this.listeners.clear();
   }
 }
+
+/** Existing UI uses the same class and database through this compatibility name. */
+export { ActionCommandQueue as RewardCommandQueue };

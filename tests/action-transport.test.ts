@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { decodeActionReceipt } from '@/data/actions/contracts';
-import { createRewardTransport, rewardCommandParameters, type RewardRpcResponse } from '@/data/actions/transport';
+import { createRewardTransport, actionCommandRequest, rewardCommandParameters, type RewardRpcResponse } from '@/data/actions/transport';
 import { command, deferred, receipt, scope, uuid } from './action-queue.helpers';
 
 function fixture(response: RewardRpcResponse = { data: receipt(), error: null, status: 200 }) {
@@ -22,7 +22,7 @@ describe('reward RPC transport', () => {
     const f = fixture();
     const result = await f.transport.execute(command, scope, signal());
     expect(result).toEqual({ kind: 'confirmed', receipt: receipt() });
-    expect(f.callRpc).toHaveBeenCalledWith(rewardCommandParameters(command), 'synthetic-token-A', expect.any(AbortSignal));
+    expect(f.callRpc).toHaveBeenCalledWith(actionCommandRequest(command), 'synthetic-token-A', expect.any(AbortSignal));
     expect(rewardCommandParameters(command).p_expected_cost).toBe(20);
   });
   it.each([undefined, null, -1, 1.5, 2147483648])('does not send a Buy with invalid reviewed cost %s', async expectedCost => {

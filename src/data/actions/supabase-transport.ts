@@ -1,26 +1,28 @@
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
-import { createRewardTransport, type RewardRpcParameters, type RewardRpcResponse } from './transport';
+import { createActionTransport, type ActionRpcCall, type ActionRpcResponse } from './transport';
 
-interface RewardRpcRequest extends PromiseLike<RewardRpcResponse> {
-  setHeader(name: string, value: string): RewardRpcRequest;
-  abortSignal(signal: AbortSignal): RewardRpcRequest;
+interface ActionRpcRequest extends PromiseLike<ActionRpcResponse> {
+  setHeader(name: string, value: string): ActionRpcRequest;
+  abortSignal(signal: AbortSignal): ActionRpcRequest;
 }
 // Generated database types predate the reviewed forward migration. Keep its
 // temporary typed boundary in the data layer, not in components.
-const rewardRpc = supabase.rpc.bind(supabase) as unknown as (
-  name: 'execute_reward_command', parameters: RewardRpcParameters,
-) => RewardRpcRequest;
+const actionRpc = supabase.rpc.bind(supabase) as unknown as (
+  name: ActionRpcCall['name'], parameters: ActionRpcCall['parameters'],
+) => ActionRpcRequest;
 
 /** The backend namespace comes from the same configuration as the shared client.
  * This factory performs no request until the queue executes an action.
  */
-export function createSupabaseRewardTransport() {
-  return createRewardTransport({ backendId: supabaseBackendId,
+export function createSupabaseActionTransport() {
+  return createActionTransport({ backendId: supabaseBackendId,
     readSession: async () => {
       const { data, error } = await supabase.auth.getSession();
       return !error && data.session ? { accountId: data.session.user.id, accessToken: data.session.access_token } : null;
     },
-    callRpc: (parameters, accessToken, signal) => rewardRpc('execute_reward_command', parameters)
+    callRpc: ({ name, parameters }, accessToken, signal) => actionRpc(name, parameters)
       .setHeader('Authorization', `Bearer ${accessToken}`).abortSignal(signal),
   });
 }
+
+export { createSupabaseActionTransport as createSupabaseRewardTransport };
