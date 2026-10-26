@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 // Push Notification Test Utilities
 // Run pushNotificationTest() in browser console to debug push notifications
 
@@ -49,14 +51,10 @@ export const pushNotificationTest = () => {
 
   // Step 4: Test VAPID key fetch
   console.log("\n4. TESTING VAPID KEY FETCH:");
-  const supabaseUrl = 'https://ronqvzihpffgowyscgfm.supabase.co';
-  fetch(`${supabaseUrl}/functions/v1/get-vapid-public-key`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('sb-ronqvzihpffgowyscgfm-auth-token')?.split('"')[3] || 'test'}`
-    }
-  }).then(response => response.json())
+  supabase.functions.invoke('get-vapid-public-key').then(({ data, error }) => {
+    if (error) throw error;
+    return data;
+  })
     .then(data => {
       if (data.publicKey) {
         console.log("✅ VAPID key fetched:", data.publicKey.substring(0, 20) + "…");
@@ -138,23 +136,17 @@ export const pushNotificationTest = () => {
     try {
       console.log("Sending test push notification…");
 
-      const supabaseUrl = 'https://ronqvzihpffgowyscgfm.supabase.co';
-      const response = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('sb-ronqvzihpffgowyscgfm-auth-token')?.split('"')[3] || 'test'}`
-        },
-        body: JSON.stringify({
+      const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
           targetUserId: 'test',
           type: 'test',
           title: 'Test Notification',
           body: 'This is a test push notification',
           data: { test: true }
-        })
+        }
       });
+      if (error) throw error;
 
-      const result = await response.json();
       console.log("Push test result:", result);
 
       if (result.sent) {
