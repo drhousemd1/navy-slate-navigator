@@ -10,6 +10,8 @@ import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/
 import { useCreatePunishment, useUpdatePunishment, useDeletePunishment, CreatePunishmentVariables, UpdatePunishmentVariables } from '@/data/punishments/mutations';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { useActionCommands } from '@/contexts/ActionCommandsContext';
+import { AtomicPunishmentsContent } from '@/components/punishments/AtomicPunishmentsContent';
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -123,6 +125,7 @@ const PunishmentsContent: React.FC<{
 };
 
 const Punishments: React.FC = () => {
+  const actions = useActionCommands();
   const contentRef = useRef<{ handleAddNewPunishment?: () => void }>({});
   
   const handleAddNewPunishmentLayout = () => {
@@ -134,7 +137,12 @@ const Punishments: React.FC = () => {
   return (
     <AppLayout onAddNewItem={handleAddNewPunishmentLayout}>
       <ErrorBoundary fallbackMessage="Could not load punishments. Please try reloading.">
-        <PunishmentsContent contentRef={contentRef} />
+        {actions.mode === 'legacy' ? <PunishmentsContent contentRef={contentRef} /> : actions.mode === 'atomic' ?
+          <AtomicPunishmentsContent key={`${actions.scope?.accountId}:${actions.scope?.relationshipId}`} contentRef={contentRef} /> :
+          <div className="p-6 text-white" role={actions.mode === 'error' ? 'alert' : 'status'}>
+            <p>{actions.error || 'Checking your current punishment account…'}</p>
+            {actions.mode === 'error' && <button className="underline" onClick={() => void actions.refresh()}>Retry</button>}
+          </div>}
       </ErrorBoundary>
     </AppLayout>
   );

@@ -31,9 +31,9 @@ const mapPunishmentDataToFormValues = (punishment: PunishmentData): PunishmentFo
     subtext_color: punishment.subtext_color || '#8E9196',
     calendar_color: punishment.calendar_color || '#ea384c',
     highlight_effect: punishment.highlight_effect || false,
-    background_opacity: punishment.background_opacity || 100,
-    focal_point_x: punishment.focal_point_x || 50,
-    focal_point_y: punishment.focal_point_y || 50,
+    background_opacity: punishment.background_opacity ?? 100,
+    focal_point_x: punishment.focal_point_x ?? 50,
+    focal_point_y: punishment.focal_point_y ?? 50,
   };
 };
 
@@ -48,6 +48,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   children
 }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const onSubmit = async (values: PunishmentFormValues) => {
     if (isSaving) {
@@ -65,7 +66,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       ...values,
       points: points,
       dom_points: dom_points,
-      icon_name: selectedIconName,
+      icon_name: iconPreview ? `custom:${iconPreview}` : selectedIconName,
       background_image_url: imagePreview,
       icon_color: values.icon_color || '#ea384c',
     };
@@ -78,6 +79,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
     
     try {
       setIsSaving(true);
+      setSaveError(null);
       const savedPunishment = await onSave(dataToSave);
       
       if (savedPunishment) {
@@ -85,7 +87,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       }
     } catch (e: unknown) {
       logger.error("Error saving punishment in form handler:", e);
-      // Error handling is done by the mutation hooks
+      setSaveError(e instanceof Error ? e.message : 'The punishment could not be saved. Your draft is still open.');
     } finally {
       setIsSaving(false);
     }
@@ -93,7 +95,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
 
   const childrenWithProps = React.Children.map(children, child => {
     if (React.isValidElement(child)) {
-      return React.cloneElement(child as React.ReactElement<any>, { isSaving });
+      return React.cloneElement(child as React.ReactElement<{ isSaving?: boolean }>, { isSaving });
     }
     return child;
   });
@@ -101,6 +103,7 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {saveError && <p role="alert" className="text-red-300">{saveError}</p>}
         {childrenWithProps}
       </form>
     </Form>

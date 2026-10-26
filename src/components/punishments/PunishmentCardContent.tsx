@@ -38,7 +38,8 @@ const PunishmentCardContent: React.FC<PunishmentCardContentProps> = ({
           >
             {icon_name ? (
               <TaskIcon 
-                icon_name={icon_name} 
+                icon_name={icon_name.startsWith('custom:') ? undefined : icon_name}
+                icon_url={icon_name.startsWith('custom:') ? icon_name.slice(7) : undefined}
                 icon_color={icon_color} 
                 className="w-6 h-6"
               />

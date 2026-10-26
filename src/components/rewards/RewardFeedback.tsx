@@ -53,7 +53,9 @@ export function RewardFeedback() {
     <div className="space-y-2 pointer-events-auto">
       {enabled && actions.confirmed.filter(entry => entry.state.status === 'confirmed' && !dismissed.has(entry.command.commandId)).map(entry => {
         if (entry.state.status !== 'confirmed' || entry.state.receipt.feedback.some(item => item.kind === 'points_refunded')) return null;
-        const kind = entry.command.kind;
+        const command = entry.command;
+        const kind = command.kind;
+        if (!kind.startsWith('reward_') && !(command.kind === 'undo' && actions.data?.events.some(event => event.id === command.eventId))) return null;
         const show = kind === 'reward_buy' || kind === 'reward_gift' ? settings.preferences.types.rewardPurchased : kind === 'reward_redeem' || kind === 'undo' ? settings.preferences.types.rewardRedeemed : settings.preferences.types.rewardRefunded;
         if (!show) return null;
         const text = { reward_buy: 'Purchase confirmed', reward_redeem: 'Use confirmed', reward_gift: 'Gift confirmed for your Sub', reward_delete: 'Reward deletion confirmed', undo: 'Undo confirmed' }[kind];

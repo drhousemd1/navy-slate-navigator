@@ -1,3 +1,4 @@
+import { SavedActions } from '@/components/activity/SavedActions';
 import { useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -15,17 +16,7 @@ export function RewardActivity() {
   if (actions.mode === 'legacy') return null;
   return <section className="mb-6 space-y-3 text-white" aria-label="Reward actions">
     {(actions.error || error) && <div role="alert" className="rounded border border-amber-500 bg-navy p-3"><p>{error || actions.error}</p><button className="underline" onClick={() => void perform(actions.refresh)}>Refresh confirmed data</button></div>}
-    {pending.length > 0 && <div className="rounded border border-light-navy bg-navy p-3 space-y-3">
-      <h2 className="font-semibold">Saved actions</h2>
-      {pending.map(entry => <div key={entry.command.commandId} className="border-t border-light-navy pt-2 text-sm">
-        <p><strong>{labels[entry.command.kind]}</strong> — {entry.state.status === 'confirmation_unknown' ? 'Confirmation unknown' : entry.state.status === 'sending' ? 'Sending…' : entry.state.status === 'pending' ? 'Pending; saved on this device' : 'Rejected'}</p>
-        {entry.problem && <p>{entry.problem.message}</p>}
-        {!entry.canReplay && <p>This belongs to an earlier relationship period and will not be sent here.</p>}
-        {entry.canReplay && entry.state.status !== 'sending' && <button className="mr-4 underline" onClick={() => void perform(() => actions.retry(entry.command.commandId))}>Retry same action</button>}
-        {entry.canCancel && <button className="underline" onClick={() => void perform(() => actions.cancelUnsent(entry.command.commandId))}>Cancel unsent action</button>}
-      </div>)}
-      <p className="text-xs text-gray-300">Balances and inventory change only after server confirmation. Retrying keeps the same action ID.</p>
-    </div>}
+    <SavedActions />
     {actions.mode === 'atomic' && <details className="rounded border border-light-navy bg-navy p-3">
       <summary className="cursor-pointer font-semibold">Reward History</summary>
       {!actions.data ? <p className="mt-3">Loading confirmed history…</p> : <div className="mt-3 space-y-3">

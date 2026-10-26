@@ -1,5 +1,7 @@
 
 import React from 'react';
+import type { TaskProgress } from '@/domain/actions/types';
+import { taskDayIndex } from '@/data/tasks/actionReadModel';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Edit } from 'lucide-react';
@@ -21,7 +23,11 @@ interface TaskCardProps {
   backgroundOpacity?: number;
   focalPointX?: number;
   focalPointY?: number;
-  onEdit: () => void;
+  onEdit?: () => void;
+  atomic?: boolean;
+  progress?: TaskProgress;
+  progressError?: string;
+  actionDisabled?: boolean;
   onToggleCompletion?: (completed: boolean) => void;
   onDelete?: () => void;
   frequency?: 'daily' | 'weekly';
@@ -39,6 +45,7 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
+  atomic = false, progress, progressError, actionDisabled = false,
   title,
   description,
   points,
@@ -62,10 +69,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
   icon_color = '#9b87f5',
   is_dom_task = false
 }) => {
-  const currentDayOfWeek = getCurrentDayOfWeek();
-  const currentCompletions = usage_data[currentDayOfWeek] || 0;
-  const maxCompletions = frequency_count || 1;
-  const isFullyCompleted = currentCompletions >= maxCompletions;
+  const currentDayOfWeek = atomic && progress ? taskDayIndex(progress) : getCurrentDayOfWeek();
+  const currentCompletions = atomic ? progress?.currentCount ?? 0 : usage_data[currentDayOfWeek] || 0;
+  const maxCompletions = atomic ? progress?.target ?? frequency_count : frequency_count || 1;
+  const isFullyCompleted = atomic ? !!progress?.completed : currentCompletions >= maxCompletions;
 
   return (
     <Card className={`relative overflow-hidden border-2 ${is_dom_task ? 'border-red-500' : 'border-cyan-400'} ${!backgroundImage ? 'bg-card' : ''}`}>
@@ -88,13 +95,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {onToggleCompletion && (
             <div className="flex items-center gap-2">
               <PointsBadge points={points} isDomTask={is_dom_task} />
-              <CompletionCounter 
+              {(!atomic || progress) ? <CompletionCounter
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}
                 isDomTask={is_dom_task}
-              />
+              /> : <span aria-label="Task progress unavailable">—</span>}
               <CompletionButton 
-                completed={completed} 
+                disabled={actionDisabled || (atomic && !progress)}
+                completed={atomic ? !!progress?.completed : completed}
                 onToggleCompletion={onToggleCompletion}
                 currentCompletions={currentCompletions}
                 maxCompletions={maxCompletions}
@@ -134,26 +142,30 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </div>
         
         <div className="flex items-center justify-between mt-4">
-          {frequency && (
+          {frequency && (!atomic || progress) && (
             <FrequencyTracker 
-              frequency={frequency} 
-              frequency_count={frequency_count} 
+              frequency={atomic ? progress.frequency : frequency}
+              frequency_count={atomic ? progress.target : frequency_count}
               calendar_color={calendar_color}
-              usage_data={usage_data}
+              usage_data={atomic ? [...progress.usageData] : usage_data}
+              currentDay={atomic ? currentDayOfWeek : undefined}
             />
           )}
           
           <div className="flex space-x-2 ml-auto">
-            <Button
+            {onEdit && <Button
+              aria-label={`Edit ${title}`}
               variant="ghost"
               size="icon"
               onClick={onEdit}
               className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
             >
               <Edit className="h-4 w-4" />
-            </Button>
+            </Button>}
           </div>
         </div>
+        {atomic && progress && <p className="mt-2 text-xs text-gray-300">{progress.frequency === 'weekly' ? 'Monday–Sunday' : 'Today'} · {progress.timeZone}</p>}
+        {progressError && <p className="mt-2 text-sm text-amber-300">{progressError}</p>}
       </div>
       
       {isFullyCompleted && (

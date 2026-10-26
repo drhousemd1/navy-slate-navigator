@@ -22,7 +22,7 @@ const PrioritySelector = <T extends FieldValues>({ control, name = 'priority' as
           <FormLabel className="text-white">Priority</FormLabel>
           <Select 
             onValueChange={(value) => field.onChange(value as PriorityValue)} 
-            defaultValue={field.value as string}
+            value={field.value as string}
           >
             <FormControl>
               <SelectTrigger className="bg-dark-navy border-light-navy text-white">

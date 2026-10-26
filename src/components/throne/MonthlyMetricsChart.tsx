@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -10,8 +10,8 @@ import { ChartContainer } from '@/components/ui/chart';
 
 import MonthlyMetricsChartSkeleton from './MonthlyMetricsChartSkeleton';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useMonthlyMetrics, MonthlyMetricsData, MonthlyDataItem, MonthlyMetricsSummary } from '@/data/queries/metrics/useMonthlyMetrics';
-import { logger } from '@/lib/logger';
+import { useMonthlyMetrics } from '@/data/queries/metrics/useMonthlyMetrics';
+import { ActivityMetricsError, ActivityMetricsNotice } from './ActivityMetricsNotice';
 
 interface MonthlyMetricsChartProps {
   showToggle?: boolean;
@@ -47,7 +47,8 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
     }, 
     isLoading, 
     error, 
-    refetch 
+    refetch,
+    metrics
   } = useMonthlyMetrics();
   
   const monthDates = useMemo(() => data.dataArray.map(d => d.date), [data.dataArray]);
@@ -61,11 +62,6 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
   const dayWidth = (BAR_WIDTH * BAR_COUNT) + (BAR_COUNT - 1) * BAR_GAP + GROUP_PADDING;
   const chartWidth = Math.max((monthDates.length > 0 ? monthDates.length : 30) * dayWidth + CHART_PADDING * 2, 900);
 
-
-  if (error) {
-    // The hook already shows a toast on error.
-    logger.error("Error in MonthlyMetricsChart:", error);
-  }
 
   const hasContent = data.dataArray.some(d =>
     d.subTasksCompleted || d.domTasksCompleted || d.rulesBroken || d.subRewardsRedeemed || d.domRewardsRedeemed || d.punishmentsPerformed
@@ -96,7 +92,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
 
   const endDrag = () => setIsDragging(false);
 
-  const handleBarClick = (barData: any) => { // barData type can be more specific if known from Recharts
+  const handleBarClick = (barData: { date?: string }) => {
     if (!chartScrollRef.current) return;
     const clickedDate = barData.date;
     const dateIndex = monthDates.findIndex(date => date === clickedDate);
@@ -106,8 +102,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
     chartScrollRef.current.scrollTo({ left: Math.max(0, scrollPosition), behavior: 'smooth' });
   };
 
-  const monthlyChart = useMemo(() => {
-    return (
+  const monthlyChart = (
       <ChartContainer className="w-full h-full" config={chartConfig}>
         <div
           ref={chartScrollRef}
@@ -175,7 +170,6 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
         </div>
       </ChartContainer>
     );
-  }, [data.dataArray, isDragging, getYAxisDomain, chartWidth, chartConfig, monthDates, BAR_GAP, GROUP_PADDING, CHART_PADDING, BAR_WIDTH, onMouseDown, onMouseMove, endDrag, handleBarClick]);
 
   if (isLoading) {
     return (
@@ -221,7 +215,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
             <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-navy to-transparent pointer-events-none z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
             <div className="h-full">
-              {!hasContent ? (
+              {error ? <ActivityMetricsError error={error} retry={refetch} /> : !hasContent ? (
                 <div className="flex items-center justify-center h-full text-white text-sm">
                   No activity data to display for this month.
                 </div>
@@ -250,6 +244,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
               Punishments
             </span>
           </div>
+          {!error && <ActivityMetricsNotice metrics={metrics} />}
         </div>
       </Card>
     </div>

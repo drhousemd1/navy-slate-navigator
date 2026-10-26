@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActionCommandsProvider, useActionCommands } from '@/contexts/ActionCommandsContext';
 import { uuid, receipt } from './action-queue.helpers';
@@ -9,10 +9,11 @@ const mocks = vi.hoisted(() => ({ identity: null as any, gate: vi.fn(), read: vi
 vi.mock('@/contexts/UserIdsContext', () => ({ useUserIds: () => mocks.identity }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: mocks.identity?.currentUserId ? { id: mocks.identity.currentUserId } : null }) }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {}, supabaseBackendId: 'http://127.0.0.1:28622' }));
+vi.mock('@/components/task/TaskFeedback', () => ({ TaskFeedback: () => null }));
 vi.mock('@/components/rewards/RewardFeedback', () => ({ RewardFeedback: () => null }));
 vi.mock('@/data/rewards/actionReadModel', async importOriginal => ({ ...await importOriginal<any>(),
   readAccountingEnabled: (...args: any[]) => mocks.gate(...args), readRewardActionData: (...args: any[]) => mocks.read(...args) }));
-vi.mock('@/data/actions/supabase-transport', () => ({ createSupabaseRewardTransport: () => ({ backendId: 'http://127.0.0.1:28622', execute: (...args: any[]) => mocks.send(...args) }) }));
+vi.mock('@/data/actions/supabase-transport', () => ({ createSupabaseActionTransport: () => ({ backendId: 'http://127.0.0.1:28622', execute: (...args: any[]) => mocks.send(...args) }) }));
 vi.mock('@/data/actions/store', async () => {
   const { MemoryQueueStore } = await import('./action-queue.helpers');
   return { IndexedDBActionQueueStore: class extends MemoryQueueStore { async close() {} } };
@@ -30,6 +31,23 @@ const setup = () => {
   return ({ children }: React.PropsWithChildren) => <QueryClientProvider client={client}><ActionCommandsProvider>{children}</ActionCommandsProvider></QueryClientProvider>;
 };
 describe('mounted command provider scope and offline gate', () => {
+  it('refetches mounted activity metrics after confirmation and explicit refresh', async () => {
+    const metrics = vi.fn().mockResolvedValueOnce(1).mockResolvedValue(2);
+    mocks.send.mockImplementation(async command => ({ kind: 'confirmed', receipt: receipt(command) }));
+    const { result } = renderHook(() => ({
+      actions: useActionCommands(),
+      metrics: useQuery({ queryKey: ['activity-metrics', uuid(1), uuid(3)], queryFn: metrics, staleTime: Infinity }),
+    }), { wrapper: setup() });
+    await waitFor(() => expect(result.current.actions.mode).toBe('atomic'));
+    await waitFor(() => expect(result.current.metrics.data).toBe(1));
+    await act(async () => { await result.current.actions.enqueue({ kind: 'reward_buy', rewardId: uuid(5), expectedCost: 7 }); });
+    await waitFor(() => expect(result.current.metrics.data).toBe(2));
+    expect(metrics).toHaveBeenCalledTimes(2);
+    metrics.mockResolvedValue(3);
+    await act(async () => { await result.current.actions.refresh(); });
+    await waitFor(() => expect(result.current.metrics.data).toBe(3));
+    expect(metrics).toHaveBeenCalledTimes(3);
+  });
   it('refetches current balances after confirmation instead of applying the historical receipt balance', async () => {
     const state = { rewards: [], lots: [], events: [], points: [], deliveries: [], acknowledged: [], wallets: [{ currency: 'sub', balance: 100 }] };
     mocks.read.mockResolvedValueOnce(state).mockResolvedValue({ ...state, wallets: [{ currency: 'sub', balance: 99 }] });
@@ -57,7 +75,7 @@ describe('mounted command provider scope and offline gate', () => {
     mocks.gate.mockRejectedValue(new Error('Status unavailable'));
     const { result } = renderHook(useActionCommands, { wrapper: setup() });
     await waitFor(() => expect(result.current.mode).toBe('error'));
-    await expect(result.current.enqueue({ kind: 'reward_buy', rewardId: uuid(5), expectedCost: 7 })).rejects.toThrow('Load your current reward account');
+    await expect(result.current.enqueue({ kind: 'reward_buy', rewardId: uuid(5), expectedCost: 7 })).rejects.toThrow('Load your current action account');
     expect(mocks.read).not.toHaveBeenCalled(); expect(mocks.send).not.toHaveBeenCalled();
   });
   it('hides another account immediately and does not reuse a previous period’s verified gate', async () => {

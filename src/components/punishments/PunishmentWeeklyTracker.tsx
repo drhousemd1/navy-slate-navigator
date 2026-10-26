@@ -6,13 +6,14 @@ import { getMondayBasedDay } from '@/lib/utils';
 interface PunishmentWeeklyTrackerProps {
   calendar_color: string;
   usage_data?: number[];
+  currentDayIndex?: number;
 }
 
 const PunishmentWeeklyTracker: React.FC<PunishmentWeeklyTrackerProps> = ({ 
   calendar_color,
-  usage_data = []
+  usage_data = [], currentDayIndex
 }) => {
-  const currentDayOfWeek = getMondayBasedDay();
+  const currentDayOfWeek = currentDayIndex ?? getMondayBasedDay();
   
   const generateTrackerCircles = () => {
     const circles = [];

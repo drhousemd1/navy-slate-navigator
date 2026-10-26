@@ -18,13 +18,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
+  preserveHistory?: boolean;
   onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData>; 
   onCancel: () => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => void | Promise<void>;
 }
 
 const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
-  punishmentData,
+  punishmentData, preserveHistory = false,
   onSave,
   onCancel,
   onDelete
@@ -71,7 +72,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
       if (punishmentData.icon_url) {
         setIconPreview(punishmentData.icon_url);
       } else {
-        setIconPreview(null);
+        setIconPreview(punishmentData.icon_name?.startsWith('custom:') ? punishmentData.icon_name.slice(7) : null);
       }
       setImagePreview(punishmentData.background_image_url || null);
     } else {
@@ -104,11 +105,11 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
           onCancel();
         };
 
-        const handleDeleteWithClear = () => {
+        const handleDeleteWithClear = async () => {
           if (onDelete && punishmentData?.id) {
-            onDelete(punishmentData.id);
+            await onDelete(punishmentData.id);
           }
-          clearPersistedState(); 
+          await clearPersistedState();
           setIsDeleteDialogOpen(false);
         };
 
@@ -139,6 +140,7 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
               imagePreview={imagePreview}
               isDeleteDialogOpen={isDeleteDialogOpen}
               setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+              preserveHistory={preserveHistory}
               punishmentData={punishmentData}
               handleSelectIcon={handleSelectIcon}
               handleUploadIcon={handleUploadIcon}
@@ -163,13 +165,14 @@ interface PunishmentFormContentProps {
   isDeleteDialogOpen: boolean;
   setIsDeleteDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   punishmentData?: PunishmentData;
+  preserveHistory?: boolean;
   handleSelectIcon: (iconName: string) => void;
   handleUploadIcon: () => void;
   handleRemoveIcon: () => void;
   handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveImage: () => void;
   onCancel: () => void;
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
   isSaving?: boolean;
 }
 
@@ -180,7 +183,7 @@ const PunishmentFormContent: React.FC<PunishmentFormContentProps> = ({
   imagePreview,
   isDeleteDialogOpen,
   setIsDeleteDialogOpen,
-  punishmentData,
+  punishmentData, preserveHistory = false,
   handleSelectIcon,
   handleUploadIcon,
   handleRemoveIcon,
@@ -218,6 +221,7 @@ const PunishmentFormContent: React.FC<PunishmentFormContentProps> = ({
       <PunishmentColorSettings control={form.control} />
       
       <PunishmentFormActions 
+        preserveHistory={preserveHistory}
         punishmentData={punishmentData}
         isSaving={isSaving}
         isDeleteDialogOpen={isDeleteDialogOpen}

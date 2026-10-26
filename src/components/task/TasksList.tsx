@@ -1,5 +1,6 @@
 
 import React from 'react';
+import type { TaskProgress } from '@/domain/actions/types';
 import TaskCard from '../TaskCard';
 import { TaskWithId } from '@/data/tasks/types';
 import { StandardLoading, StandardError, StandardEmpty } from '@/components/common/StandardizedStates';
@@ -7,14 +8,19 @@ import { sortTasksByPriorityAndDate } from '@/lib/taskSorting';
 
 interface TasksListProps {
   tasks: TaskWithId[];
+  atomic?: boolean;
+  progress?: Record<string, TaskProgress>;
+  progressErrors?: Record<string, string>;
+  actionDisabled?: boolean;
   isLoading: boolean; 
-  onEditTask: (task: TaskWithId) => void;
+  onEditTask?: (task: TaskWithId) => void;
   onToggleCompletion: (taskId: string, completed: boolean) => void;
   error?: Error | null;
   isUsingCachedData?: boolean;
 }
 
 const TasksList: React.FC<TasksListProps> = ({ 
+  atomic = false, progress, progressErrors, actionDisabled = false,
   tasks, 
   isLoading,
   onEditTask,
@@ -46,6 +52,7 @@ const TasksList: React.FC<TasksListProps> = ({
         return (
           <div key={task.id} className="w-full max-w-full overflow-x-hidden">
             <TaskCard
+              atomic={atomic} progress={progress?.[task.id]} progressError={progressErrors?.[task.id]} actionDisabled={actionDisabled}
               title={task.title}
               description={task.description || ''}
               points={task.points}
@@ -66,7 +73,7 @@ const TasksList: React.FC<TasksListProps> = ({
               calendar_color={task.calendar_color}
               icon_color={task.icon_color}
               is_dom_task={task.is_dom_task}
-              onEdit={() => onEditTask(task)}
+              onEdit={onEditTask ? () => onEditTask(task) : undefined}
               onToggleCompletion={(completed) => onToggleCompletion(task.id, completed)}
             />
           </div>

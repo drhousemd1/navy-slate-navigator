@@ -22,6 +22,7 @@ import { handleImageUpload } from '@/utils/image/taskIntegration';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskEditorFormProps {
+  atomicAccounting?: boolean;
   taskData?: Partial<Task>;
   onSave: (taskData: LocalTaskFormValues) => Promise<void>; 
   onDelete?: (taskId: string) => Promise<void>;
@@ -29,6 +30,7 @@ interface TaskEditorFormProps {
 }
 
 const TaskEditorForm: React.FC<TaskEditorFormProps> = ({ 
+  atomicAccounting = false,
   taskData,
   onSave,
   onDelete,
@@ -37,6 +39,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [operationError, setOperationError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -70,6 +73,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     >
       {(form, clearPersistedState) => {
         const handleSaveWithClear = async (formData: LocalTaskFormValues) => {
+          setOperationError(null);
           setLoading(true);
           try {
             const taskToSave: LocalTaskFormValues = {
@@ -84,6 +88,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             onCancel();
           } catch (e: unknown) {
             const descriptiveMessage = getErrorMessage(e);
+            setOperationError(descriptiveMessage);
             logger.error('Error saving task:', descriptiveMessage, e);
             toast({
               title: "Error Saving Task",
@@ -101,13 +106,18 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
         };
 
         const handleDeleteWithClear = async (taskId: string) => {
-          if (onDelete) {
+          if (onDelete && !loading) {
+            setOperationError(null);
+            setLoading(true);
             try {
               await onDelete(taskId);
               onCancel();
             } catch (error) {
               logger.error('[TaskEditorForm] Error deleting task:', error);
-              toast({ title: "Error", description: "Failed to delete task. Please try again.", variant: "destructive" });
+              setOperationError(getErrorMessage(error));
+              toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
+            } finally {
+              setLoading(false);
             }
           }
         };
@@ -179,6 +189,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
 
         return (
           <form onSubmit={form.handleSubmit(handleSaveWithClear)} className="space-y-6">
+            {operationError && <p role="alert" className="text-amber-300">{operationError}</p>}
             <TaskBasicDetails control={form.control} isSaving={loading} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -311,6 +322,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             />
 
             <TaskFormActions 
+              atomicAccounting={atomicAccounting}
               taskData={taskData}
               isSaving={loading}
               isDeleteDialogOpen={isDeleteDialogOpen}

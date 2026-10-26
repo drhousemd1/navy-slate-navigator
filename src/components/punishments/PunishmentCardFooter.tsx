@@ -9,19 +9,22 @@ interface PunishmentCardFooterProps {
   calendar_color: string;
   usage_data: number[];
   onEdit: () => void;
+  editDisabled?: boolean;
+  currentDayIndex?: number;
 }
 
 const PunishmentCardFooter: React.FC<PunishmentCardFooterProps> = ({
   frequency_count,
   calendar_color,
   usage_data,
-  onEdit
+  onEdit, editDisabled = false, currentDayIndex
 }) => {
   return (
     <div className="flex items-center justify-between mt-4">
       <PunishmentWeeklyTracker 
         calendar_color={calendar_color}
         usage_data={usage_data}
+        currentDayIndex={currentDayIndex}
       />
       
       <div className="flex space-x-2 ml-auto">
@@ -30,6 +33,8 @@ const PunishmentCardFooter: React.FC<PunishmentCardFooterProps> = ({
           size="icon"
           className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
           onClick={onEdit}
+          disabled={editDisabled}
+          aria-label="Edit punishment"
         >
           <Edit className="h-4 w-4" />
         </Button>

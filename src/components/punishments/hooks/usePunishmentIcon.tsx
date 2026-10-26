@@ -7,7 +7,7 @@ export const usePunishmentIcon = (initialIconName?: string | null) => {
 
   const handleSelectIcon = (iconName: string) => {
     setSelectedIconName(iconName);
-    setIconPreview(null);
+    setIconPreview(iconName.startsWith('custom:') ? iconName.slice(7) : null);
   };
 
   const handleUploadIcon = () => {

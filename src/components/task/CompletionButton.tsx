@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '../ui/button';
 
 interface CompletionButtonProps {
+  disabled?: boolean;
   completed: boolean;
   onToggleCompletion: (completed: boolean) => void;
   currentCompletions: number;
@@ -10,6 +11,7 @@ interface CompletionButtonProps {
 }
 
 const CompletionButton: React.FC<CompletionButtonProps> = ({ 
+  disabled = false,
   completed, 
   onToggleCompletion,
   currentCompletions = 0,
@@ -22,8 +24,8 @@ const CompletionButton: React.FC<CompletionButtonProps> = ({
       variant="default"
       size="sm"
       className={`${hasReachedMax ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500'} text-white px-3 py-0 h-7`}
-      onClick={() => !hasReachedMax && onToggleCompletion(!completed)}
-      disabled={hasReachedMax}
+      onClick={() => !disabled && !hasReachedMax && onToggleCompletion(!completed)}
+      disabled={disabled || hasReachedMax}
     >
       <span className="text-xs">
         {hasReachedMax ? 'Completed' : 'Complete'}

@@ -8,6 +8,7 @@ import { Rule } from '@/data/interfaces/Rule';
 
 interface RuleEditorProps {
   isOpen: boolean;
+  preserveHistory?: boolean;
   onClose: () => void;
   ruleData?: Rule | Partial<Rule>;
   onSave: (ruleData: Partial<Rule>) => Promise<void>;
@@ -15,7 +16,7 @@ interface RuleEditorProps {
 }
 
 const RuleEditor: React.FC<RuleEditorProps> = ({ 
-  isOpen, 
+  isOpen, preserveHistory = false,
   onClose, 
   ruleData, 
   onSave, 
@@ -48,6 +49,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
             </SheetHeader>
             
             <RuleEditorForm
+              preserveHistory={preserveHistory}
               ruleData={ruleData as Rule}
               onSave={handleSave}
               onDelete={handleDelete}
@@ -72,6 +74,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
         </DialogHeader>
         
         <RuleEditorForm
+          preserveHistory={preserveHistory}
           ruleData={ruleData as Rule}
           onSave={handleSave}
           onDelete={handleDelete}

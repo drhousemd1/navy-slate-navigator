@@ -1,3 +1,5 @@
+import { useActionCommands } from '@/contexts/ActionCommandsContext';
+import { AtomicTasksContent } from '@/components/task/AtomicTasksContent';
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import TaskEditor from '@/components/TaskEditor';
@@ -13,7 +15,7 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { toastManager } from '@/lib/toastManager';
 import { useToggleTaskCompletionMutation } from '@/data/tasks/mutations/useToggleTaskCompletionMutation';
 
-const Tasks: React.FC = () => {
+const LegacyTasks: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithId | null>(null);
   const { user } = useAuth();
@@ -188,4 +190,12 @@ const Tasks: React.FC = () => {
   );
 };
 
+const Tasks: React.FC = () => {
+  const actions = useActionCommands();
+  if (actions.mode === 'legacy') return <LegacyTasks />;
+  if (actions.mode === 'atomic') return <AtomicTasksContent key={`${actions.scope?.accountId}:${actions.scope?.relationshipId}`} />;
+  return <AppLayout><div className="p-4 pt-6 max-w-4xl mx-auto"><TasksHeader onCreateTask={() => {}} />
+    {actions.mode === 'error' ? <div role="alert"><p>{actions.error}</p><button className="underline" onClick={() => void actions.refresh()}>Retry loading tasks</button></div> : <p>Loading task account…</p>}
+  </div></AppLayout>;
+};
 export default Tasks;

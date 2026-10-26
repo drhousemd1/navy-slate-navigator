@@ -6,13 +6,14 @@ import { getMondayBasedDay } from '@/lib/utils';
 interface RuleViolationTrackerProps {
   calendar_color: string;
   usage_data?: number[]; // 7-element array tracking violations for each day
+  currentDayIndex?: number;
 }
 
 const RuleViolationTracker: React.FC<RuleViolationTrackerProps> = ({ 
   calendar_color,
-  usage_data = Array(7).fill(0)
+  usage_data = Array(7).fill(0), currentDayIndex
 }) => {
-  const currentDayOfWeek = getMondayBasedDay();
+  const currentDayOfWeek = currentDayIndex ?? getMondayBasedDay();
   
   const generateViolationCircles = () => {
     const circles = [];

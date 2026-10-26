@@ -8,14 +8,15 @@ import { logger } from '@/lib/logger';
 
 interface PunishmentEditorProps {
   isOpen: boolean;
+  preserveHistory?: boolean;
   onClose: () => void;
   punishmentData?: PunishmentData;
   onSave: (data: Partial<PunishmentData>) => Promise<PunishmentData>; // Updated return type to always return PunishmentData
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => void | Promise<void>;
 }
 
 const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
-  isOpen,
+  isOpen, preserveHistory = false,
   onClose,
   punishmentData,
   onSave,
@@ -48,6 +49,7 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
               </SheetDescription>
             </SheetHeader>
             <PunishmentEditorForm
+              preserveHistory={preserveHistory}
               punishmentData={punishmentData}
               onSave={onSave}
               onCancel={handleClose}
@@ -71,6 +73,7 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
           </DialogDescription>
         </DialogHeader>
         <PunishmentEditorForm
+          preserveHistory={preserveHistory}
           punishmentData={punishmentData}
           onSave={onSave}
           onCancel={handleClose}

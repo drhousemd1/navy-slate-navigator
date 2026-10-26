@@ -4,6 +4,7 @@ import { Calendar } from 'lucide-react';
 import { getMondayBasedDay } from '@/lib/utils';
 
 interface FrequencyTrackerProps {
+  currentDay?: number;
   frequency: 'daily' | 'weekly';
   frequency_count: number;
   calendar_color: string;
@@ -11,12 +12,13 @@ interface FrequencyTrackerProps {
 }
 
 const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({ 
+  currentDay,
   frequency, 
   frequency_count, 
   calendar_color,
   usage_data
 }) => {
-  const currentDayOfWeek = getMondayBasedDay();
+  const currentDayOfWeek = currentDay ?? getMondayBasedDay();
   
   const generateTrackerCircles = () => {
     const circles = [];
@@ -48,6 +50,7 @@ const FrequencyTracker: React.FC<FrequencyTrackerProps> = ({
       circles.push(
         <div 
           key={i}
+          aria-label={`${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i]}: ${usage_data?.[i] ?? 0} completions${isCurrentDay ? ', today' : ''}`}
           className={`w-4 h-4 rounded-full border ${isUsed ? 'border-transparent' : 'bg-transparent'}`}
           style={{
             backgroundColor: isUsed ? calendar_color : 'transparent',

@@ -15,13 +15,15 @@ import { Button } from '@/components/ui/button';
 
 interface DeleteRuleDialogProps {
   isOpen: boolean;
+  preserveHistory?: boolean;
+  isDeleting?: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onDelete: () => void;
   ruleName?: string;
 }
 
 const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
-  isOpen,
+  isOpen, preserveHistory = false, isDeleting = false,
   onOpenChange,
   onDelete,
   ruleName,
@@ -29,6 +31,8 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
   return (
     <>
       <Button 
+        type="button"
+        disabled={isDeleting}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -48,11 +52,12 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete Rule</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {ruleName ? `the rule "${ruleName}"` : 'this rule'}? This action cannot be undone.
+              Are you sure you want to delete {ruleName ? `the rule "${ruleName}"` : 'this rule'}? {preserveHistory ? 'Past activity and Undo records will remain in History.' : 'This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel 
+              disabled={isDeleting}
               className="bg-dark-navy text-white border-light-navy hover:bg-light-navy"
               onClick={(e) => {
                 e.preventDefault();
@@ -63,6 +68,7 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction 
+              disabled={isDeleting}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -70,7 +76,7 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
               }}
               className="bg-red-700 text-white hover:bg-red-600"
             >
-              Delete
+              {isDeleting ? 'Removing…' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -2,28 +2,22 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useWeeklyMetricsSummary } from '@/data/queries/useWeeklyMetricsSummary';
 import { useMonthlyMetrics } from '@/data/queries/metrics/useMonthlyMetrics';
+import { ActivityMetricsError } from './ActivityMetricsNotice';
 
 interface UnifiedMetricsTilesProps {
   isMonthlyView: boolean;
 }
 
 const UnifiedMetricsTiles: React.FC<UnifiedMetricsTilesProps> = ({ isMonthlyView }) => {
-  const { data: weeklyData } = useWeeklyMetricsSummary();
-  const { data: monthlyData } = useMonthlyMetrics();
-
-  // Default values to ensure we always have numbers
-  const defaultMetrics = {
-    subTasksCompleted: 0,
-    domTasksCompleted: 0,
-    rulesBroken: 0,
-    subRewardsRedeemed: 0,
-    domRewardsRedeemed: 0,
-    punishmentsPerformed: 0
-  };
+  const weekly = useWeeklyMetricsSummary({ enabled: !isMonthlyView });
+  const monthly = useMonthlyMetrics({ enabled: isMonthlyView });
+  const selected = isMonthlyView ? monthly : weekly;
+  if (selected.error) return <Card className="bg-navy border border-light-navy"><ActivityMetricsError error={selected.error} retry={selected.refetch} /></Card>;
+  if (selected.isLoading || !selected.data) return <Card className="bg-navy border border-light-navy"><p role="status" className="p-6 text-nav-inactive">Loading activity totals…</p></Card>;
 
   const displayData = isMonthlyView 
-    ? { ...defaultMetrics, ...(monthlyData?.monthlyTotals || {}) }
-    : { ...defaultMetrics, ...(weeklyData || {}) };
+    ? monthly.data.monthlyTotals
+    : weekly.data;
 
   return (
     <Card className="bg-navy border border-light-navy">

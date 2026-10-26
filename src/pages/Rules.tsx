@@ -12,6 +12,8 @@ import { getErrorMessage } from '@/lib/errors';
 import { toastManager } from '@/lib/toastManager';
 import { useAuth } from '@/contexts/auth';
 import { forceResetAllRuleUsageData } from '@/lib/rulesUtils';
+import { useActionCommands } from '@/contexts/ActionCommandsContext';
+import { AtomicRulesContent } from '@/components/rule/AtomicRulesContent';
 
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -141,6 +143,7 @@ const RulesPageContent: React.FC = () => {
 };
 
 const Rules: React.FC = () => {
+  const actions = useActionCommands();
   return (
     <AppLayout onAddNewItem={() => {
       const content = document.querySelector('.RulesContent');
@@ -150,7 +153,12 @@ const Rules: React.FC = () => {
       }
     }}>
       <ErrorBoundary fallbackMessage="Could not load rules. Please try reloading.">
-          <RulesPageContent />
+          {actions.mode === 'legacy' ? <RulesPageContent /> : actions.mode === 'atomic' ?
+            <AtomicRulesContent key={`${actions.scope?.accountId}:${actions.scope?.relationshipId}`} /> :
+            <div className="p-6 text-white" role={actions.mode === 'error' ? 'alert' : 'status'}>
+              <p>{actions.error || 'Checking your current rules account…'}</p>
+              {actions.mode === 'error' && <button className="underline" onClick={() => void actions.refresh()}>Retry</button>}
+            </div>}
       </ErrorBoundary>
     </AppLayout>
   );

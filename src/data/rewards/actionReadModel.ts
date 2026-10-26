@@ -71,12 +71,12 @@ export async function readRewardActionData(scope: ActionQueueScope, signal?: Abo
   if (deliveries.some(row => row.recipient_participant_id !== scope.participantId)) throw new Error('Invalid refund recipient.');
   return { rewards: rewards.filter(reward => !reward.deleted_at), wallets, lots, events: events.filter(event => event.reward_id), points, deliveries, acknowledged: acks.map(row => row.event_id) };
 }
-export async function acknowledgeRewardFeedback(scope: ActionQueueScope, eventId: string): Promise<void> {
+export async function acknowledgeRewardFeedback(scope: ActionQueueScope, eventId: string, kind: 'points_refunded' | 'action_confirmed' = 'points_refunded'): Promise<void> {
   const token = await rewardReadToken(scope.accountId);
   const { error } = await database.rpc('acknowledge_action_feedback', {
-    p_expected_relationship_id: scope.relationshipId, p_event_id: eventId, p_kind: 'points_refunded',
+    p_expected_relationship_id: scope.relationshipId, p_event_id: eventId, p_kind: kind,
   }).setHeader('Authorization', `Bearer ${token}`);
-  if (error) throw new Error('Dismissal could not be confirmed. Retry dismissal; the refund itself is already recorded.');
+  if (error) throw new Error('Dismissal could not be confirmed. Retry dismissal; the action itself is already recorded.');
   await rewardReadToken(scope.accountId);
 }
 

@@ -33,18 +33,20 @@ interface RuleFormValues {
   highlight_effect: boolean;
   focal_point_x: number;
   focal_point_y: number;
-  image_meta?: any;
+  // Opaque image metadata is passed through, not edited as recursive form fields.
+  image_meta?: unknown;
 }
 
 interface RuleEditorFormProps {
   ruleData?: Rule;
+  preserveHistory?: boolean;
   onSave: (ruleData: Partial<Rule>) => Promise<void>;
   onDelete?: (ruleId: string) => Promise<void>;
   onCancel: () => void;
 }
 
 const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
-  ruleData,
+  ruleData, preserveHistory = false,
   onSave,
   onDelete,
   onCancel,
@@ -85,7 +87,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         description: ruleData.description || '',
         priority: ruleData.priority || 'medium',
         background_image_url: ruleData.background_image_url || undefined,
-        background_opacity: ruleData.background_opacity || 100,
+        background_opacity: ruleData.background_opacity ?? 100,
         icon_url: ruleData.icon_url || undefined,
         icon_name: ruleData.icon_name || undefined,
         title_color: ruleData.title_color || '#FFFFFF',
@@ -93,8 +95,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         calendar_color: ruleData.calendar_color || '#7E69AB',
         icon_color: ruleData.icon_color || '#FF6B6B',
         highlight_effect: ruleData.highlight_effect || false,
-        focal_point_x: ruleData.focal_point_x || 50,
-        focal_point_y: ruleData.focal_point_y || 50,
+        focal_point_x: ruleData.focal_point_x ?? 50,
+        focal_point_y: ruleData.focal_point_y ?? 50,
         image_meta: ruleData.image_meta || null,
       });
       setImagePreview(ruleData.background_image_url || null);
@@ -177,10 +179,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         ...values,
         id: ruleData?.id,
         priority: values.priority,
-        background_image_url: imagePreview || values.background_image_url,
-        image_meta: values.image_meta,
-        icon_name: currentValues.icon_name || undefined,
-        icon_url: iconPreview || undefined,
+        background_image_url: imagePreview || values.background_image_url || null,
+        image_meta: values.image_meta as Rule['image_meta'],
+        icon_name: currentValues.icon_name || null,
+        icon_url: iconPreview || null,
       };
       
       logger.debug('[RuleEditorForm] Saving rule:', ruleToSave);
@@ -195,6 +197,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   };
 
   const handleDeleteWrapped = async () => {
+    if (isDeleting) return;
     if (ruleData?.id && onDelete) {
       setIsDeleting(true);
       try {
@@ -314,6 +317,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         <div className="pt-4 w-full flex items-center justify-end gap-3">
           {ruleData?.id && onDelete && (
             <DeleteRuleDialog
+              isDeleting={isDeleting}
+              preserveHistory={preserveHistory}
               isOpen={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
               onDelete={handleDeleteWrapped}

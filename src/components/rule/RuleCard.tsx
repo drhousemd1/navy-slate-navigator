@@ -7,14 +7,18 @@ import RuleViolationTracker from './RuleViolationTracker';
 import PriorityBadge from '../task/PriorityBadge';
 import HighlightedText from '../task/HighlightedText';
 import { Rule } from '@/data/interfaces/Rule';
+import TaskIcon from '../task/TaskIcon';
 
 interface RuleCardProps {
   rule: Rule;
   onEditRule: (rule: Rule) => void;
   onRuleBroken: (rule: Rule) => void;
+  disabled?: boolean;
+  editDisabled?: boolean;
+  currentDayIndex?: number;
 }
 
-const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) => {
+const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken, disabled = false, editDisabled = false, currentDayIndex }) => {
   return (
     <Card 
       className={`bg-dark-navy border-2 ${
@@ -28,8 +32,8 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) =
             style={{
               backgroundImage: `url(${rule.background_image_url})`,
               backgroundSize: 'cover',
-              backgroundPosition: `${rule.focal_point_x || 50}% ${rule.focal_point_y || 50}%`,
-              opacity: (rule.background_opacity || 100) / 100
+              backgroundPosition: `${rule.focal_point_x ?? 50}% ${rule.focal_point_y ?? 50}%`,
+              opacity: (rule.background_opacity ?? 100) / 100
             }}
           />
         )}
@@ -41,6 +45,7 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) =
             size="sm"
             className="bg-red-500 text-white hover:bg-red-600/90 h-7 px-3 z-10"
             onClick={() => onRuleBroken(rule)}
+            disabled={disabled}
           >
             Rule Broken
           </Button>
@@ -49,7 +54,7 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) =
         <div className="mb-4 relative z-10">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-              <Check className="w-6 h-6 text-white" />
+              {rule.icon_url || rule.icon_name ? <TaskIcon icon_url={rule.icon_url} icon_name={rule.icon_name} icon_color={rule.icon_color} /> : <Check className="w-6 h-6" style={{ color: rule.icon_color }} />}
             </div>
             <div className="flex-1 flex flex-col">
               <div className="text-xl font-semibold">
@@ -77,12 +82,15 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken }) =
           <RuleViolationTracker 
             calendar_color={rule.calendar_color}
             usage_data={rule.usage_data}
+            currentDayIndex={currentDayIndex}
           />
 
           <Button 
             size="sm" 
             className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
             onClick={() => onEditRule(rule)}
+            disabled={editDisabled}
+            aria-label={`Edit ${rule.title}`}
           >
             <Edit className="w-4 h-4" />
           </Button>

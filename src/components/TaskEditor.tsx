@@ -9,12 +9,14 @@ import { TaskFormValues } from '@/data/tasks/types'; // Import TaskFormValues
 interface TaskEditorProps {
   isOpen: boolean;
   onClose: () => void;
+  atomicAccounting?: boolean;
   taskData?: Partial<Task>; // Keep Partial<Task> for initial data
   onSave: (taskData: TaskFormValues) => Promise<void>; // Use TaskFormValues for saving
   onDelete?: (taskId: string) => Promise<void>;
 }
 
 const TaskEditor: React.FC<TaskEditorProps> = ({ 
+  atomicAccounting = false,
   isOpen, 
   onClose, 
   taskData, 
@@ -50,6 +52,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
             </SheetHeader>
             
             <TaskEditorForm
+              atomicAccounting={atomicAccounting}
               taskData={taskData}
               onSave={handleSave} // handleSave now expects TaskFormValues
               onDelete={handleDelete}
@@ -74,6 +77,7 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
         </DialogHeader>
         
         <TaskEditorForm
+              atomicAccounting={atomicAccounting}
           taskData={taskData}
           onSave={handleSave} // handleSave now expects TaskFormValues
           onDelete={handleDelete}

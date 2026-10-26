@@ -8,8 +8,8 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import WeeklyMetricsChartSkeleton from './WeeklyMetricsChartSkeleton';
-import { useWeeklyMetrics, WeeklyDataItem } from '@/data/queries/metrics/useWeeklyMetrics'; 
-import { logger } from '@/lib/logger';
+import { useWeeklyMetrics } from '@/data/queries/metrics/useWeeklyMetrics';
+import { ActivityMetricsError, ActivityMetricsNotice } from './ActivityMetricsNotice';
 
 interface WeeklyMetricsChartProps {
   showToggle?: boolean;
@@ -31,11 +31,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     punishmentsPerformed: { color: '#ea384c', label: 'Punishments Performed' }
   };
 
-  const { data = [], isLoading, error } = useWeeklyMetrics();
-
-  if (error) {
-    logger.error("Error in WeeklyMetricsChart:", error);
-  }
+  const { data = [], metrics, isLoading, error, refetch } = useWeeklyMetrics();
   
   // Always show chart data, even if it's all zeros
   const hasData = data && data.length > 0;
@@ -68,7 +64,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           )}
         </div>
         <div className="h-60">
-          {!hasData && !isLoading ? (
+          {error ? <ActivityMetricsError error={error} retry={refetch} /> : !hasData && !isLoading ? (
             <div className="flex items-center justify-center h-full text-white">
               No activity data to display for this week
             </div>
@@ -167,6 +163,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
             Punishments
           </span>
         </div>
+        {!error && <ActivityMetricsNotice metrics={metrics} />}
       </div>
     </Card>
   );

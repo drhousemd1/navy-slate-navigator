@@ -7,15 +7,16 @@ import DeletePunishmentDialog from '../DeletePunishmentDialog';
 
 interface PunishmentFormActionsProps {
   punishmentData?: PunishmentData;
+  preserveHistory?: boolean;
   isSaving?: boolean;
   isDeleteDialogOpen: boolean;
   setIsDeleteDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onCancel: () => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => void | Promise<void>;
 }
 
 const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
-  punishmentData,
+  punishmentData, preserveHistory = false,
   isSaving = false,
   isDeleteDialogOpen,
   setIsDeleteDialogOpen,
@@ -69,11 +70,12 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
         <DeletePunishmentDialog
           isOpen={isDeleteDialogOpen}
           onOpenChange={setIsDeleteDialogOpen}
-          onDelete={() => {
+          onDelete={async () => {
             if (punishmentData?.id && onDelete) {
-              onDelete(punishmentData.id);
+              await onDelete(punishmentData.id);
             }
           }}
+          preserveHistory={preserveHistory}
           punishmentName={punishmentData.title}
         />
       )}

@@ -3,11 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext';
 import { useUserIds } from './UserIdsContext';
 import { supabaseBackendId } from '@/integrations/supabase/client';
-import { RewardCommandQueue } from '@/data/actions/queue';
+import { ActionCommandQueue } from '@/data/actions/queue';
 import { IndexedDBActionQueueStore } from '@/data/actions/store';
-import { createSupabaseRewardTransport } from '@/data/actions/supabase-transport';
-import { scopeKey, type ActionQueueScope, type QueueEntry, type RewardIntent } from '@/data/actions/contracts';
+import { createSupabaseActionTransport } from '@/data/actions/supabase-transport';
+import { scopeKey, type ActionQueueScope, type QueueEntry, type ActionIntent } from '@/data/actions/contracts';
 import { accountingStatusKey, readAccountingEnabled, readRewardActionData, rewardActionKey, type RewardActionData } from '@/data/rewards/actionReadModel';
+import { TaskFeedback } from '@/components/task/TaskFeedback';
 import { RewardFeedback } from '@/components/rewards/RewardFeedback';
 
 export type VisibleCommand = QueueEntry & { canReplay: boolean; canCancel: boolean };
@@ -18,7 +19,7 @@ interface ActionCommandsValue {
   error: string | null;
   entries: VisibleCommand[];
   confirmed: QueueEntry[];
-  enqueue(intent: RewardIntent): Promise<void>;
+  enqueue(intent: ActionIntent): Promise<void>;
   retry(id: string): Promise<void>;
   cancelUnsent(id: string): Promise<void>;
   refresh(): Promise<void>;
@@ -34,7 +35,7 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
     ? { backendId: supabaseBackendId, accountId: user.id, participantId: identity.participantId, relationshipId: identity.relationshipId } : null,
   [identity.canAccessData, identity.isLoadingUserIds, identity.currentUserId, identity.relationshipId, identity.participantId, identity.relationshipStatus, user?.id]);
   const currentScope = useRef(scope); currentScope.current = scope;
-  const [queue, setQueue] = useState<RewardCommandQueue | null>(null);
+  const [queue, setQueue] = useState<ActionCommandQueue | null>(null);
   const [listed, setListed] = useState<{ key: string; rows: VisibleCommand[] } | null>(null);
   const [confirmed, setConfirmed] = useState<QueueEntry[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
 
   useEffect(() => {
     const store = new IndexedDBActionQueueStore();
-    const instance = new RewardCommandQueue({ store, transport: createSupabaseRewardTransport(),
+    const instance = new ActionCommandQueue({ store, transport: createSupabaseActionTransport(),
       onStorageError: error => setStorageError(error.message),
       onObserverError: () => setStorageError('The action was recorded, but its display could not refresh. Reload confirmed data.'),
       onConfirmed: entry => {
@@ -60,6 +61,9 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
         setConfirmed(previous => [...previous.filter(item => item.command.commandId !== entry.command.commandId), entry]);
         // Receipts describe a past instant. Always read current balances again.
         void queryClient.invalidateQueries({ queryKey: rewardActionKey(entry.scope), exact: true });
+        void queryClient.invalidateQueries({ queryKey: ['task-action-state'] });
+        void queryClient.invalidateQueries({ queryKey: ['recording-action-state'] });
+        void queryClient.invalidateQueries({ queryKey: ['activity-metrics'] });
         void queryClient.invalidateQueries({ queryKey: ['profile'] });
       },
     });
@@ -88,8 +92,8 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
   }, [queue, scope, atomic]);
   const entries = scope && listed?.key === scopeKey(scope) ? listed.rows : [];
   const visibleConfirmed = scope ? confirmed.filter(entry => scopeKey(entry.scope) === scopeKey(scope)) : [];
-  const enqueue = useCallback(async (intent: RewardIntent) => {
-    if (!queue || !atomic || !scope || currentScope.current !== scope) throw new Error('Load your current reward account before taking an action.');
+  const enqueue = useCallback(async (intent: ActionIntent) => {
+    if (!queue || !atomic || !scope || currentScope.current !== scope) throw new Error('Load your current action account before taking an action.');
     if (savingIntent.current) throw new Error('This action is already being saved.');
     savingIntent.current = true;
     try {
@@ -102,19 +106,24 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
   const refresh = useCallback(async () => {
     setStorageError(null);
     await queryClient.invalidateQueries({ queryKey: accountingStatusKey(scope), exact: true });
-    if (atomic) await queryClient.invalidateQueries({ queryKey: rewardActionKey(scope), exact: true });
+    if (atomic) await Promise.all([
+      queryClient.invalidateQueries({ queryKey: rewardActionKey(scope), exact: true }),
+      queryClient.invalidateQueries({ queryKey: ['task-action-state'] }),
+      queryClient.invalidateQueries({ queryKey: ['recording-action-state'] }),
+      queryClient.invalidateQueries({ queryKey: ['activity-metrics'] }),
+    ]);
   }, [queryClient, scope, atomic]);
   const mode = !scope ? 'loading' : status.data === true ? 'atomic' : status.data === false ? 'legacy' : status.isError ? 'error' : 'loading';
   const value: ActionCommandsValue = { scope, mode, data: atomic ? readModel.data ?? null : null,
     error: storageError ?? (status.error?.message || readModel.error?.message || null), entries, confirmed: visibleConfirmed,
     enqueue, refresh,
-    retry: async id => { if (!queue || !atomic) throw new Error('Current reward account is unavailable.'); await queue.retry(id); },
+    retry: async id => { if (!queue || !atomic) throw new Error('Current action account is unavailable.'); await queue.retry(id); },
     cancelUnsent: async id => { if (!queue || !atomic || !await queue.cancelUnsent(id)) throw new Error('This action may already have been sent and cannot be cancelled.'); },
   };
-  return <ActionCommandsContext.Provider value={value}>{children}<RewardFeedback /></ActionCommandsContext.Provider>;
+  return <ActionCommandsContext.Provider value={value}>{children}<div className="action-feedback-stack"><RewardFeedback /><TaskFeedback /></div></ActionCommandsContext.Provider>;
 }
 export function useActionCommands() {
   const value = useContext(ActionCommandsContext);
-  if (!value) throw new Error('Reward commands require ActionCommandsProvider.');
+  if (!value) throw new Error('Action commands require ActionCommandsProvider.');
   return value;
 }

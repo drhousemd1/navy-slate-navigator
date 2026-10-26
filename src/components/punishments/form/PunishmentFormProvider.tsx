@@ -21,7 +21,7 @@ export const punishmentFormSchema = z.object({
   background_opacity: z.number().min(0).max(100).default(100),
   focal_point_x: z.number().min(0).max(100).default(50),
   focal_point_y: z.number().min(0).max(100).default(50),
-  background_image_url: z.string().optional(),
+  background_image_url: z.string().nullable().optional(),
   image_meta: z.any().optional(),
 });
 

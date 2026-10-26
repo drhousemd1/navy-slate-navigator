@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -11,17 +11,27 @@ import { Button } from "@/components/ui/button";
 
 interface DeletePunishmentDialogProps {
   isOpen: boolean;
+  preserveHistory?: boolean;
   onOpenChange: (open: boolean) => void;
-  onDelete: () => void;
+  onDelete: () => void | Promise<void>;
   punishmentName?: string;
 }
 
 const DeletePunishmentDialog: React.FC<DeletePunishmentDialogProps> = ({
-  isOpen,
+  isOpen, preserveHistory = false,
   onOpenChange,
   onDelete,
   punishmentName
 }) => {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const remove = async () => {
+    if (deleting) return;
+    setDeleting(true); setError(null);
+    try { await onDelete(); onOpenChange(false); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Removal was not confirmed. Please retry.'); }
+    finally { setDeleting(false); }
+  };
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent className="bg-navy border-light-navy text-white max-w-md">
@@ -34,21 +44,25 @@ const DeletePunishmentDialog: React.FC<DeletePunishmentDialogProps> = ({
               {punishmentName ? 
                 `Are you sure you want to delete "${punishmentName}"? This action cannot be undone.` : 
                 "Are you sure you want to delete this punishment? This action cannot be undone."}
+              {preserveHistory && <span className="block mt-2">Past activity, points and Undo records remain in History.</span>}
             </AlertDialogDescription>
           </AlertDialogHeader>
           
+          {error && <p role="alert" className="text-red-300 mb-3">{error}</p>}
           <div className="flex justify-center gap-6 w-full mt-2">
             <Button
               onClick={() => onOpenChange(false)}
+              disabled={deleting}
               className="bg-transparent border border-slate-700 text-white hover:bg-slate-800 w-36 h-12 rounded-md"
             >
               Cancel
             </Button>
             <Button 
-              onClick={onDelete} 
+              onClick={() => void remove()}
+              disabled={deleting}
               className="bg-red-700 text-white hover:bg-red-600 w-36 h-12 rounded-md"
             >
-              Delete
+              {deleting ? 'Removing…' : 'Delete'}
             </Button>
           </div>
         </div>

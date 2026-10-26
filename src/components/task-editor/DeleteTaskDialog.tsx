@@ -14,16 +14,18 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface DeleteTaskDialogProps {
+  atomicAccounting?: boolean;
+  disabled?: boolean;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete: () => void;
   taskName?: string;
 }
 
-const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ isOpen, onOpenChange, onDelete, taskName }) => {
+const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ atomicAccounting = false, disabled = false, isOpen, onOpenChange, onDelete, taskName }) => {
   return (
     <>
-      <Button 
+      <Button disabled={disabled}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -43,7 +45,7 @@ const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ isOpen, onOpenChang
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {taskName ? `the task "${taskName}"` : 'this task'}? This action cannot be undone.
+              Are you sure you want to delete {taskName ? `the task "${taskName}"` : 'this task'}? {atomicAccounting ? 'The task will leave current cards. Its completion history and Undo corrections remain available; points are not changed by removal.' : 'This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -57,7 +59,7 @@ const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ isOpen, onOpenChang
             >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction disabled={disabled}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

@@ -323,7 +323,7 @@ export function useToggleTaskCompletionMutation() {
             queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
         }
         queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY }); 
-        queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['activity-metrics'] });
       },
     }
   );

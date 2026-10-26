@@ -22,9 +22,7 @@ const ThroneRoom: React.FC = () => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('fresh')) {
       logger.debug('Fresh page load detected after reset, force updating metrics');
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['monthly-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-metrics-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['activity-metrics'] });
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }

@@ -6,6 +6,7 @@ import { Loader2, Trash2, Save } from 'lucide-react';
 import DeleteTaskDialog from './DeleteTaskDialog';
 
 interface TaskFormActionsProps {
+  atomicAccounting?: boolean;
   taskData?: Partial<Task>;
   isSaving?: boolean;
   isDeleteDialogOpen: boolean;
@@ -15,6 +16,7 @@ interface TaskFormActionsProps {
 }
 
 const TaskFormActions: React.FC<TaskFormActionsProps> = ({
+  atomicAccounting = false,
   taskData,
   isSaving = false,
   isDeleteDialogOpen,
@@ -27,6 +29,8 @@ const TaskFormActions: React.FC<TaskFormActionsProps> = ({
       <div className="flex items-center justify-end space-x-3 pt-4">
         {taskData?.id && onDelete && (
           <DeleteTaskDialog
+            atomicAccounting={atomicAccounting}
+            disabled={isSaving}
             isOpen={isDeleteDialogOpen}
             onOpenChange={setIsDeleteDialogOpen}
             onDelete={onDelete}
