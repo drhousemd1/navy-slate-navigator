@@ -224,3 +224,12 @@ export function selectRewardLot(
   if (!matches[0]) fail('no_available_reward', 'No available reward in the selected inventory.');
   return matches[0];
 }
+
+/** Applies to the selected calendar period: daily target per day, weekly target total per week. */
+export function assertTaskCapacity(frequency: 'daily' | 'weekly', target: number, currentCount: number): void {
+  if (frequency !== 'daily' && frequency !== 'weekly') fail('invalid_task_definition', 'Choose a daily or weekly task.');
+  integer(target, true);
+  integer(currentCount, true);
+  if (target < 1) fail('invalid_task_definition', 'Tasks must allow at least one completion per period.');
+  if (currentCount >= target) fail('task_target_reached', 'This task has reached its target for this period.');
+}

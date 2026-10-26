@@ -1,12 +1,13 @@
 import React from 'react';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Bell, Wifi } from 'lucide-react';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { toast } from '@/hooks/use-toast';
 
 export const NotificationSettings: React.FC = () => {
-  const { preferences, isLoading, isSaving, updateNotificationType, toggleNotifications } = useNotificationSettings();
+  const { preferences, isLoading, isSaving, isReady, loadError, loadPreferences, updateNotificationType, toggleNotifications } = useNotificationSettings();
   const { isSubscribed, isSupported } = usePushSubscription();
 
   const handleTypeToggle = async (type: keyof typeof preferences.types, enabled: boolean) => {
@@ -47,6 +48,9 @@ export const NotificationSettings: React.FC = () => {
     if (type === 'rewardRedeemed') {
       return { title: 'Reward Redeemed', description: 'Get notified when your partner redeems a reward' };
     }
+    if (type === 'rewardRefunded') {
+      return { title: 'Points Refunded', description: 'Get notified when deleting a reward returns points from your unused purchases' };
+    }
     if (type === 'punishmentPerformed') {
       return { title: 'Punishment Performed', description: 'Get notified when your partner applies a punishment' };
     }
@@ -75,6 +79,12 @@ export const NotificationSettings: React.FC = () => {
       </h2>
       
       <div className="bg-navy p-4 rounded border border-light-navy space-y-4">
+        {isLoading && <p role="status" className="text-sm text-gray-400">Loading notification preferences…</p>}
+        {loadError && <div className="space-y-2">
+          <p role="alert" className="text-sm text-red-300">{loadError}</p>
+          <Button variant="outline" disabled={isLoading || isSaving} onClick={() => void loadPreferences()}>Retry notification preferences</Button>
+        </div>}
+
         {/* Master Toggle */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -86,8 +96,9 @@ export const NotificationSettings: React.FC = () => {
           </div>
           <Switch
             checked={preferences.enabled}
+            aria-label="Push Notifications"
             onCheckedChange={handleMasterToggle}
-            disabled={isLoading || isSaving}
+            disabled={!isReady || isLoading || isSaving}
           />
         </div>
 
@@ -111,10 +122,11 @@ export const NotificationSettings: React.FC = () => {
                   </div>
                   <Switch
                     checked={enabled}
+                    aria-label={typeInfo.title}
                     onCheckedChange={(checked) => 
                       handleTypeToggle(type as keyof typeof preferences.types, checked)
                     }
-                    disabled={isLoading || isSaving || !preferences.enabled}
+                    disabled={!isReady || isLoading || isSaving || !preferences.enabled}
                   />
                 </div>
               );

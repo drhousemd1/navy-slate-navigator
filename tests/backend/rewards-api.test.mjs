@@ -87,7 +87,7 @@ test('atomic reward accounting on isolated local fixtures', {
     task=ok(await req('POST','/rest/v1/tasks',service,{title:'Synthetic accounting task',user_id:sub.id,relationship_id:period,points:5}))[0];
 
     await t.test('disabled staging preserves legacy writers; only service can activate verified current openings',async()=>{
-      denied(await command(sub,body('reward_buy',purchaseReward.id)),'ACCOUNTING_NOT_ENABLED');
+      denied(await command(sub,body('reward_buy',purchaseReward.id,{p_expected_cost:13})),'ACCOUNTING_NOT_ENABLED');
       ok(await rpc(sub,'record_task_completion',{task_id_param:task.id,user_id_param:sub.id}));
       const disposable=await account('sub');
       ok(await rpc(disposable,'delete_user_account'));
@@ -116,9 +116,9 @@ test('atomic reward accounting on isolated local fixtures', {
     });
 
     await t.test('own-role buys are atomic and concurrent retries return exactly one durable receipt',async()=>{
-      denied(await command(dom,body('reward_buy',purchaseReward.id)),'ACTION_NOT_ALLOWED');
-      denied(await command(sub,body('reward_buy',domReward.id)),'ACTION_NOT_ALLOWED');
-      const payload=body('reward_buy',purchaseReward.id);
+      denied(await command(dom,body('reward_buy',purchaseReward.id,{p_expected_cost:13})),'ACTION_NOT_ALLOWED');
+      denied(await command(sub,body('reward_buy',domReward.id,{p_expected_cost:11})),'ACTION_NOT_ALLOWED');
+      const payload=body('reward_buy',purchaseReward.id,{p_expected_cost:13});
       const results=await Promise.all([command(sub,payload),command(sub,payload)]);
       purchased=ok(results[0]); assert.deepEqual(ok(results[1]),purchased);
       assert.equal(await balance('sub'),87); assert.equal(await quantity(purchaseReward),1);
@@ -126,13 +126,48 @@ test('atomic reward accounting on isolated local fixtures', {
       assert.equal((await rows('action_events',`command_id=eq.${payload.p_command_id}&select=id`)).length,1);
       denied(await command(sub,{...payload,p_reward_id:legacy.id}),'COMMAND_ID_REUSED');
       denied(await command(dom,payload),'COMMAND_ACTOR_MISMATCH');
-      domPurchase=ok(await command(dom,body('reward_buy',domReward.id)));
+      domPurchase=ok(await command(dom,body('reward_buy',domReward.id,{p_expected_cost:11})));
       assert.equal(await balance('dom'),69);
       assert.ok(purchased.confirmedAt);
       assert.equal(purchased.availableRewardQuantities.find(x=>x.currency==='sub').quantity,1);
       denied(await command(stranger,payload),'STALE_RELATIONSHIP');
       assert.equal((await rows('action_events','select=id',stranger.token)).length,0);
       assert.equal((await rows('action_command_receipts',`command_id=eq.${payload.p_command_id}&select=id`,dom.token)).length,0);
+    });
+
+    await t.test('Buy binds the reviewed cost; price changes and missing preconditions cannot silently spend',async()=>{
+      const before=await balance('sub');
+      const quoted=await reward(sub,20);
+      const offline=body('reward_buy',quoted.id,{p_expected_cost:20});
+      ok(await req('PATCH',`/rest/v1/rewards?id=eq.${quoted.id}`,dom.token,{cost:30}));
+      const changed=await command(sub,offline);
+      denied(changed,'REWARD_COST_CHANGED');
+      assert.deepEqual(JSON.parse(changed.data.details),{expectedCost:20,currentCost:30});
+      assert.equal(await balance('sub'),before); assert.equal(await quantity(quoted),0);
+      assert.equal((await rows('action_events',`command_id=eq.${offline.p_command_id}&select=id`)).length,0);
+      assert.equal((await rows('action_command_receipts',`command_id=eq.${offline.p_command_id}&select=id`)).length,0);
+      denied(await command(sub,offline),'REWARD_COST_CHANGED');
+      // The obsolete six-argument call shape must resolve to the guarded new
+      // function with NULL expected cost, never an unguarded old overload.
+      denied(await command(sub,body('reward_buy',quoted.id,{p_event_id:null,p_inventory_currency:null})),'EXPECTED_REWARD_COST_REQUIRED');
+      denied(await command(sub,body('reward_buy',quoted.id,{p_expected_cost:null})),'EXPECTED_REWARD_COST_REQUIRED');
+      denied(await command(sub,body('reward_buy',quoted.id,{p_expected_cost:-1})),'INVALID_EXPECTED_REWARD_COST');
+      // A new, explicitly reviewed intent accepts the new price.
+      const accepted=body('reward_buy',quoted.id,{p_expected_cost:30});
+      const bought=ok(await command(sub,accepted));
+      assert.equal(await balance('sub'),before-30); assert.equal(await quantity(quoted),1);
+      const saved=(await rows('action_command_receipts',`command_id=eq.${accepted.p_command_id}&select=payload`))[0];
+      assert.equal(saved.payload.expectedCost,30);
+      ok(await req('PATCH',`/rest/v1/rewards?id=eq.${quoted.id}`,dom.token,{cost:40}));
+      assert.deepEqual(ok(await command(sub,accepted)),bought);
+      assert.equal(await balance('sub'),before-30); assert.equal(await quantity(quoted),1);
+      denied(await command(sub,{...accepted,p_expected_cost:40}),'COMMAND_ID_REUSED');
+      // A lowered price also needs a new review: the exact displayed agreement
+      // is immutable, rather than an implicit maximum-spend instruction.
+      ok(await req('PATCH',`/rest/v1/rewards?id=eq.${quoted.id}`,dom.token,{cost:10}));
+      denied(await command(sub,offline),'REWARD_COST_CHANGED');
+      const refunded=ok(await command(sub,body('undo',bought.eventIds[0])));
+      assert.equal(refunded.refunds[0].total,30); assert.equal(await balance('sub'),before);
     });
 
     await t.test('Use respects current permission, returns the selected owner, and Undo has an actionable purchase dependency',async()=>{
@@ -162,9 +197,9 @@ test('atomic reward accounting on isolated local fixtures', {
     });
 
     await t.test('type editing preserves two owned inventories and requires an explicit choice',async()=>{
-      ok(await command(sub,body('reward_buy',mixed.id)));
+      ok(await command(sub,body('reward_buy',mixed.id,{p_expected_cost:3})));
       ok(await req('PATCH',`/rest/v1/rewards?id=eq.${mixed.id}`,dom.token,{is_dom_reward:true,cost:4}));
-      ok(await command(dom,body('reward_buy',mixed.id)));
+      ok(await command(dom,body('reward_buy',mixed.id,{p_expected_cost:4})));
       denied(await command(dom,body('reward_redeem',mixed.id)),'INVENTORY_SELECTION_REQUIRED');
       denied(await command(sub,body('reward_redeem',mixed.id,{p_inventory_currency:'dom'})),'ACTION_NOT_ALLOWED');
       const selected=ok(await command(dom,body('reward_redeem',mixed.id,{p_inventory_currency:'sub'})));
@@ -192,7 +227,7 @@ test('atomic reward accounting on isolated local fixtures', {
       // Legacy oldest unit is redeemed; one legacy plus a paid unit and gift remain.
       const redeemed=ok(await command(dom,body('reward_redeem',legacy.id,{p_inventory_currency:'sub'})));
       ok(await req('PATCH',`/rest/v1/rewards?id=eq.${legacy.id}`,dom.token,{cost:20}));
-      const paid=ok(await command(sub,body('reward_buy',legacy.id)));
+      const paid=ok(await command(sub,body('reward_buy',legacy.id,{p_expected_cost:20})));
       ok(await command(dom,body('reward_gift',legacy.id)));
       const before=await balance('sub');
       const payload=body('reward_delete',legacy.id);
@@ -227,10 +262,10 @@ test('atomic reward accounting on isolated local fixtures', {
       assert.equal(hash(await rows('task_completion_history',`task_id=eq.${task.id}&select=*`)),hash(historyBefore));
       denied(await rpc(sub,'delete_user_account'),'ACCOUNT_DELETION_INTEGRATION_REQUIRED');
       assert.equal((await identity(sub)).participant_id,subParticipant);
-      denied(await command(sub,body('reward_buy',randomUUID())),'REWARD_NOT_FOUND');
+      denied(await command(sub,body('reward_buy',randomUUID(),{p_expected_cost:1})),'REWARD_NOT_FOUND');
       const before=await balance('sub'),cost=Math.floor(before/2)+1;
       ok(await req('PATCH',`/rest/v1/rewards?id=eq.${raceReward.id}`,dom.token,{cost}));
-      const a=body('reward_buy',raceReward.id),b=body('reward_buy',raceReward.id);
+      const a=body('reward_buy',raceReward.id,{p_expected_cost:cost}),b=body('reward_buy',raceReward.id,{p_expected_cost:cost});
       const results=await Promise.all([command(sub,a),command(sub,b)]);
       assert.equal(results.filter(r=>r.status<300).length,1);
       denied(results.find(r=>r.status>=400),'INSUFFICIENT_POINTS');
@@ -249,9 +284,9 @@ test('atomic reward accounting on isolated local fixtures', {
       const solo=ok(await rpc(dom,'unlink_my_partner',{p_expected_relationship_id:period}));
       fixturePeriods.add(solo.relationship_id); fixturePeriods.add((await identity(sub)).relationship_id);
       period=await link(dom,sub); assert.notEqual(period,oldPeriod);
-      denied(await command(sub,body('reward_buy',raceReward.id,{p_expected_relationship_id:oldPeriod})),'STALE_RELATIONSHIP');
+      denied(await command(sub,body('reward_buy',raceReward.id,{p_expected_relationship_id:oldPeriod,p_expected_cost:1})),'STALE_RELATIONSHIP');
       assert.equal((await rows('action_events',`relationship_id=eq.${oldPeriod}&select=id`,dom.token)).length,0);
-      denied(await command(sub,body('reward_buy',raceReward.id)),'ACCOUNTING_NOT_ENABLED');
+      denied(await command(sub,body('reward_buy',raceReward.id,{p_expected_cost:1})),'ACCOUNTING_NOT_ENABLED');
     });
   } finally {
     // Explicitly bounded fixture cleanup. Original rows are never targeted.
@@ -259,7 +294,7 @@ test('atomic reward accounting on isolated local fixtures', {
     if(fixtureIds.length) for(const m of await rows('relationship_period_members',`user_id=in.(${fixtureIds.join(',')})&select=relationship_id`)) fixturePeriods.add(m.relationship_id);
     for(const id of fixturePeriods) {
       for(const table of ['action_feedback_outbox','action_command_receipts','reward_usage','action_inventory_movements','action_point_entries',
-        'reward_inventory_lots','action_events','action_wallets','action_accounting_periods','rewards','task_completion_history','tasks']) {
+        'reward_inventory_lots','action_events','action_task_openings','action_wallets','action_accounting_periods','rewards','task_completion_history','tasks']) {
         ok(await req('DELETE',`/rest/v1/${table}?relationship_id=eq.${id}`,service));
       }
     }

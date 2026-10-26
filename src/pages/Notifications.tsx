@@ -11,7 +11,7 @@ import WellnessReminderSettings from '@/components/profile/WellnessReminderSetti
 
 const Notifications: React.FC = () => {
   const navigate = useNavigate();
-  const { preferences, isLoading, isSaving, updateNotificationType, toggleNotifications } = useNotificationSettings();
+  const { preferences, isLoading, isSaving, isReady, loadError, loadPreferences, updateNotificationType, toggleNotifications } = useNotificationSettings();
   const { isSubscribed, isSupported, isLoading: pushLoading, subscribe, unsubscribe, requestPermissionImmediately } = usePushSubscription();
 
   const handleTypeToggle = async (type: keyof typeof preferences.types, enabled: boolean) => {
@@ -103,6 +103,10 @@ const Notifications: React.FC = () => {
         title: 'Reward Redeemed',
         description: 'Get notified when your partner redeems a reward'
       },
+      rewardRefunded: {
+        title: 'Points Refunded',
+        description: 'Get notified when deleting a reward returns points from your unused purchases'
+      },
       punishmentPerformed: {
         title: 'Punishment Performed',
         description: 'Get notified when your partner applies a punishment'
@@ -135,6 +139,12 @@ const Notifications: React.FC = () => {
               Push Notifications
             </h2>
             
+            {isLoading && <p role="status" className="text-sm text-gray-400">Loading notification preferences…</p>}
+            {loadError && <div className="space-y-2">
+              <p role="alert" className="text-sm text-red-300">{loadError}</p>
+              <Button variant="outline" disabled={isLoading || isSaving} onClick={() => void loadPreferences()}>Retry notification preferences</Button>
+            </div>}
+
             {/* Master Toggle */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -146,8 +156,9 @@ const Notifications: React.FC = () => {
               </div>
               <Switch
                 checked={preferences.enabled}
+                aria-label="Push Notifications"
                 onCheckedChange={handleMasterToggle}
-                disabled={isLoading || isSaving || pushLoading}
+                disabled={!isReady || isLoading || isSaving || pushLoading}
               />
             </div>
 
@@ -173,10 +184,11 @@ const Notifications: React.FC = () => {
                       </div>
                       <Switch
                         checked={enabled}
+                        aria-label={typeInfo.title}
                         onCheckedChange={(checked) => 
                           handleTypeToggle(type as keyof typeof preferences.types, checked)
                         }
-                        disabled={isLoading || isSaving || !preferences.enabled}
+                        disabled={!isReady || isLoading || isSaving || !preferences.enabled}
                       />
                     </div>
                   );

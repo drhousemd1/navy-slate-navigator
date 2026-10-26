@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ActionContractError, applyPointDeltas, assertOperationAllowed, planPurchase, planPurchaseUndo,
+  ActionContractError, assertTaskCapacity, applyPointDeltas, assertOperationAllowed, planPurchase, planPurchaseUndo,
   planGift, selectRewardLot, planPunishment, planRecordedUndo, planRedemptionUndo, planRewardDeletion, planTaskCompletion,
 } from '../src/domain/actions/accounting';
 import type { ActionEvent, ActionIdentity, InventoryLot, Role } from '../src/domain/actions/types';
@@ -193,5 +193,21 @@ describe('gift and explicit inventory intent', () => {
     expect(selectRewardLot(context(), 'period-a', 'reward-1', 'sub', [newer, older, tie], 'sub')).toBe(tie);
     code(() => selectRewardLot(context(), 'period-a', 'reward-1', 'dom', [older]), 'no_available_reward');
     code(() => selectRewardLot({ ...context(), permissions: { ...context().permissions, sub_reward_redeem: 'sub' } }, 'period-a', 'reward-1', 'sub', [older]), 'not_allowed');
+  });
+});
+
+
+describe('task calendar-period capacity', () => {
+  it.each(['daily', 'weekly'] as const)('caps the %s period total without changing the per-completion award', frequency => {
+    expect(() => assertTaskCapacity(frequency, 3, 2)).not.toThrow();
+    code(() => assertTaskCapacity(frequency, 3, 3), 'task_target_reached');
+    code(() => assertTaskCapacity(frequency, 2, 3), 'task_target_reached');
+    expect(() => assertTaskCapacity(frequency, 4, 3)).not.toThrow();
+    expect(planTaskCompletion(context(), 'period-a', 'sub', 0).amount).toBe(0);
+  });
+  it('rejects invalid targets and counts', () => {
+    code(() => assertTaskCapacity('daily', 0, 0), 'invalid_task_definition');
+    code(() => assertTaskCapacity('weekly', 2.5, 1), 'invalid_amount');
+    code(() => assertTaskCapacity('weekly', 2, -1), 'invalid_amount');
   });
 });

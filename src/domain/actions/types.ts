@@ -25,7 +25,16 @@ export interface ActionIdentity {
   readonly permissions: Readonly<Record<ConfigurableOperation, PermissionValue>>;
 }
 
-/** Actor, beneficiary, prices, balances and permissions are deliberately not client inputs. */
+/** The displayed price is a consent precondition, never authority to set a price. */
+export interface RewardBuyCommand {
+  readonly commandId: string;
+  readonly expectedRelationshipId: string;
+  readonly kind: 'reward_buy';
+  readonly rewardId: string;
+  readonly expectedCost: number;
+}
+
+/** Actor, beneficiary, authoritative prices, balances and permissions remain server-owned. */
 export type ActionCommand = {
   readonly commandId: string;
   readonly expectedRelationshipId: string;
@@ -33,7 +42,8 @@ export type ActionCommand = {
   | { readonly kind: 'task_complete'; readonly taskId: string }
   | { readonly kind: 'rule_violation'; readonly ruleId: string }
   | { readonly kind: 'punishment_apply'; readonly punishmentId: string }
-  | { readonly kind: 'reward_buy' | 'reward_delete' | 'reward_gift'; readonly rewardId: string }
+  | RewardBuyCommand
+  | { readonly kind: 'reward_delete' | 'reward_gift'; readonly rewardId: string }
   | { readonly kind: 'reward_redeem'; readonly rewardId: string; readonly inventoryCurrency?: Currency }
   | { readonly kind: 'undo'; readonly eventId: string }
 );
@@ -120,6 +130,24 @@ export interface ActionEvent {
   readonly provenance: 'command' | 'legacy_import' | 'migration_credit';
 }
 
+/** Authoritative current counters; existing task-row counters are legacy data. */
+export interface TaskProgress {
+  readonly taskId: string;
+  readonly beneficiaryParticipantId: string;
+  readonly currency: Currency;
+  readonly timeZone: string;
+  readonly localDate: string;
+  readonly weekStartDate: string;
+  readonly weekIdentifier: string;
+  readonly frequency: 'daily' | 'weekly';
+  readonly target: number;
+  readonly currentCount: number;
+  readonly usageData: readonly number[];
+  readonly completed: boolean;
+  readonly lastCompletedDate: string | null;
+  readonly deleted: boolean;
+}
+
 /** Persist atomically with events/effects. Retry of the same actor/command ID returns this receipt.
  * The server must reject that ID with changed payload, stale period or changed authenticated actor.
  */
@@ -129,6 +157,9 @@ export interface ActionReceipt {
   readonly eventIds: readonly string[];
   readonly confirmedAt: string;
   readonly balances: readonly WalletBalance[];
+  readonly pointDeltas?: readonly PointDelta[];
+  /** Null only when Undo succeeds but the edited definition lacks a current owner/timezone. */
+  readonly taskProgress?: TaskProgress | null;
   readonly inventorySelection?: { readonly requestedCurrency: Currency | null; readonly allocatedCurrency: Currency } | null;
   readonly availableRewardQuantities: readonly {
     rewardId: string;

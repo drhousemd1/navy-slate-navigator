@@ -22,6 +22,9 @@ const configuration = resolveSupabaseConfiguration(
   { url: SUPABASE_URL, publishableKey: SUPABASE_PUBLISHABLE_KEY }
 );
 
+// Non-secret identity for durable work scoped to this already validated backend.
+export const supabaseBackendId = configuration.url;
+
 export const supabase = createClient<Database>(configuration.url, configuration.publishableKey, {
   auth: {
     autoRefreshToken: true,
