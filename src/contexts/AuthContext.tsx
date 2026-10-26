@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef, ReactNode } from 'react';
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -39,12 +39,18 @@ export interface AuthContextType extends AuthState {
   checkAdminStatus: () => Promise<boolean>;
   // Partner linking functions
   generateLinkCode: ReturnType<typeof usePartnerLinking>['generateLinkCode'];
+  previewPartnerCode: ReturnType<typeof usePartnerLinking>['previewPartnerCode'];
+  updateRelationshipPermissions: ReturnType<typeof usePartnerLinking>['updateRelationshipPermissions'];
+  updateTimezone: ReturnType<typeof usePartnerLinking>['updateTimezone'];
   linkToPartner: ReturnType<typeof usePartnerLinking>['linkToPartner'];
   unlinkFromPartner: ReturnType<typeof usePartnerLinking>['unlinkFromPartner'];
   getLinkedPartnerInfo: ReturnType<typeof usePartnerLinking>['getLinkedPartnerInfo'];
   getCurrentLinkCode: ReturnType<typeof usePartnerLinking>['getCurrentLinkCode'];
   getLinkedPartnerId: ReturnType<typeof usePartnerLinking>['getLinkedPartnerId'];
   partnerLinkingLoading: boolean;
+  relationshipIdentity: ReturnType<typeof usePartnerLinking>['relationshipIdentity'];
+  refreshIdentity: ReturnType<typeof usePartnerLinking>['refreshIdentity'];
+  partnerLinkingAvailable: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,23 +67,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
 
   const authOperations = useAuthOperations();
+  const currentAccountId = useRef(authState.user?.id ?? null);
+  currentAccountId.current = authState.user?.id ?? null;
   const wrappedSetUserForProfile = (updatedUser: User | null) => {
-    setAuthState(currentAuthState => ({
-      ...currentAuthState,
-      user: updatedUser,
-      userExists: !!updatedUser,
-    }));
+    const expectedAccountId = authState.user?.id;
+    setAuthState(currentAuthState => {
+      if (currentAuthState.user?.id !== expectedAccountId || (updatedUser && updatedUser.id !== expectedAccountId)) return currentAuthState;
+      return { ...currentAuthState, user: updatedUser, userExists: !!updatedUser };
+    });
   };
-  const userProfileUtils = useUserProfile(authState.user, wrappedSetUserForProfile);
-  const partnerLinkingUtils = usePartnerLinking(authState.user, wrappedSetUserForProfile);
+  const partnerLinkingUtils = usePartnerLinking(authState.user);
+  const userProfileUtils = useUserProfile(authState.user, wrappedSetUserForProfile, {
+    getRole: () => partnerLinkingUtils.relationshipIdentity.currentRole,
+    refresh: partnerLinkingUtils.refreshIdentity,
+  });
 
   // On-demand admin check function
   const checkAdminStatus = async (): Promise<boolean> => {
     if (!authState.user) return false;
+    const requestedAccountId = authState.user.id;
     
     try {
       const { data: hasAdminRole, error } = await supabase.rpc('has_role', {
-        requested_user_id: authState.user.id,
+        requested_user_id: requestedAccountId,
         requested_role: 'admin'
       });
       
@@ -87,7 +99,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       const isAdmin = !!hasAdminRole;
-      setAuthState(prev => ({ ...prev, isAdmin }));
+      if (currentAccountId.current !== requestedAccountId) return false;
+      setAuthState(prev => prev.user?.id === requestedAccountId ? { ...prev, isAdmin } : prev);
       return isAdmin;
     } catch (e) {
       logger.error('Exception during admin role check:', e);
@@ -236,12 +249,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkAdminStatus,
     // Partner linking functions
     generateLinkCode: partnerLinkingUtils.generateLinkCode,
+    previewPartnerCode: partnerLinkingUtils.previewPartnerCode,
+    updateRelationshipPermissions: partnerLinkingUtils.updateRelationshipPermissions,
+    updateTimezone: partnerLinkingUtils.updateTimezone,
     linkToPartner: partnerLinkingUtils.linkToPartner,
     unlinkFromPartner: partnerLinkingUtils.unlinkFromPartner,
     getLinkedPartnerInfo: partnerLinkingUtils.getLinkedPartnerInfo,
     getCurrentLinkCode: partnerLinkingUtils.getCurrentLinkCode,
     getLinkedPartnerId: partnerLinkingUtils.getLinkedPartnerId,
     partnerLinkingLoading: partnerLinkingUtils.loading,
+    relationshipIdentity: partnerLinkingUtils.relationshipIdentity,
+    refreshIdentity: partnerLinkingUtils.refreshIdentity,
+    partnerLinkingAvailable: partnerLinkingUtils.partnerLinkingAvailable,
   };
 
   return (

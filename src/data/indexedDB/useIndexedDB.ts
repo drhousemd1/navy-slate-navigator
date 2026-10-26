@@ -47,16 +47,51 @@ const domPointsStore = localforage.createInstance({ name: DB_NAME, storeName: DO
 const wellbeingStore = localforage.createInstance({ name: DB_NAME, storeName: WELLBEING_STORE_NAME });
 // NOTE: Notification preferences removed from IndexedDB to fix mobile cache conflicts
 
-// Helper function to create user-specific keys
+// Namespace selection never deletes offline work. Legacy unscoped keys remain
+// quarantined until the offline migration can classify pending versus cached rows.
+// Request-start scope tokens are still required in legacy asynchronous writers
+// before relationship lifecycle transitions can be enabled for restored accounts.
+let activeScope: string | null = null;
+let activeOwners: ReadonlySet<string> = new Set();
+let cacheGeneration = 0;
+
+export async function prepareIdentityCacheScope(scope: string | null, userIds: readonly string[]): Promise<void> {
+  cacheGeneration++;
+  activeScope = scope;
+  activeOwners = new Set(userIds);
+}
+
 const getUserKey = (baseKey: string, userId: string | null): string => {
-  return userId ? `${baseKey}_${userId}` : baseKey;
+  if (!activeScope || (userId && !activeOwners.has(userId))) throw new Error('Identity cache scope is not ready for this account.');
+  return `${baseKey}:${activeScope}:${userId ?? 'shared'}`;
 };
+
+type CacheStore = ReturnType<typeof localforage.createInstance>;
+const belongsToScope = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.every(belongsToScope);
+  if (value && typeof value === 'object') {
+    return 'user_id' in value && typeof value.user_id === 'string' && activeOwners.has(value.user_id);
+  }
+  return true;
+};
+
+async function readCached<T>(store: CacheStore, key: string): Promise<T | null> {
+  const scope = activeScope;
+  const generation = cacheGeneration;
+  const value = await store.getItem<T>(key);
+  return scope && generation === cacheGeneration && scope === activeScope && belongsToScope(value) ? value : null;
+}
+
+async function writeCached<T>(store: CacheStore, key: string, value: T): Promise<T> {
+  if (!activeScope || !belongsToScope(value)) throw new Error('Cached data does not belong to the current account or partner.');
+  return store.setItem(key, value);
+}
 
 // Rewards specific functions
 export const loadRewardsFromDB = async (userId?: string | null): Promise<Reward[] | null> => {
   try {
     const key = getUserKey('allRewards', userId || null);
-    const rewards = await rewardsStore.getItem<Reward[]>(key);
+    const rewards = await readCached<Reward[]>(rewardsStore, key);
     return rewards;
   } catch (error) {
     logger.error('Error loading rewards from IndexedDB:', error);
@@ -67,7 +102,7 @@ export const loadRewardsFromDB = async (userId?: string | null): Promise<Reward[
 export const saveRewardsToDB = async (rewards: Reward[], userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('allRewards', userId || null);
-    await rewardsStore.setItem(key, rewards);
+    await writeCached(rewardsStore, key, rewards);
   } catch (error) {
     logger.error('Error saving rewards to IndexedDB:', error);
   }
@@ -76,7 +111,7 @@ export const saveRewardsToDB = async (rewards: Reward[], userId?: string | null)
 export const getLastSyncTimeForRewards = async (userId?: string | null): Promise<string | null> => {
   try {
     const key = getUserKey('rewardsLastSync', userId || null);
-    return await lastSyncStore.getItem<string>(key);
+    return await readCached<string>(lastSyncStore, key);
   } catch (error) {
     logger.error('Error getting last sync time for rewards:', error);
     return null;
@@ -86,7 +121,7 @@ export const getLastSyncTimeForRewards = async (userId?: string | null): Promise
 export const setLastSyncTimeForRewards = async (time: string, userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('rewardsLastSync', userId || null);
-    await lastSyncStore.setItem(key, time);
+    await writeCached(lastSyncStore, key, time);
   } catch (error) {
     logger.error('Error setting last sync time for rewards:', error);
   }
@@ -96,7 +131,7 @@ export const setLastSyncTimeForRewards = async (time: string, userId?: string | 
 export const loadTasksFromDB = async (userId?: string | null): Promise<Task[] | null> => {
   try {
     const key = getUserKey('allTasks', userId || null);
-    return await tasksStore.getItem<Task[]>(key);
+    return await readCached<Task[]>(tasksStore, key);
   } catch (error) {
     logger.error('Error loading tasks from IndexedDB:', error);
     return null;
@@ -106,7 +141,7 @@ export const loadTasksFromDB = async (userId?: string | null): Promise<Task[] | 
 export const saveTasksToDB = async (tasks: Task[], userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('allTasks', userId || null);
-    await tasksStore.setItem(key, tasks);
+    await writeCached(tasksStore, key, tasks);
   } catch (error) {
     logger.error('Error saving tasks to IndexedDB:', error);
   }
@@ -115,7 +150,7 @@ export const saveTasksToDB = async (tasks: Task[], userId?: string | null): Prom
 export const getLastSyncTimeForTasks = async (userId?: string | null): Promise<string | null> => {
   try {
     const key = getUserKey('tasksLastSync', userId || null);
-    return await lastSyncStore.getItem<string>(key);
+    return await readCached<string>(lastSyncStore, key);
   } catch (error) {
     logger.error('Error getting last sync time for tasks:', error);
     return null;
@@ -125,7 +160,7 @@ export const getLastSyncTimeForTasks = async (userId?: string | null): Promise<s
 export const setLastSyncTimeForTasks = async (time: string, userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('tasksLastSync', userId || null);
-    await lastSyncStore.setItem(key, time);
+    await writeCached(lastSyncStore, key, time);
   } catch (error) {
     logger.error('Error setting last sync time for tasks:', error);
   }
@@ -135,7 +170,7 @@ export const setLastSyncTimeForTasks = async (time: string, userId?: string | nu
 export const loadRulesFromDB = async (userId?: string | null): Promise<Rule[] | null> => {
   try {
     const key = getUserKey('allRules', userId || null);
-    return await rulesStore.getItem<Rule[]>(key);
+    return await readCached<Rule[]>(rulesStore, key);
   } catch (error) {
     logger.error('Error loading rules from IndexedDB:', error);
     return null;
@@ -145,7 +180,7 @@ export const loadRulesFromDB = async (userId?: string | null): Promise<Rule[] | 
 export const saveRulesToDB = async (rules: Rule[], userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('allRules', userId || null);
-    await rulesStore.setItem(key, rules);
+    await writeCached(rulesStore, key, rules);
   } catch (error) {
     logger.error('Error saving rules to IndexedDB:', error);
   }
@@ -154,7 +189,7 @@ export const saveRulesToDB = async (rules: Rule[], userId?: string | null): Prom
 export const getLastSyncTimeForRules = async (userId?: string | null): Promise<string | null> => {
   try {
     const key = getUserKey('rulesLastSync', userId || null);
-    return await lastSyncStore.getItem<string>(key);
+    return await readCached<string>(lastSyncStore, key);
   } catch (error) {
     logger.error('Error getting last sync time for rules:', error);
     return null;
@@ -164,7 +199,7 @@ export const getLastSyncTimeForRules = async (userId?: string | null): Promise<s
 export const setLastSyncTimeForRules = async (time: string, userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('rulesLastSync', userId || null);
-    await lastSyncStore.setItem(key, time);
+    await writeCached(lastSyncStore, key, time);
   } catch (error) {
     logger.error('Error setting last sync time for rules:', error);
   }
@@ -174,7 +209,7 @@ export const setLastSyncTimeForRules = async (time: string, userId?: string | nu
 export const loadPunishmentsFromDB = async (userId?: string | null): Promise<PunishmentData[] | null> => {
   try {
     const key = getUserKey('allPunishments', userId || null);
-    const punishments = await punishmentsStore.getItem<PunishmentData[]>(key);
+    const punishments = await readCached<PunishmentData[]>(punishmentsStore, key);
     return punishments;
   } catch (error) {
     logger.error('Error loading punishments from IndexedDB:', error);
@@ -185,7 +220,7 @@ export const loadPunishmentsFromDB = async (userId?: string | null): Promise<Pun
 export const savePunishmentsToDB = async (punishments: PunishmentData[], userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('allPunishments', userId || null);
-    await punishmentsStore.setItem(key, punishments.filter(p => p.id));
+    await writeCached(punishmentsStore, key, punishments.filter(p => p.id));
   } catch (error) {
     logger.error('Error saving punishments to IndexedDB:', error);
   }
@@ -194,7 +229,7 @@ export const savePunishmentsToDB = async (punishments: PunishmentData[], userId?
 export const getLastSyncTimeForPunishments = async (userId?: string | null): Promise<string | null> => {
   try {
     const key = getUserKey('punishmentsLastSync', userId || null);
-    return await lastSyncStore.getItem<string>(key);
+    return await readCached<string>(lastSyncStore, key);
   } catch (error) {
     logger.error('Error getting last sync time for punishments:', error);
     return null;
@@ -204,7 +239,7 @@ export const getLastSyncTimeForPunishments = async (userId?: string | null): Pro
 export const setLastSyncTimeForPunishments = async (time: string, userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('punishmentsLastSync', userId || null);
-    await lastSyncStore.setItem(key, time);
+    await writeCached(lastSyncStore, key, time);
   } catch (error) {
     logger.error('Error setting last sync time for punishments:', error);
   }
@@ -214,7 +249,7 @@ export const setLastSyncTimeForPunishments = async (time: string, userId?: strin
 export const loadPunishmentHistoryFromDB = async (userId?: string | null): Promise<PunishmentHistory[] | null> => {
   try {
     const key = getUserKey('allPunishmentHistory', userId || null);
-    const history = await punishmentHistoryStore.getItem<PunishmentHistory[]>(key);
+    const history = await readCached<PunishmentHistory[]>(punishmentHistoryStore, key);
     return history;
   } catch (error) {
     logger.error('Error loading punishment history from IndexedDB:', error);
@@ -225,7 +260,7 @@ export const loadPunishmentHistoryFromDB = async (userId?: string | null): Promi
 export const savePunishmentHistoryToDB = async (history: PunishmentHistory[], userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('allPunishmentHistory', userId || null);
-    await punishmentHistoryStore.setItem(key, history);
+    await writeCached(punishmentHistoryStore, key, history);
   } catch (error) {
     logger.error('Error saving punishment history to IndexedDB:', error);
   }
@@ -235,7 +270,7 @@ export const savePunishmentHistoryToDB = async (history: PunishmentHistory[], us
 export const savePointsToDB = async (points: number, userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('userPoints', userId || null);
-    await pointsStore.setItem(key, points);
+    await writeCached(pointsStore, key, points);
   } catch (error) {
     logger.error('Error saving points to IndexedDB:', error);
   }
@@ -244,7 +279,7 @@ export const savePointsToDB = async (points: number, userId?: string | null): Pr
 export const loadPointsFromDB = async (userId?: string | null): Promise<number | null> => {
   try {
     const key = getUserKey('userPoints', userId || null);
-    return await pointsStore.getItem<number>(key);
+    return await readCached<number>(pointsStore, key);
   } catch (error) {
     logger.error('Error loading points from IndexedDB:', error);
     return null;
@@ -255,7 +290,7 @@ export const loadPointsFromDB = async (userId?: string | null): Promise<number |
 export const saveDomPointsToDB = async (points: number, userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('userDomPoints', userId || null);
-    await domPointsStore.setItem(key, points);
+    await writeCached(domPointsStore, key, points);
   } catch (error) {
     logger.error('Error saving dom points to IndexedDB:', error);
   }
@@ -264,7 +299,7 @@ export const saveDomPointsToDB = async (points: number, userId?: string | null):
 export const loadDomPointsFromDB = async (userId?: string | null): Promise<number | null> => {
   try {
     const key = getUserKey('userDomPoints', userId || null);
-    return await domPointsStore.getItem<number>(key);
+    return await readCached<number>(domPointsStore, key);
   } catch (error) {
     logger.error('Error loading dom points from IndexedDB:', error);
     return null;
@@ -275,7 +310,7 @@ export const loadDomPointsFromDB = async (userId?: string | null): Promise<numbe
 export const loadWellbeingFromDB = async (userId?: string | null): Promise<WellbeingSnapshot | null> => {
   try {
     const key = getUserKey('latestWellbeing', userId || null);
-    const wellbeing = await wellbeingStore.getItem<WellbeingSnapshot>(key);
+    const wellbeing = await readCached<WellbeingSnapshot>(wellbeingStore, key);
     return wellbeing;
   } catch (error) {
     logger.error('Error loading wellbeing from IndexedDB:', error);
@@ -286,7 +321,7 @@ export const loadWellbeingFromDB = async (userId?: string | null): Promise<Wellb
 export const saveWellbeingToDB = async (wellbeing: WellbeingSnapshot, userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('latestWellbeing', userId || null);
-    await wellbeingStore.setItem(key, wellbeing);
+    await writeCached(wellbeingStore, key, wellbeing);
   } catch (error) {
     logger.error('Error saving wellbeing to IndexedDB:', error);
   }
@@ -295,7 +330,7 @@ export const saveWellbeingToDB = async (wellbeing: WellbeingSnapshot, userId?: s
 export const getLastSyncTimeForWellbeing = async (userId?: string | null): Promise<string | null> => {
   try {
     const key = getUserKey('wellbeingLastSync', userId || null);
-    return await lastSyncStore.getItem<string>(key);
+    return await readCached<string>(lastSyncStore, key);
   } catch (error) {
     logger.error('Error getting last sync time for wellbeing:', error);
     return null;
@@ -305,7 +340,7 @@ export const getLastSyncTimeForWellbeing = async (userId?: string | null): Promi
 export const setLastSyncTimeForWellbeing = async (time: string, userId?: string | null): Promise<void> => {
   try {
     const key = getUserKey('wellbeingLastSync', userId || null);
-    await lastSyncStore.setItem(key, time);
+    await writeCached(lastSyncStore, key, time);
   } catch (error) {
     logger.error('Error setting last sync time for wellbeing:', error);
   }
@@ -314,7 +349,8 @@ export const setLastSyncTimeForWellbeing = async (time: string, userId?: string 
 // Notification Preferences functions REMOVED to fix mobile cache conflicts
 // Notification settings now use ONLY direct Supabase calls for reliability
 
-// Function to clear all data for a specific user
+// Explicit cleanup of this user's keys in the active namespace only. Identity
+// refresh never calls this; quarantined legacy/offline rows are retained.
 export const clearUserDataFromDB = async (userId: string): Promise<void> => {
   try {
     const userKeys = [

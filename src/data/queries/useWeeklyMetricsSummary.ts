@@ -6,6 +6,7 @@ import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { WeeklyMetricsSummary } from '@/components/throne/WeeklyMetricsSummary';
 import { logger } from '@/lib/logger';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { identityScopeUserIds } from '@/lib/identity';
 
 // This is the type definition from the read-only file: src/components/throne/WeeklyMetricsSummary.ts
 // export interface WeeklyMetricsSummary {
@@ -15,7 +16,7 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 //   punishments: number;
 // }
 
-export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: string): Promise<WeeklyMetricsSummary> => {
+export const fetchWeeklyMetricsSummary = async (subUserId: string | null, domUserId: string | null): Promise<WeeklyMetricsSummary> => {
   try {
     // Use consistent date calculation with other hooks
     const today = new Date();
@@ -39,7 +40,7 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
         user_id,
         tasks!inner(is_dom_task)
       `)
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('completed_at', start.toISOString())
       .lte('completed_at', end.toISOString());
     if (taskError) throw new Error(`Error fetching tasks: ${taskError.message}`);
@@ -60,7 +61,7 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
     const { data: ruleViolations, error: ruleError } = await supabase
       .from('rule_violations')
       .select('*')
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('violation_date', start.toISOString())
       .lte('violation_date', end.toISOString());
     if (ruleError) throw new Error(`Error fetching rule violations: ${ruleError.message}`);
@@ -75,7 +76,7 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
         user_id,
         rewards!inner(is_dom_reward)
       `)
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('created_at', start.toISOString())
       .lte('created_at', end.toISOString());
     if (rewardError) throw new Error(`Error fetching rewards: ${rewardError.message}`);
@@ -96,7 +97,7 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
     const { data: punishments, error: punishmentError } = await supabase
       .from('punishment_history')
       .select('*')
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('applied_date', start.toISOString())
       .lte('applied_date', end.toISOString());
     if (punishmentError) throw new Error(`Error fetching punishments: ${punishmentError.message}`);
@@ -116,14 +117,7 @@ export const fetchWeeklyMetricsSummary = async (subUserId: string, domUserId: st
     return result;
   } catch (err) {
     logger.error('Error fetching metrics summary data:', err);
-    return {
-      subTasksCompleted: 0,
-      domTasksCompleted: 0,
-      rulesBroken: 0,
-      subRewardsRedeemed: 0,
-      domRewardsRedeemed: 0,
-      punishmentsPerformed: 0
-    };
+    throw err;
   }
 };
 
@@ -132,8 +126,8 @@ export function useWeeklyMetricsSummary() {
   
   return useQuery<WeeklyMetricsSummary>({
     queryKey: ['weekly-metrics-summary', subUserId, domUserId],
-    queryFn: () => fetchWeeklyMetricsSummary(subUserId!, domUserId!),
-    enabled: !isLoadingUserIds && !!subUserId && !!domUserId,
+    queryFn: () => fetchWeeklyMetricsSummary(subUserId, domUserId),
+    enabled: !isLoadingUserIds && !!(subUserId || domUserId),
     ...STANDARD_QUERY_CONFIG
   });
 }

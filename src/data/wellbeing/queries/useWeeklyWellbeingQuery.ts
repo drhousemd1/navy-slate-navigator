@@ -4,6 +4,7 @@ import { format, eachDayOfInterval } from 'date-fns';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { logger } from '@/lib/logger';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { identityScopeUserIds } from '@/lib/identity';
 
 export interface WeeklyWellbeingDataItem {
   date: string;
@@ -15,7 +16,7 @@ export interface WeeklyWellbeingDataItem {
 
 export const WEEKLY_WELLBEING_QUERY_KEY = ['weekly-wellbeing'];
 
-const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): Promise<WeeklyWellbeingDataItem[]> => {
+const fetchWeeklyWellbeingData = async (subUserId: string | null, domUserId: string | null): Promise<WeeklyWellbeingDataItem[]> => {
   logger.debug('Fetching weekly wellbeing data for users:', subUserId, domUserId);
   
   try {
@@ -43,14 +44,14 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
     const { data: wellbeingData, error } = await supabase
       .from('wellbeing_snapshots')
       .select('user_id, overall_score, updated_at')
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('updated_at', start.toISOString())
       .lte('updated_at', end.toISOString())
       .order('updated_at', { ascending: true });
 
     if (error) {
       logger.error('Error fetching wellbeing data:', error);
-      return weekData;
+      throw error;
     }
 
     // Map wellbeing data to corresponding days, separating by user
@@ -115,10 +116,10 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
         }
 
         // Use default score if no prior data exists
-        if (day.subScore === null) {
+        if (subUserId && day.subScore === null) {
           day.subScore = 50; // Default wellness score
         }
-        if (day.domScore === null) {
+        if (domUserId && day.domScore === null) {
           day.domScore = 50; // Default wellness score
         }
       }
@@ -129,7 +130,7 @@ const fetchWeeklyWellbeingData = async (subUserId: string, domUserId: string): P
     return weekData;
   } catch (err) {
     logger.error('Error in fetchWeeklyWellbeingData:', err);
-    return [];
+    throw err;
   }
 };
 
@@ -140,11 +141,11 @@ interface UseWeeklyWellbeingOptions {
 export const useWeeklyWellbeingQuery = (options?: UseWeeklyWellbeingOptions) => {
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
   
-  const isEnabled = !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? true);
+  const isEnabled = !isLoadingUserIds && !!(subUserId || domUserId) && (options?.enabled ?? true);
   
   return useQuery<WeeklyWellbeingDataItem[], Error>({
     queryKey: [...WEEKLY_WELLBEING_QUERY_KEY, subUserId, domUserId],
-    queryFn: () => fetchWeeklyWellbeingData(subUserId!, domUserId!),
+    queryFn: () => fetchWeeklyWellbeingData(subUserId, domUserId),
     enabled: isEnabled,
     ...STANDARD_QUERY_CONFIG,
   });

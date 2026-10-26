@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,9 +8,16 @@ import { getErrorMessage } from '@/lib/errors';
 import { ProfileRole } from '@/types/profile';
 import { useQueryClient } from '@tanstack/react-query';
 import { handleAvatarImageUpload } from '@/utils/image/avatarIntegration';
+import { callIdentityCommand, identityCommandError } from '@/data/identity';
+import type { IdentityState } from '@/lib/identity';
 
-export function useUserProfile(user: User | null, setUser: (user: User | null) => void) {
+export function useUserProfile(user: User | null, setUser: (user: User | null) => void, identity: {
+  getRole: () => ProfileRole | null;
+  refresh: () => Promise<IdentityState | null>;
+}) {
   const queryClient = useQueryClient();
+  const currentAccount = useRef(user?.id);
+  currentAccount.current = user?.id;
 
   // Update user nickname in both user_metadata and profiles table
   const updateNickname = async (nickname: string) => {
@@ -104,7 +112,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
   // Synchronous role getter for UI display only (NEVER use for business logic)
   const getUserRoleSync = (): string => {
     if (!user) return '';
-    return user.user_metadata?.role || '';
+    return identity.getRole() || '';
   };
 
   // Get user role from profiles table (async - source of truth)
@@ -132,42 +140,16 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
 
   // Update user role in profiles table (not user metadata)
   const updateUserRole = async (role: ProfileRole) => {
-    if (!user) return;
+    if (!user || currentAccount.current !== user.id) return;
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role })
-        .eq('id', user.id);
-        
-      if (error) {
-        logger.error('Error updating user role in profiles:', error);
-        toast({
-          title: 'Error updating role',
-          description: error.message,
-          variant: 'destructive',
-        });
-        return;
+      await callIdentityCommand(user.id, 'set_my_profile_role', { p_role: role });
+      if (currentAccount.current !== user.id) return;
+      const refreshed = await identity.refresh();
+      if (currentAccount.current !== user.id) return;
+      if (!refreshed?.canAccessData || refreshed.currentUserId !== user.id || refreshed.currentRole !== role) {
+        throw new Error('Your role change could not be verified. Refresh your account before continuing.');
       }
-      
-      // Also update user metadata for immediate UI feedback
-      const { error: authError } = await supabase.auth.updateUser({
-        data: { role }
-      });
-      
-      if (authError) {
-        logger.warn('Error updating auth metadata (non-critical):', authError);
-      }
-      
-      // Update local user state
-      const updatedUser = {
-        ...user,
-        user_metadata: {
-          ...(user.user_metadata || {}),
-          role
-        }
-      };
-      setUser(updatedUser);
       
       // Invalidate partner profile cache so partner sees the role update
       queryClient.invalidateQueries({ queryKey: ['partner-profile'] });
@@ -177,12 +159,15 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
         description: `Your role has been updated to ${role}`,
       });
     } catch (error: unknown) {
+      if (currentAccount.current !== user?.id) return;
+      const failure = new Error(identityCommandError(error));
       logger.error('Exception during user role update:', error);
       toast({
         title: 'Error updating role',
-        description: getErrorMessage(error),
+        description: failure.message,
         variant: 'destructive',
       });
+      throw failure;
     }
   };
 

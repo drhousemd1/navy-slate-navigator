@@ -1,205 +1,134 @@
-
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/auth';
-import { logger } from '@/lib/logger';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearUserDataFromDB } from '@/data/indexedDB/useIndexedDB';
-import { ProfileRole } from '@/types/profile';
+import { useAuth } from '@/contexts/auth';
+import { prepareIdentityCacheScope } from '@/data/indexedDB/useIndexedDB';
+import { emptyIdentity, identityCacheScope, identityScopeUserIds, type IdentityState } from '@/lib/identity';
+import { Button } from '@/components/ui/button';
+import { getErrorMessage } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+import type { ProfileRole } from '@/types/profile';
 
-interface UserIds {
-  subUserId: string | null;
-  domUserId: string | null;
-}
-
-interface UserIdsContextType extends UserIds {
+interface UserIdsContextType extends IdentityState {
   isLoadingUserIds: boolean;
   initializeUserIds: () => Promise<void>;
 }
 
 const UserIdsContext = createContext<UserIdsContextType | undefined>(undefined);
+const publicAccountPaths = new Set(['/auth', '/forgot-password', '/reset-password']);
 
-export const UserIdsProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
-  const [userIds, setUserIds] = useState<UserIds>({ subUserId: null, domUserId: null });
-  const [isLoadingUserIds, setIsLoadingUserIds] = useState(true);
-  const [previousUserId, setPreviousUserId] = useState<string | null>(null);
-  const { user } = useAuth();
+export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const { user, loading: authLoading, relationshipIdentity, refreshIdentity, signOut, updateUserRole, unlinkFromPartner } = useAuth();
+  const { pathname } = useLocation();
   const queryClient = useQueryClient();
-
-  const clearPreviousUserData = useCallback(async (prevUserId: string) => {
-    try {
-      // Clear React Query cache
-      await queryClient.clear();
-      
-      // Clear user-specific IndexedDB data
-      await clearUserDataFromDB(prevUserId);
-      
-      logger.debug(`Cleared data for previous user: ${prevUserId}`);
-    } catch (error) {
-      logger.error('Error clearing previous user data:', error);
-    }
-  }, [queryClient]);
-
-  const initializeUserIds = useCallback(async () => {
-    logger.debug('[UserIdsProvider] initializeUserIds called with user:', user?.id);
-    
-    if (!user) {
-      logger.debug('[UserIdsProvider] No user, resetting userIds');
-      
-      // Clear cache if we had a previous user
-      if (previousUserId) {
-        await clearPreviousUserData(previousUserId);
-        setPreviousUserId(null);
-      }
-      
-      setUserIds({ subUserId: null, domUserId: null });
-      setIsLoadingUserIds(false);
-      return;
-    }
-
-    // Check if user changed and clear previous data
-    if (previousUserId && previousUserId !== user.id) {
-      await clearPreviousUserData(previousUserId);
-    }
-    setPreviousUserId(user.id);
-
-    setIsLoadingUserIds(true);
-    try {
-      logger.debug('[UserIdsProvider] Fetching profile for user:', user.id);
-      
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('id, role, linked_partner_id')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        logger.error('[UserIdsProvider] Error fetching profile:', error);
-        // Fallback: use current user as both sub and dom
-        const fallbackIds = { subUserId: user.id, domUserId: user.id };
-        logger.debug('[UserIdsProvider] Using fallback IDs:', fallbackIds);
-        setUserIds(fallbackIds);
-        setIsLoadingUserIds(false);
-        return;
-      }
-
-      if (profile) {
-        logger.debug('[UserIdsProvider] Profile found:', { 
-          id: profile.id, 
-          role: profile.role,
-          linked_partner_id: profile.linked_partner_id 
-        });
-        
-        if (profile.linked_partner_id) {
-          // CRITICAL FIX: Fetch BOTH profiles to get their actual roles
-          logger.debug('[UserIdsProvider] Fetching both linked profiles...');
-          
-          const { data: partnerProfile, error: partnerError } = await supabase
-            .from('profiles')
-            .select('id, role')
-            .eq('id', profile.linked_partner_id)
-            .single();
-
-          if (partnerError || !partnerProfile) {
-            logger.error('[UserIdsProvider] Error fetching partner profile:', partnerError);
-            // Fallback to solo user behavior
-            const soloIds = { subUserId: profile.id, domUserId: profile.id };
-            logger.debug('[UserIdsProvider] Partner fetch failed, using solo IDs:', soloIds);
-            setUserIds(soloIds);
-          } else {
-            // FIXED: Always assign roles consistently regardless of who is logged in
-            const currentUserRole = profile.role as ProfileRole;
-            const partnerRole = partnerProfile.role as ProfileRole;
-            
-            logger.debug('[UserIdsProvider] Both profiles fetched:', {
-              currentUser: { id: profile.id, role: currentUserRole },
-              partner: { id: partnerProfile.id, role: partnerRole }
-            });
-
-            // CRITICAL FIX: Assign roles based on stored profile.role values consistently
-            // Always assign the same user to subUserId/domUserId regardless of who is logged in
-            let finalIds: UserIds;
-            
-            if (currentUserRole === 'sub' && partnerRole === 'dom') {
-              // Current user is sub, partner is dom
-              finalIds = {
-                subUserId: profile.id,
-                domUserId: partnerProfile.id,
-              };
-            } else if (currentUserRole === 'dom' && partnerRole === 'sub') {
-              // Current user is dom, partner is sub
-              finalIds = {
-                subUserId: partnerProfile.id,
-                domUserId: profile.id,
-              };
-            } else {
-              // Both have same role or unclear roles - use consistent assignment
-              // Always put the user with lexicographically smaller ID as sub for consistency
-              const userIds = [
-                { id: profile.id, role: currentUserRole },
-                { id: partnerProfile.id, role: partnerRole }
-              ].sort((a, b) => a.id.localeCompare(b.id));
-              
-              finalIds = {
-                subUserId: userIds[0].id,
-                domUserId: userIds[1].id,
-              };
-              
-              logger.debug('[UserIdsProvider] Same roles detected, using consistent assignment based on ID order');
-            }
-            
-            logger.debug('[UserIdsProvider] Final role assignment (CONSISTENT FOR BOTH USERS):', finalIds);
-            setUserIds(finalIds);
-          }
-        } else {
-          // Solo user - they are both sub and dom for their own data
-          const soloIds = {
-            subUserId: profile.id,
-            domUserId: profile.id,
-          };
-          logger.debug('[UserIdsProvider] Setting solo user IDs:', soloIds);
-          setUserIds(soloIds);
-        }
-      } else {
-        // No profile found, use current user as fallback
-        const fallbackIds = { subUserId: user.id, domUserId: user.id };
-        logger.debug('[UserIdsProvider] No profile found, using fallback:', fallbackIds);
-        setUserIds(fallbackIds);
-      }
-    } catch (e) {
-      logger.error('[UserIdsProvider] Exception in initializeUserIds:', e);
-      const fallbackIds = { subUserId: user.id, domUserId: user.id };
-      logger.debug('[UserIdsProvider] Exception fallback IDs:', fallbackIds);
-      setUserIds(fallbackIds);
-    } finally {
-      setIsLoadingUserIds(false);
-      logger.debug('[UserIdsProvider] initializeUserIds completed');
-    }
-  }, [user, previousUserId, clearPreviousUserData]);
+  const accountId = user?.id ?? null;
+  const generation = useRef(0);
+  const currentAccount = useRef(accountId);
+  const lastPrepared = useRef<{ accountId: string | null; scope: string | null } | null>(null);
+  currentAccount.current = accountId;
+  const [preparedScope, setPreparedScope] = useState<string | null>(null);
+  const [cacheError, setCacheError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isRepairing, setIsRepairing] = useState(false);
+  const identity = relationshipIdentity.currentUserId === accountId
+    ? relationshipIdentity : emptyIdentity(accountId ? 'loading' : 'signed-out', accountId);
+  const scope = identityCacheScope(identity);
+  const subUserId = identity.subUserId;
+  const domUserId = identity.domUserId;
 
   useEffect(() => {
-    initializeUserIds();
-  }, [initializeUserIds]);
+    let active = true;
+    const requestGeneration = ++generation.current;
+    const isCurrent = () => active && currentAccount.current === accountId && generation.current === requestGeneration;
+    setPreparedScope(null);
+    setCacheError(null);
+    setActionError(null);
+    setIsRepairing(false);
+    const prepare = async () => {
+      try {
+        await queryClient.cancelQueries();
+        if (!isCurrent()) return;
+        if (lastPrepared.current && lastPrepared.current.accountId !== accountId) {
+          // Preserve the existing account-switch reset. Ordinary identity refresh
+          // must not discard paused mutations or offline work for this account.
+          queryClient.clear();
+        } else if (scope && lastPrepared.current?.scope !== scope) {
+          queryClient.removeQueries();
+        }
+        await prepareIdentityCacheScope(scope, scope ? identityScopeUserIds(subUserId, domUserId) : []);
+        if (isCurrent()) {
+          lastPrepared.current = { accountId, scope: scope ?? (lastPrepared.current?.accountId === accountId ? lastPrepared.current.scope : null) };
+          setPreparedScope(scope);
+        }
+      } catch (error) {
+        if (!isCurrent()) return;
+        logger.error('Account cache preparation failed:', getErrorMessage(error));
+        setCacheError('Your account data could not be prepared safely. Retry before continuing.');
+      }
+    };
+    void prepare();
+    return () => { active = false; };
+  }, [accountId, scope, subUserId, domUserId, queryClient]);
 
-  const contextValue = {
-    ...userIds,
-    isLoadingUserIds,
-    initializeUserIds
+  const initializeUserIds = useCallback(async () => {
+    setCacheError(null);
+    setActionError(null);
+    await refreshIdentity();
+  }, [refreshIdentity]);
+
+  const effectiveIdentity = cacheError
+    ? emptyIdentity('error', accountId, cacheError)
+    : identity.canAccessData && preparedScope !== scope
+      ? emptyIdentity('loading', accountId)
+      : identity;
+  const isLoadingUserIds = authLoading || effectiveIdentity.status === 'loading';
+  const value = { ...effectiveIdentity, isLoadingUserIds, initializeUserIds };
+
+  const repair = async (operation: () => Promise<unknown>) => {
+    const expectedAccount = accountId;
+    setIsRepairing(true);
+    setActionError(null);
+    try { await operation(); }
+    catch (error) {
+      if (currentAccount.current === expectedAccount) setActionError(getErrorMessage(error));
+    } finally {
+      if (currentAccount.current === expectedAccount) setIsRepairing(false);
+    }
   };
-
-  logger.debug('[UserIdsProvider] Context value:', contextValue);
+  const needsBoundary = !!accountId && (!effectiveIdentity.canAccessData || isLoadingUserIds);
+  const canSetRole = identity.status === 'invalid' && !identity.partnerUserId &&
+    (identity.problem === 'missing_profile' || identity.problem === 'invalid_role');
 
   return (
-    <UserIdsContext.Provider value={contextValue}>
-      {children}
+    <UserIdsContext.Provider value={value}>
+      {needsBoundary && !publicAccountPaths.has(pathname) ? (
+        <main className="flex h-full min-h-0 items-center justify-center overflow-y-auto bg-dark-navy p-6 text-white">
+          <section className="w-full max-w-md rounded-lg border border-light-navy bg-navy p-6 space-y-4" aria-labelledby="identity-heading">
+            <h1 id="identity-heading" className="text-xl font-semibold">{isLoadingUserIds ? 'Loading your account' : canSetRole ? 'Set up your role' : 'Account connection needs attention'}</h1>
+            <p role={isLoadingUserIds ? 'status' : 'alert'} className="text-sm text-gray-300">
+              {isLoadingUserIds ? 'Checking your profile and partner connection…' : effectiveIdentity.error}
+            </p>
+            {actionError && <p role="alert" className="text-sm text-red-300">{actionError}</p>}
+            {canSetRole && <div className="flex gap-3">
+              {(['dom', 'sub'] as ProfileRole[]).map(role => <Button key={role} disabled={isRepairing} onClick={() => void repair(() => updateUserRole(role))} className="bg-cyan-600 hover:bg-cyan-700">{role === 'dom' ? 'Choose Dom' : 'Choose Sub'}</Button>)}
+            </div>}
+            {identity.status === 'invalid' && identity.partnerUserId && <div className="space-y-2">
+              <p className="text-sm text-gray-300">{identity.lifecycleReady ? 'Disconnect the invalid connection before repairing your role or connecting again. Existing history is archived by the account service.' : 'This connection needs repair. Partner changes are temporarily unavailable until the relationship history and privacy upgrade is ready. You can retry loading your account, or still use password recovery.'}</p>
+              <Button disabled={isRepairing || !identity.lifecycleReady} variant="outline" className="border-red-500 text-red-300" onClick={() => void repair(unlinkFromPartner)}>Disconnect partner</Button>
+            </div>}
+            {!isLoadingUserIds && <div className="flex gap-3">
+              <Button disabled={isRepairing} onClick={() => void repair(initializeUserIds)}>Retry</Button>
+              <Button disabled={isRepairing} variant="outline" onClick={() => void repair(signOut)}>Sign out</Button>
+            </div>}
+          </section>
+        </main>
+      ) : children}
     </UserIdsContext.Provider>
   );
 };
 
-export const useUserIds = () => {
+export const useUserIds = (): UserIdsContextType => {
   const context = useContext(UserIdsContext);
-  if (context === undefined) {
-    throw new Error('useUserIds must be used within a UserIdsProvider');
-  }
+  if (!context) throw new Error('useUserIds must be used within a UserIdsProvider');
   return context;
 };

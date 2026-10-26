@@ -19,7 +19,8 @@ export type CreatePunishmentVariables = Partial<Omit<PunishmentData, 'id' | 'cre
 
 export const useCreatePunishment = () => {
   const queryClient = useQueryClient();
-  const { subUserId, domUserId } = useUserIds();
+  const { subUserId, domUserId, currentUserId, status, canAccessData } = useUserIds();
+  const ownerId = canAccessData ? (status === 'unlinked' ? currentUserId : subUserId) : null;
 
   const punishmentsQueryKey = [...PUNISHMENTS_QUERY_KEY, subUserId, domUserId];
 
@@ -27,7 +28,7 @@ export const useCreatePunishment = () => {
     queryClient,
     queryKey: punishmentsQueryKey,
     mutationFn: async (variables: CreatePunishmentVariables) => {
-      if (!subUserId) {
+      if (!ownerId) {
         throw new Error("User not authenticated");
       }
 
@@ -39,7 +40,7 @@ export const useCreatePunishment = () => {
         background_image_url: processedUrl,
         image_meta: variables.image_meta || metadata,
         dom_supply: variables.dom_supply ?? 0,
-        user_id: subUserId
+        user_id: ownerId
       };
       
       const { data, error } = await supabase
@@ -71,7 +72,7 @@ export const useCreatePunishment = () => {
         focal_point_x: variables.focal_point_x || 50,
         focal_point_y: variables.focal_point_y || 50,
         dom_supply: variables.dom_supply ?? 0,
-        user_id: subUserId!,
+        user_id: ownerId!,
         ...variables,
       } as PunishmentWithId;
     },

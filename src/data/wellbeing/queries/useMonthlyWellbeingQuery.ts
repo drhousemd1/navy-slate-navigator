@@ -4,6 +4,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { logger } from '@/lib/logger';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { identityScopeUserIds } from '@/lib/identity';
 
 export interface MonthlyWellbeingDataItem {
   date: string;
@@ -15,7 +16,7 @@ export interface MonthlyWellbeingDataItem {
 
 export const MONTHLY_WELLBEING_QUERY_KEY = ['monthly-wellbeing'];
 
-const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): Promise<MonthlyWellbeingDataItem[]> => {
+const fetchMonthlyWellbeingData = async (subUserId: string | null, domUserId: string | null): Promise<MonthlyWellbeingDataItem[]> => {
   logger.debug('Fetching monthly wellbeing data for users:', subUserId, domUserId);
   
   try {
@@ -38,14 +39,14 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
     const { data: wellbeingData, error } = await supabase
       .from('wellbeing_snapshots')
       .select('user_id, overall_score, updated_at')
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('updated_at', start.toISOString())
       .lte('updated_at', end.toISOString())
       .order('updated_at', { ascending: true });
 
     if (error) {
       logger.error('Error fetching monthly wellbeing data:', error);
-      return monthData;
+      throw error;
     }
 
     // Map wellbeing data to corresponding days, separating by user
@@ -110,10 +111,10 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
         }
 
         // Use default score if no prior data exists
-        if (day.subScore === null) {
+        if (subUserId && day.subScore === null) {
           day.subScore = 50; // Default wellness score
         }
-        if (day.domScore === null) {
+        if (domUserId && day.domScore === null) {
           day.domScore = 50; // Default wellness score
         }
       }
@@ -124,7 +125,7 @@ const fetchMonthlyWellbeingData = async (subUserId: string, domUserId: string): 
     return monthData;
   } catch (err) {
     logger.error('Error in fetchMonthlyWellbeingData:', err);
-    return [];
+    throw err;
   }
 };
 
@@ -135,11 +136,11 @@ interface UseMonthlyWellbeingOptions {
 export const useMonthlyWellbeingQuery = (options?: UseMonthlyWellbeingOptions) => {
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
   
-  const isEnabled = !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? true);
+  const isEnabled = !isLoadingUserIds && !!(subUserId || domUserId) && (options?.enabled ?? true);
   
   return useQuery<MonthlyWellbeingDataItem[], Error>({
     queryKey: [...MONTHLY_WELLBEING_QUERY_KEY, subUserId, domUserId],
-    queryFn: () => fetchMonthlyWellbeingData(subUserId!, domUserId!),
+    queryFn: () => fetchMonthlyWellbeingData(subUserId, domUserId),
     enabled: isEnabled,
     ...STANDARD_QUERY_CONFIG,
   });

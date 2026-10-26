@@ -13,6 +13,7 @@ import { DeleteAvatarDialog } from '@/components/profile/DeleteAvatarDialog';
 
 
 import PartnerLinkingSection from '@/components/profile/PartnerLinkingSection';
+import TimezoneSection from '@/components/profile/TimezoneSection';
 
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -28,7 +29,7 @@ const Profile: React.FC = () => {
     uploadProfileImageAndUpdateState, 
     deleteUserProfileImage, 
     signOut,
-    getUserRole,
+    relationshipIdentity,
     updateUserRole,
     deleteAccount 
   } = useAuth();
@@ -40,7 +41,8 @@ const Profile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
   const [isDeleteAvatarDialogOpen, setIsDeleteAvatarDialogOpen] = useState(false);
-  const [currentRole, setCurrentRole] = useState<ProfileRole | null>(null);
+  const currentRole = relationshipIdentity.currentRole;
+  const roleLocked = relationshipIdentity.status !== 'unlinked';
   const [loadingRole, setLoadingRole] = useState(false);
 
   useEffect(() => {
@@ -52,24 +54,8 @@ const Profile: React.FC = () => {
       const currentImage = getProfileImage();
       logger.debug('Profile Page: Current profile image from context:', currentImage);
       setProfileImage(currentImage);
-
-      // Fetch role from profiles table
-      const fetchRole = async () => {
-        setLoadingRole(true);
-        try {
-          const role = await getUserRole();
-          setCurrentRole(role);
-          logger.debug('Profile Page: Current user role from profiles table:', role);
-        } catch (error) {
-          logger.error('Error fetching user role:', error);
-        } finally {
-          setLoadingRole(false);
-        }
-      };
-
-      fetchRole();
     }
-  }, [user, getNickname, getProfileImage, getUserRole]);
+  }, [user, getNickname, getProfileImage]);
 
   const handleNicknameChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,16 +153,16 @@ const Profile: React.FC = () => {
   };
 
   const handleRoleChange = async (newRole: ProfileRole) => {
-    if (!user) return;
+    if (!user || roleLocked || currentRole === newRole) return;
     setLoadingRole(true);
+    setError(null);
     try {
       await updateUserRole(newRole);
-      setCurrentRole(newRole);
-      toastManager.success('Success', `Role updated to ${newRole}.`);
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       logger.error('Error updating role:', errorMessage);
-      toastManager.error('Error', errorMessage);
+      // The profile hook owns the single popup; retain the failure on this page.
+      setError(errorMessage);
     } finally {
       setLoadingRole(false);
     }
@@ -265,6 +251,8 @@ const Profile: React.FC = () => {
             <p className="text-gray-400 bg-navy p-3 rounded border border-light-navy">{user.email}</p>
           </div>
 
+          <TimezoneSection />
+
           {/* Role Selection Section */}
           <div className="mb-8">
             <Label className="block text-sm font-medium text-gray-300 mb-1">Current Role</Label>
@@ -276,7 +264,7 @@ const Profile: React.FC = () => {
                 onClick={() => handleRoleChange('sub')} 
                 variant={currentRole === 'sub' ? "default" : "ghost"}
                 className={currentRole === 'sub' ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-600 text-white hover:bg-gray-500 hover:text-white"}
-                disabled={loadingRole}
+                disabled={loadingRole || roleLocked}
               >
                 Set as Submissive
               </Button>
@@ -284,12 +272,14 @@ const Profile: React.FC = () => {
                 onClick={() => handleRoleChange('dom')} 
                 variant={currentRole === 'dom' ? "default" : "ghost"}
                 className={currentRole === 'dom' ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-600 text-white hover:bg-gray-500 hover:text-white"}
-                disabled={loadingRole}
+                disabled={loadingRole || roleLocked}
               >
                 Set as Dominant
               </Button>
             </div>
           </div>
+
+          {roleLocked && <p className="text-sm text-gray-400 mb-6">Disconnect your partner before changing your Dom or Sub role. Partner changes may remain unavailable during the relationship history upgrade.</p>}
 
           {/* Partner Linking Section */}
           <PartnerLinkingSection />

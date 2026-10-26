@@ -11,7 +11,8 @@ import { saveRewardsToDB } from '@/data/indexedDB/useIndexedDB';
 
 export const useCreateRewardMutation = () => {
   const queryClient = useQueryClient();
-  const { subUserId, domUserId } = useUserIds();
+  const { subUserId, domUserId, currentUserId, status, canAccessData } = useUserIds();
+  const ownerId = canAccessData ? (status === 'unlinked' ? currentUserId : subUserId) : null;
 
   // Use the standardized query key function
   const rewardsQueryKey = getRewardsQueryKey(subUserId, domUserId);
@@ -20,7 +21,7 @@ export const useCreateRewardMutation = () => {
     queryClient,
     queryKey: rewardsQueryKey,
     mutationFn: async (variables: CreateRewardVariables) => {
-      if (!subUserId) {
+      if (!ownerId) {
         throw new Error("User not authenticated");
       }
 
@@ -43,7 +44,7 @@ export const useCreateRewardMutation = () => {
         focal_point_x: variables.focal_point_x,
         focal_point_y: variables.focal_point_y,
         image_meta: variables.image_meta || metadata,
-        user_id: subUserId
+        user_id: ownerId
       };
 
       logger.debug('Creating reward with data:', rewardData);
@@ -69,7 +70,7 @@ export const useCreateRewardMutation = () => {
       supply: 0, // Supply starts at 0 and is managed automatically
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: subUserId || '',
+      user_id: ownerId || '',
     } as Reward),
     onSuccessCallback: async (newReward) => {
       logger.debug('[Create Reward] Reward created successfully');

@@ -8,6 +8,7 @@ import { STANDARD_QUERY_CONFIG } from '@/lib/react-query-config';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useUserIds } from '@/contexts/UserIdsContext';
+import { identityScopeUserIds } from '@/lib/identity';
 
 export interface WeeklyDataItem {
   date: string;
@@ -21,7 +22,7 @@ export interface WeeklyDataItem {
 
 export const WEEKLY_METRICS_QUERY_KEY = ['weekly-metrics'];
 
-const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<WeeklyDataItem[]> => {
+const fetchWeeklyData = async (subUserId: string | null, domUserId: string | null): Promise<WeeklyDataItem[]> => {
   logger.debug('Fetching weekly chart data via useWeeklyMetrics hook at', new Date().toISOString(), 'for users:', subUserId, domUserId);
   try {
     const weekDays = generateMondayBasedWeekDates();
@@ -60,11 +61,11 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
         user_id,
         tasks!inner(is_dom_task)
       `)
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('completed_at', start.toISOString())
       .lte('completed_at', end.toISOString());
 
-    if (taskError) logger.error('Error fetching task completions:', taskError);
+    if (taskError) throw taskError;
     else if (taskCompletions) {
       logger.debug('Raw task completions:', taskCompletions);
       taskCompletions.forEach(entry => {
@@ -85,11 +86,11 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
     const { data: ruleViolations, error: ruleError } = await supabase
       .from('rule_violations')
       .select('violation_date')
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('violation_date', start.toISOString())
       .lte('violation_date', end.toISOString());
 
-    if (ruleError) logger.error('Error fetching rule violations:', ruleError);
+    if (ruleError) throw ruleError;
     else if (ruleViolations) {
       ruleViolations.forEach(entry => {
         const date = format(new Date(entry.violation_date), 'yyyy-MM-dd');
@@ -105,11 +106,11 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
         user_id,
         rewards!inner(is_dom_reward)
       `)
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('created_at', start.toISOString())
       .lte('created_at', end.toISOString());
 
-    if (rewardError) logger.error('Error fetching reward usages:', rewardError);
+    if (rewardError) throw rewardError;
     else if (rewardUsages) {
       rewardUsages.forEach(entry => {
         const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
@@ -128,11 +129,11 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
     const { data: punishmentsData, error: punishmentError } = await supabase
       .from('punishment_history')
       .select('applied_date')
-      .in('user_id', [subUserId, domUserId])
+      .in('user_id', identityScopeUserIds(subUserId, domUserId))
       .gte('applied_date', start.toISOString())
       .lte('applied_date', end.toISOString());
 
-    if (punishmentError) logger.error('Error fetching punishments:', punishmentError);
+    if (punishmentError) throw punishmentError;
     else if (punishmentsData) {
       punishmentsData.forEach(entry => {
         const date = format(new Date(entry.applied_date), 'yyyy-MM-dd');
@@ -150,7 +151,7 @@ const fetchWeeklyData = async (subUserId: string, domUserId: string): Promise<We
       description: getErrorMessage(error),
       variant: 'destructive'
     });
-    return [];
+    throw error;
   }
 };
 
@@ -161,7 +162,7 @@ interface UseWeeklyMetricsOptions {
 export const useWeeklyMetrics = (options?: UseWeeklyMetricsOptions) => {
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
   
-  const isEnabled = !isLoadingUserIds && !!subUserId && !!domUserId && (options?.enabled ?? true);
+  const isEnabled = !isLoadingUserIds && !!(subUserId || domUserId) && (options?.enabled ?? true);
   
   logger.debug('[useWeeklyMetrics] Query enabled check:', {
     isLoadingUserIds,
@@ -173,7 +174,7 @@ export const useWeeklyMetrics = (options?: UseWeeklyMetricsOptions) => {
   
   return useQuery<WeeklyDataItem[], Error>({
     queryKey: [...WEEKLY_METRICS_QUERY_KEY, subUserId, domUserId],
-    queryFn: () => fetchWeeklyData(subUserId!, domUserId!),
+    queryFn: () => fetchWeeklyData(subUserId, domUserId),
     enabled: isEnabled,
     ...STANDARD_QUERY_CONFIG,
   });
