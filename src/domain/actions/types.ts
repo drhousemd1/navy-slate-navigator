@@ -54,6 +54,13 @@ export interface PointDelta {
   readonly amount: number;
 }
 
+export interface ActionCalendar {
+  readonly participantId: string;
+  readonly timeZone: string;
+  readonly localDate: string;
+  readonly weekStartDate: string;
+}
+
 export interface WalletBalance {
   readonly participantId: string;
   readonly currency: Currency;
@@ -112,15 +119,15 @@ export interface ActionEvent {
   readonly definitionValues:
     | { readonly type: 'task'; readonly points: number; readonly frequency: 'daily' | 'weekly'; readonly target: number }
     | { readonly type: 'reward'; readonly cost: number }
-    | { readonly type: 'punishment'; readonly subDeduction: number; readonly domAward: number }
+    | {
+        readonly type: 'punishment'; readonly subDeduction: number; readonly domAward: number;
+        readonly domAwardParticipantId?: string | null;
+        readonly domAwardOmittedReason?: 'dom_participant_absent' | 'zero_configured_award' | null;
+      }
     | null;
-  readonly calendar: {
-    readonly participantId: string;
-    readonly timeZone: string;
-    readonly localDate: string;
-    readonly weekStartDate: string;
-  } | null;
-  readonly points: readonly PointDelta[];
+  readonly calendar: ActionCalendar | null;
+  /** New punishment entries retain each affected person's clock; older entries use event.calendar. */
+  readonly points: readonly (PointDelta & { readonly calendar?: ActionCalendar | null })[];
   readonly inventory: readonly {
     lotId: string;
     from: InventoryLot['status'] | null;
@@ -148,6 +155,20 @@ export interface TaskProgress {
   readonly deleted: boolean;
 }
 
+/** Weekly event counts; rule/punishment cards render a filled mark for counts above zero. */
+export interface RecordingProgress {
+  readonly subjectType: 'rule' | 'punishment';
+  readonly subjectId: string;
+  readonly beneficiaryParticipantId: string;
+  readonly timeZone: string;
+  readonly localDate: string;
+  readonly weekStartDate: string;
+  readonly weekIdentifier: string;
+  readonly usageData: readonly number[];
+  readonly currentCount: number;
+  readonly deleted: boolean;
+}
+
 /** Persist atomically with events/effects. Retry of the same actor/command ID returns this receipt.
  * The server must reject that ID with changed payload, stale period or changed authenticated actor.
  */
@@ -160,6 +181,7 @@ export interface ActionReceipt {
   readonly pointDeltas?: readonly PointDelta[];
   /** Null only when Undo succeeds but the edited definition lacks a current owner/timezone. */
   readonly taskProgress?: TaskProgress | null;
+  readonly recordingProgress?: RecordingProgress | null;
   readonly inventorySelection?: { readonly requestedCurrency: Currency | null; readonly allocatedCurrency: Currency } | null;
   readonly availableRewardQuantities: readonly {
     rewardId: string;

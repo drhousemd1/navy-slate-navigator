@@ -101,6 +101,24 @@ describe('exact, reversible accounting', () => {
     expect(planPunishment(context(), 'period-a', -8, 10, 4)[0].amount).toBe(0);
   });
 
+  it('keeps solo Sub deductions without inventing an absent Dom award', () => {
+    const solo = { ...context('sub'), participants: { sub: 'sub-participant', dom: null } };
+    expect(planPunishment(solo, 'period-a', 2, 5, 7)).toEqual([
+      { participantId: 'sub-participant', currency: 'sub', amount: -2 },
+    ]);
+    code(() => planPunishment({ ...context(), participants: { dom: 'dom-participant', sub: null } }, 'period-a', 2, 5, 7), 'missing_participant');
+  });
+
+  it('keeps zero-value punishments recordable and correction debts intact', () => {
+    expect(planPunishment(context(), 'period-a', -8, 0, 0)).toEqual([
+      { participantId: 'sub-participant', currency: 'sub', amount: 0 },
+    ]);
+    expect(planPunishment(context(), 'period-a', 0, 100, 7)).toEqual([
+      { participantId: 'sub-participant', currency: 'sub', amount: 0 },
+      { participantId: 'dom-participant', currency: 'dom', amount: 7 },
+    ]);
+  });
+
   it('rejects duplicate reversal, reversal of reversal, and fabricated legacy reversal values', () => {
     code(() => planRecordedUndo(context(), completed, true), 'already_undone');
     code(() => planRecordedUndo(context(), { ...completed, kind: 'action_undone' }, false), 'not_reversible');

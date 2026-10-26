@@ -82,7 +82,10 @@ export function planPunishment(
   const deltas: PointDelta[] = [{
     participantId: participant(identity, 'sub'), currency: 'sub', amount: actualDeduction === 0 ? 0 : -actualDeduction,
   }];
-  if (domAward > 0) deltas.push({ participantId: participant(identity, 'dom'), currency: 'dom', amount: domAward });
+  // Existing solo-Sub behavior records the debit without inventing a Dom wallet.
+  if (domAward > 0 && identity.participants.dom) {
+    deltas.push({ participantId: identity.participants.dom, currency: 'dom', amount: domAward });
+  }
   return deltas;
 }
 
