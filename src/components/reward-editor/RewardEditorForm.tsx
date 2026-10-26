@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
@@ -11,7 +11,7 @@ import DeleteRewardDialog from './DeleteRewardDialog';
 import { useRewardIcon } from './hooks/useRewardIcon';
 import { useRewardBackground } from './hooks/useRewardBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
-import { useDeleteReward } from '@/data/rewards/mutations/useDeleteReward';
+import { useRewards } from '@/contexts/RewardsContext';
 import { UseFormReturn } from 'react-hook-form';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -21,7 +21,7 @@ interface RewardEditorFormProps {
   rewardData?: Reward;
   onSave: (data: RewardFormValues) => Promise<Reward>; 
   onCancel: () => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
@@ -31,7 +31,9 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   onDelete
 }) => {
   const isMobile = useIsMobile();
-  const deleteRewardMutation = useDeleteReward();
+  const { atomicAccounting } = useRewards();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   
   const { 
     isDeleteDialogOpen, 
@@ -103,16 +105,17 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
         };
 
         const handleDeleteWithClear = async () => {
-          if (rewardData?.id) {
+          if (rewardData?.id && onDelete && !deleting) {
+            setDeleting(true); setDeleteError(null);
             try {
-              await deleteRewardMutation.mutateAsync(rewardData.id);
+              await onDelete(rewardData.id);
               await clearPersistedState();
               setIsDeleteDialogOpen(false);
               onCancel(); // Close the main editor modal
             } catch (error) {
               logger.error("Error deleting reward:", error);
-              // Error will be handled by the mutation's error handling
-            }
+              setDeleteError(getErrorMessage(error));
+            } finally { setDeleting(false); }
           }
         };
 
@@ -160,6 +163,9 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
               onOpenChange={setIsDeleteDialogOpen}
               onConfirm={handleDeleteWithClear}
               rewardName={rewardData?.title}
+              atomicAccounting={atomicAccounting}
+              busy={deleting}
+              error={deleteError}
             />
           </>
         );

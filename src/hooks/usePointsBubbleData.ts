@@ -2,7 +2,7 @@
 import { useRewards } from '@/contexts/RewardsContext';
 
 export const usePointsBubbleData = () => {
-  const { rewards, totalPoints, domPoints } = useRewards();
+  const { rewards, totalPoints, domPoints, atomicAccounting, totalRewardsSupply, totalDomRewardsSupply, isLoading } = useRewards();
 
   // Calculate reward type counts from existing rewards data
   const subRewardTypesCount = rewards.reduce((total, reward) => {
@@ -14,9 +14,10 @@ export const usePointsBubbleData = () => {
   }, 0);
 
   return {
+    isLoading,
     subPoints: totalPoints ?? 0,
     domPoints: domPoints ?? 0,
-    subRewardTypesCount,
-    domRewardTypesCount,
+    subRewardTypesCount: atomicAccounting ? totalRewardsSupply : subRewardTypesCount,
+    domRewardTypesCount: atomicAccounting ? totalDomRewardsSupply : domRewardTypesCount,
   };
 };

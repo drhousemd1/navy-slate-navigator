@@ -6,7 +6,7 @@ import { Box, Coins } from 'lucide-react';
 import { usePointsBubbleData } from '@/hooks/usePointsBubbleData';
 
 const PointsBubbles: React.FC = () => {
-  const { subPoints, domPoints, subRewardTypesCount, domRewardTypesCount } = usePointsBubbleData();
+  const { subPoints, domPoints, subRewardTypesCount, domRewardTypesCount, isLoading } = usePointsBubbleData();
 
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
 
@@ -17,17 +17,17 @@ const PointsBubbles: React.FC = () => {
         style={badgeStyle}
       >
         <Box className="w-3 h-3" />
-        <span>{subRewardTypesCount}</span>
+        <span>{isLoading ? '—' : subRewardTypesCount}</span>
       </Badge>
       <Badge 
         className="text-white font-bold px-3 py-1 flex items-center gap-1"
         style={badgeStyle}
       >
         <Coins className="w-3 h-3" />
-        <span>{subPoints}</span>
+        <span>{isLoading ? '—' : subPoints}</span>
       </Badge>
-      <DOMBadge icon="box" value={domRewardTypesCount} />
-      <DOMBadge icon="crown" value={domPoints} />
+      <DOMBadge icon="box" value={isLoading ? '—' : domRewardTypesCount} />
+      <DOMBadge icon="crown" value={isLoading ? '—' : domPoints} />
     </div>
   );
 };

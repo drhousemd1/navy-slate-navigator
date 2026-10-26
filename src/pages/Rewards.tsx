@@ -4,6 +4,7 @@ import RewardsList from '../components/rewards/RewardsList';
 import RewardEditor from '../components/RewardEditor';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { RewardActivity } from '@/components/rewards/RewardActivity';
 
 import { Reward, RewardFormValues } from '@/data/rewards/types'; 
 
@@ -121,6 +122,7 @@ const RewardsContent: React.FC<{
   return (
     <div className="p-4 pt-6 max-w-4xl mx-auto">
       <RewardsHeader onAddNewReward={handleAddNewReward} /> 
+      <RewardActivity />
       <div className="mt-4">
         <RewardsList 
           rewards={rewards}

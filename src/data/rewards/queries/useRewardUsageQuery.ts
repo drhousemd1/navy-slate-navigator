@@ -41,12 +41,12 @@ const fetchRewardUsage = async (rewardId: string): Promise<boolean[]> => {
   return usageArray;
 };
 
-export const useRewardUsageQuery = (rewardId: string) => {
+export const useRewardUsageQuery = (rewardId: string, enabled = true) => {
   return useQuery<boolean[]>({
     queryKey: ['reward-usage', rewardId],
     queryFn: () => fetchRewardUsage(rewardId),
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
-    enabled: !!rewardId,
+    enabled: !!rewardId && enabled,
   });
 };

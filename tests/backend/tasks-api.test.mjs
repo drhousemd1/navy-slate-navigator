@@ -257,7 +257,7 @@ test('atomic task completion and Undo on isolated local fixtures', {
     const fixtureIds=accounts.map(a=>a.id);
     if(fixtureIds.length) for(const m of await rows('relationship_period_members',`user_id=in.(${fixtureIds.join(',')})&select=relationship_id`)) fixturePeriods.add(m.relationship_id);
     for(const id of fixturePeriods) {
-      for(const table of ['action_feedback_outbox','action_command_receipts','reward_usage','task_completion_history','action_inventory_movements','action_point_entries',
+      for(const table of ['action_feedback_acknowledgments','action_feedback_outbox','action_command_receipts','reward_usage','task_completion_history','action_inventory_movements','action_point_entries',
         'reward_inventory_lots','action_events','action_task_openings','action_wallets','action_accounting_periods','rewards','tasks']) {
         ok(await req('DELETE',`/rest/v1/${table}?relationship_id=eq.${id}`,service));
       }

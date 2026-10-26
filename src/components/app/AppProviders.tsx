@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { queryClient } from '@/data/queryClient';
 import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { ActionCommandsProvider } from '@/contexts/ActionCommandsContext';
 import { RewardsProvider } from '@/contexts/RewardsContext';
 import { PunishmentsProvider } from '@/contexts/punishments/PunishmentsProvider';
 import { ColorSchemeProvider } from '@/contexts/ColorSchemeContext';
@@ -21,6 +22,7 @@ export const AppProviders: React.FC<React.PropsWithChildren<{}>> = ({ children }
           <ColorSchemeErrorBoundary>
             <ColorSchemeProvider>
               <UserIdsProvider>
+              <ActionCommandsProvider>
               <RewardsProvider>
                 <PunishmentsProvider>
                   <OfflineBanner />
@@ -28,6 +30,7 @@ export const AppProviders: React.FC<React.PropsWithChildren<{}>> = ({ children }
                   <Toaster />
                 </PunishmentsProvider>
               </RewardsProvider>
+              </ActionCommandsProvider>
             </UserIdsProvider>
             </ColorSchemeProvider>
           </ColorSchemeErrorBoundary>

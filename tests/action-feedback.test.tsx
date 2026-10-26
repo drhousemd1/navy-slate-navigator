@@ -129,6 +129,21 @@ describe('confirmed refund feedback', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
+  it('resumes an undismissed refund after temporary preference unreadiness without duplicate cards', async () => {
+    const ledger = createActionFeedbackLedger();
+    const props = { activeScope: sub, result: result(), ledger };
+    const view = render(<ConfirmedActionFeedback {...props} enabled />);
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    view.rerender(<ConfirmedActionFeedback {...props} enabled={false} />);
+    expect(screen.queryByRole('status')).toBeNull();
+    view.rerender(<ConfirmedActionFeedback {...props} enabled />);
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    await userEvent.setup().click(screen.getByRole('button', { name: /Dismiss refund/ }));
+    view.rerender(<ConfirmedActionFeedback {...props} enabled={false} />);
+    view.rerender(<ConfirmedActionFeedback {...props} enabled />);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('is keyboard dismissible without taking focus and returns focus to the previous control', async () => {
     const user = userEvent.setup();
     const onDismiss = vi.fn();

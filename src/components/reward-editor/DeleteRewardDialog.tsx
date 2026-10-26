@@ -14,13 +14,19 @@ interface DeleteRewardDialogProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   rewardName?: string;
+  atomicAccounting?: boolean;
+  busy?: boolean;
+  error?: string | null;
 }
 
 const DeleteRewardDialog: React.FC<DeleteRewardDialogProps> = ({ 
   isOpen, 
   onOpenChange, 
   onConfirm,
-  rewardName 
+  rewardName,
+  atomicAccounting = false,
+  busy = false,
+  error
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
@@ -31,11 +37,12 @@ const DeleteRewardDialog: React.FC<DeleteRewardDialogProps> = ({
               Delete Reward
             </AlertDialogTitle>
             <AlertDialogDescription className="text-white mt-4">
-              {rewardName ? 
+              {atomicAccounting ? `Delete “${rewardName ?? 'this reward'}”? Unused purchases will be cancelled and their recorded points returned to each owner. Gifts refund zero points. Used items and History remain. The deletion is final after confirmation.` : rewardName ?
                 `Are you sure you want to delete "${rewardName}"? This action cannot be undone.` : 
                 "Are you sure you want to delete this reward? This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {error && <p role="alert" className="text-amber-300">{error}</p>}
           
           <div className="flex justify-center gap-6 w-full mt-2">
             <Button
@@ -46,9 +53,10 @@ const DeleteRewardDialog: React.FC<DeleteRewardDialogProps> = ({
             </Button>
             <Button 
               onClick={onConfirm} 
+              disabled={busy}
               className="bg-red-700 text-white hover:bg-red-600 w-36 h-12 rounded-md"
             >
-              Delete
+              {busy ? 'Saving…' : 'Delete'}
             </Button>
           </div>
         </div>

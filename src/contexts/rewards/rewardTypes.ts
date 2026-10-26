@@ -14,6 +14,8 @@ export interface BuyRewardParams {
 }
 
 export interface RewardsContextType {
+  atomicAccounting: boolean;
+  handleGiftReward: (id: string) => Promise<void>;
   rewards: Reward[];
   totalPoints: number;
   totalRewardsSupply: number;
@@ -26,6 +28,6 @@ export interface RewardsContextType {
   handleSaveReward: (rewardData: Partial<Reward>, index: number | null) => Promise<string | null>;
   handleDeleteReward: (index: number) => Promise<boolean>;
   handleBuyReward: (id: string, cost: number, isDomReward?: boolean) => Promise<void>;
-  handleUseReward: (id: string) => Promise<void>;
+  handleUseReward: (id: string, inventoryCurrency?: 'dom' | 'sub') => Promise<void>;
   refreshPointsFromDatabase: () => Promise<void>;
 }

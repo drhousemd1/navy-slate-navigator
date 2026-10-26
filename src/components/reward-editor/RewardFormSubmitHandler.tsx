@@ -47,6 +47,7 @@ const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
   children
 }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const onSubmit = async (values: RewardFormValues) => {
     if (isSaving) {
@@ -65,6 +66,7 @@ const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
     
     try {
       setIsSaving(true);
+      setSaveError(null);
       const savedReward = await onSave(dataToSave);
       
       if (savedReward) {
@@ -72,7 +74,7 @@ const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
       }
     } catch (e: unknown) {
       logger.error("Error saving reward in form handler:", e);
-      // Error handling is done by the mutation hooks
+      setSaveError(e instanceof Error ? e.message : 'Reward changes could not be confirmed.');
     } finally {
       setIsSaving(false);
     }
@@ -88,6 +90,7 @@ const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {saveError && <p role="alert" className="text-amber-300">{saveError}</p>}
         {childrenWithProps}
       </form>
     </Form>

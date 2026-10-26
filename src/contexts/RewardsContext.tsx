@@ -1,11 +1,12 @@
 
-import React, { createContext, useContext, useEffect, useMemo } from 'react';
-import { RewardsContextType, SaveRewardParams } from './rewards/rewardTypes';
+import React, { createContext, useContext } from 'react';
+import { RewardsContextType } from './rewards/rewardTypes';
 import { useRewardsData } from '@/data/rewards/useRewardsData';
+import { useAtomicRewardsData } from '@/data/rewards/useAtomicRewardsData';
+import { useActionCommands } from './ActionCommandsContext';
+import type { Currency } from '@/domain/actions/types';
 import { Reward } from '@/data/rewards/types';
 import { QueryObserverResult } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger';
 
 const mockQueryResult: QueryObserverResult<Reward[], Error> = {
   data: [],
@@ -37,6 +38,8 @@ const mockQueryResult: QueryObserverResult<Reward[], Error> = {
 
 
 const RewardsContext = createContext<RewardsContextType>({
+  atomicAccounting: false,
+  handleGiftReward: async () => { throw new Error('Gifting is not available yet.'); },
   rewards: [],
   totalPoints: 0,
   totalRewardsSupply: 0,
@@ -55,153 +58,51 @@ const RewardsContext = createContext<RewardsContextType>({
 
 export const useRewards = () => useContext(RewardsContext);
 
-export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const {
-    rewards,
-    totalPoints,
-    totalRewardsSupply,
-    domPoints = 0,
-    isLoading,
-    saveReward,
-    deleteReward,
-    buyReward,
-    useReward,
-    updatePoints,
-    updateDomPoints,
-    refetchRewards,
-    refreshPointsFromDatabase,
-    totalDomRewardsSupply,
-  } = useRewardsData();
-  
-  useEffect(() => {
-    refreshPointsFromDatabase();
-  }, [refreshPointsFromDatabase]);
-
-  const handleSaveReward = async (rewardData: Partial<Reward>, index: number | null): Promise<string | null> => {
-    logger.debug("RewardsContext - handleSaveReward called with data:", rewardData, "index:", index);
-    try {
-      const params: SaveRewardParams = { rewardData, currentIndex: index };
-      
-      const savedReward = await saveReward(params);
-      
-      if (savedReward?.id) {
-        // Force refetch to ensure the new reward appears in the list
-        await refetchRewards();
-        logger.debug("RewardsContext - reward saved and list refreshed:", savedReward.id);
-        return savedReward.id;
-      }
-      
-      return null;
-    } catch (error) {
-      logger.error("Error in RewardsContext handleSaveReward:", error);
-      return null;
-    }
-  };
-
-  const handleDeleteReward = async (index: number): Promise<boolean> => {
-    const rewardToDelete = rewards[index];
-    if (!rewardToDelete?.id) {
-      toast({ title: "Error", description: "Reward ID not found for deletion.", variant: "destructive" });
-      return false;
-    }
-    try {
-      await deleteReward(rewardToDelete.id);
-      return true;
-    } catch (error) {
-      logger.error("Error in RewardsContext handleDeleteReward:", error);
-      return false;
-    }
-  };
-
-  const handleBuyRewardWrapper = async (id: string, cost: number, isDomReward?: boolean) => {
-    try {
-      logger.debug("RewardsContext - buying reward:", { id, cost, isDomReward });
-      
-      let finalIsDomReward = isDomReward;
-      if (finalIsDomReward === undefined) {
-        const reward = rewards.find(r => r.id === id);
-        if (!reward) {
-          toast({ title: "Reward not found", description: "Cannot buy a non-existent reward.", variant: "destructive" });
-          return;
-        }
-        finalIsDomReward = reward.is_dom_reward;
-      }
-      
-      logger.debug("RewardsContext - final isDomReward value:", finalIsDomReward);
-      await buyReward({ rewardId: id, cost, isDomReward: finalIsDomReward });
-    } catch (error) {
-      logger.error("Error in RewardsContext handleBuyRewardWrapper:", error);
-    }
-  };
-
-  const handleUseRewardWrapper = async (id: string) => {
-     const reward = rewards.find(r => r.id === id);
-    if (!reward) {
-        toast({ title: "Reward not found", description: "Cannot use a non-existent reward.", variant: "destructive" });
-        return;
-    }
-    
-    try {
-        logger.debug("RewardsContext - using reward:", { id, isDom: reward.is_dom_reward });
-        await useReward({ rewardId: id });
-    } catch (error) {
-        logger.error("Error in RewardsContext handleUseRewardWrapper:", error);
-    }
-  };
-  
-  const setTotalPointsWrapper = async (points: number) => {
-    try {
-      await updatePoints(points);
-    } catch (error) {
-      logger.error("Error setting total points:", error);
-      await refreshPointsFromDatabase(); 
-    }
-  };
-
-  const setDomPointsWrapper = async (points: number) => {
-    try {
-      await updateDomPoints(points);
-    } catch (error) {
-      logger.error("Error setting dom points:", error);
-      await refreshPointsFromDatabase();
-    }
-  };
-
-  const value = useMemo(() => ({
-    rewards,
-    totalPoints,
-    totalRewardsSupply,
-    totalDomRewardsSupply,
-    domPoints,
-    setTotalPoints: setTotalPointsWrapper,
-    setDomPoints: setDomPointsWrapper,
-    isLoading,
-    refetchRewards,
-    handleSaveReward,
-    handleDeleteReward,
-    handleBuyReward: handleBuyRewardWrapper,
-    handleUseReward: handleUseRewardWrapper,
-    refreshPointsFromDatabase,
-  }), [
-    rewards, 
-    totalPoints, 
-    totalRewardsSupply, 
-    totalDomRewardsSupply, 
-    domPoints, 
-    isLoading, 
-    refetchRewards, 
-    refreshPointsFromDatabase,
-    saveReward,
-    deleteReward,
-    buyReward,
-    useReward,
-    updatePoints,
-    updateDomPoints,
-  ]);
-
-  return (
-    <RewardsContext.Provider value={value}>
-      {children}
-    </RewardsContext.Provider>
-  );
+export const RewardsProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const actions = useActionCommands();
+  if (actions.mode === 'atomic') return <AtomicRewardsProvider>{children}</AtomicRewardsProvider>;
+  if (actions.mode === 'legacy') return <LegacyRewardsProvider>{children}</LegacyRewardsProvider>;
+  return <>{children}</>;
 };
+function LegacyRewardsProvider({ children }: React.PropsWithChildren) {
+  const data = useRewardsData();
+  return <RewardDataProvider data={data}>{children}</RewardDataProvider>;
+}
+function AtomicRewardsProvider({ children }: React.PropsWithChildren) {
+  const data = useAtomicRewardsData();
+  return <RewardDataProvider data={data}>{children}</RewardDataProvider>;
+}
+function RewardDataProvider({ children, data }: React.PropsWithChildren<{ data: ReturnType<typeof useRewardsData> | ReturnType<typeof useAtomicRewardsData> }>) {
+  const atomicAccounting = 'atomicAccounting' in data && data.atomicAccounting;
+  const value: RewardsContextType = {
+    rewards: data.rewards, totalPoints: data.totalPoints, domPoints: data.domPoints,
+    totalRewardsSupply: data.totalRewardsSupply, totalDomRewardsSupply: data.totalDomRewardsSupply,
+    atomicAccounting, isLoading: data.isLoading,
+    setTotalPoints: data.updatePoints, setDomPoints: data.updateDomPoints,
+    refetchRewards: data.refetchRewards, refreshPointsFromDatabase: data.refreshPointsFromDatabase,
+    handleSaveReward: async (rewardData, currentIndex) => {
+      const reward = await data.saveReward({ rewardData, currentIndex });
+      await data.refetchRewards();
+      return reward?.id ?? null;
+    },
+    handleDeleteReward: async index => {
+      const reward = data.rewards[index];
+      if (!reward) throw new Error('Reward not found. Reload before deleting.');
+      await data.deleteReward(reward.id);
+      // Atomic means durably queued, not already deleted. The page shows the
+      // saved command and retains the card until a confirmed read removes it.
+      return true;
+    },
+    handleBuyReward: async (id, cost, isDomReward) => {
+      const reward = data.rewards.find(item => item.id === id);
+      if (!reward) throw new Error('Reward not found. Reload before buying.');
+      await data.buyReward({ rewardId: id, cost, isDomReward: isDomReward ?? reward.is_dom_reward });
+    },
+    handleUseReward: async (id, inventoryCurrency?: Currency) => { await data.useReward({ rewardId: id, inventoryCurrency }); },
+    handleGiftReward: async id => {
+      if (!('giftReward' in data)) throw new Error('Gifting will be available after this relationship’s accounting upgrade.');
+      await data.giftReward(id);
+    },
+  };
+  return <RewardsContext.Provider value={value}>{children}</RewardsContext.Provider>;
+}

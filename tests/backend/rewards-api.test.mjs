@@ -278,6 +278,27 @@ test('atomic reward accounting on isolated local fixtures', {
       assert.equal(refunded.refunds[0].total,11);
     });
 
+    await t.test('refund acknowledgments are own-recipient, current-period, idempotent, and do not change outbox evidence',async()=>{
+      const feedback=(await rows('action_feedback_outbox',`relationship_id=eq.${period}&recipient_participant_id=eq.${subParticipant}&kind=eq.points_refunded&select=*`))[0];
+      assert.ok(feedback);
+      const payload={p_expected_relationship_id:period,p_event_id:feedback.event_id,p_kind:'points_refunded'};
+      const before=hash(await rows('action_feedback_outbox',`event_id=eq.${feedback.event_id}&select=*`));
+      denied(await rpc(dom,'acknowledge_action_feedback',payload),'OWN_FEEDBACK_REQUIRED');
+      denied(await rpc(stranger,'acknowledge_action_feedback',payload),'STALE_RELATIONSHIP');
+      denied(await req('POST','/rest/v1/rpc/acknowledge_action_feedback',anon,payload));
+      denied(await req('POST','/rest/v1/action_feedback_acknowledgments',sub.token,{event_id:feedback.event_id,recipient_participant_id:subParticipant,relationship_id:period,kind:'points_refunded'}));
+      denied(await rpc(sub,'acknowledge_action_feedback',{...payload,p_expected_relationship_id:randomUUID()}),'STALE_RELATIONSHIP');
+      denied(await rpc(sub,'acknowledge_action_feedback',{...payload,p_event_id:randomUUID()}),'OWN_FEEDBACK_REQUIRED');
+      ok(await rpc(sub,'acknowledge_action_feedback',payload));
+      const first=await rows('action_feedback_acknowledgments',`event_id=eq.${feedback.event_id}&select=*`,sub.token);
+      assert.equal(first.length,1);
+      ok(await rpc(sub,'acknowledge_action_feedback',payload));
+      assert.equal(hash(await rows('action_feedback_acknowledgments',`event_id=eq.${feedback.event_id}&select=*`,sub.token)),hash(first));
+      assert.equal((await rows('action_feedback_acknowledgments',`event_id=eq.${feedback.event_id}&select=*`,dom.token)).length,0);
+      assert.equal((await rows('action_feedback_acknowledgments',`event_id=eq.${feedback.event_id}&select=*`,stranger.token)).length,0);
+      assert.equal(hash(await rows('action_feedback_outbox',`event_id=eq.${feedback.event_id}&select=*`)),before);
+    });
+
     await t.test('same account UUIDs after a fresh relationship cannot replay an old period command or read its ledger',async()=>{
       const oldPeriod=period;
       await setReady(dom,true); await setReady(sub,true); // ONLY disposable fixtures.
@@ -293,7 +314,7 @@ test('atomic reward accounting on isolated local fixtures', {
     const fixtureIds=accounts.map(a=>a.id);
     if(fixtureIds.length) for(const m of await rows('relationship_period_members',`user_id=in.(${fixtureIds.join(',')})&select=relationship_id`)) fixturePeriods.add(m.relationship_id);
     for(const id of fixturePeriods) {
-      for(const table of ['action_feedback_outbox','action_command_receipts','reward_usage','action_inventory_movements','action_point_entries',
+      for(const table of ['action_feedback_acknowledgments','action_feedback_outbox','action_command_receipts','reward_usage','action_inventory_movements','action_point_entries',
         'reward_inventory_lots','action_events','action_task_openings','action_wallets','action_accounting_periods','rewards','task_completion_history','tasks']) {
         ok(await req('DELETE',`/rest/v1/${table}?relationship_id=eq.${id}`,service));
       }

@@ -12,6 +12,15 @@
   pointer-events: none;
 }
 
+/* The mounted reward delivery reader can show several confirmed recipients.
+   Its single outer stack owns placement; nested cards must not overlap. */
+.action-feedback-stack > .action-feedback-stack {
+  position: static;
+  width: auto;
+  max-height: none;
+  padding: 0;
+}
+
 .action-feedback-card {
   position: relative;
   isolation: isolate;

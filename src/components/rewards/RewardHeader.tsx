@@ -12,6 +12,8 @@ interface RewardHeaderProps {
   isDomReward?: boolean;
   onBuy: (cost: number) => void;
   onUse: () => void;
+  buyDisabled?: boolean;
+  hideUse?: boolean;
 }
 
 const RewardHeader: React.FC<RewardHeaderProps> = ({
@@ -20,7 +22,9 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
   cost,
   isDomReward = false,
   onBuy,
-  onUse
+  onUse,
+  buyDisabled = false,
+  hideUse = false
 }) => {
   // Colors based on reward type
   const buyButtonColor = isDomReward 
@@ -53,7 +57,7 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
           <span>{supply}</span>
         </Badge>
         
-        {supply > 0 && (
+        {supply > 0 && !hideUse && (
           <Button 
             variant="outline" 
             size="sm"
@@ -82,6 +86,7 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
           size="sm"
           className={`${buyButtonColor} text-white h-7`}
           onClick={() => onBuy(cost)}
+          disabled={buyDisabled}
         >
           Buy
         </Button>

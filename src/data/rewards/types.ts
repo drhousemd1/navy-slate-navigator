@@ -9,6 +9,8 @@ export type Json =
   | Json[];
 
 export interface Reward {
+  deleted_at?: string | null;
+  relationship_id?: string;
   id: string;
   title: string;
   description?: string | null;
@@ -28,7 +30,9 @@ export interface Reward {
   image_meta?: Json | null;
   created_at?: string;
   updated_at?: string;
-  user_id: string;
+  // Legacy reads include the owner Auth ID. The atomic UI projection omits it;
+  // its writes resolve ownership from the authenticated account instead.
+  user_id?: string;
 }
 
 // Used for optimistic updates

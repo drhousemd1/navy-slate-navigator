@@ -36,13 +36,16 @@ function ScopedRefundFeedback({ activeScope, result, enabled, ledger = actionFee
   const candidates = useMemo(() => enabled ? getRefundPresentations(result, activeScope) : [], [enabled, result, activeScope]);
   const [visible, setVisible] = useState<RefundPresentation[]>([]);
   useEffect(() => {
+    // Loading/saving preferences temporarily closes presentation. Keep a
+    // claimed, undismissed card so readiness can resume it in this scope.
+    if (!enabled) return;
     const keys = new Set(candidates.map(item => item.key));
     // Claim outside React's updater: StrictMode may replay updater functions.
     const fresh = candidates.filter(item => ledger.claim(item.key));
     setVisible(previous => [...previous.filter(item => keys.has(item.key)), ...fresh]);
-  }, [candidates, ledger]);
+  }, [candidates, ledger, enabled]);
   const candidateKeys = new Set(candidates.map(item => item.key));
-  const current = visible.filter(item => candidateKeys.has(item.key));
+  const current = enabled ? visible.filter(item => candidateKeys.has(item.key)) : [];
 
   if (current.length === 0) return null;
   return <section className="action-feedback-stack" aria-label="Confirmed refunds">
