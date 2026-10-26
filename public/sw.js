@@ -44,6 +44,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event
 self.addEventListener('fetch', (event) => {
+  // Private documents must use authenticated network requests, never an offline
+  // app-shell fallback or a cached response from an earlier account.
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.pathname.includes('/storage/v1/object/') &&
+      requestUrl.pathname.includes('/admin-documents/')) return;
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

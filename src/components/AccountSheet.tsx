@@ -12,12 +12,14 @@ import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { logger } from '@/lib/logger';
+import { useAdminDocumentAccess } from '@/features/admin-documents/useAdminDocumentAccess';
 
 const AccountSheet = () => {
   const navigate = useNavigate();
   const { user, getNickname, getProfileImage, getUserRoleSync, signOut, isAdmin } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const documentAccess = useAdminDocumentAccess(sheetOpen);
   
   const handleProfileClick = () => {
     navigate('/profile');
@@ -189,7 +191,7 @@ const AccountSheet = () => {
               Notifications
             </Button>
 
-            {isAdmin && user && ( // Show Admin Panel button if user is admin
+            {documentAccess === 'allowed' && user && (
               <Button 
                 variant="ghost" 
                 className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-cyan-500/50"
