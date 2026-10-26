@@ -4,6 +4,7 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useDialogFocusHandlers } from "@/hooks/use-dialog-focus"
 
 const Dialog = DialogPrimitive.Root
 
@@ -35,8 +36,9 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, hideCloseButton = false, ...props }, ref) => {
+>(({ className, children, hideCloseButton = false, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
   const isMobile = useIsMobile()
+  const focusHandlers = useDialogFocusHandlers({ onOpenAutoFocus, onCloseAutoFocus })
   
   return (
     <DialogPortal>
@@ -55,8 +57,7 @@ const DialogContent = React.forwardRef<
           WebkitOverflowScrolling: "touch",
           boxSizing: "border-box",
         }}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        {...focusHandlers}
         {...props}
       >
         <div className="modal-content w-full box-border px-4 md:px-0">

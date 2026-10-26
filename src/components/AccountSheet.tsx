@@ -86,7 +86,9 @@ const AccountSheet = () => {
   return (
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger asChild>
-        <UserCircle2 className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
+        <button type="button" aria-label="Open account menu" className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
+          <UserCircle2 aria-hidden="true" className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
+        </button>
       </SheetTrigger>
       <SheetContent 
         side="left" 

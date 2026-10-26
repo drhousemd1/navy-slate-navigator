@@ -1,24 +1,25 @@
 
 "use client";
 
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { toast as sonnerToast, type ToastT } from "sonner";
 
 type ToastProps = {
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  action?: React.ReactNode;
+  title?: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
   variant?: "default" | "destructive";
 };
 
 // Centralized toast function with consistent configuration
 const toast = ({ title, description, action, variant }: ToastProps) => {
-  sonnerToast(title as string, {
-    description: null, // Force no description for single line
+  sonnerToast(title, {
+    description,
     action,
-    className: variant === "destructive" ? "destructive single-line-toast" : "single-line-toast",
+    className: variant === "destructive" ? "destructive" : undefined,
     position: "top-center",
-    duration: 2000, // Reduced duration
+    duration: variant === "destructive" ? 10000 : description ? 6000 : 2000,
+    closeButton: true,
   });
 };
 
