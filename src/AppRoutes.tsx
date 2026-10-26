@@ -19,6 +19,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import AdminRebuildPlan from '@/pages/AdminRebuildPlan';
 
 const AppRoutes = () => {
   return (
@@ -29,6 +30,8 @@ const AppRoutes = () => {
       <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
       
       {/* Protected routes */}
+      <Route path="/admin-panel" element={<ProtectedRoute><ErrorBoundary><AdminRebuildPlan /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/admin-panel/rebuild-plan" element={<ProtectedRoute><ErrorBoundary><AdminRebuildPlan /></ErrorBoundary></ProtectedRoute>} />
       <Route 
         path="/" 
         element={<ProtectedRoute><ErrorBoundary><Index /></ErrorBoundary></ProtectedRoute>} 
