@@ -27,7 +27,9 @@ export default function AdminRebuildPlan() {
     async function load() {
       try {
         const bucket = supabase.storage.from('admin-documents');
-        const current = await bucket.download('current.json');
+        // This pinned Storage SDK predates the cacheNonce option. Its download
+        // path preserves the query string, which forces a fresh version check.
+        const current = await bucket.download(`current.json?cacheNonce=${crypto.randomUUID()}`);
         if (current.error || !current.data || current.data.size > 4096) throw new Error('Manifest unavailable');
         const manifest = parseAdminDocumentManifest(JSON.parse(await current.data.text()));
         const file = await bucket.download(manifest.object);
@@ -72,7 +74,8 @@ export default function AdminRebuildPlan() {
         ) : current?.html ? (
           <>
             <p className="mb-2 text-xs text-slate-400">
-              Maintained in Codex. Checkbox clicks here are temporary; source updates are published as a new version.
+              Baseline plan, written before this admin page was published. Maintained in Codex.
+              Checkbox clicks here are temporary; source updates are published as a new version.
               Supporting files remain in the project workspace.
             </p>
             <iframe
