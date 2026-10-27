@@ -1,6 +1,6 @@
 import {
   decodeActionReceipt, decodeActionScope, decodeActionCommand, scopeKey,
-  type ActionProblem, type ActionQueueScope, type CommandOutcome, type QueueEntry, type ActionIntent, type ActionTransport,
+  type ActionProblem, type ActionQueueScope, type StoredActionScope, type CommandOutcome, type QueueEntry, type ActionIntent, type ActionTransport, type ReceiptRecoveryOutcome,
 } from './contracts';
 import type { ActionQueueStore } from './store';
 import { unknownProblem } from './transport';
@@ -49,6 +49,7 @@ export class ActionCommandQueue {
   private readonly manualRetries = new Set<string>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private activeRequest: AbortController | null = null;
+  private readonly recoveryRequests = new Set<AbortController>();
   private readonly listeners = new Set<() => void>();
   private readonly stopConnection: () => void;
   private readonly connection: QueueConnection;
@@ -79,7 +80,7 @@ export class ActionCommandQueue {
     }
   }
   private notify() { for (const listener of this.listeners) this.observe(listener); }
-  private same(scope: ActionQueueScope) { return this.context !== null && scopeKey(scope) === scopeKey(this.context); }
+  private same(scope: StoredActionScope) { return this.context !== null && scopeKey(scope) === scopeKey(this.context); }
   private storageError(error: unknown) { this.options.onStorageError?.(error instanceof Error ? error : new Error('Saved actions are unavailable.')); }
   private kick() { void this.flush().catch(error => this.storageError(error)); }
   private clearTimer() { if (this.timer) clearTimeout(this.timer); this.timer = null; }
@@ -92,7 +93,9 @@ export class ActionCommandQueue {
     const next = scope ? decodeActionScope(scope) : null;
     if (next && next.backendId !== this.options.transport.backendId) throw new Error('Queue backend does not match the current identity');
     if (this.context && next && scopeKey(this.context) === scopeKey(next)) return;
-    this.context = next; this.generation++; this.manualRetries.clear(); this.clearTimer(); this.activeRequest?.abort(); this.notify(); this.kick();
+    this.context = next; this.generation++; this.manualRetries.clear(); this.clearTimer(); this.activeRequest?.abort();
+    for (const controller of this.recoveryRequests) controller.abort();
+    this.notify(); this.kick();
   }
 
   async enqueue(intent: ActionIntent): Promise<QueueEntry> {
@@ -111,14 +114,56 @@ export class ActionCommandQueue {
   /** Old periods for the SAME signed-in account remain visible but read-only.
    * No data from a signed-out/different account is returned to its UI.
    */
-  async list(): Promise<(QueueEntry & { canReplay: boolean; canCancel: boolean })[]> {
+  async list(): Promise<(QueueEntry & { canReplay: boolean; canCancel: boolean; canReconcile: boolean })[]> {
     const scope = this.context, generation = this.generation;
     if (!scope) return [];
     const entries = await this.options.store.list();
     if (generation !== this.generation) return [];
     return entries.filter(e => e.scope.backendId === scope.backendId && e.scope.accountId === scope.accountId)
       .sort((a, b) => a.sequence - b.sequence).map(entry => ({ ...entry, canReplay: this.same(entry.scope),
-        canCancel: this.same(entry.scope) && entry.state.status === 'pending' && !entry.everSent && !entry.lease }));
+        canCancel: this.same(entry.scope) && entry.state.status === 'pending' && !entry.everSent && !entry.lease,
+        canReconcile: !this.same(entry.scope) && entry.state.status !== 'confirmed' && (!entry.lease || entry.lease.until <= this.now()) }));
+  }
+
+  /** Historical scopes are immutable. Only an authenticated read can recover
+   * an existing receipt; a missing receipt never becomes a replacement intent. */
+  async reconcile(commandId: string): Promise<'confirmed' | 'not_found'> {
+    const context = this.context, generation = this.generation;
+    const isCurrent = () => !!context && !this.disposed && generation === this.generation && this.same(context);
+    if (!context || !this.options.transport.readReceipt) throw new Error('Load the signed-in account before checking its saved receipts.');
+    const entry = (await this.options.store.list()).find(row => row.command.commandId === commandId);
+    if (!isCurrent() || !entry || entry.scope.backendId !== context.backendId || entry.scope.accountId !== context.accountId) throw new Error('This receipt is unavailable in the current account.');
+    if (entry.state.status === 'confirmed') return 'confirmed';
+    if (this.same(entry.scope) || (entry.lease && entry.lease.until > this.now())) throw new Error('This action is not ready for historical receipt recovery.');
+    const controller = new AbortController(); this.recoveryRequests.add(controller);
+    let timeout: ReturnType<typeof setTimeout>;
+    let cancel: () => void;
+    const unavailable: ReceiptRecoveryOutcome = { kind: 'unavailable', problem: { code: 'RECEIPT_LOOKUP_INTERRUPTED', retryable: true,
+      message: 'The receipt could not be checked. The saved action is unchanged; no action was sent.' } };
+    const interrupted = new Promise<ReceiptRecoveryOutcome>(resolve => {
+      cancel = () => resolve(unavailable); controller.signal.addEventListener('abort', cancel, { once: true });
+      timeout = setTimeout(() => controller.abort(), this.timeout);
+    });
+    try {
+      const result = await Promise.race([interrupted, this.options.transport.readReceipt(entry.command, entry.scope, controller.signal)]);
+      if (!isCurrent()) throw new Error('Your account or relationship changed while checking the receipt.');
+      if (result.kind === 'unavailable') throw new Error(result.problem.message);
+      if (result.kind === 'not_found') return 'not_found';
+      const receipt = decodeActionReceipt(result.receipt, entry.command, entry.scope.relationshipSessionId);
+      await this.options.store.update(commandId, current => {
+        if (!isCurrent() || scopeKey(current.scope) !== scopeKey(entry.scope) || JSON.stringify(current.command) !== JSON.stringify(entry.command) ||
+            (current.lease && current.lease.until > this.now())) throw new Error('Saved action changed during receipt recovery');
+        if (current.state.status === 'confirmed') return current;
+        return { ...current, state: { status: 'confirmed', receipt }, receiptRecoveredAt: this.now(), updatedAt: this.now(), lease: null, problem: null, nextAttemptAt: 0 };
+      });
+      if (!isCurrent()) throw new Error('Your account or relationship changed while checking the receipt.');
+      this.notify();
+      // No onConfirmed callback: recovering old command-time balances must not
+      // overwrite current state or replay a success/refund celebration.
+      return 'confirmed';
+    } finally {
+      clearTimeout(timeout!); controller.signal.removeEventListener('abort', cancel!); this.recoveryRequests.delete(controller);
+    }
   }
 
   async cancelUnsent(commandId: string): Promise<boolean> {
@@ -202,7 +247,7 @@ export class ActionCommandQueue {
       if (!this.same(scope) || generation !== this.generation || !this.connection.isOnline()) outcome = { kind: 'not_sent', problem: { code: 'CONTEXT_CHANGED', retryable: false, message: 'The original account and relationship must be active before sending this action.' } };
       else outcome = await this.request(claimed);
       if (outcome.kind === 'confirmed') {
-        try { outcome = { kind: 'confirmed', receipt: decodeActionReceipt(outcome.receipt, claimed.command) }; }
+        try { outcome = { kind: 'confirmed', receipt: decodeActionReceipt(outcome.receipt, claimed.command, claimed.scope.relationshipSessionId) }; }
         catch { outcome = { kind: 'confirmation_unknown', problem: unknownProblem('INVALID_RECEIPT', false) }; }
       }
       const wasUncertain = previous.state.status === 'confirmation_unknown' || previous.state.status === 'sending';
@@ -241,13 +286,14 @@ export class ActionCommandQueue {
       resolve({ kind: 'confirmation_unknown', problem: unknownProblem('REQUEST_TIMEOUT') }); controller.abort();
     }, this.timeout); });
     try {
-      return await Promise.race([expired, interrupted, this.options.transport.execute(entry.command, entry.scope, controller.signal)
+      return await Promise.race([expired, interrupted, this.options.transport.execute(entry.command, decodeActionScope(entry.scope), controller.signal)
         .catch(() => ({ kind: 'confirmation_unknown' as const, problem: unknownProblem('CONNECTION_LOST') }))]);
     } finally { clearTimeout(timer!); controller.signal.removeEventListener('abort', onAbort!); if (this.activeRequest === controller) this.activeRequest = null; }
   }
 
   dispose(): void {
     this.disposed = true; this.generation++; this.context = null; this.clearTimer(); this.activeRequest?.abort(); this.stopConnection(); this.listeners.clear();
+    for (const controller of this.recoveryRequests) controller.abort();
   }
 }
 

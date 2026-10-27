@@ -1,7 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useWeeklyMetrics } from '@/data/queries/metrics/useWeeklyMetrics';
-import { useMonthlyMetrics } from '@/data/queries/metrics/useMonthlyMetrics';
-import { useWeeklyMetricsSummary } from '@/data/queries/useWeeklyMetricsSummary';
 import { useWeeklyWellbeingQuery } from '@/data/wellbeing/queries/useWeeklyWellbeingQuery';
 import { useMonthlyWellbeingQuery } from '@/data/wellbeing/queries/useMonthlyWellbeingQuery';
 import { useCreateRewardMutation } from '@/data/rewards/mutations/useCreateReward';
@@ -36,13 +33,16 @@ beforeEach(() => {
     return chain;
   });
 });
-const readers = [useWeeklyMetrics, useMonthlyMetrics, useWeeklyMetricsSummary, useWeeklyWellbeingQuery, useMonthlyWellbeingQuery];
+// Activity metrics now use period-scoped events and saved participant clocks,
+// rather than these legacy user-ID filters. Their real SDK reads and projections
+// are covered in activity-metrics-read-model.test.ts and activity-metrics.test.ts.
+const readers = [useWeeklyWellbeingQuery, useMonthlyWellbeingQuery];
 function queryOptions(reader: () => unknown) {
   reader();
   return mocks.query.mock.calls.at(-1)![0] as { enabled: boolean; queryFn: () => Promise<unknown> };
 }
 
-describe('all five previously both-ID-required readers', () => {
+describe('remaining legacy wellbeing readers', () => {
   it.each(readers)('%s reads solo Dom records and propagates a backend failure', async reader => {
     const options = queryOptions(reader);
     expect(options.enabled).toBe(true);

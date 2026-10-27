@@ -12,18 +12,18 @@ const signal = () => new AbortController().signal;
 
 describe('reward RPC transport', () => {
   it('sends only the immutable command contract, including explicit inventory currency', () => {
-    expect(rewardCommandParameters({ commandId: command.commandId, expectedRelationshipId: scope.relationshipId, rewardId: uuid(5), kind: 'reward_redeem', inventoryCurrency: 'dom' })).toEqual({
+    expect(rewardCommandParameters({ commandId: command.commandId, expectedRelationshipId: scope.relationshipId, rewardId: uuid(5), kind: 'reward_redeem', inventoryCurrency: 'dom' }, scope)).toEqual({
       p_command_id: command.commandId, p_expected_relationship_id: scope.relationshipId, p_action: 'reward_redeem',
-      p_reward_id: uuid(5), p_event_id: null, p_inventory_currency: 'dom', p_expected_cost: null,
+      p_reward_id: uuid(5), p_event_id: null, p_inventory_currency: 'dom', p_expected_cost: null, p_expected_relationship_session_id: scope.relationshipSessionId,
     });
-    expect(rewardCommandParameters({ commandId: uuid(4), expectedRelationshipId: uuid(3), kind: 'undo', eventId: uuid(6) })).toMatchObject({ p_reward_id: null, p_event_id: uuid(6), p_inventory_currency: null });
+    expect(rewardCommandParameters({ commandId: uuid(4), expectedRelationshipId: uuid(3), kind: 'undo', eventId: uuid(6) }, scope)).toMatchObject({ p_reward_id: null, p_event_id: uuid(6), p_inventory_currency: null });
   });
   it('pins the checked account token and validates the returned receipt', async () => {
     const f = fixture();
     const result = await f.transport.execute(command, scope, signal());
     expect(result).toEqual({ kind: 'confirmed', receipt: receipt() });
-    expect(f.callRpc).toHaveBeenCalledWith(actionCommandRequest(command), 'synthetic-token-A', expect.any(AbortSignal));
-    expect(rewardCommandParameters(command).p_expected_cost).toBe(20);
+    expect(f.callRpc).toHaveBeenCalledWith(actionCommandRequest(command, scope), 'synthetic-token-A', expect.any(AbortSignal));
+    expect(rewardCommandParameters(command, scope).p_expected_cost).toBe(20);
   });
   it.each([undefined, null, -1, 1.5, 2147483648])('does not send a Buy with invalid reviewed cost %s', async expectedCost => {
     const f = fixture();

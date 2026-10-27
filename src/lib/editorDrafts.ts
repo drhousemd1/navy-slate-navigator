@@ -1,10 +1,12 @@
 import { compressImage } from '@/utils/image/compression';
 import { toast } from '@/hooks/use-toast';
 
-export interface EditorDraftScope { backendId: string; accountId: string; relationshipId: string }
-export const EDITOR_DRAFT_PREFIX = 'obedience-editor-draft:v2:';
+export interface EditorDraftScope { backendId: string; accountId: string; relationshipId: string; relationshipSessionId: string }
+// Earlier v2 bytes stay untouched. They cannot be assigned to a generation that
+// was never recorded when they were written.
+export const EDITOR_DRAFT_PREFIX = 'obedience-editor-draft:v3:';
 export const editorDraftKey = (scope: EditorDraftScope, formId: string) =>
-  `${EDITOR_DRAFT_PREFIX}${JSON.stringify([scope.backendId, scope.accountId, scope.relationshipId, formId])}`;
+  `${EDITOR_DRAFT_PREFIX}${JSON.stringify([scope.backendId, scope.accountId, scope.relationshipId, scope.relationshipSessionId, formId])}`;
 
 /** Keep complete image data in the draft; object URLs cannot survive reload. */
 export function readDraftImage(file: Blob): Promise<string> {

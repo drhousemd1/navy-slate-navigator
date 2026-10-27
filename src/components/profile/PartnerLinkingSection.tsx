@@ -13,12 +13,12 @@ const PartnerLinkingSection: React.FC = () => {
   const [partnerCode, setPartnerCode] = useState('');
   const [review, setReview] = useState<{ code: string; consent: LinkPreview; scope: string } | null>(null);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
-  const scope = JSON.stringify([identity.currentUserId, identity.relationshipId]);
+  const scope = JSON.stringify([identity.currentUserId, identity.relationshipId, identity.relationshipSessionId]);
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const isLinked = identity.status === 'linked';
   const linkCode = identity.partnerLinkCode;
-  const disabled = partnerLinkingLoading || !partnerLinkingAvailable;
+  const disabled = partnerLinkingLoading || !partnerLinkingAvailable || !identity.relationshipSessionId;
 
   useEffect(() => {
     setPartnerCode('');
@@ -44,7 +44,8 @@ const PartnerLinkingSection: React.FC = () => {
 
   const confirmConnection = async () => {
     if (!review || review.scope !== currentScope.current) return;
-    if (await linkToPartner(review.code, review.consent)) {
+    const reviewedScope = review.scope;
+    if (await linkToPartner(review.code, review.consent) && currentScope.current === reviewedScope) {
       setReview(null);
       setPartnerCode('');
     }

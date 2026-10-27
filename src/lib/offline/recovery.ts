@@ -61,8 +61,11 @@ export function reconcileRecoveryAccount(backend: string, account: string | null
   if (!readRecoverySnapshot(backend, account)) clearRecoverySnapshot(backend);
 }
 export function verifyRecoveryScope(scope: ActionQueueScope) {
+  // In particular, do not retain pre-session summaries when Continue brings
+  // the same period/participant IDs back with a different session UUID.
+  scopeSchema.parse(scope);
   const previous = readRecoverySnapshot(scope.backendId, scope.accountId);
-  if (previous && scopeKey(previous.scope) !== scopeKey(scope)) clearRecoverySnapshot(scope.backendId);
+  if (!previous || scopeKey(previous.scope) !== scopeKey(scope)) clearRecoverySnapshot(scope.backendId);
   verified.set(accessKey(scope.backendId, scope.accountId), { ...scope });
   setRecoveryAccess(scope.backendId, scope.accountId, 'verified');
 }

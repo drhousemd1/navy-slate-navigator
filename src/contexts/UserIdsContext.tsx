@@ -36,6 +36,8 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
   const identity = relationshipIdentity.currentUserId === accountId
     ? relationshipIdentity : emptyIdentity(accountId ? 'loading' : 'signed-out', accountId);
   const scope = identityCacheScope(identity);
+  const repairScope = JSON.stringify([accountId, identity.relationshipId, identity.relationshipSessionId]);
+  const currentRepairScope = useRef(repairScope); currentRepairScope.current = repairScope;
   const subUserId = identity.subUserId;
   const domUserId = identity.domUserId;
   const recovery = useSyncExternalStore(subscribeRecovery, () => accountId ? recoveryAccess(supabaseBackendId, accountId) : 'checking');
@@ -75,7 +77,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
     };
     void prepare();
     return () => { active = false; };
-  }, [accountId, scope, subUserId, domUserId, queryClient]);
+  }, [accountId, scope, repairScope, subUserId, domUserId, queryClient]);
 
   const initializeUserIds = useCallback(async () => {
     setCacheError(null);
@@ -92,14 +94,14 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
   const value = { ...effectiveIdentity, isLoadingUserIds, initializeUserIds };
 
   const repair = async (operation: () => Promise<unknown>) => {
-    const expectedAccount = accountId;
+    const expectedScope = repairScope;
     setIsRepairing(true);
     setActionError(null);
     try { await operation(); }
     catch (error) {
-      if (currentAccount.current === expectedAccount) setActionError(getErrorMessage(error));
+      if (currentRepairScope.current === expectedScope) setActionError(getErrorMessage(error));
     } finally {
-      if (currentAccount.current === expectedAccount) setIsRepairing(false);
+      if (currentRepairScope.current === expectedScope) setIsRepairing(false);
     }
   };
   const needsBoundary = !!accountId && (!effectiveIdentity.canAccessData || isLoadingUserIds);
@@ -124,7 +126,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
             </div>}
             {identity.status === 'invalid' && identity.partnerUserId && <div className="space-y-2">
               <p className="text-sm text-gray-300">{identity.lifecycleReady ? 'Disconnect the invalid connection before repairing your role or connecting again. Existing history is archived by the account service.' : 'This connection needs repair. Partner changes are temporarily unavailable until the relationship history and privacy upgrade is ready. You can retry loading your account, or still use password recovery.'}</p>
-              <Button disabled={isRepairing || !identity.lifecycleReady} variant="outline" className="border-red-500 text-red-300" onClick={() => void repair(unlinkFromPartner)}>Disconnect partner</Button>
+              <Button disabled={isRepairing || !identity.lifecycleReady || !identity.relationshipSessionId} variant="outline" className="border-red-500 text-red-300" onClick={() => void repair(unlinkFromPartner)}>Disconnect partner</Button>
             </div>}
             {!isLoadingUserIds && <div className="flex gap-3">
               <Button disabled={isRepairing} onClick={() => void repair(initializeUserIds)}>Retry</Button>

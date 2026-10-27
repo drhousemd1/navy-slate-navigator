@@ -21,8 +21,8 @@ vi.mock('@/data/actions/store', async () => {
   return { IndexedDBActionQueueStore: class extends MemoryQueueStore { async close() {} } };
 });
 beforeEach(() => {
-  mocks.identity = { canAccessData: true, isLoadingUserIds: false, currentUserId: uuid(1), participantId: uuid(2), relationshipId: uuid(3), relationshipStatus: 'active' };
-  verifyRecoveryScope({ backendId: 'http://127.0.0.1:28622', accountId: uuid(1), participantId: uuid(2), relationshipId: uuid(3) });
+  mocks.identity = { canAccessData: true, isLoadingUserIds: false, currentUserId: uuid(1), participantId: uuid(2), relationshipId: uuid(3), relationshipSessionId: uuid(1000), relationshipStatus: 'active' };
+  verifyRecoveryScope({ backendId: 'http://127.0.0.1:28622', accountId: uuid(1), participantId: uuid(2), relationshipId: uuid(3), relationshipSessionId: uuid(1000) });
   mocks.gate.mockReset().mockResolvedValue(true);
   mocks.read.mockReset().mockResolvedValue({ rewards: [], wallets: [], lots: [], events: [], points: [], deliveries: [], acknowledged: [] });
   mocks.send.mockReset(); mocks.online = true;

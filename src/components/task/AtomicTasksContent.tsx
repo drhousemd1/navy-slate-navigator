@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 import TaskEditor from '@/components/TaskEditor';
@@ -9,16 +9,21 @@ import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { removeTaskDefinition, saveTaskDefinition, taskActionKey, taskPermission, useTaskActionData } from '@/data/tasks/actionReadModel';
 import type { TaskFormValues, TaskWithId } from '@/data/tasks/types';
+import { scopeKey } from '@/data/actions/contracts';
 
 export function AtomicTasksContent() {
   const actions = useActionCommands();
   const identity = useUserIds();
+  const key = actions.scope ? scopeKey(actions.scope) : null;
+  const currentKey = useRef(key); currentKey.current = key;
+  useEffect(() => { currentKey.current = key; return () => { currentKey.current = null; }; }, [key]);
   const queryClient = useQueryClient();
   const query = useTaskActionData(actions.scope, actions.mode === 'atomic');
   const [editing, setEditing] = useState<TaskWithId | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  useEffect(() => { setEditing(null); setEditorOpen(false); setError(null); setSaving(false); }, [key]);
   const pending = actions.entries.some(entry => entry.canReplay && ['pending', 'sending', 'confirmation_unknown'].includes(entry.state.status));
   const canManage = taskPermission(identity.permissions ?? {}, identity.currentRole, 'definition_manage');
   const canComplete = taskPermission(identity.permissions ?? {}, identity.currentRole, 'task_complete');
@@ -26,7 +31,8 @@ export function AtomicTasksContent() {
   const close = () => { setEditorOpen(false); setEditing(null); };
   const mutateDefinition = async (operation: () => Promise<void>) => {
     if (!actions.scope || !canManage || pending) throw new Error('Resolve pending actions and check your task editing permission before saving.');
-    await operation(); await refresh(); close();
+    const assertCurrent = () => { if (currentKey.current !== key) throw new Error('Your relationship changed. Reopen the current task before continuing.'); };
+    assertCurrent(); await operation(); assertCurrent(); await refresh(); assertCurrent(); close();
   };
   const save = (values: TaskFormValues) => mutateDefinition(() => saveTaskDefinition(actions.scope!, values, editing?.id));
   const remove = (id: string) => mutateDefinition(() => removeTaskDefinition(actions.scope!, id));
@@ -34,8 +40,8 @@ export function AtomicTasksContent() {
     if (!canComplete || pending || saving) return;
     setError(null); setSaving(true);
     try { await actions.enqueue({ kind: 'task_complete', taskId }); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Task completion could not be saved.'); }
-    finally { setSaving(false); }
+    catch (e) { if (currentKey.current === key) setError(e instanceof Error ? e.message : 'Task completion could not be saved.'); }
+    finally { if (currentKey.current === key) setSaving(false); }
   };
   return <AppLayout onAddNewItem={() => {
     if (!canManage) { setError('Your relationship permission does not allow task editing.'); return; }
@@ -54,7 +60,7 @@ export function AtomicTasksContent() {
         error={query.error} atomic progress={query.data?.progress} progressErrors={query.data?.progressErrors}
         actionDisabled={!canComplete || pending || saving} onEditTask={canManage && !pending ? task => { setEditing(task); setEditorOpen(true); } : undefined}
         onToggleCompletion={id => void complete(id)} />
-      <TaskEditor key={`${actions.scope?.relationshipId}:${editing?.id ?? 'new'}:${editorOpen}`} isOpen={editorOpen} onClose={close}
+      <TaskEditor key={`${key}:${editing?.id ?? 'new'}:${editorOpen}`} isOpen={editorOpen} onClose={close}
         taskData={editing ?? undefined} onSave={save} onDelete={editing ? remove : undefined} atomicAccounting />
     </div>
   </AppLayout>;

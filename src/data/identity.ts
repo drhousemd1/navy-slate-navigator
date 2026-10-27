@@ -5,11 +5,11 @@ interface IdentityCommands {
   set_my_profile_role: { p_role: 'dom' | 'sub' };
   set_my_timezone: { p_timezone: string };
   initialize_my_timezone: { p_timezone: string };
-  generate_partner_link_code: { p_expected_relationship_id: string; p_mode: LinkMode; p_previous_relationship_id: string | null };
+  generate_partner_link_code: { p_expected_relationship_id: string; p_expected_relationship_session_id: string; p_mode: LinkMode; p_previous_relationship_id: string | null };
   preview_partner_link_code: { p_code: string };
-  accept_partner_link_code: { p_expected_relationship_id: string; p_code: string; p_mode: LinkMode; p_previous_relationship_id: string | null };
-  unlink_my_partner: { p_expected_relationship_id: string };
-  set_relationship_permissions: { p_permissions: Record<string, PermissionChoice>; p_expected_relationship_id: string };
+  accept_partner_link_code: { p_expected_relationship_id: string; p_expected_relationship_session_id: string; p_code: string; p_mode: LinkMode; p_previous_relationship_id: string | null };
+  unlink_my_partner: { p_expected_relationship_id: string; p_expected_relationship_session_id: string };
+  set_relationship_permissions: { p_permissions: Record<string, PermissionChoice>; p_expected_relationship_id: string; p_expected_relationship_session_id: string };
 }
 type IdentityRpcName = 'get_my_identity' | keyof IdentityCommands;
 interface RpcResponse { data: unknown; error: { message: string } | null }
@@ -59,6 +59,12 @@ export function identityCommandError(error: unknown): string {
     ACCOUNT_CHANGED: 'The signed-in account changed. Reload this account before trying again.',
     LIFECYCLE_INTEGRATION_REQUIRED: 'Partner changes are temporarily unavailable while relationship history and privacy are upgraded. Your current connection is unchanged.',
     PERIOD_CHANGED: 'Your relationship changed while this screen was open. Refresh and review it before trying again.',
+    STALE_RELATIONSHIP: 'Your relationship changed while this screen was open. Refresh and review it before trying again.',
+    STALE_RELATIONSHIP_SESSION: 'Your connection changed. Refresh and review the current connection before trying again. The previous request will not be retried automatically.',
+    LINK_INVITATION_STALE: 'This invitation belongs to an earlier connection. Ask your partner for a new code.',
+    LIFECYCLE_ACCOUNTING_INTEGRATION_REQUIRED: 'Partner changes are temporarily unavailable while relationship accounting is upgraded. Your current connection is unchanged.',
+    LIFECYCLE_WALLET_MISSING: 'Partner changes could not be completed because the current balances could not be verified. Your connection is unchanged.',
+    ROLE_LIFECYCLE_INTEGRATION_REQUIRED: 'Role changes are temporarily unavailable while relationship history and balances are upgraded.',
     INVALID_LINK_CODE: 'This link code is invalid, unavailable, or belongs to a different previous relationship. Ask your partner for a new code.',
     SAME_ROLE: 'A connection needs one Dom and one Sub. Check both profile roles before linking.',
     ALREADY_LINKED_OR_INCOMPLETE: 'One account already has a connection that needs to be resolved before linking.',

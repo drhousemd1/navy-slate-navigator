@@ -46,6 +46,14 @@ describe('minimal confirmed recovery projection', () => {
     reconcileRecoveryAccount(scope.backendId, null);
     expect(localStorage.length).toBe(0);
   });
+  it('clears a Continued same-period snapshot and rejects pre-session summaries without inferring provenance', () => {
+    verifyRecoveryScope(scope); const snapshot = projectRecoverySnapshot(scope, data(), 12345); saveRecoverySnapshot(snapshot);
+    verifyRecoveryScope({ ...scope, relationshipSessionId: uuid(1001) });
+    expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toBeNull(); expect(saveRecoverySnapshot(snapshot)).toBe(false);
+    const { relationshipSessionId: _session, ...oldScope } = scope;
+    localStorage.setItem(`obedience-recovery-v1:${encodeURIComponent(scope.backendId)}`, JSON.stringify({ ...snapshot, scope: oldScope }));
+    expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toBeNull();
+  });
   it('retains data on transport outage but deletes it on explicit denial or corrupt storage', () => {
     verifyRecoveryScope(scope); saveRecoverySnapshot(projectRecoverySnapshot(scope, data(), 12345));
     setRecoveryAccess(scope.backendId, scope.accountId, 'unreachable');
@@ -82,7 +90,7 @@ describe('minimal confirmed recovery projection', () => {
   });
 });
 
-const ready = () => ({ ...emptyIdentity('linked', scope.accountId), canAccessData: true, relationshipStatus: 'active', relationshipId: scope.relationshipId, participantId: scope.participantId });
+const ready = () => ({ ...emptyIdentity('linked', scope.accountId), canAccessData: true, relationshipStatus: 'active', relationshipId: scope.relationshipId, relationshipSessionId: scope.relationshipSessionId, participantId: scope.participantId });
 function setup() {
   const send = vi.fn().mockResolvedValue({ kind: 'confirmed', receipt: receipt() });
   const checks = { identity: vi.fn().mockResolvedValue(ready()), accounting: vi.fn().mockResolvedValue(true), isCurrent: vi.fn().mockReturnValue(true) };

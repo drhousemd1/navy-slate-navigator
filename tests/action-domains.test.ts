@@ -31,7 +31,7 @@ describe('shared action routing and receipt boundary', () => {
     const callRpc = vi.fn(async (): Promise<ActionRpcResponse> => ({ data: actionReceipt(input), error: null }));
     const adapter = createActionTransport({ backendId: scope.backendId, readSession: async () => ({ accountId: scope.accountId, accessToken: 'synthetic-token' }), callRpc });
     expect((await adapter.execute(input, scope, new AbortController().signal)).kind).toBe('confirmed');
-    const common = { p_command_id: input.commandId, p_expected_relationship_id: input.expectedRelationshipId };
+    const common = { p_command_id: input.commandId, p_expected_relationship_id: input.expectedRelationshipId, p_expected_relationship_session_id: scope.relationshipSessionId };
     const expected = input.kind === 'task_complete' ? { name: 'execute_task_command', parameters: { ...common, p_action: 'task_complete', p_task_id: input.taskId, p_event_id: null } }
       : input.kind === 'rule_violation' ? { name: 'execute_recording_command', parameters: { ...common, p_action: 'rule_violation', p_rule_id: input.ruleId, p_punishment_id: null, p_event_id: null } }
       : input.kind === 'punishment_apply' ? { name: 'execute_recording_command', parameters: { ...common, p_action: 'punishment_apply', p_rule_id: null, p_punishment_id: input.punishmentId, p_event_id: null } }
@@ -39,7 +39,7 @@ describe('shared action routing and receipt boundary', () => {
     expect(callRpc).toHaveBeenCalledWith(expected, 'synthetic-token', expect.any(AbortSignal));
   });
   it('retains the Buy expected-cost precondition and rejects extra authority/calendar inputs for all new actions', () => {
-    expect(actionCommandRequest(command)).toMatchObject({ name: 'execute_reward_command', parameters: { p_expected_cost: 20 } });
+    expect(actionCommandRequest(command, scope)).toMatchObject({ name: 'execute_reward_command', parameters: { p_expected_cost: 20 } });
     for (const input of cases) for (const extra of [{ amount: 999 }, { participantId: uuid(99) }, { timeZone: 'UTC' }, { relationshipId: uuid(99) }]) {
       expect(() => decodeActionCommand({ ...input, ...extra })).toThrow();
     }

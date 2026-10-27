@@ -15,7 +15,7 @@ vi.mock('@/integrations/supabase/client', async () => {
 const scope = { ...baseScope, backendId: supabaseBackendId };
 const session = (id = scope.accountId) => ({ data: { session: { user: { id }, access_token: `synthetic-${id}`, token_type: 'bearer', refresh_token: 'unused', expires_in: 3600 } as Session }, error: null });
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-const identity = () => ({ user_id: scope.accountId, relationship_id: scope.relationshipId, participant_id: scope.participantId });
+const identity = () => ({ status: 'ready_solo', relationship_status: 'active', relationship_session_id: scope.relationshipSessionId, user_id: scope.accountId, relationship_id: scope.relationshipId, participant_id: scope.participantId });
 const history = (id: number) => ({ id: uuid(id), relationship_id: scope.relationshipId, completed_at: '2026-10-26T12:00:00Z' });
 const event = () => ({ id: uuid(900), relationship_id: scope.relationshipId, kind: 'task_completed', beneficiary_participant_id: scope.participantId,
   subject: { role: 'sub' }, calendar: { participantId: scope.participantId, localDate: '2026-10-26', weekStartDate: '2026-10-26', timeZone: 'America/Boise' }, reverses_event_id: null });
@@ -61,12 +61,12 @@ describe('actual SDK metrics read path (network stubbed)', () => {
     expect(await readMetricClocks(scope, { subUserId: scope.accountId, domUserId: partner })).toEqual([
       { role: 'sub', timeZone: 'America/Boise' }, { role: 'dom', timeZone: 'Europe/London' },
     ]);
-    const url = new URL(mocks.network.mock.calls[0][0]);
+    const url = new URL(mocks.network.mock.calls.find(([input]) => String(input).includes('/profiles'))![0]);
     expect(url.searchParams.get('id')).toBe(`in.(${scope.accountId},${partner})`);
     expect(url.searchParams.get('select')).toBe('id,role,timezone');
   });
   it('reports a missing saved clock instead of silently using the browser’s timezone', async () => {
-    mocks.network.mockResolvedValue(response([{ id: scope.accountId, role: 'sub', timezone: null }]));
+    mocks.network.mockImplementation((input: string) => response(input.includes('get_my_identity') ? identity() : [{ id: scope.accountId, role: 'sub', timezone: null }]));
     await expect(readMetricClocks(scope, { subUserId: scope.accountId, domUserId: null })).rejects.toThrow('saved timezone');
   });
   it('rejects denied or partial reads instead of returning zero', async () => {

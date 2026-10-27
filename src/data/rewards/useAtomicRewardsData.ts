@@ -1,8 +1,9 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { supabase } from '@/integrations/supabase/client';
-import { rewardReadToken } from './actionReadModel';
+import { actionScopeToken, assertCurrentActionScope } from './actionReadModel';
+import { scopeKey } from '@/data/actions/contracts';
 import type { Reward } from './types';
 import type { Currency } from '@/domain/actions/types';
 import type { QueryObserverResult } from '@tanstack/react-query';
@@ -11,23 +12,27 @@ const editableFields = ['title', 'description', 'cost', 'is_dom_reward', 'backgr
 export function useAtomicRewardsData() {
   const actions = useActionCommands();
   const identity = useUserIds();
-  const current = useRef(actions.scope); current.current = actions.scope;
+  const currentKey = actions.scope ? scopeKey(actions.scope) : null;
+  const current = useRef(currentKey); current.current = currentKey;
+  useEffect(() => { current.current = currentKey; return () => { current.current = null; }; }, [currentKey]);
   const rewards = actions.data?.rewards ?? [];
   const saveReward = async ({ rewardData }: { rewardData: Partial<Reward>; currentIndex: number | null }): Promise<Reward> => {
     const scope = actions.scope;
     if (!scope || !actions.data || !['both', identity.currentRole].includes(identity.permissions?.definition_manage)) throw new Error('Reward editing is unavailable for your current relationship permission.');
-    const token = await rewardReadToken(scope.accountId);
-    if (scope !== current.current) throw new Error('Your relationship changed. Reopen the reward before saving.');
+    const expectedKey = scopeKey(scope);
+    const token = await actionScopeToken(scope);
+    if (expectedKey !== current.current) throw new Error('Your relationship changed. Reopen the reward before saving.');
     const values = Object.fromEntries(editableFields.filter(field => field in rewardData).map(field => [field, rewardData[field]]));
     const db = supabase as any;
     const request = rewardData.id
       ? db.from('rewards').update(values).eq('id', rewardData.id).eq('relationship_id', scope.relationshipId).is('deleted_at', null)
       : db.from('rewards').insert({ ...values, user_id: scope.accountId, relationship_id: scope.relationshipId, supply: 0 });
-    const { data, error } = await request.select('*').single().setHeader('Authorization', `Bearer ${token}`);
-    if (error) throw new Error(error.message || 'Reward changes were not confirmed.');
-    await rewardReadToken(scope.accountId);
-    if (scope !== current.current) throw new Error('Your relationship changed. Reload the current rewards.');
+    const { data, error } = await request.select('*').single().setHeader('Authorization', `Bearer ${token}`).setHeader('x-relationship-session-id', scope.relationshipSessionId);
+    if (error || !data || data.relationship_id !== scope.relationshipId) throw new Error(error?.message || 'Reward changes were not confirmed.');
+    await assertCurrentActionScope(scope, token);
+    if (expectedKey !== current.current) throw new Error('Your relationship changed. Reload the current rewards.');
     await actions.refresh();
+    if (expectedKey !== current.current) throw new Error('Your relationship changed. Reload the current rewards.');
     return data as Reward;
   };
   const forbidAbsoluteBalance = async () => { throw new Error('Balances change through recorded actions. Direct replacement is unavailable.'); };

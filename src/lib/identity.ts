@@ -20,6 +20,7 @@ export interface IdentityState {
   domUserId: string | null;
   error: string | null;
   canAccessData: boolean;
+  relationshipSessionId: string | null;
   problem?: string;
   partnerRole?: ProfileRole | null;
   partnerLinkCode?: string | null;
@@ -33,8 +34,11 @@ export interface IdentityState {
 }
 
 export function emptyIdentity(status: IdentityStatus, currentUserId: string | null = null, error: string | null = null): IdentityState {
-  return { status, currentUserId, currentRole: null, partnerUserId: null, subUserId: null, domUserId: null, error, canAccessData: false };
+  return { status, currentUserId, currentRole: null, partnerUserId: null, subUserId: null, domUserId: null, error, canAccessData: false, relationshipSessionId: null };
 }
+
+export const isRelationshipSessionId = (value: unknown): value is string =>
+  typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 function isProfileRole(role: string | null): role is ProfileRole {
   return role === 'sub' || role === 'dom';
@@ -98,11 +102,16 @@ export function decodeIdentity(accountId: string, payload: unknown): IdentitySta
   const role = record.role === 'sub' || record.role === 'dom' ? record.role : null;
   const partnerRole = record.partner_role === 'sub' || record.partner_role === 'dom' ? record.partner_role : null;
   const partnerId = typeof record.linked_partner_id === 'string' ? record.linked_partner_id : null;
+  // An owned active but malformed connection may still be unlinked. Keep its
+  // server generation without turning it into a valid shared-data identity.
+  const relationshipSessionId = record.relationship_status === 'active' && typeof record.participant_id === 'string' &&
+    isRelationshipSessionId(record.relationship_session_id) ? record.relationship_session_id : null;
   const context = {
+    relationshipSessionId,
     relationshipId: typeof record.relationship_id === 'string' ? record.relationship_id : null,
     participantId: typeof record.participant_id === 'string' ? record.participant_id : null,
     relationshipStatus: typeof record.relationship_status === 'string' ? record.relationship_status : null,
-    lifecycleReady: record.lifecycle_ready === true,
+    lifecycleReady: record.lifecycle_ready === true && relationshipSessionId !== null,
     timezone: typeof record.timezone === 'string' ? record.timezone : null,
   };
   if (typeof record.status === 'string' && identityProblems[record.status]) {
@@ -147,7 +156,7 @@ export function decodeLinkPreview(payload: unknown): LinkPreview {
 
 export function identityCacheScope(identity: IdentityState): string | null {
   return identity.canAccessData && identity.currentUserId
-    ? JSON.stringify([identity.currentUserId, identity.relationshipId ?? 'solo', identity.subUserId, identity.domUserId])
+    ? JSON.stringify([identity.currentUserId, identity.relationshipId ?? 'solo', identity.relationshipSessionId, identity.subUserId, identity.domUserId])
     : null;
 }
 

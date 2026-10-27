@@ -13,10 +13,13 @@ vi.mock('@/lib/identity', async importOriginal => ({ ...await importOriginal<typ
 vi.mock('@/contexts/auth', () => ({ useAuth: () => mocks.auth }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn() } }));
 vi.mock('@/lib/toastManager', () => ({ toastManager: { success: mocks.toastSuccess, error: mocks.toastError } }));
+// These timezone fixtures deliberately use readable non-UUID account IDs; the
+// recovery namespace has its own strict UUID transport tests.
+vi.mock('@/lib/offline/recovery', async original => ({ ...await original<typeof import('@/lib/offline/recovery')>(), verifyRecoveryScope: vi.fn() }));
 const user = (id: string) => ({ id }) as User;
 const receipt = (id: string, timezone: string | null) => ({
   status: 'ready_solo', user_id: id, role: 'dom', linked_partner_id: null, partner_role: null, sub_user_id: null, dom_user_id: id,
-  relationship_id: `period-${id}`, relationship_status: 'active', participant_id: `member-${id}`,
+  relationship_id: `period-${id}`, relationship_status: 'active', relationship_session_id: '00000000-0000-4000-8000-000000000090', participant_id: `member-${id}`,
   permissions: {}, lifecycle_ready: false, timezone, partner_link_code: null,
 });
 const identity = (id: string, timezone: string | null) => decodeIdentity(id, receipt(id, timezone));

@@ -25,13 +25,25 @@ describe('real SDK reward adapter (network stubbed)', () => {
     const [url, init] = mocks.network.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://action-transport-fixture.invalid/rest/v1/rpc/execute_reward_command');
     expect(new Headers(init.headers).get('Authorization')).toBe(`Bearer synthetic-${scope.accountId}`);
-    expect(JSON.parse(init.body as string)).toMatchObject({ p_command_id: command.commandId, p_expected_relationship_id: scope.relationshipId, p_action: 'reward_buy' });
+    expect(JSON.parse(init.body as string)).toMatchObject({ p_command_id: command.commandId, p_expected_relationship_id: scope.relationshipId, p_action: 'reward_buy', p_expected_relationship_session_id: scope.relationshipSessionId });
   });
   it('does not call RPC when the current account does not match the captured command account', async () => {
     vi.spyOn(supabase.auth, 'getSession').mockResolvedValue(session(uuid(99)));
     const transport = createSupabaseRewardTransport();
     expect((await transport.execute(command, { ...scope, backendId: transport.backendId }, new AbortController().signal)).kind).toBe('not_sent');
     expect(mocks.network).not.toHaveBeenCalled();
+  });
+  it('uses the real SDK read-only recovery endpoint with the captured owner and suppresses a later account switch', async () => {
+    const { relationshipSessionId: _session, ...oldScope } = scope;
+    const { relationshipSessionId: _receiptSession, ...oldReceipt } = receipt();
+    mocks.network.mockResolvedValue(new Response(JSON.stringify(oldReceipt), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce(session(scope.accountId)).mockResolvedValue(session(uuid(99)));
+    const transport = createSupabaseRewardTransport();
+    expect((await transport.readReceipt!(command, { ...oldScope, backendId: transport.backendId }, new AbortController().signal)).kind).toBe('unavailable');
+    const [url, init] = mocks.network.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://action-transport-fixture.invalid/rest/v1/rpc/get_my_action_receipt');
+    expect(new Headers(init.headers).get('Authorization')).toBe(`Bearer synthetic-${scope.accountId}`);
+    expect(JSON.parse(init.body as string)).toEqual({ p_command_id: command.commandId, p_expected_relationship_id: scope.relationshipId });
   });
   it.each([
     ['task_complete', 'execute_task_command', 'p_task_id'],
@@ -57,7 +69,7 @@ describe('real SDK reward adapter (network stubbed)', () => {
     expect(url).toBe(`https://action-transport-fixture.invalid/rest/v1/rpc/${rpc}`);
     expect(new Headers(init.headers).get('Authorization')).toBe(`Bearer synthetic-${scope.accountId}`);
     const payload = JSON.parse(init.body as string);
-    expect(payload).toMatchObject({ p_command_id: input.commandId, p_expected_relationship_id: scope.relationshipId, [target]: uuid(5) });
-    if (kind === 'undo') expect(Object.keys(payload).sort()).toEqual(['p_command_id', 'p_event_id', 'p_expected_relationship_id']);
+    expect(payload).toMatchObject({ p_command_id: input.commandId, p_expected_relationship_id: scope.relationshipId, [target]: uuid(5), p_expected_relationship_session_id: scope.relationshipSessionId });
+    if (kind === 'undo') expect(Object.keys(payload).sort()).toEqual(['p_command_id', 'p_event_id', 'p_expected_relationship_id', 'p_expected_relationship_session_id']);
   });
 });

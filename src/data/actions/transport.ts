@@ -1,5 +1,5 @@
-import type { ActionProblem, ActionQueueScope, CommandOutcome, QueuedActionCommand, RewardCommand, ActionTransport } from './contracts';
-import { decodeActionReceipt, decodeActionCommand, decodeRewardCommand } from './contracts';
+import type { ActionProblem, ActionQueueScope, CommandOutcome, QueuedActionCommand, RewardCommand, ActionTransport, ReceiptRecoveryOutcome, StoredActionScope } from './contracts';
+import { decodeActionReceipt, decodeActionCommand, decodeActionScope, decodeStoredActionScope, decodeRewardCommand } from './contracts';
 
 export interface RewardRpcParameters {
   p_command_id: string;
@@ -9,18 +9,21 @@ export interface RewardRpcParameters {
   p_event_id: string | null;
   p_inventory_currency: 'dom' | 'sub' | null;
   p_expected_cost: number | null;
+  p_expected_relationship_session_id: string;
 }
 export interface RpcFailure { message: string; code?: string; details?: string | null }
 export interface ActionRpcResponse { data: unknown; error: RpcFailure | null; status?: number }
 export type RewardRpcResponse = ActionRpcResponse;
-interface ScopedRpcParameters { p_command_id: string; p_expected_relationship_id: string }
+interface ReceiptRpcParameters { p_command_id: string; p_expected_relationship_id: string }
+interface ScopedRpcParameters extends ReceiptRpcParameters { p_expected_relationship_session_id: string }
 export type ActionRpcCall =
   | { name: 'execute_reward_command'; parameters: RewardRpcParameters }
   | { name: 'execute_task_command'; parameters: ScopedRpcParameters & { p_action: 'task_complete'; p_task_id: string; p_event_id: null } }
   | { name: 'execute_recording_command'; parameters: ScopedRpcParameters & (
       { p_action: 'rule_violation'; p_rule_id: string; p_punishment_id: null; p_event_id: null } |
       { p_action: 'punishment_apply'; p_rule_id: null; p_punishment_id: string; p_event_id: null }) }
-  | { name: 'undo_action'; parameters: ScopedRpcParameters & { p_event_id: string } };
+  | { name: 'undo_action'; parameters: ScopedRpcParameters & { p_event_id: string } }
+  | { name: 'get_my_action_receipt'; parameters: ReceiptRpcParameters };
 export interface ActionTransportDependencies {
   /** Canonical configured backend URL, also used as the saved queue namespace. */
   backendId: string;
@@ -33,6 +36,7 @@ const messages: Record<string, string> = {
   UNDO_USE_FIRST: 'Undo the use of this reward before undoing its purchase.',
   TIMEZONE_REQUIRED: 'A participant affected by this action needs a saved timezone before it can be recorded.',
   STALE_RELATIONSHIP: 'This action belongs to a previous relationship period. Review it without moving it to the current period.',
+  STALE_RELATIONSHIP_SESSION: 'This relationship was closed or restarted after the action was saved. Check for its existing receipt; this old intent cannot be sent again.',
   ACCOUNTING_NOT_ENABLED: 'Action recording is not available for this relationship yet.',
   AUTHENTICATION_REQUIRED: 'Sign in to the original account before recording this action.',
   ACTION_NOT_ALLOWED: 'Your current role and relationship permissions do not allow this action.',
@@ -67,27 +71,31 @@ export const unknownProblem = (code = 'CONFIRMATION_UNKNOWN', retryable = true):
   code, retryable, message: 'The result has not been confirmed. The original action is saved; checking it again will reuse the same request.',
 });
 
-export function rewardCommandParameters(input: RewardCommand): RewardRpcParameters {
+export function rewardCommandParameters(input: RewardCommand, inputScope: ActionQueueScope): RewardRpcParameters {
   const command = decodeRewardCommand(input);
+  const actionScope = decodeActionScope(inputScope);
   return { p_command_id: command.commandId, p_expected_relationship_id: command.expectedRelationshipId, p_action: command.kind,
     p_reward_id: command.kind === 'undo' ? null : command.rewardId,
     p_event_id: command.kind === 'undo' ? command.eventId : null,
     p_inventory_currency: command.kind === 'reward_redeem' ? command.inventoryCurrency ?? null : null,
-    p_expected_cost: command.kind === 'reward_buy' ? command.expectedCost : null };
+    p_expected_cost: command.kind === 'reward_buy' ? command.expectedCost : null,
+    p_expected_relationship_session_id: actionScope.relationshipSessionId };
 }
 
 /** Only canonical target IDs and consent preconditions cross this boundary.
  * Undo's family comes from the server's original event, never a client guess.
  */
-export function actionCommandRequest(input: QueuedActionCommand): ActionRpcCall {
+export function actionCommandRequest(input: QueuedActionCommand, inputScope: ActionQueueScope): ActionRpcCall {
   const command = decodeActionCommand(input);
-  const scope = { p_command_id: command.commandId, p_expected_relationship_id: command.expectedRelationshipId };
+  const actionScope = decodeActionScope(inputScope);
+  const scope = { p_command_id: command.commandId, p_expected_relationship_id: command.expectedRelationshipId,
+    p_expected_relationship_session_id: actionScope.relationshipSessionId };
   switch (command.kind) {
     case 'task_complete': return { name: 'execute_task_command', parameters: { ...scope, p_action: command.kind, p_task_id: command.taskId, p_event_id: null } };
     case 'rule_violation': return { name: 'execute_recording_command', parameters: { ...scope, p_action: command.kind, p_rule_id: command.ruleId, p_punishment_id: null, p_event_id: null } };
     case 'punishment_apply': return { name: 'execute_recording_command', parameters: { ...scope, p_action: command.kind, p_rule_id: null, p_punishment_id: command.punishmentId, p_event_id: null } };
     case 'undo': return { name: 'undo_action', parameters: { ...scope, p_event_id: command.eventId } };
-    default: return { name: 'execute_reward_command', parameters: rewardCommandParameters(command) };
+    default: return { name: 'execute_reward_command', parameters: rewardCommandParameters(command, actionScope) };
   }
 }
 
@@ -120,7 +128,7 @@ function rejection(error: RpcFailure): ActionProblem {
 export function createActionTransport(dependencies: ActionTransportDependencies): ActionTransport {
   return { backendId: dependencies.backendId, async execute(input: QueuedActionCommand, scope: ActionQueueScope, signal: AbortSignal): Promise<CommandOutcome> {
     let call: ActionRpcCall;
-    try { call = actionCommandRequest(input); }
+    try { call = actionCommandRequest(input, scope); }
     catch { return { kind: 'not_sent', problem: { code: 'INVALID_SAVED_COMMAND', message: 'The saved action could not be validated. It was kept for review.', retryable: false } }; }
     if (scope.backendId !== dependencies.backendId || scope.relationshipId !== input.expectedRelationshipId) return { kind: 'not_sent', problem: { code: 'SCOPE_MISMATCH', message: 'This action belongs to a different backend or relationship period.', retryable: false } };
     let session: Awaited<ReturnType<ActionTransportDependencies['readSession']>>;
@@ -135,11 +143,31 @@ export function createActionTransport(dependencies: ActionTransportDependencies)
         if ((error.code === '22023' || error.code === '42501') && (!status || status < 500)) return { kind: 'rejected', problem: rejection(error) };
         return { kind: 'confirmation_unknown', problem: unknownProblem(error.code ?? 'REQUEST_FAILED') };
       }
-      try { return { kind: 'confirmed', receipt: decodeActionReceipt(data, input) }; }
+      try { return { kind: 'confirmed', receipt: decodeActionReceipt(data, input, scope.relationshipSessionId) }; }
       catch { return { kind: 'confirmation_unknown', problem: unknownProblem('INVALID_RECEIPT', false) }; }
     } catch {
       return { kind: 'confirmation_unknown', problem: unknownProblem(signal.aborted ? 'REQUEST_INTERRUPTED' : 'CONNECTION_LOST') };
     }
+  }, async readReceipt(input: QueuedActionCommand, scope: StoredActionScope, signal: AbortSignal): Promise<ReceiptRecoveryOutcome> {
+    const unavailable = (code: string): ReceiptRecoveryOutcome => ({ kind: 'unavailable', problem: { code, retryable: true,
+      message: 'The original receipt could not be checked. The saved action is unchanged; no action was sent.' } });
+    try {
+      decodeActionCommand(input); decodeStoredActionScope(scope);
+      if (scope.backendId !== dependencies.backendId || scope.relationshipId !== input.expectedRelationshipId) return unavailable('SCOPE_MISMATCH');
+      const session = await dependencies.readSession();
+      if (!session?.accessToken || session.accountId !== scope.accountId || signal.aborted) return unavailable('IDENTITY_UNAVAILABLE');
+      const { data, error } = await dependencies.callRpc({ name: 'get_my_action_receipt', parameters: {
+        p_command_id: input.commandId, p_expected_relationship_id: input.expectedRelationshipId,
+      } }, session.accessToken, signal);
+      // The lookup's token is pinned to the original owner. Also suppress late
+      // results after this tab changes accounts, before returning any receipt.
+      const current = await dependencies.readSession();
+      if (signal.aborted || !current?.accessToken || current.accountId !== scope.accountId) return unavailable('IDENTITY_UNAVAILABLE');
+      if (error) return unavailable('RECEIPT_LOOKUP_FAILED');
+      if (data === null) return { kind: 'not_found' };
+      try { return { kind: 'confirmed', receipt: decodeActionReceipt(data, input, scope.relationshipSessionId) }; }
+      catch { return unavailable('INVALID_RECEIPT'); }
+    } catch { return unavailable('RECEIPT_LOOKUP_FAILED'); }
   } };
 }
 

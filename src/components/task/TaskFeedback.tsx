@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { acknowledgeRewardFeedback } from '@/data/rewards/actionReadModel';
 import { useTaskActionData } from '@/data/tasks/actionReadModel';
+import { scopeKey } from '@/data/actions/contracts';
 
 /** Own recipient confirmations come from the durable outbox. An actor acting
  * for a partner sees only a local acknowledgment, never a claim of delivery. */
@@ -14,11 +15,18 @@ export function TaskFeedback() {
   const [failure, setFailure] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(() => new Set());
   const scope = actions.scope;
+  const currentScopeKey = scope ? scopeKey(scope) : null;
+  const current = useRef(currentScopeKey); current.current = currentScopeKey;
+  useEffect(() => {
+    current.current = currentScopeKey;
+    setDismissed(new Set()); setFailure({}); setSaving(new Set());
+    return () => { current.current = null; };
+  }, [currentScopeKey]);
   if (!scope || actions.mode !== 'atomic' || settings.accountId !== scope.accountId || !settings.isReady ||
       !settings.preferences.enabled || !settings.preferences.types.taskCompleted) return null;
   const data = query.data;
   const events = data?.events ?? [];
-  const key = (event: string) => `${scope.accountId}:${scope.relationshipId}:${event}`;
+  const key = (event: string) => `${currentScopeKey}:${event}`;
   const own = (actions.data?.deliveries ?? []).filter(delivery => delivery.kind === 'action_confirmed' &&
     delivery.recipient_participant_id === scope.participantId && !actions.data?.acknowledged.includes(delivery.event_id) && events.some(event => event.id === delivery.event_id));
   const ack = async (eventId: string) => {
@@ -26,11 +34,12 @@ export function TaskFeedback() {
     setSaving(previous => new Set([...previous, id]));
     try {
       await acknowledgeRewardFeedback(scope, eventId, 'action_confirmed');
+      if (current.current !== currentScopeKey) return;
       setDismissed(previous => new Set([...previous, id]));
       setFailure(previous => { const next = { ...previous }; delete next[id]; return next; });
       await actions.refresh();
-    } catch (error) { setFailure(previous => ({ ...previous, [id]: error instanceof Error ? error.message : 'Dismissal was not confirmed.' })); }
-    finally { setSaving(previous => { const next = new Set(previous); next.delete(id); return next; }); }
+    } catch (error) { if (current.current === currentScopeKey) setFailure(previous => ({ ...previous, [id]: error instanceof Error ? error.message : 'Dismissal was not confirmed.' })); }
+    finally { if (current.current === currentScopeKey) setSaving(previous => { const next = new Set(previous); next.delete(id); return next; }); }
   };
   const ownCards = own.filter(delivery => !dismissed.has(key(delivery.event_id))).map(delivery => {
     const event = events.find(value => value.id === delivery.event_id)!;

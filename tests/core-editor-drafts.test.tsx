@@ -9,7 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { editorDraftKey } from '@/lib/editorDrafts';
 const media = vi.hoisted(() => ({ compress: vi.fn() }));
 vi.mock('@/utils/image/compression', () => ({ compressImage: (...args: unknown[]) => media.compress(...args) }));
-const identity = vi.hoisted(() => ({ scope: { backendId: 'local', accountId: 'alice', relationshipId: 'period' } as any }));
+const identity = vi.hoisted(() => ({ scope: { backendId: 'local', accountId: 'alice', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' } as any }));
 vi.mock('@/hooks/useEditorDraftScope', () => ({ useEditorDraftScope: () => identity.scope }));
 vi.mock('@/contexts/RewardsContext', () => ({ useRewards: () => ({ atomicAccounting: true }) }));
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
@@ -41,7 +41,7 @@ const variants = [
   ['rule', RuleEditorForm, 'ruleData', 'Rule Title'],
 ] as const;
 function seed(kind: string) { const key = editorDraftKey(identity.scope, `${kind}-editor-definition`); localStorage.setItem(key, JSON.stringify({ version: 2, key, values: draftValues })); return key; }
-beforeEach(() => { vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} }); localStorage.clear(); media.compress.mockReset(); identity.scope = { backendId: 'local', accountId: 'alice', relationshipId: 'period' }; });
+beforeEach(() => { vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} }); localStorage.clear(); media.compress.mockReset(); identity.scope = { backendId: 'local', accountId: 'alice', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' }; });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 describe.each(variants)('%s actual definition editor draft path', (kind, Editor, dataProp, label) => {
   it('restores media and zeros, retains a rejected save, survives close/reopen, and clears only after confirmed save', async () => {
@@ -87,6 +87,16 @@ describe.each(variants)('%s actual definition editor draft path', (kind, Editor,
     view.rerender(<Editor {...{ [dataProp]: initial } as any} onSave={vi.fn()} onCancel={vi.fn()} />);
     expect((screen.getByRole('textbox', { name: label }) as HTMLInputElement).value).toBe('Server title');
     expect(JSON.parse(localStorage.getItem(key)!).values.title).toBe('Alice last edit');
+    expect(localStorage.getItem(editorDraftKey(identity.scope, `${kind}-editor-definition`))).toBeNull();
+  });
+  it('preserves old draft bytes but starts from the definition when only Continue generation changes', () => {
+    const key = seed(kind);
+    const view = render(<Editor {...{ [dataProp]: initial } as any} onSave={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.change(screen.getByRole('textbox', { name: label }), { target: { value: 'Before unlink' } });
+    identity.scope = { ...identity.scope, relationshipSessionId: '00000000-0000-4000-8000-000000000091' };
+    view.rerender(<Editor {...{ [dataProp]: initial } as any} onSave={vi.fn()} onCancel={vi.fn()} />);
+    expect((screen.getByRole('textbox', { name: label }) as HTMLInputElement).value).toBe('Server title');
+    expect(JSON.parse(localStorage.getItem(key)!).values.title).toBe('Before unlink');
     expect(localStorage.getItem(editorDraftKey(identity.scope, `${kind}-editor-definition`))).toBeNull();
   });
   it('rejects an image still processing after its editor closes or changes account', async () => {

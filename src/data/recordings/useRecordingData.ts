@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -14,6 +14,7 @@ export function useRecordingData(type: RecordingType) {
   const scope = actions.mode === 'atomic' ? actions.scope : null;
   const scopeId = scope ? scopeKey(scope) : null;
   const current = useRef(scopeId); current.current = scopeId;
+  useEffect(() => { current.current = scopeId; return () => { current.current = null; }; }, [scopeId]);
   const query = useQuery({ queryKey: recordingKey(scope, type), enabled: !!scope,
     queryFn: ({ signal }) => readRecordingData(scope!, type, !!identity.subUserId, signal),
     staleTime: 0, retry: false, refetchOnMount: 'always', refetchOnWindowFocus: true, refetchInterval: 10_000 });
@@ -22,11 +23,14 @@ export function useRecordingData(type: RecordingType) {
   const save = async (values: Partial<Rule & PunishmentData>) => {
     if (!scope || !canManage) throw new Error('Your relationship permission does not allow editing.');
     const result = await saveRecordingDefinition(scope, type, values, () => current.current === scopeId);
-    await refresh(); return result;
+    await refresh();
+    if (current.current !== scopeId) throw new Error('Your relationship changed. Reopen the current editor before continuing.');
+    return result;
   };
   const remove = async (id: string) => {
     if (!scope || !canManage) throw new Error('Your relationship permission does not allow removal.');
     await removeRecordingDefinition(scope, type, id, () => current.current === scopeId); await refresh();
+    if (current.current !== scopeId) throw new Error('Your relationship changed. Reload before continuing.');
   };
   const pending = actions.entries.some(entry => entry.canReplay && ['pending', 'sending', 'confirmation_unknown'].includes(entry.state.status));
   const operation = type === 'rule' ? 'rule_violation' : 'punishment_apply';

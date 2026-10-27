@@ -8,7 +8,11 @@ export function withCurrentVerification(transport: ActionTransport, checks: {
   accounting(scope: ActionQueueScope, signal: AbortSignal): Promise<boolean>;
   isCurrent(scope: ActionQueueScope): boolean;
 }): ActionTransport {
-  return { backendId: transport.backendId, async execute(command, scope, signal) {
+  return { backendId: transport.backendId,
+    // Receipt recovery is an owned-account read, not permission to execute an
+    // old session. Its adapter independently pins and rechecks the account.
+    readReceipt: transport.readReceipt?.bind(transport),
+    async execute(command, scope, signal) {
     const unavailable = { kind: 'not_sent' as const, problem: { code: 'VERIFICATION_REQUIRED', retryable: true,
       message: 'Your current account and relationship could not be verified. The saved action is kept; no new request was sent.' } };
     try {
@@ -16,9 +20,10 @@ export function withCurrentVerification(transport: ActionTransport, checks: {
       const identity = await checks.identity(scope.accountId, signal);
       if (signal.aborted || !checks.isCurrent(scope)) return unavailable;
       if (!identity.canAccessData || identity.currentUserId !== scope.accountId || identity.participantId !== scope.participantId ||
-          identity.relationshipId !== scope.relationshipId || identity.relationshipStatus !== 'active') {
+          identity.relationshipId !== scope.relationshipId || identity.relationshipStatus !== 'active' ||
+          identity.relationshipSessionId !== scope.relationshipSessionId) {
         return { kind: 'not_sent', problem: { code: 'PERIOD_CHANGED', retryable: false,
-          message: 'This saved action belongs to an account or relationship that is no longer active. It has been kept without sending.' } };
+          message: 'This saved action belongs to an account, relationship or session that is no longer active. It has been kept without sending.' } };
       }
       if (!await checks.accounting(scope, signal)) return { kind: 'not_sent', problem: { code: 'ACCOUNTING_UNAVAILABLE', retryable: false,
         message: 'Actions are not enabled for this relationship. The original saved action has been kept.' } };

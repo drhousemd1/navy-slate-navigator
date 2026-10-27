@@ -1,5 +1,5 @@
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
-import { rewardReadToken } from '@/data/rewards/actionReadModel';
+import { actionScopeToken, assertCurrentActionScope } from '@/data/rewards/actionReadModel';
 import type { ActionQueueScope } from '@/data/actions/contracts';
 import type { ActionCalendar, Currency, RecordingProgress } from '@/domain/actions/types';
 import type { Rule } from '@/data/interfaces/Rule';
@@ -26,7 +26,7 @@ export interface ImportedRecording {
 }
 export interface RecordingData { definitions: RecordingDefinition[]; progress: RecordingProgress[]; events: RecordingEvent[]; points: RecordingPoint[]; imported: ImportedRecording[] }
 export const recordingKey = (scope: ActionQueueScope | null, type: RecordingType) =>
-  ['recording-action-state', supabaseBackendId, scope?.accountId, scope?.relationshipId, type] as const;
+  ['recording-action-state', supabaseBackendId, scope?.accountId, scope?.relationshipId, scope?.relationshipSessionId, type] as const;
 const tableFor = (type: RecordingType) => type === 'rule' ? 'rules' : 'punishments';
 // Forward-migration schema is kept at this one boundary until generated types are refreshed.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,7 +47,7 @@ async function rows<T>(table: string, fields: string, scope: ActionQueueScope, t
   }
 }
 export async function readRecordingData(scope: ActionQueueScope, type: RecordingType, hasSub: boolean, signal?: AbortSignal): Promise<RecordingData> {
-  const token = await rewardReadToken(scope.accountId, signal);
+  const token = await actionScopeToken(scope, signal);
   const progressRequest = hasSub ? database.rpc('get_recording_progress', { p_expected_relationship_id: scope.relationshipId, p_subject_type: type })
     .setHeader('Authorization', `Bearer ${token}`).abortSignal(signal) : Promise.resolve({ data: [], error: null });
   const [definitions, events, points, progress, imported] = await Promise.all([
@@ -59,7 +59,7 @@ export async function readRecordingData(scope: ActionQueueScope, type: Recording
       `id,relationship_id,action_event_id,day_of_week,${type === 'rule' ? 'rule_id,violation_date,week_number' : 'punishment_id,applied_date,points_deducted'}`,
       scope, token, signal, true),
   ]);
-  await rewardReadToken(scope.accountId, signal);
+  await assertCurrentActionScope(scope, token, signal);
   if (progress.error || !Array.isArray(progress.data)) throw new Error('The current weekly activity could not be verified. Refresh to retry.');
   if (progress.data.some((item: RecordingProgress) => item.subjectType !== type || !definitions.some(row => row.id === item.subjectId) ||
     !Array.isArray(item.usageData) || item.usageData.length !== 7 || item.usageData.some(n => !Number.isSafeInteger(n) || n < 0))) {
@@ -81,23 +81,23 @@ export function recordingDefinitionValues(type: RecordingType, values: Partial<R
 }
 export async function saveRecordingDefinition(scope: ActionQueueScope, type: RecordingType, values: Partial<Rule & PunishmentData>, isCurrent: () => boolean): Promise<RecordingDefinition> {
   const payload = recordingDefinitionValues(type, values);
-  const token = await rewardReadToken(scope.accountId);
+  const token = await actionScopeToken(scope);
   if (!isCurrent()) throw new Error('Your account or relationship changed. Reopen the editor.');
   const request = values.id ? database.from(tableFor(type)).update(payload).eq('id', values.id).eq('relationship_id', scope.relationshipId).is('deleted_at', null)
     : database.from(tableFor(type)).insert({ ...payload, user_id: scope.accountId, relationship_id: scope.relationshipId });
-  const { data, error } = await request.select().single().setHeader('Authorization', `Bearer ${token}`);
+  const { data, error } = await request.select().single().setHeader('Authorization', `Bearer ${token}`).setHeader('x-relationship-session-id', scope.relationshipSessionId);
   if (error || !data) throw new Error(error?.message || 'The definition could not be saved. Your draft is still open.');
-  await rewardReadToken(scope.accountId);
+  await assertCurrentActionScope(scope, token);
   if (!isCurrent()) throw new Error('Your account or relationship changed after saving. Reload the current account.');
   return data;
 }
 export async function removeRecordingDefinition(scope: ActionQueueScope, type: RecordingType, id: string, isCurrent: () => boolean): Promise<void> {
-  const token = await rewardReadToken(scope.accountId);
+  const token = await actionScopeToken(scope);
   if (!isCurrent()) throw new Error('Your account or relationship changed. Reopen the editor.');
   const { data, error } = await database.from(tableFor(type)).update({ deleted_at: new Date().toISOString() }).eq('id', id)
-    .eq('relationship_id', scope.relationshipId).is('deleted_at', null).select('id').single().setHeader('Authorization', `Bearer ${token}`);
+    .eq('relationship_id', scope.relationshipId).is('deleted_at', null).select('id').single().setHeader('Authorization', `Bearer ${token}`).setHeader('x-relationship-session-id', scope.relationshipSessionId);
   if (error || !data) throw new Error(error?.message || 'Removal was not confirmed. Refresh before retrying.');
-  await rewardReadToken(scope.accountId);
+  await assertCurrentActionScope(scope, token);
   if (!isCurrent()) throw new Error('Your account or relationship changed after removal. Reload the current account.');
 }
 export function recordingUndoReason(event: RecordingEvent, events: readonly RecordingEvent[], role: Currency, permissions: Readonly<Record<string, string>>): string | null {

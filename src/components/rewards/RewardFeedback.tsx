@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { ConfirmedActionFeedback } from '@/components/activity/ConfirmedActionFeedback';
 import { acknowledgeRewardFeedback } from '@/data/rewards/actionReadModel';
 import type { ActionReceipt } from '@/domain/actions/types';
+import { scopeKey } from '@/data/actions/contracts';
 
 /** Recipient delivery is an outbox read, independent of the actor's browser.
  * Dismissal is durable only after the server acknowledges it. A crash before
@@ -12,19 +13,28 @@ import type { ActionReceipt } from '@/domain/actions/types';
 export function RewardFeedback() {
   const actions = useActionCommands();
   const settings = useNotificationSettings();
-  const [failed, setFailed] = useState<{ account: string; period: string; event: string; message: string }[]>([]);
+  const [failed, setFailed] = useState<{ scopeKey: string; event: string; message: string }[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
   const scope = actions.scope;
+  const key = scope ? scopeKey(scope) : null;
+  const currentKey = useRef(key); currentKey.current = key;
+  useEffect(() => {
+    currentKey.current = key;
+    setFailed([]); setDismissed(new Set());
+    return () => { currentKey.current = null; };
+  }, [key]);
   if (!scope || actions.mode !== 'atomic') return null;
   const enabled = settings.accountId === scope.accountId && settings.isReady && settings.preferences.enabled;
   const ack = async (event: string) => {
     try {
       await acknowledgeRewardFeedback(scope, event);
-      setFailed(previous => previous.filter(item => !(item.account === scope.accountId && item.period === scope.relationshipId && item.event === event)));
+      if (currentKey.current !== key) return;
+      setFailed(previous => previous.filter(item => !(item.scopeKey === key && item.event === event)));
       await actions.refresh();
     } catch (error) {
-      setFailed(previous => [...previous.filter(item => !(item.account === scope.accountId && item.event === event)), {
-        account: scope.accountId, period: scope.relationshipId, event,
+      if (currentKey.current !== key) return;
+      setFailed(previous => [...previous.filter(item => !(item.scopeKey === key && item.event === event)), {
+        scopeKey: key, event,
         message: error instanceof Error ? error.message : 'Dismissal was not confirmed.',
       }]);
     }
@@ -64,7 +74,7 @@ export function RewardFeedback() {
           <button className="mt-2 text-sm underline" onClick={() => setDismissed(previous => new Set([...previous, entry.command.commandId]))}>Dismiss confirmation</button>
         </div>;
       })}
-      {failed.filter(item => item.account === scope.accountId && item.period === scope.relationshipId).map(item => <div key={item.event} role="alert" className="rounded border border-amber-500 bg-navy p-3 text-white">
+      {failed.filter(item => item.scopeKey === key).map(item => <div key={item.event} role="alert" className="rounded border border-amber-500 bg-navy p-3 text-white">
         <p>{item.message}</p><button className="underline" onClick={() => void ack(item.event)}>Retry dismissal</button>
       </div>)}
     </div>

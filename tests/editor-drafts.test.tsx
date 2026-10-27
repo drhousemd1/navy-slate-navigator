@@ -7,7 +7,7 @@ import { EditorDraftNotice } from '@/components/common/EditorDraftNotice';
 import { editorDraftKey, type EditorDraftScope } from '@/lib/editorDrafts';
 
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
-const scope: EditorDraftScope = { backendId: 'local', accountId: 'alice', relationshipId: 'period' };
+const scope: EditorDraftScope = { backendId: 'local', accountId: 'alice', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
 const defaults = { title: 'Server title', cost: 10, background_image_url: 'server.jpg' as string | null, icon_name: null as string | null, focal_point_x: 50, image_meta: null as unknown };
 function Editor({ scope: owner = scope, id = 'reward-new' }: { scope?: EditorDraftScope; id?: string }) {
   const form = useForm({ defaultValues: defaults });
@@ -45,6 +45,7 @@ describe('durable scoped editor drafts', () => {
   it.each([
     ['backend', { ...scope, backendId: 'staging' }, 'reward-new'],
     ['account', { ...scope, accountId: 'bob' }, 'reward-new'],
+    ['continued session', { ...scope, relationshipSessionId: '00000000-0000-4000-8000-000000000091' }, 'reward-new'],
     ['period', { ...scope, relationshipId: 'fresh-period' }, 'reward-new'],
     ['existing definition', scope, 'reward-existing'],
     ['feature', scope, 'task-new'],
@@ -57,6 +58,12 @@ describe('durable scoped editor drafts', () => {
     localStorage.setItem('kingdom-app-form-reward-new', JSON.stringify({ title: 'Unowned' }));
     localStorage.setItem(editorDraftKey(scope, 'reward-new'), JSON.stringify({ version: 2, key: editorDraftKey({ ...scope, accountId: 'bob' }, 'reward-new'), values: { title: 'Other account' } }));
     mount(); expect(values().title).toBe('Server title'); expect(screen.getByRole('alert').textContent).toContain('could not be loaded');
+  });
+  it('preserves pre-generation scoped bytes without adopting them into a new session', () => {
+    const oldKey = `obedience-editor-draft:v2:${JSON.stringify([scope.backendId, scope.accountId, scope.relationshipId, 'reward-new'])}`;
+    const bytes = JSON.stringify({ version: 2, key: oldKey, values: { title: 'Before generation' } });
+    localStorage.setItem(oldKey, bytes); mount();
+    expect(values().title).toBe('Server title'); expect(localStorage.getItem(oldKey)).toBe(bytes);
   });
   it('clears only the confirmed draft and does not recreate it from reset or unmount', async () => {
     localStorage.setItem(editorDraftKey(scope, 'task-new'), 'untouched');

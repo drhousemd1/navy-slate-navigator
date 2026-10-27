@@ -6,7 +6,7 @@ import { supabaseBackendId } from '@/integrations/supabase/client';
 import { ActionCommandQueue } from '@/data/actions/queue';
 import { IndexedDBActionQueueStore } from '@/data/actions/store';
 import { createSupabaseActionTransport } from '@/data/actions/supabase-transport';
-import { scopeKey, type ActionQueueScope, type QueueEntry, type ActionIntent } from '@/data/actions/contracts';
+import { decodeActionScope, scopeKey, type ActionQueueScope, type QueueEntry, type ActionIntent } from '@/data/actions/contracts';
 import { accountingStatusKey, readAccountingEnabled, readRewardActionData, rewardActionKey, type RewardActionData } from '@/data/rewards/actionReadModel';
 import { TaskFeedback } from '@/components/task/TaskFeedback';
 import { RewardFeedback } from '@/components/rewards/RewardFeedback';
@@ -14,7 +14,7 @@ import { fetchIdentity } from '@/data/identity';
 import { withCurrentVerification } from '@/lib/offline/verified-transport';
 import { clearRecoverySnapshot, projectRecoverySnapshot, saveRecoverySnapshot } from '@/lib/offline/recovery';
 
-export type VisibleCommand = QueueEntry & { canReplay: boolean; canCancel: boolean };
+export type VisibleCommand = QueueEntry & { canReplay: boolean; canCancel: boolean; canReconcile: boolean };
 interface ActionCommandsValue {
   scope: ActionQueueScope | null;
   mode: 'loading' | 'error' | 'legacy' | 'atomic';
@@ -25,6 +25,7 @@ interface ActionCommandsValue {
   enqueue(intent: ActionIntent): Promise<void>;
   retry(id: string): Promise<void>;
   cancelUnsent(id: string): Promise<void>;
+  reconcile(id: string): Promise<'confirmed' | 'not_found'>;
   refresh(): Promise<void>;
 }
 const ActionCommandsContext = createContext<ActionCommandsValue | null>(null);
@@ -34,9 +35,9 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const scope = useMemo<ActionQueueScope | null>(() => identity.canAccessData && !identity.isLoadingUserIds &&
-    user?.id && user.id === identity.currentUserId && identity.relationshipId && identity.participantId && identity.relationshipStatus === 'active'
-    ? { backendId: supabaseBackendId, accountId: user.id, participantId: identity.participantId, relationshipId: identity.relationshipId } : null,
-  [identity.canAccessData, identity.isLoadingUserIds, identity.currentUserId, identity.relationshipId, identity.participantId, identity.relationshipStatus, user?.id]);
+    user?.id && user.id === identity.currentUserId && identity.relationshipId && identity.relationshipSessionId && identity.participantId && identity.relationshipStatus === 'active'
+    ? { backendId: supabaseBackendId, accountId: user.id, participantId: identity.participantId, relationshipId: identity.relationshipId, relationshipSessionId: identity.relationshipSessionId } : null,
+  [identity.canAccessData, identity.isLoadingUserIds, identity.currentUserId, identity.relationshipId, identity.relationshipSessionId, identity.participantId, identity.relationshipStatus, user?.id]);
   const currentScope = useRef(scope); currentScope.current = scope;
   const [queue, setQueue] = useState<ActionCommandQueue | null>(null);
   const [listed, setListed] = useState<{ key: string; rows: VisibleCommand[] } | null>(null);
@@ -78,7 +79,7 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
         if (!currentScope.current || scopeKey(currentScope.current) !== scopeKey(entry.scope)) return;
         setConfirmed(previous => [...previous.filter(item => item.command.commandId !== entry.command.commandId), entry]);
         // Receipts describe a past instant. Always read current balances again.
-        void queryClient.invalidateQueries({ queryKey: rewardActionKey(entry.scope), exact: true });
+        void queryClient.invalidateQueries({ queryKey: rewardActionKey(decodeActionScope(entry.scope)), exact: true });
         void queryClient.invalidateQueries({ queryKey: ['task-action-state'] });
         void queryClient.invalidateQueries({ queryKey: ['recording-action-state'] });
         void queryClient.invalidateQueries({ queryKey: ['activity-metrics'] });
@@ -136,6 +137,7 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
     error: storageError ?? (status.error?.message || readModel.error?.message || null), entries, confirmed: visibleConfirmed,
     enqueue, refresh,
     retry: async id => { if (!queue || !atomic) throw new Error('Current action account is unavailable.'); await queue.retry(id); },
+    reconcile: async id => { if (!queue || !atomic) throw new Error('Load your current action account before checking old receipts.'); return queue.reconcile(id); },
     cancelUnsent: async id => { if (!queue || !atomic || !await queue.cancelUnsent(id)) throw new Error('This action may already have been sent and cannot be cancelled.'); },
   };
   return <ActionCommandsContext.Provider value={value}>{children}<div className="action-feedback-stack"><RewardFeedback /><TaskFeedback /></div></ActionCommandsContext.Provider>;

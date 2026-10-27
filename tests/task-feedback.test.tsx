@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TaskFeedback } from '@/components/task/TaskFeedback';
@@ -10,7 +10,7 @@ vi.mock('@/hooks/useNotificationSettings', () => ({ useNotificationSettings: () 
 vi.mock('@/data/tasks/actionReadModel', () => ({ useTaskActionData: () => ({ data: mocks.data }) }));
 vi.mock('@/data/rewards/actionReadModel', () => ({ acknowledgeRewardFeedback: (...args: any[]) => mocks.ack(...args) }));
 beforeEach(() => {
-  const scope = { accountId: 'sub', participantId: 'sub-member', relationshipId: 'period' };
+  const scope = { accountId: 'sub', participantId: 'sub-member', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
   mocks.actions = { scope, mode: 'atomic', confirmed: [], refresh: vi.fn().mockResolvedValue(undefined), data: { events: [], acknowledged: [], deliveries: [{ event_id: 'event', kind: 'action_confirmed', recipient_participant_id: 'sub-member' }] } };
   mocks.data = { events: [{ id: 'event', kind: 'task_completed', subject: { title: 'Morning task' } }], points: [{ event_id: 'event', currency: 'sub', amount: 5 }] };
   mocks.settings = { accountId: 'sub', isReady: true, preferences: { enabled: true, types: { taskCompleted: true, rewardRedeemed: true, rewardRefunded: true } } };
@@ -42,5 +42,18 @@ describe('confirmed task feedback', () => {
     mocks.settings.preferences.types.taskCompleted = false; const view = render(<TaskFeedback />); expect(screen.queryByRole('status')).toBeNull();
     mocks.settings.preferences.types.taskCompleted = true; mocks.actions.data.deliveries = []; mocks.actions.confirmed = [{ command: { kind: 'task_complete' }, state: { status: 'pending' } }];
     view.rerender(<TaskFeedback />); expect(screen.queryByRole('status')).toBeNull();
+  });  it.each(['resolve', 'reject'] as const)('does not carry a late task dismissal %s into a continued session', async outcome => {
+    let resolve!: () => void, reject!: (error: Error) => void;
+    mocks.ack.mockReturnValue(new Promise<void>((yes, no) => { resolve = yes; reject = no; }));
+    const view = render(<TaskFeedback />);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss task confirmation' }));
+    expect((screen.getByRole('button', { name: 'Confirming dismissal…' }) as HTMLButtonElement).disabled).toBe(true);
+    mocks.actions = { ...mocks.actions, scope: { ...mocks.actions.scope, relationshipSessionId: '00000000-0000-4000-8000-000000000091' } };
+    view.rerender(<TaskFeedback />);
+    await act(async () => { if (outcome === 'resolve') resolve(); else reject(new Error('Old dismissal failed')); });
+    expect(screen.getByText('Task completion confirmed')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Dismiss task confirmation' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole('alert')).toBeNull(); expect(mocks.actions.refresh).not.toHaveBeenCalled();
   });
+
 });

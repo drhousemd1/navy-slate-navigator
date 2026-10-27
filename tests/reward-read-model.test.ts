@@ -4,6 +4,7 @@ import { readAccountingEnabled, readRewardActionData, rewardActionKey, rewardInv
 const mocks = vi.hoisted(() => ({ account: 'a', rows: {} as Record<string, any[]>, requests: [] as any[], afterRead: null as (() => void) | null }));
 vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'http://127.0.0.1:28622', supabase: {
   auth: { getSession: async () => ({ data: { session: { user: { id: mocks.account }, access_token: `token-${mocks.account}` } }, error: null }) },
+  rpc: () => identityQuery(),
   from: (table: string) => {
     const record: any = { table, headers: {}, filters: {}, start: 0, end: 499 };
     const q: any = { select: (fields: string) => { record.fields = fields; return q; }, eq: (field: string, value: string) => { record.filters[field] = value; return q; },
@@ -16,7 +17,8 @@ vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'http://12
     }; return q;
   },
 } }));
-const scope = { backendId: 'http://127.0.0.1:28622', accountId: 'a', participantId: 'participant', relationshipId: 'period' };
+function identityQuery() { const q: any = { setHeader: () => q, abortSignal: () => q, then: (resolve: any) => Promise.resolve(resolve({ data: { status: 'ready_solo', relationship_status: 'active', user_id: mocks.account, relationship_id: scope.relationshipId, participant_id: scope.participantId, relationship_session_id: scope.relationshipSessionId }, error: null })) }; return q; }
+const scope = { backendId: 'http://127.0.0.1:28622', accountId: 'a', participantId: 'participant', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
 beforeEach(() => { mocks.account = 'a'; mocks.rows = {}; mocks.requests = []; mocks.afterRead = null; });
 describe('reward reads stay in the verified account and period', () => {
   it('uses the narrow accounting columns and explicit request token; absent row is disabled', async () => {

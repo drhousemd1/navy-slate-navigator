@@ -30,6 +30,8 @@ test('server identity, permissions and staged relationship periods', {
   assert.ok(anon && service, 'Local API keys are missing');
   const accounts = [];
   const createdEntities = [];
+  const fixturePeriods=new Set(),reviewedSessions=new Map(),accountSessions=new Map();
+  const scopeFor=id=>({p_expected_relationship_id:id,p_expected_relationship_session_id:reviewedSessions.get(id)});
   const stable = (v) => Array.isArray(v) ? v.map(stable) : v && typeof v === 'object'
     ? Object.fromEntries(Object.keys(v).sort().map(k => [k, stable(v[k])])) : v;
   const hash = v => createHash('sha256').update(JSON.stringify(stable(v))).digest('hex');
@@ -39,7 +41,8 @@ test('server identity, permissions and staged relationship periods', {
     assert.equal(url.origin, api);
     const response = await fetch(url, {
       method, headers: { apikey: token === service ? service : anon,
-        Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Prefer: 'return=representation',
+        ...(accountSessions.has(token)?{'x-relationship-session-id':accountSessions.get(token)}:{}) },
       body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(12_000),
       redirect: 'error',
     });
@@ -50,8 +53,20 @@ test('server identity, permissions and staged relationship periods', {
   const ok = r => { assert.ok(r.status >= 200 && r.status < 300, `API status ${r.status}; code ${r.data?.code ?? r.data?.error_code ?? 'none'}`); return r.data; };
   const denied = (r, code) => { assert.ok(r.status >= 400, `Expected denial, got ${r.status}`); if (code) assert.equal(r.data?.message, code); };
   const rpc = (account, name, body = {}) => request('POST', `/rest/v1/rpc/${name}`, account?.token ?? anon, body);
-  const identity = async account => ok(await rpc(account, 'get_my_identity'));
-  const unlink = async a => rpc(a, 'unlink_my_partner', { p_expected_relationship_id: (await identity(a)).relationship_id });
+  const identity = async account => {
+    const result=ok(await rpc(account,'get_my_identity'));
+    if(result.relationship_id){
+      assert.ok(result.relationship_session_id,'Apply reviewed session migration before fixtures');
+      fixturePeriods.add(result.relationship_id);reviewedSessions.set(result.relationship_id,result.relationship_session_id);
+      accountSessions.set(account.token,result.relationship_session_id);
+    }
+    return result;
+  };
+  const unlink = async a => {
+    const current=await identity(a),result=await rpc(a,'unlink_my_partner',scopeFor(current.relationship_id));
+    if(result.status<300){await identity(a);const peer=accounts.find(x=>x.id===current.linked_partner_id);if(peer)await identity(peer);}
+    return result;
+  };
   const rows = async (table, token = service, query = 'select=*') => ok(await request('GET', `/rest/v1/${table}?${query}`, token));
   async function account(role, { signup = false } = {}) {
     const email = `identity-${randomUUID()}@example.invalid`;
@@ -69,24 +84,70 @@ test('server identity, permissions and staged relationship periods', {
     const signedIn = ok(await request('POST', '/auth/v1/token?grant_type=password', anon, { email, password }));
     a.token = signedIn.access_token;
     assert.ok(a.token);
+    await identity(a);
     return a;
   }
   async function enableFixture(a) {
+    assert.ok(accounts.some(x=>x.id===a.id) && !originalProfileIds.includes(a.id));
+    const current=await identity(a);
+    const existing=await rows('action_accounting_periods',service,`relationship_id=eq.${current.relationship_id}&select=*`);
+    if(existing.length===0)ok(await request('POST','/rest/v1/rpc/activate_action_accounting',service,{p_relationship_id:current.relationship_id}));
+    else assert.ok(existing.length===1 && existing[0].accounting_enabled && existing[0].activation_id,'Never reset an existing ledger');
     const result = ok(await request('PATCH', `/rest/v1/identity_contexts?user_id=eq.${a.id}`, service, { lifecycle_ready: true }));
     assert.equal(result.length, 1);
   }
   async function invite(a, mode = 'fresh', previous = null) {
     const reviewedPeriod = (await identity(a)).relationship_id;
     return ok(await rpc(a, 'generate_partner_link_code', {
-      p_expected_relationship_id: reviewedPeriod, p_mode: mode, p_previous_relationship_id: previous,
+      ...scopeFor(reviewedPeriod), p_mode: mode, p_previous_relationship_id: previous,
     }));
   }
   async function accept(a, invitation, reviewedPeriod = undefined) {
     const expectedPeriod = reviewedPeriod === undefined ? (await identity(a)).relationship_id : reviewedPeriod;
-    return rpc(a, 'accept_partner_link_code', {
-      p_expected_relationship_id: expectedPeriod,
+    const result=await rpc(a, 'accept_partner_link_code', {
+      ...scopeFor(expectedPeriod),
       p_code: invitation.code, p_mode: invitation.mode, p_previous_relationship_id: invitation.previous_relationship_id,
     });
+    if(result.status<300){await identity(a);const peer=accounts.find(x=>x.id===result.data.linked_partner_id);if(peer)await identity(peer);}
+    return result;
+  }
+  // Service-only construction of a synthetic imported existing pair. This is
+  // NOT the Fresh product flow: no accounting exists until the cutover test.
+  async function seedImportedPair(dom,sub) {
+    assert.notEqual(dom.id,sub.id);
+    const candidates=[dom,sub],oldPeriods=[];
+    const originalIds=new Set(originalProfileIds);
+    for(const [a,role] of [[dom,'dom'],[sub,'sub']]) {
+      assert.ok(accounts.some(x=>x.id===a.id) && !originalIds.has(a.id));
+      const p=await rows('profiles',service,`id=eq.${a.id}&select=*`);
+      const c=await rows('identity_contexts',service,`user_id=eq.${a.id}&select=*`);
+      assert.equal(p.length,1);assert.equal(p[0].role,role);assert.equal(p[0].linked_partner_id,null);
+      assert.equal(c.length,1);assert.equal(c[0].lifecycle_ready,false);
+      const old=c[0].relationship_id;assert.ok(fixturePeriods.has(old));oldPeriods.push(old);
+      const r=await rows('relationship_periods',service,`id=eq.${old}&select=*`);
+      const m=await rows('relationship_period_members',service,`relationship_id=eq.${old}&select=*`);
+      assert.equal(r.length,1);assert.equal(r[0].status,'active');assert.equal(m.length,1);
+      assert.equal(m[0].user_id,a.id);assert.equal(m[0].role,role);
+      for(const table of ['action_accounting_periods','action_wallets','action_events','action_command_receipts',
+        'rules','tasks','rewards','punishments','rule_violations','task_completion_history','reward_usage',
+        'punishment_history','wellbeing_snapshots','messages','archived_messages'])
+        assert.equal((await rows(table,service,`relationship_id=eq.${old}&select=relationship_id`)).length,0,`New solo ${table} must be empty`);
+      assert.equal((await rows('partner_link_invitations',service,`user_id=eq.${a.id}&select=user_id`)).length,0);
+    }
+    assert.equal(new Set(oldPeriods).size,2);
+    const id=randomUUID();fixturePeriods.add(id); // Track before the first write/lost response.
+    const members=candidates.map((a,index)=>({participant_id:randomUUID(),relationship_id:id,user_id:a.id,role:index===0?'dom':'sub'}));
+    ok(await request('POST','/rest/v1/relationship_periods',service,{id}));
+    ok(await request('POST','/rest/v1/relationship_period_members',service,members));
+    for(const a of candidates)ok(await request('PATCH',`/rest/v1/identity_contexts?user_id=eq.${a.id}`,service,{relationship_id:id,lifecycle_ready:false}));
+    ok(await request('PATCH',`/rest/v1/profiles?id=eq.${dom.id}`,service,{linked_partner_id:sub.id}));
+    ok(await request('PATCH',`/rest/v1/profiles?id=eq.${sub.id}`,service,{linked_partner_id:dom.id}));
+    for(const old of oldPeriods)ok(await request('PATCH',`/rest/v1/relationship_periods?id=eq.${old}`,service,{status:'archived',ended_at:new Date().toISOString()}));
+    const saved=await rows('relationship_period_members',service,`relationship_id=eq.${id}&select=participant_id,relationship_id,user_id,role`);
+    assert.deepEqual(saved.sort((a,b)=>a.participant_id.localeCompare(b.participant_id)),members.sort((a,b)=>a.participant_id.localeCompare(b.participant_id)));
+    assert.equal((await rows('action_accounting_periods',service,`relationship_id=eq.${id}&select=relationship_id`)).length,0);
+    for(const a of candidates){const i=await identity(a);assert.equal(i.status,'ready_linked');assert.equal(i.relationship_id,id);assert.equal(i.lifecycle_ready,false);}
+    return id;
   }
   async function insertEntity(a, table, body) {
     const result = ok(await request('POST', `/rest/v1/${table}`, a.token, body));
@@ -98,6 +159,9 @@ test('server identity, permissions and staged relationship periods', {
   // Fail before creating anything if SQL has not been reviewed/applied.
   assert.equal(ok(await request('POST', '/rest/v1/rpc/current_relationship_id', anon, {})), null);
   denied(await rpc(null, 'get_my_identity'));
+  await rows('relationship_periods',service,'select=relationship_session_id&limit=0');
+  const originalPeriods=await rows('relationship_periods');
+  const originalPeriodIds=new Set(originalPeriods.map(x=>x.id));
   const originalProfiles = await rows('profiles');
   const originalProfileIds = originalProfiles.map(x => x.id);
   const originalContexts = await rows('identity_contexts');
@@ -139,7 +203,7 @@ test('server identity, permissions and staged relationship periods', {
       assert.equal(fixed.sub_user_id, missing.id);
       assert.equal(fixed.dom_user_id, null);
       assert.equal(fixed.lifecycle_ready, false);
-      denied(await rpc(dom, 'generate_partner_link_code', { p_expected_relationship_id: (await identity(dom)).relationship_id }), 'LIFECYCLE_INTEGRATION_REQUIRED');
+      denied(await rpc(dom, 'generate_partner_link_code', scopeFor((await identity(dom)).relationship_id)), 'LIFECYCLE_INTEGRATION_REQUIRED');
       for (const a of [dom, sub, stranger, sameRole]) await enableFixture(a);
     });
 
@@ -190,9 +254,9 @@ test('server identity, permissions and staged relationship periods', {
       const currentCode = await invite(recipient);
       for (const expected of [reviewedPeriod,null]) {
         denied(await rpc(recipient,'generate_partner_link_code', {
-          p_expected_relationship_id:expected,p_mode:'fresh',p_previous_relationship_id:null,
-        }),'PERIOD_CHANGED');
-        denied(await accept(recipient,delayedInvitation,expected),'PERIOD_CHANGED');
+          ...scopeFor(expected),p_mode:'fresh',p_previous_relationship_id:null,
+        }),'STALE_RELATIONSHIP');
+        denied(await accept(recipient,delayedInvitation,expected),'STALE_RELATIONSHIP');
       }
       // A legacy overload must not remain callable by leaving out the new argument.
       for (const [name,body] of [
@@ -233,6 +297,8 @@ test('server identity, permissions and staged relationship periods', {
       assert.equal(linked.dom_user_id, dom.id);
       assert.equal(linked.sub_user_id, sub.id);
       assert.equal((await identity(dom)).relationship_id, originalPeriod);
+      assert.equal((await rows('action_accounting_periods',service,`relationship_id=eq.${originalPeriod}&select=accounting_enabled`))[0].accounting_enabled,true);
+      assert.deepEqual((await rows('action_wallets',service,`relationship_id=eq.${originalPeriod}&select=balance`)).map(x=>x.balance),[0,0]);
       denied(await accept(stranger, current), 'INVALID_LINK_CODE');
       assert.equal(ok(await rpc(dom, 'get_linked_partner_id', { user_id_param: dom.id })), sub.id);
       assert.equal(ok(await rpc(dom, 'get_linked_partner_id', { user_id_param: sub.id })), dom.id);
@@ -241,16 +307,23 @@ test('server identity, permissions and staged relationship periods', {
       assert.equal((await rows('profiles', stranger.token)).length, 1);
     });
 
-    await t.test('own preferences and pair balances still work; Dom-only permission choices exclude purchasing and leaving', async () => {
+    await t.test('separate imported existing pair preserves the disabled legacy-write baseline before cutover',async()=>{
+      // The preceding accounts tested the real Fresh path. These are new accounts
+      // representing an existing imported pair; no activated ledger is reset.
+      dom=await account('dom');sub=await account('sub');
+      originalPeriod=await seedImportedPair(dom,sub);
+    });
+
+    await t.test('disabled imported pair retains own preferences/shared balance writes and Dom-only choices', async () => {
       ok(await request('PATCH', `/rest/v1/profiles?id=eq.${dom.id}`, dom.token, { nickname: 'Synthetic Dom' }));
       denied(await request('PATCH', `/rest/v1/profiles?id=eq.${sub.id}`, dom.token, { nickname: 'Changed by partner' }), 'OWN_PROFILE_FIELDS_ONLY');
       ok(await request('PATCH', `/rest/v1/profiles?id=eq.${sub.id}`, dom.token, { points: 17, dom_points: 2 }));
       ok(await request('PATCH', `/rest/v1/profiles?id=eq.${dom.id}`, sub.token, { points: 3, dom_points: 23 }));
-      const changed = ok(await rpc(dom, 'set_relationship_permissions', { p_permissions: { sub_reward_redeem: 'dom', task_undo: 'both', rule_violation_undo: 'both' }, p_expected_relationship_id: originalPeriod }));
+      const changed = ok(await rpc(dom, 'set_relationship_permissions', { p_permissions: { sub_reward_redeem: 'dom', task_undo: 'both', rule_violation_undo: 'both' }, ...scopeFor(originalPeriod) }));
       assert.equal(changed.permissions.sub_reward_redeem, 'dom');
-      denied(await rpc(sub, 'set_relationship_permissions', { p_permissions: { task_undo: 'sub' }, p_expected_relationship_id: originalPeriod }), 'LINKED_DOM_REQUIRED');
+      denied(await rpc(sub, 'set_relationship_permissions', { p_permissions: { task_undo: 'sub' }, ...scopeFor(originalPeriod) }), 'LINKED_DOM_REQUIRED');
       for (const p_permissions of [{ purchase: 'both' }, { unlink: 'dom' }, { task_undo: 'nobody' }, []]) {
-        denied(await rpc(dom, 'set_relationship_permissions', { p_permissions, p_expected_relationship_id: originalPeriod }));
+        denied(await rpc(dom, 'set_relationship_permissions', { p_permissions, ...scopeFor(originalPeriod) }));
       }
       assert.equal(ok(await rpc(sub, 'set_my_timezone', { p_timezone: 'America/Boise' })).timezone, 'America/Boise');
       denied(await rpc(sub, 'set_my_timezone', { p_timezone: 'Somewhere/Invalid' }), 'INVALID_TIMEZONE');
@@ -275,6 +348,9 @@ test('server identity, permissions and staged relationship periods', {
       denied(await request('POST', '/rest/v1/messages', sub.token, { sender_id: dom.id, receiver_id: sub.id, content: 'Forged' }), 'MESSAGE_SENDER_MISMATCH');
       denied(await rpc(stranger, 'record_task_completion', { task_id_param: task.id, user_id_param: sub.id }), 'TASK_OUTSIDE_PERIOD');
       assert.equal(ok(await rpc(stranger, 'get_task_completions_for_week', { week_start: new Date(Date.now()-86_400_000).toISOString() })).length, 0);
+      await enableFixture(dom);await enableFixture(sub);
+      assert.equal((await rows('action_wallets',service,`relationship_id=eq.${originalPeriod}&currency=eq.sub&select=balance`))[0].balance,17);
+      assert.equal((await rows('action_wallets',service,`relationship_id=eq.${originalPeriod}&currency=eq.dom&select=balance`))[0].balance,23);
     });
 
     await t.test('unlink archives rather than retags; unrelated new partner never gains old rows or former profile identity', async () => {
@@ -312,8 +388,8 @@ test('server identity, permissions and staged relationship periods', {
       ok(await unlink(dom));
       const fresh = ok(await accept(sub, await invite(dom)));
       assert.notEqual(fresh.relationship_id, originalPeriod);
-      denied(await rpc(dom, 'unlink_my_partner', { p_expected_relationship_id: originalPeriod }), 'PERIOD_CHANGED');
-      denied(await rpc(dom, 'set_relationship_permissions', { p_permissions: { task_undo: 'dom' }, p_expected_relationship_id: originalPeriod }), 'PERIOD_CHANGED');
+      denied(await rpc(dom, 'unlink_my_partner', { ...scopeFor(originalPeriod) }), 'STALE_RELATIONSHIP');
+      denied(await rpc(dom, 'set_relationship_permissions', { p_permissions: { task_undo: 'dom' }, ...scopeFor(originalPeriod) }), 'STALE_RELATIONSHIP');
       denied(await request('POST', '/rest/v1/tasks', sub.token, { title: 'Stale period', user_id: sub.id, relationship_id: originalPeriod }), 'PERIOD_MISMATCH');
       assert.equal(ok(await request('PATCH', `/rest/v1/tasks?id=eq.${task.id}`, sub.token, { title: 'Stale write' })).length, 0);
       assert.equal((await rows('tasks', sub.token, `id=eq.${task.id}&select=id`)).length, 0);
@@ -357,21 +433,29 @@ test('server identity, permissions and staged relationship periods', {
       assert.equal(ok(await unlink(dom)).status,'ready_solo');
     });
   } finally {
-    // Delete ONLY recorded synthetic entity IDs, then synthetic Auth users.
-    for (const item of createdEntities.reverse()) {
-      ok(await request('DELETE', `/rest/v1/${item.table}?id=eq.${item.id}`, service));
+    // Remove ONLY recorded fixture periods, ledger children before definitions.
+    const fixtureIds=accounts.map(a=>a.id);
+    if(fixtureIds.length)for(const m of await rows('relationship_period_members',service,
+      `user_id=in.(${fixtureIds.join(',')})&select=relationship_id`))fixturePeriods.add(m.relationship_id);
+    for(const id of fixturePeriods){
+      assert.ok(!originalPeriodIds.has(id),'Never clean an original period');
+      const members=await rows('relationship_period_members',service,`relationship_id=eq.${id}&select=user_id`);
+      assert.ok(members.every(m=>m.user_id===null || fixtureIds.includes(m.user_id)),'Fixture period contains an unrelated member');
+      for(const table of ['action_feedback_acknowledgments','action_feedback_outbox','action_command_receipts',
+        'reward_usage','task_completion_history','rule_violations','punishment_history','action_inventory_movements',
+        'action_point_entries','reward_inventory_lots','action_events','action_task_openings','action_wallets','action_accounting_periods'])
+        ok(await request('DELETE',`/rest/v1/${table}?relationship_id=eq.${id}`,service));
     }
-    const fixtureIds = accounts.map(a => a.id);
-    const fixturePeriods = fixtureIds.length ? (await rows('relationship_period_members', service,
-      `user_id=in.(${fixtureIds.join(',')})&select=relationship_id`)).map(x => x.relationship_id) : [];
+    for(const item of createdEntities.reverse())ok(await request('DELETE',`/rest/v1/${item.table}?id=eq.${item.id}`,service));
     for (const a of accounts) {
       ok(await request('PATCH', `/rest/v1/profiles?id=eq.${a.id}`, service, { linked_partner_id: null }));
     }
     for (const a of accounts) ok(await request('DELETE', `/auth/v1/admin/users/${a.id}`, service));
-    for (const id of new Set(fixturePeriods)) {
+    for (const id of fixturePeriods) {
       ok(await request('DELETE', `/rest/v1/relationship_period_members?relationship_id=eq.${id}`, service));
       ok(await request('DELETE', `/rest/v1/relationship_periods?id=eq.${id}`, service));
     }
+    assert.equal(hash((await rows('relationship_periods')).sort((a,b)=>a.id.localeCompare(b.id))),hash(originalPeriods.sort((a,b)=>a.id.localeCompare(b.id))),'Original periods changed or a fixture period remains');
     const afterProfiles = (await rows('profiles')).filter(x => originalProfileIds.includes(x.id));
     assert.equal(hash(afterProfiles.sort((a,b) => a.id.localeCompare(b.id))), hash(originalProfiles.sort((a,b) => a.id.localeCompare(b.id))), 'Original profile data, pointers and balances changed');
     assert.equal(hash(await rows('admin_document_readers')), originalDocumentReaders, 'Document-only membership changed');

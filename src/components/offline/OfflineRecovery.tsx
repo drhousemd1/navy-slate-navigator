@@ -38,7 +38,7 @@ export function OfflineRecovery({ backendId, accountId, checking, onRetry, onSig
         {!visible ? <p>Reading saved actions…</p> : visible.error ? <p role="alert">Saved actions could not be read. Their records have not been deleted. Do not clear site data.</p> : visible.rows.length ? <ul className="space-y-3">
           {visible.rows.map(row => <li key={row.id}><strong>{actionLabels[row.kind] ?? 'Action'}</strong> — {savedActionStatus(row.status, true)}</li>)}
         </ul> : <p>No unconfirmed actions were found for this account on this device.</p>}
-        <p className="text-sm text-gray-300">Actions from earlier periods are retained. After verification, only matching current-period actions may resume with their original IDs. Other periods remain read-only.</p>
+        <p className="text-sm text-gray-300">Earlier actions are retained. After your connection is checked, actions saved for the current connection can resume. Older actions stay saved and can only be checked for an existing confirmation.</p>
       </div>
       <div className="flex flex-wrap gap-3">
         <Button disabled={checking} onClick={onRetry}>{checking ? 'Checking connection…' : 'Retry connection'}</Button>

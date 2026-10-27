@@ -12,13 +12,15 @@ function builder(initial: any) {
     update: (payload: any) => { record.update = payload; return q; }, insert: (payload: any) => { record.insert = payload; return q; }, single: () => { record.single = true; return q; },
     range: (start: number, end: number) => { record.start = start; record.end = end; return q; }, order: () => q,
     setHeader: (name: string, value: string) => { record.headers[name] = value; return q; }, abortSignal: () => q,
-    then: (resolve: (value: any) => void) => { mocks.requests.push(record); mocks.after?.();
+    then: (resolve: (value: any) => void) => {
+      if (record.name === 'get_my_identity') return Promise.resolve(resolve({ data: { status: 'ready_solo', relationship_status: 'active', user_id: mocks.account, relationship_id: scope.relationshipId, participant_id: scope.participantId, relationship_session_id: scope.relationshipSessionId }, error: null }));
+      mocks.requests.push(record); mocks.after?.();
       const result = record.rpc ? mocks.rpc[record.args.p_task_id ?? 'all'] : { data: record.single ? { id: record.filters.id ?? id(1), relationship_id: 'period' } : (mocks.rows[record.table] ?? []).slice(record.start, record.end + 1), error: null };
       return Promise.resolve(resolve(result)); },
   }; return q;
 }
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-const scope = { backendId: 'http://127.0.0.1:28622', accountId: 'account', participantId: id(3), relationshipId: 'period' };
+const scope = { backendId: 'http://127.0.0.1:28622', accountId: 'account', participantId: id(3), relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
 const progress = { taskId: id(1), beneficiaryParticipantId: id(3), currency: 'sub', timeZone: 'Pacific/Honolulu', localDate: '2026-10-25', weekStartDate: '2026-10-19', weekIdentifier: '2026-W43', frequency: 'weekly', target: 2, currentCount: 1, usageData: [1,0,0,0,0,0,0], completed: false, lastCompletedDate: '2026-10-19', deleted: false };
 const form = { title: 'Task', frequency: 'daily', frequency_count: 2, points: 0, icon_url: undefined, background_image_url: undefined } as any;
 beforeEach(() => { mocks.account = 'account'; mocks.requests = []; mocks.rows = { tasks: [{ id: id(1), relationship_id: 'period', deleted_at: null }] }; mocks.rpc = { all: { data: [progress], error: null } }; mocks.after = null; });

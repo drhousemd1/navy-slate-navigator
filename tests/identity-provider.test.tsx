@@ -18,11 +18,11 @@ vi.mock('@/lib/toastManager', () => ({ toastManager: { success: mocks.success, e
 
 const user = (id: string) => ({ id }) as User;
 const solo = (id: string, role: 'dom' | 'sub' = 'dom'): IdentityState => ({
-  ...resolveIdentity(id, { id, role, linked_partner_id: null }), relationshipId: `period-${id}`, participantId: `member-${id}`, lifecycleReady: false,
+  ...resolveIdentity(id, { id, role, linked_partner_id: null }), relationshipId: `period-${id}`, relationshipSessionId: '00000000-0000-4000-8000-000000000090', participantId: `member-${id}`, lifecycleReady: false,
 });
 const linked = (): IdentityState => ({
   ...resolveIdentity('A', { id: 'A', role: 'sub', linked_partner_id: 'D' }, { id: 'D', role: 'dom', linked_partner_id: 'A' }),
-  relationshipId: 'old-period', partnerRole: 'dom', lifecycleReady: false,
+  relationshipId: 'old-period', relationshipSessionId: '00000000-0000-4000-8000-000000000090', partnerRole: 'dom', lifecycleReady: false,
 });
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -76,7 +76,7 @@ describe('authoritative identity request lifecycle', () => {
     const { result } = renderHook(() => usePartnerLinking(user('A')));
     await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('linked'));
     await act(async () => { expect(await result.current.unlinkFromPartner()).toBe(false); });
-    expect(mocks.command).toHaveBeenCalledExactlyOnceWith('A', 'unlink_my_partner', { p_expected_relationship_id: 'old-period' });
+    expect(mocks.command).toHaveBeenCalledExactlyOnceWith('A', 'unlink_my_partner', { p_expected_relationship_id: 'old-period', p_expected_relationship_session_id: '00000000-0000-4000-8000-000000000090' });
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
     expect(mocks.success).not.toHaveBeenCalled();
   });
@@ -87,10 +87,41 @@ describe('authoritative identity request lifecycle', () => {
     const { result } = renderHook(() => usePartnerLinking(user('A')));
     await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
     await act(async () => { expect(await result.current.linkToPartner(' code ', { mode: 'continue', previousRelationshipId: 'archived-period', canContinuePrevious: true })).toBe(false); });
-    expect(mocks.command).toHaveBeenCalledWith('A', 'accept_partner_link_code', { p_expected_relationship_id: 'period-A', p_code: 'CODE', p_mode: 'continue', p_previous_relationship_id: 'archived-period' });
+    expect(mocks.command).toHaveBeenCalledWith('A', 'accept_partner_link_code', { p_expected_relationship_id: 'period-A', p_expected_relationship_session_id: '00000000-0000-4000-8000-000000000090', p_code: 'CODE', p_mode: 'continue', p_previous_relationship_id: 'archived-period' });
     expect(mocks.success).not.toHaveBeenCalled();
     expect(result.current.relationshipIdentity.status).toBe('error');
+  });  it('retains the refreshed generation and rejects late command success plus stale callbacks from the same pair', async () => {
+    const pending = deferred<unknown>();
+    mocks.fetch.mockResolvedValue(solo('A')); mocks.command.mockReturnValue(pending.promise);
+    const { result } = renderHook(() => usePartnerLinking(user('A')));
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
+    const oldUpdate = result.current.updateRelationshipPermissions;
+    let saving!: Promise<boolean>;
+    act(() => { saving = oldUpdate({ task_complete: 'both' }); });
+    const continued = { ...solo('A'), relationshipSessionId: '00000000-0000-4000-8000-000000000091' };
+    mocks.fetch.mockResolvedValue(continued);
+    await act(async () => { await result.current.refreshIdentity(); });
+    await act(async () => { pending.resolve({}); expect(await saving).toBe(false); });
+    await act(async () => { expect(await oldUpdate({ task_complete: 'dom' })).toBe(false); });
+    expect(mocks.command).toHaveBeenCalledTimes(1);
+    expect(mocks.command.mock.calls[0][2].p_expected_relationship_session_id).toBe(solo('A').relationshipSessionId);
+    expect(result.current.relationshipIdentity.relationshipSessionId).toBe(continued.relationshipSessionId);
+    expect(mocks.success).not.toHaveBeenCalled(); expect(result.current.loading).toBe(false);
   });
+  it('sends the malformed owned-context generation for unlink repair but refuses missing-session commands', async () => {
+    const invalid = { ...linked(), status: 'invalid' as const, canAccessData: false, subUserId: null, domUserId: null, lifecycleReady: true };
+    mocks.fetch.mockResolvedValue(invalid); mocks.command.mockRejectedValue(new Error('STALE_RELATIONSHIP_SESSION'));
+    const { result } = renderHook(() => usePartnerLinking(user('A')));
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('invalid'));
+    await act(async () => { expect(await result.current.unlinkFromPartner()).toBe(false); });
+    expect(mocks.command).toHaveBeenCalledExactlyOnceWith('A', 'unlink_my_partner', { p_expected_relationship_id: invalid.relationshipId, p_expected_relationship_session_id: invalid.relationshipSessionId });
+    expect(result.current.relationshipIdentity).toEqual(invalid);
+    mocks.fetch.mockResolvedValue({ ...solo('A'), relationshipSessionId: null });
+    await act(async () => { await result.current.refreshIdentity(); });
+    await act(async () => { expect(await result.current.generateLinkCode()).toBeNull(); expect(await result.current.updateRelationshipPermissions({ task_complete: 'both' })).toBe(false); });
+    expect(mocks.command).toHaveBeenCalledTimes(1);
+  });
+
 });
 
 function Consumer() {
@@ -146,6 +177,32 @@ describe('real UserIds boundary', () => {
     await screen.findByTestId('domain');
     expect(view.clear).not.toHaveBeenCalled();
     expect(view.client.getMutationCache().getAll()).toContain(mutation);
+  });
+
+  it('prepares a new cache namespace for Continue without deleting durable mutations', async () => {
+    auth(solo('A')); const view = renderBoundary(); await screen.findByTestId('domain');
+    view.client.setQueryData(['old-session'], { private: true });
+    const mutation = view.client.getMutationCache().build(view.client, { mutationFn: async () => 'saved intent' });
+    const previous = mocks.prepare.mock.calls.at(-1)?.[0];
+    mocks.auth.relationshipIdentity = { ...solo('A'), relationshipSessionId: '00000000-0000-4000-8000-000000000091' }; view.repaint();
+    await screen.findByTestId('domain');
+    expect(mocks.prepare.mock.calls.at(-1)?.[0]).not.toBe(previous);
+    expect(view.client.getQueryData(['old-session'])).toBeUndefined();
+    expect(view.client.getMutationCache().getAll()).toContain(mutation); expect(view.clear).not.toHaveBeenCalled();
+  });
+
+  it('releases a pending repair when an invalid owned context changes generation without becoming valid', async () => {
+    let reject!: (error: Error) => void;
+    const invalid = { ...emptyIdentity('invalid', 'A', 'Partner invalid'), problem: 'same_role', partnerUserId: 'D', lifecycleReady: true,
+      relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
+    auth(invalid); mocks.auth.unlinkFromPartner = vi.fn(() => new Promise((_yes, no) => { reject = no; }));
+    const view = renderBoundary(); fireEvent.click(screen.getByRole('button', { name: 'Disconnect partner' }));
+    expect((screen.getByRole('button', { name: 'Disconnect partner' }) as HTMLButtonElement).disabled).toBe(true);
+    mocks.auth.relationshipIdentity = { ...invalid, relationshipSessionId: '00000000-0000-4000-8000-000000000091' }; view.repaint();
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Disconnect partner' }) as HTMLButtonElement).disabled).toBe(false));
+    await act(async () => reject(new Error('Old repair failed')));
+    expect(screen.queryByText('Old repair failed')).toBeNull();
+    expect((screen.getByRole('button', { name: 'Disconnect partner' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('shows a visible staged limitation for invalid partner repair, with retry still available', async () => {

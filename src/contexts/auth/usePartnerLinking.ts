@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { callIdentityCommand, fetchIdentity, fetchLinkPreview, identityCommandError } from '@/data/identity';
-import { decodeIdentity, emptyIdentity, getBrowserTimezone, type IdentityState, type LinkPreview, type LinkMode, type PermissionChoice } from '@/lib/identity';
+import { decodeIdentity, emptyIdentity, getBrowserTimezone, isRelationshipSessionId, type IdentityState, type LinkPreview, type LinkMode, type PermissionChoice } from '@/lib/identity';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { toastManager } from '@/lib/toastManager';
@@ -17,6 +17,8 @@ export const usePartnerLinking = (user: User | null) => {
   const request = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   const [identity, setIdentity] = useState<IdentityState>(() => emptyIdentity(accountId ? 'loading' : 'signed-out', accountId));
+  const contextKey = JSON.stringify([accountId, identity.relationshipId, identity.relationshipSessionId]);
+  const currentContext = useRef(contextKey); currentContext.current = contextKey;
   const [busyAccount, setBusyAccount] = useState<string | null>(null);
 
   const refreshIdentity = useCallback(async (): Promise<IdentityState | null> => {
@@ -58,8 +60,8 @@ export const usePartnerLinking = (user: User | null) => {
           next = { ...next, timezoneInitializationError: 'Your default timezone could not be saved. Choose and save your timezone in Profile, or retry loading your account.' };
         }
       }
-      if (next.canAccessData && next.relationshipStatus === 'active' && next.relationshipId && next.participantId) {
-        verifyRecoveryScope({ backendId: supabaseBackendId, accountId, relationshipId: next.relationshipId, participantId: next.participantId });
+      if (next.canAccessData && next.relationshipStatus === 'active' && next.relationshipId && next.participantId && isRelationshipSessionId(next.relationshipSessionId)) {
+        verifyRecoveryScope({ backendId: supabaseBackendId, accountId, relationshipId: next.relationshipId, participantId: next.participantId, relationshipSessionId: next.relationshipSessionId });
       } else {
         clearRecoverySnapshot(supabaseBackendId);
         setRecoveryAccess(supabaseBackendId, accountId, 'denied');
@@ -105,13 +107,14 @@ export const usePartnerLinking = (user: User | null) => {
     ? identity : emptyIdentity(accountId ? 'loading' : 'signed-out', accountId);
 
   const runCommand = async (command: () => Promise<unknown>, successMessage?: string, failureTitle = 'Unable to update partner connection'): Promise<IdentityState | null> => {
-    if (!accountId || !mounted.current || currentAccount.current !== accountId) return null;
+    if (!accountId || !mounted.current || currentAccount.current !== accountId || currentContext.current !== contextKey) return null;
+    const startingRead = generation.current;
     const operation = ++commandGeneration.current;
     const isCurrent = () => mounted.current && currentAccount.current === accountId && commandGeneration.current === operation;
     setBusyAccount(accountId);
     try {
       await command();
-      if (!isCurrent()) return null;
+      if (!isCurrent() || currentContext.current !== contextKey || generation.current !== startingRead) return null;
       const next = await refreshIdentity();
       if (!isCurrent()) return null;
       if (!next || !next.canAccessData) {
@@ -121,7 +124,7 @@ export const usePartnerLinking = (user: User | null) => {
       if (successMessage) toastManager.success('Success', successMessage);
       return next;
     } catch (error) {
-      if (isCurrent()) {
+      if (isCurrent() && currentContext.current === contextKey && generation.current === startingRead) {
         logger.error('Partner request failed:', getErrorMessage(error));
         toastManager.error(failureTitle, identityCommandError(error));
       }
@@ -133,23 +136,25 @@ export const usePartnerLinking = (user: User | null) => {
 
   const generateLinkCode = async (mode: LinkMode = 'fresh', previousRelationshipId: string | null = null): Promise<string | null> => {
     const expectedPeriod = relationshipIdentity.relationshipId;
-    if (!expectedPeriod) return null;
+    const expectedSession = relationshipIdentity.relationshipSessionId;
+    if (!expectedPeriod || !isRelationshipSessionId(expectedSession)) return null;
     const next = await runCommand(() => callIdentityCommand(accountId, 'generate_partner_link_code', {
-      p_expected_relationship_id: expectedPeriod, p_mode: mode, p_previous_relationship_id: previousRelationshipId,
+      p_expected_relationship_id: expectedPeriod, p_expected_relationship_session_id: expectedSession, p_mode: mode, p_previous_relationship_id: previousRelationshipId,
     }));
     return next?.partnerLinkCode ?? null;
   };
 
   const previewPartnerCode = async (code: string): Promise<LinkPreview | null> => {
-    if (!accountId || currentAccount.current !== accountId || !mounted.current) return null;
+    if (!accountId || currentAccount.current !== accountId || !mounted.current || currentContext.current !== contextKey || !isRelationshipSessionId(relationshipIdentity.relationshipSessionId)) return null;
     const operation = ++commandGeneration.current;
+    const startingRead = generation.current;
     const isCurrent = () => mounted.current && currentAccount.current === accountId && commandGeneration.current === operation;
     setBusyAccount(accountId);
     try {
       const preview = await fetchLinkPreview(accountId, code);
-      return isCurrent() ? preview : null;
+      return isCurrent() && currentContext.current === contextKey && generation.current === startingRead ? preview : null;
     } catch (error) {
-      if (isCurrent()) toastManager.error('Unable to review connection', identityCommandError(error));
+      if (isCurrent() && currentContext.current === contextKey) toastManager.error('Unable to review connection', identityCommandError(error));
       return null;
     } finally {
       if (isCurrent()) setBusyAccount(null);
@@ -158,9 +163,10 @@ export const usePartnerLinking = (user: User | null) => {
 
   const linkToPartner = async (partnerCode: string, consent: LinkPreview): Promise<boolean> => {
     const expectedPeriod = relationshipIdentity.relationshipId;
-    if (!expectedPeriod) return false;
+    const expectedSession = relationshipIdentity.relationshipSessionId;
+    if (!expectedPeriod || !isRelationshipSessionId(expectedSession)) return false;
     const next = await runCommand(() => callIdentityCommand(accountId, 'accept_partner_link_code', {
-      p_expected_relationship_id: expectedPeriod, p_code: partnerCode.trim().toUpperCase(), p_mode: consent.mode,
+      p_expected_relationship_id: expectedPeriod, p_expected_relationship_session_id: expectedSession, p_code: partnerCode.trim().toUpperCase(), p_mode: consent.mode,
       p_previous_relationship_id: consent.previousRelationshipId,
     }), 'Connected to your partner.');
     return next?.status === 'linked';
@@ -169,21 +175,23 @@ export const usePartnerLinking = (user: User | null) => {
   const unlinkFromPartner = async (): Promise<boolean> => {
     // Capture the period the person reviewed. Never replace it after a conflict.
     const expectedPeriod = relationshipIdentity.relationshipId;
-    if (!expectedPeriod) {
+    const expectedSession = relationshipIdentity.relationshipSessionId;
+    if (!expectedPeriod || !isRelationshipSessionId(expectedSession)) {
       toastManager.error('Refresh needed', 'Load your current relationship before disconnecting.');
       return false;
     }
     const next = await runCommand(() => callIdentityCommand(accountId, 'unlink_my_partner', {
-      p_expected_relationship_id: expectedPeriod,
+      p_expected_relationship_id: expectedPeriod, p_expected_relationship_session_id: expectedSession,
     }), 'Partner disconnected.');
     return next?.status === 'unlinked';
   };
 
   const updateRelationshipPermissions = async (permissions: Record<string, PermissionChoice>): Promise<boolean> => {
     const expectedPeriod = relationshipIdentity.relationshipId;
-    if (!expectedPeriod) return false;
+    const expectedSession = relationshipIdentity.relationshipSessionId;
+    if (!expectedPeriod || !isRelationshipSessionId(expectedSession)) return false;
     const next = await runCommand(() => callIdentityCommand(accountId, 'set_relationship_permissions', {
-      p_permissions: permissions, p_expected_relationship_id: expectedPeriod,
+      p_permissions: permissions, p_expected_relationship_id: expectedPeriod, p_expected_relationship_session_id: expectedSession,
     }), 'Relationship permissions updated.');
     return !!next?.canAccessData;
   };
@@ -211,6 +219,6 @@ export const usePartnerLinking = (user: User | null) => {
     getCurrentLinkCode: (): string | null => currentAccount.current === accountId ? relationshipIdentity.partnerLinkCode ?? null : null,
     getLinkedPartnerId: (): string | null => currentAccount.current === accountId && relationshipIdentity.status === 'linked' ? relationshipIdentity.partnerUserId : null,
     loading: busyAccount === accountId && !!accountId,
-    partnerLinkingAvailable: relationshipIdentity.lifecycleReady === true,
+    partnerLinkingAvailable: relationshipIdentity.lifecycleReady === true && isRelationshipSessionId(relationshipIdentity.relationshipSessionId),
   };
 };

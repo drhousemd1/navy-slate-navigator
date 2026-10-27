@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PartnerLinkingSection from '@/components/profile/PartnerLinkingSection';
 import { resolveIdentity } from '@/lib/identity';
@@ -9,14 +9,14 @@ vi.mock('@/contexts/auth', () => ({ useAuth: () => mocks.auth }));
 vi.mock('@/lib/toastManager', () => ({ toastManager: { success: vi.fn(), error: vi.fn() } }));
 afterEach(cleanup);
 beforeEach(() => {
-  mocks.auth = { relationshipIdentity: { ...resolveIdentity('A', { id: 'A', role: 'dom', linked_partner_id: null }), relationshipId: 'solo' },
+  mocks.auth = { relationshipIdentity: { ...resolveIdentity('A', { id: 'A', role: 'dom', linked_partner_id: null }), relationshipId: 'solo', relationshipSessionId: '00000000-0000-4000-8000-000000000090' },
     partnerLinkingLoading: false, partnerLinkingAvailable: true, generateLinkCode: vi.fn(), previewPartnerCode: vi.fn(),
     linkToPartner: vi.fn().mockResolvedValue(false), unlinkFromPartner: vi.fn() };
 });
 
 describe('profile relationship controls', () => {
   it('shows the authoritative connected status and staged limitation without a false connect or generate form', () => {
-    mocks.auth.relationshipIdentity = { ...resolveIdentity('A', { id: 'A', role: 'sub', linked_partner_id: 'D' }, { id: 'D', role: 'dom', linked_partner_id: 'A' }), relationshipId: 'pair', partnerRole: 'dom' };
+    mocks.auth.relationshipIdentity = { ...resolveIdentity('A', { id: 'A', role: 'sub', linked_partner_id: 'D' }, { id: 'D', role: 'dom', linked_partner_id: 'A' }), relationshipId: 'pair', relationshipSessionId: '00000000-0000-4000-8000-000000000090', partnerRole: 'dom' };
     mocks.auth.partnerLinkingAvailable = false;
     render(<PartnerLinkingSection />);
     expect(screen.getByText('✓ Connected to Partner')).toBeTruthy();
@@ -48,9 +48,22 @@ describe('profile relationship controls', () => {
     fireEvent.change(screen.getByLabelText('Connect to Partner'), { target: { value: 'B'.repeat(32) } });
     fireEvent.click(screen.getByRole('button', { name: 'Review' }));
     await screen.findByRole('button', { name: 'Agree and start fresh' });
-    mocks.auth.relationshipIdentity = { ...resolveIdentity('B', { id: 'B', role: 'sub', linked_partner_id: null }), relationshipId: 'different-solo' };
+    mocks.auth.relationshipIdentity = { ...resolveIdentity('B', { id: 'B', role: 'sub', linked_partner_id: null }), relationshipId: 'different-solo', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
     view.rerender(<PartnerLinkingSection />);
     expect(screen.queryByRole('button', { name: 'Agree and start fresh' })).toBeNull();
     expect((screen.getByLabelText('Connect to Partner') as HTMLInputElement).value).toBe('');
+  });  it('drops reviewed consent and a delayed preview when only the session changes', async () => {
+    let resolve!: (value: unknown) => void;
+    vi.mocked(mocks.auth.previewPartnerCode as () => Promise<unknown>).mockReturnValue(new Promise(yes => { resolve = yes; }));
+    const view = render(<PartnerLinkingSection />);
+    fireEvent.change(screen.getByLabelText('Connect to Partner'), { target: { value: 'C'.repeat(32) } });
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    mocks.auth.relationshipIdentity = { ...mocks.auth.relationshipIdentity as object, relationshipSessionId: '00000000-0000-4000-8000-000000000091' };
+    view.rerender(<PartnerLinkingSection />);
+    await act(async () => resolve({ mode: 'fresh', previousRelationshipId: null, canContinuePrevious: false }));
+    expect(screen.queryByRole('button', { name: 'Agree and start fresh' })).toBeNull();
+    expect((screen.getByLabelText('Connect to Partner') as HTMLInputElement).value).toBe('');
+    expect(mocks.auth.linkToPartner).not.toHaveBeenCalled();
   });
+
 });

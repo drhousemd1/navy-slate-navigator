@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
-import { rewardReadToken } from '@/data/rewards/actionReadModel';
+import { actionScopeToken, assertCurrentActionScope } from '@/data/rewards/actionReadModel';
 import type { ActionQueueScope } from '@/data/actions/contracts';
 import { isValidTimezone } from '@/lib/identity';
 import type { Currency } from '@/domain/actions/types';
@@ -12,7 +12,7 @@ const database: SupabaseClient = supabase;
 export interface MetricPeople { subUserId: string | null; domUserId: string | null }
 export interface MetricClock { role: Currency; timeZone: string }
 export const METRICS_QUERY_KEY = ['activity-metrics'] as const;
-export const metricsScopeKey = (scope: ActionQueueScope | null) => [supabaseBackendId, scope?.accountId, scope?.participantId, scope?.relationshipId];
+export const metricsScopeKey = (scope: ActionQueueScope | null) => [supabaseBackendId, scope?.accountId, scope?.participantId, scope?.relationshipId, scope?.relationshipSessionId];
 const eventSchema = z.object({ id: z.string().uuid(), relationship_id: z.string().uuid(), kind: z.enum([
   'task_completed', 'rule_violated', 'punishment_applied', 'reward_purchased', 'reward_redeemed', 'reward_gifted',
   'reward_deleted', 'action_undone', 'opening_balance', 'opening_inventory']),
@@ -20,19 +20,9 @@ beneficiary_participant_id: z.string().uuid().nullable(), subject: z.object({ ro
 calendar: z.object({ participantId: z.string().uuid(), timeZone: z.string(), localDate: z.string(), weekStartDate: z.string() }).nullable(),
 reverses_event_id: z.string().uuid().nullable() });
 const loadError = () => new Error('Activity could not be verified. Retry to load the current records.');
-async function tokenFor(scope: ActionQueueScope, signal?: AbortSignal) {
-  if (scope.backendId !== supabaseBackendId) throw loadError();
-  return rewardReadToken(scope.accountId, signal);
-}
-async function assertCurrent(scope: ActionQueueScope, token: string, signal?: AbortSignal) {
-  await rewardReadToken(scope.accountId, signal);
-  const { data, error } = await database.rpc('get_my_identity').setHeader('Authorization', `Bearer ${token}`).abortSignal(signal);
-  if (error || data?.user_id !== scope.accountId || data?.relationship_id !== scope.relationshipId || data?.participant_id !== scope.participantId) throw loadError();
-  await rewardReadToken(scope.accountId, signal);
-}
 /** Only current-pair profiles are permitted; private period memberships/snapshots are never read. */
 export async function readMetricClocks(scope: ActionQueueScope, people: MetricPeople, signal?: AbortSignal): Promise<MetricClock[]> {
-  const token = await tokenFor(scope, signal);
+  const token = await actionScopeToken(scope, signal);
   const ids = [people.subUserId, people.domUserId].filter((id): id is string => !!id);
   if (!ids.includes(scope.accountId) || new Set(ids).size !== ids.length) throw loadError();
   const { data, error } = await database.from('profiles').select('id,role,timezone').in('id', ids)
@@ -49,7 +39,7 @@ export async function readMetricClocks(scope: ActionQueueScope, people: MetricPe
     }
     clocks.push({ role, timeZone: person.timezone });
   }
-  await assertCurrent(scope, token, signal);
+  await assertCurrentActionScope(scope, token, signal);
   return clocks;
 }
 async function rows(table: string, fields: string, scope: ActionQueueScope, token: string, legacyOnly: boolean, signal?: AbortSignal): Promise<Record<string, unknown>[]> {
@@ -74,7 +64,7 @@ const histories = [
   { table: 'punishment_history', kind: 'punishment', date: 'applied_date', join: '' },
 ] as const;
 export async function readMetricsSource(scope: ActionQueueScope, mode: 'atomic' | 'legacy', signal?: AbortSignal): Promise<MetricsSource> {
-  const token = await tokenFor(scope, signal);
+  const token = await actionScopeToken(scope, signal);
   const [events, ...historiesData] = await Promise.all([
     mode === 'atomic' ? rows('action_events', 'id,relationship_id,kind,beneficiary_participant_id,subject,calendar,reverses_event_id', scope, token, false, signal)
       .then(data => data.map(row => eventSchema.parse(row) as MetricEvent)) : Promise.resolve([]),
@@ -88,6 +78,6 @@ export async function readMetricsSource(scope: ActionQueueScope, mode: 'atomic' 
       return { id: row.id, kind: history.kind as LegacyKind, recordedAt: row[history.date], role: flag === true ? 'dom' : flag === false ? 'sub' : null } as LegacyMetricRecord;
     });
   });
-  await assertCurrent(scope, token, signal);
+  await assertCurrentActionScope(scope, token, signal);
   return { mode, events, legacy };
 }

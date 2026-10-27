@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
-import { rewardReadToken, type RewardEventRow, type RewardPointRow } from '@/data/rewards/actionReadModel';
+import { actionScopeToken, assertCurrentActionScope, type RewardEventRow, type RewardPointRow } from '@/data/rewards/actionReadModel';
 import type { ActionQueueScope } from '@/data/actions/contracts';
 import type { TaskProgress, Currency } from '@/domain/actions/types';
 import type { TaskFormValues, TaskWithId } from './types';
@@ -31,7 +31,7 @@ export function decodeTaskProgress(value: unknown): TaskProgress {
 /** Date-only arithmetic: the browser timezone must never shift the affected person's date. */
 export const taskDayIndex = (progress: Pick<TaskProgress, 'localDate' | 'weekStartDate'>) =>
   (Date.parse(`${progress.localDate}T00:00:00Z`) - Date.parse(`${progress.weekStartDate}T00:00:00Z`)) / 86_400_000;
-export const taskActionKey = (scope: ActionQueueScope | null) => ['task-action-state', supabaseBackendId, scope?.accountId, scope?.relationshipId] as const;
+export const taskActionKey = (scope: ActionQueueScope | null) => ['task-action-state', supabaseBackendId, scope?.accountId, scope?.relationshipId, scope?.relationshipSessionId] as const;
 const database = supabase as any;
 const fields = 'id,relationship_id,title,description,frequency,frequency_count,points,priority,icon_name,icon_color,icon_url,title_color,subtext_color,calendar_color,background_image_url,background_images,background_opacity,focal_point_x,focal_point_y,highlight_effect,image_meta,is_dom_task,created_at,updated_at,deleted_at';
 async function rows<T>(table: string, selected: string, scope: ActionQueueScope, token: string, signal?: AbortSignal): Promise<T[]> {
@@ -52,7 +52,7 @@ function progressProblem(message: string) {
   return 'This task needs a valid frequency, target, and nonnegative points. Edit it to continue.';
 }
 export async function readTaskActionData(scope: ActionQueueScope, signal?: AbortSignal): Promise<TaskActionData> {
-  const token = await rewardReadToken(scope.accountId, signal);
+  const token = await actionScopeToken(scope, signal);
   const requestProgress = (taskId: string | null) => database.rpc('get_task_progress', { p_expected_relationship_id: scope.relationshipId, p_task_id: taskId })
     .setHeader('Authorization', `Bearer ${token}`).abortSignal(signal);
   const [tasks, allEvents, points, imported, summary] = await Promise.all([
@@ -86,7 +86,7 @@ export async function readTaskActionData(scope: ActionQueueScope, signal?: Abort
     }
     for (const task of tasks.filter(task => !task.deleted_at)) if (!progress[task.id]) throw new Error('Task progress is incomplete.');
   }
-  await rewardReadToken(scope.accountId, signal);
+  await assertCurrentActionScope(scope, token, signal);
   return { tasks, imported: imported.filter(row => !row.action_event_id), events: allEvents.filter(event => event.task_id), points, progress, progressErrors };
 }
 export function useTaskActionData(scope: ActionQueueScope | null, enabled: boolean) {
@@ -102,21 +102,21 @@ export function taskDefinitionPayload(input: TaskFormValues): Record<string, unk
   return output;
 }
 export async function saveTaskDefinition(scope: ActionQueueScope, input: TaskFormValues, taskId?: string): Promise<void> {
-  const token = await rewardReadToken(scope.accountId);
+  const token = await actionScopeToken(scope);
   const payload = taskDefinitionPayload(input);
   const request = taskId ? database.from('tasks').update(payload).eq('id', taskId).eq('relationship_id', scope.relationshipId).is('deleted_at', null)
     : database.from('tasks').insert({ ...payload, user_id: scope.accountId, relationship_id: scope.relationshipId });
-  const { data, error } = await request.select('id,relationship_id').single().setHeader('Authorization', `Bearer ${token}`);
+  const { data, error } = await request.select('id,relationship_id').single().setHeader('Authorization', `Bearer ${token}`).setHeader('x-relationship-session-id', scope.relationshipSessionId);
   if (error || !data || data.relationship_id !== scope.relationshipId) throw new Error('Task save was not confirmed. Refresh the task before retrying; your changes remain in the editor.');
-  await rewardReadToken(scope.accountId);
+  await assertCurrentActionScope(scope, token);
 }
 export async function removeTaskDefinition(scope: ActionQueueScope, taskId: string): Promise<void> {
-  const token = await rewardReadToken(scope.accountId);
+  const token = await actionScopeToken(scope);
   const { data, error } = await database.from('tasks').update({ deleted_at: new Date().toISOString() })
     .eq('id', taskId).eq('relationship_id', scope.relationshipId).is('deleted_at', null)
-    .select('id,relationship_id').single().setHeader('Authorization', `Bearer ${token}`);
+    .select('id,relationship_id').single().setHeader('Authorization', `Bearer ${token}`).setHeader('x-relationship-session-id', scope.relationshipSessionId);
   if (error || !data || data.relationship_id !== scope.relationshipId) throw new Error('Task removal was not confirmed. Refresh before retrying.');
-  await rewardReadToken(scope.accountId);
+  await assertCurrentActionScope(scope, token);
 }
 export const taskPermission = (permissions: Readonly<Record<string, string>>, role: Currency | null, operation: 'task_complete' | 'task_undo' | 'definition_manage') =>
   !!role && ['both', role].includes(permissions[operation]);

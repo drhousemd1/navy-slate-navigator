@@ -21,7 +21,7 @@ vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn() } }));
 vi.mock('@/lib/toastManager', () => ({ toastManager: { success: vi.fn(), error: vi.fn() } }));
 const ready = (account = scope.accountId, period = scope.relationshipId) => ({ ...emptyIdentity('linked', account), canAccessData: true,
   currentRole: 'sub' as const, subUserId: account, domUserId: uuid(8), partnerUserId: uuid(8), participantId: scope.participantId,
-  relationshipId: period, relationshipStatus: 'active', timezone: 'America/Boise' });
+  relationshipId: period, relationshipSessionId: scope.relationshipSessionId, relationshipStatus: 'active', timezone: 'America/Boise' });
 function Harness({ account = scope.accountId }) {
   const linking = usePartnerLinking(account ? { id: account } as User : null);
   mocks.auth = { user: account ? { id: account } : null, loading: false, relationshipIdentity: linking.relationshipIdentity,

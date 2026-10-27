@@ -7,12 +7,16 @@ export type QueuedActionCommand = ActionCommand;
 export type ActionIntent = Intent<QueuedActionCommand>;
 /** Compatibility name for existing consumers of the shared action queue. */
 export type RewardIntent = ActionIntent;
-export interface ActionQueueScope {
+export interface StoredActionScope {
   readonly backendId: string;
   readonly accountId: string;
   readonly participantId: string;
   readonly relationshipId: string;
+  /** Absent only on historical durable rows. Never filled from current identity. */
+  readonly relationshipSessionId?: string;
 }
+export interface ActionQueueScope extends StoredActionScope { readonly relationshipSessionId: string }
+export type StoredActionReceipt = ActionReceipt & { readonly relationshipSessionId?: string };
 export interface ActionProblem {
   readonly code: string;
   readonly message: string;
@@ -23,11 +27,15 @@ export interface ActionProblem {
   readonly currentCost?: number;
 }
 export type CommandOutcome =
-  | { kind: 'confirmed'; receipt: ActionReceipt }
+  | { kind: 'confirmed'; receipt: StoredActionReceipt }
   | { kind: 'rejected' | 'confirmation_unknown' | 'not_sent'; problem: ActionProblem };
+export type ReceiptRecoveryOutcome = { kind: 'confirmed'; receipt: StoredActionReceipt } | { kind: 'not_found' } |
+  { kind: 'unavailable'; problem: ActionProblem };
 export interface ActionTransport {
   readonly backendId: string;
   execute(command: QueuedActionCommand, scope: ActionQueueScope, signal: AbortSignal): Promise<CommandOutcome>;
+  /** Read only. It can never create or retry an old unconfirmed command. */
+  readReceipt?(command: QueuedActionCommand, scope: StoredActionScope, signal: AbortSignal): Promise<ReceiptRecoveryOutcome>;
 }
 export type RewardTransport = ActionTransport;
 
@@ -47,7 +55,9 @@ export const commandSchema = z.discriminatedUnion('kind', [
   z.object({ ...commandBase, kind: z.literal('undo'), eventId: id }).strict(),
 ]);
 
-export const scopeSchema = z.object({ backendId: z.string().url(), accountId: id, participantId: id, relationshipId: id }).strict();
+const scopeFields = { backendId: z.string().url(), accountId: id, participantId: id, relationshipId: id };
+export const storedScopeSchema = z.object({ ...scopeFields, relationshipSessionId: id.optional() }).strict();
+export const scopeSchema = z.object({ ...scopeFields, relationshipSessionId: id }).strict();
 const feedbackBase = { eventId: id, recipientParticipantId: id, subjectTitle: z.string() };
 const localDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   const parsed = new Date(`${value}T00:00:00Z`);
@@ -63,7 +73,7 @@ const taskProgressSchema = z.object({ ...progressBase, taskId: id, currency,
 });
 const recordingProgressSchema = z.object({ ...progressBase, subjectType: z.enum(['rule', 'punishment']), subjectId: id });
 const receiptSchema = z.object({
-  commandId: id, relationshipId: id, eventIds: z.array(id).min(1), confirmedAt: z.string().datetime({ offset: true }),
+  commandId: id, relationshipId: id, relationshipSessionId: id.optional(), eventIds: z.array(id).min(1), confirmedAt: z.string().datetime({ offset: true }),
   balances: z.array(z.object({ participantId: id, currency, balance: integer })),
   pointDeltas: z.array(z.object({ participantId: id, currency, amount: integer })).optional(),
   taskProgress: taskProgressSchema.nullable().optional(),
@@ -75,7 +85,7 @@ const receiptSchema = z.object({
     z.object({ ...feedbackBase, kind: z.literal('action_confirmed') }),
     z.object({ ...feedbackBase, kind: z.literal('points_refunded'), reason: z.enum(['reward_deleted', 'purchase_undone', 'redemption_undone_after_deletion']), currency, points: integer.positive(), balanceAfter: integer }),
   ])),
-});
+}).strict();
 
 export function decodeActionCommand(value: unknown): QueuedActionCommand {
   return commandSchema.parse(value) as QueuedActionCommand;
@@ -91,12 +101,16 @@ export function decodeActionScope(value: unknown): ActionQueueScope {
   // project's non-strict TypeScript configuration.
   return scopeSchema.parse(value) as ActionQueueScope;
 }
-export function scopeKey(scope: ActionQueueScope): string {
-  return JSON.stringify([scope.backendId, scope.accountId, scope.participantId, scope.relationshipId]);
+export function decodeStoredActionScope(value: unknown): StoredActionScope {
+  return storedScopeSchema.parse(value) as StoredActionScope;
 }
-export function decodeActionReceipt(value: unknown, command: QueuedActionCommand): ActionReceipt {
+export function scopeKey(scope: StoredActionScope): string {
+  return JSON.stringify([scope.backendId, scope.accountId, scope.participantId, scope.relationshipId, scope.relationshipSessionId ?? null]);
+}
+export function decodeActionReceipt(value: unknown, command: QueuedActionCommand, expectedSession?: string): StoredActionReceipt {
   const receipt = receiptSchema.parse(value);
   if (receipt.commandId !== command.commandId || receipt.relationshipId !== command.expectedRelationshipId) throw new Error('Receipt does not match the original command');
+  if (expectedSession !== undefined && receipt.relationshipSessionId !== expectedSession) throw new Error('Receipt does not match the original relationship session');
   if (new Set(receipt.eventIds).size !== receipt.eventIds.length) throw new Error('Duplicate receipt events');
   const walletKeys = receipt.balances.map(b => JSON.stringify([b.participantId, b.currency]));
   if (new Set(walletKeys).size !== walletKeys.length) throw new Error('Duplicate receipt balances');
@@ -133,13 +147,13 @@ export function decodeActionReceipt(value: unknown, command: QueuedActionCommand
     if (!receipt.eventIds.includes(feedback.eventId)) throw new Error('Feedback is outside the receipt');
     if (feedback.kind === 'points_refunded' && !receipt.balances.some(b => b.participantId === feedback.recipientParticipantId && b.currency === feedback.currency && b.balance === feedback.balanceAfter)) throw new Error('Feedback balance is inconsistent');
   }
-  return receipt as ActionReceipt;
+  return receipt as StoredActionReceipt;
 }
 
 export interface QueueEntry {
   readonly version: 1;
   readonly sequence: number;
-  readonly scope: ActionQueueScope;
+  readonly scope: StoredActionScope;
   readonly command: QueuedActionCommand;
   readonly createdAt: number;
   readonly updatedAt: number;
@@ -149,26 +163,29 @@ export interface QueueEntry {
   readonly nextAttemptAt: number;
   readonly problem: ActionProblem | null;
   readonly lease: { readonly token: string; readonly until: number } | null;
+  /** Read-only reconciliation provenance, not an invented execution attempt. */
+  readonly receiptRecoveredAt?: number;
 }
-export type NewQueueEntry = Omit<QueueEntry, 'sequence'>;
+export type NewQueueEntry = Omit<QueueEntry, 'sequence' | 'scope'> & { readonly scope: ActionQueueScope };
 
 /** Reject corrupt records without deleting or attempting them. */
 export function decodeQueueEntry(value: unknown): QueueEntry {
   if (!value || typeof value !== 'object') throw new Error('Invalid saved command');
   const entry = value as QueueEntry;
   const command = decodeActionCommand(entry.command);
-  const scope = decodeActionScope(entry.scope);
+  const scope = decodeStoredActionScope(entry.scope);
   if (entry.version !== 1 || command.expectedRelationshipId !== scope.relationshipId || !Number.isSafeInteger(entry.sequence) || entry.sequence < 1 ||
       !Number.isSafeInteger(entry.attempts) || entry.attempts < 0 || typeof entry.everSent !== 'boolean' ||
       ![entry.createdAt, entry.updatedAt, entry.nextAttemptAt].every(Number.isFinite) ||
       !entry.state || !['pending', 'sending', 'confirmation_unknown', 'confirmed', 'rejected'].includes(entry.state.status)) throw new Error('Invalid saved command state');
-  if (entry.state.status === 'confirmed') decodeActionReceipt(entry.state.receipt, command);
+  if (entry.state.status === 'confirmed') decodeActionReceipt(entry.state.receipt, command, scope.relationshipSessionId);
   else if (JSON.stringify(decodeActionCommand(entry.state.command)) !== JSON.stringify(command)) throw new Error('Saved command payload changed');
   if (entry.state.status === 'rejected' && typeof entry.state.reason !== 'string') throw new Error('Invalid saved rejection');
   if (entry.lease && (typeof entry.lease.token !== 'string' || !Number.isFinite(entry.lease.until))) throw new Error('Invalid command lease');
+  if (entry.receiptRecoveredAt !== undefined && (entry.state.status !== 'confirmed' || !Number.isFinite(entry.receiptRecoveredAt) || entry.receiptRecoveredAt <= 0)) throw new Error('Invalid receipt recovery provenance');
   if ((entry.lease !== null && entry.state.status !== 'sending') ||
       (entry.state.status === 'sending' && !entry.lease) ||
-      (entry.state.status !== 'pending' && (!entry.everSent || entry.attempts < 1))) throw new Error('Inconsistent saved send state');
+      (entry.state.status !== 'pending' && entry.receiptRecoveredAt === undefined && (!entry.everSent || entry.attempts < 1))) throw new Error('Inconsistent saved send state');
   if (entry.problem && (typeof entry.problem.code !== 'string' || typeof entry.problem.message !== 'string' || typeof entry.problem.retryable !== 'boolean')) throw new Error('Invalid saved command error');
   return structuredClone(entry);
 }

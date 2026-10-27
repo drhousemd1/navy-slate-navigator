@@ -44,17 +44,17 @@ describe('real Supabase identity transport actor binding', () => {
   it('keeps the reviewed relationship parameters while binding partner commands to their initiating account', async () => {
     vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce(sessionResult('A')).mockResolvedValue(sessionResult('B'));
     await callIdentityCommand('A', 'accept_partner_link_code', {
-      p_expected_relationship_id: 'reviewed-period', p_code: 'fixture-code', p_mode: 'continue', p_previous_relationship_id: 'archived-period',
+      p_expected_relationship_id: 'reviewed-period', p_expected_relationship_session_id: '00000000-0000-4000-8000-000000000090', p_code: 'fixture-code', p_mode: 'continue', p_previous_relationship_id: 'archived-period',
     });
     const init = mocks.network.mock.calls[0][1] as RequestInit;
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer fixture-access-A');
-    expect(JSON.parse(init.body as string)).toEqual({ p_expected_relationship_id: 'reviewed-period', p_code: 'fixture-code', p_mode: 'continue', p_previous_relationship_id: 'archived-period' });
+    expect(JSON.parse(init.body as string)).toEqual({ p_expected_relationship_id: 'reviewed-period', p_expected_relationship_session_id: '00000000-0000-4000-8000-000000000090', p_code: 'fixture-code', p_mode: 'continue', p_previous_relationship_id: 'archived-period' });
   });
 
   it('uses the checked token for identity reads and still validates the returned account', async () => {
     vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce(sessionResult('A')).mockResolvedValue(sessionResult('B'));
     mocks.network.mockResolvedValue(response({ status: 'ready_solo', user_id: 'A', role: 'dom', linked_partner_id: null,
-      partner_role: null, sub_user_id: null, dom_user_id: 'A', relationship_id: 'period-A', relationship_status: 'active',
+      partner_role: null, sub_user_id: null, dom_user_id: 'A', relationship_id: 'period-A', relationship_status: 'active', relationship_session_id: '00000000-0000-4000-8000-000000000090',
       participant_id: 'member-A', permissions: {}, lifecycle_ready: false, timezone: 'UTC', partner_link_code: null }));
     expect(await fetchIdentity('A')).toMatchObject({ currentUserId: 'A', domUserId: 'A', timezone: 'UTC' });
     const init = mocks.network.mock.calls[0][1] as RequestInit;

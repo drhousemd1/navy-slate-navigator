@@ -51,7 +51,7 @@ describe('authoritative relationship resolution', () => {
 describe('server identity receipts and relationship namespaces', () => {
   const receipt = {
     status: 'ready_solo', user_id: 'dom-account', role: 'dom', linked_partner_id: null, partner_role: null,
-    sub_user_id: null, dom_user_id: 'dom-account', relationship_id: 'period-1', relationship_status: 'active',
+    sub_user_id: null, dom_user_id: 'dom-account', relationship_id: 'period-1', relationship_status: 'active', relationship_session_id: '00000000-0000-4000-8000-000000000090',
     participant_id: 'member-1', permissions: { task_complete: 'both' }, lifecycle_ready: false,
     timezone: 'America/Boise', partner_link_code: null,
   };
@@ -73,6 +73,19 @@ describe('server identity receipts and relationship namespaces', () => {
   it('uses a different cache namespace for a fresh period even when both people are unchanged', () => {
     const identity = decodeIdentity('dom-account', receipt);
     expect(identityCacheScope(identity)).not.toBe(identityCacheScope({ ...identity, relationshipId: 'period-2' }));
+  });
+  it.each([undefined, null, 'not-a-uuid'])('never turns an absent or malformed generation into write authority: %s', session => {
+    const state = decodeIdentity('dom-account', { ...receipt, relationship_session_id: session, lifecycle_ready: true });
+    expect(state.relationshipSessionId).toBeNull(); expect(state.lifecycleReady).toBe(false);
+  });
+  it('preserves an owned active generation for malformed-link repair without exposing shared role IDs', () => {
+    const state = decodeIdentity('dom-account', { ...receipt, status: 'incomplete_partner', lifecycle_ready: true });
+    expect(state).toMatchObject({ status: 'invalid', canAccessData: false, relationshipSessionId: receipt.relationship_session_id, lifecycleReady: true, subUserId: null, domUserId: null });
+    expect(decodeIdentity('dom-account', { ...receipt, status: 'incomplete_partner', relationship_status: 'archived' }).relationshipSessionId).toBeNull();
+  });
+  it('separates cache identities when Continue rotates only the relationship session', () => {
+    const first = decodeIdentity('dom-account', receipt);
+    expect(identityCacheScope(first)).not.toBe(identityCacheScope({ ...first, relationshipSessionId: '00000000-0000-4000-8000-000000000091' }));
   });
   it('requires the exact previous period in a continuation preview', () => {
     expect(decodeLinkPreview({ mode: 'continue', previous_relationship_id: 'old-period', can_continue_previous: true }))

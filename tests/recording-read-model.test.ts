@@ -13,12 +13,13 @@ function query(record: any) {
     insert: (payload: unknown) => { record.method = 'insert'; record.payload = payload; return q; }, update: (payload: unknown) => { record.method = 'update'; record.payload = payload; return q; },
     single: () => { record.single = true; return q; }, setHeader: (name: string, value: string) => { record.headers[name] = value; return q; }, abortSignal: () => q,
     then: (resolve: (value: any) => void) => {
+      if (record.rpc === 'get_my_identity') return Promise.resolve(resolve({ data: { status: 'ready_solo', relationship_status: 'active', user_id: mocks.account, relationship_id: scope.relationshipId, participant_id: scope.participantId, relationship_session_id: scope.relationshipSessionId }, error: null }));
       mocks.requests.push(record); const rows = mocks.rows[record.table] ?? []; mocks.afterRead?.();
       return Promise.resolve(resolve({ data: record.rpc ? mocks.progress : record.single ? rows[0] ?? { id: 'saved', relationship_id: 'period' } : rows.slice(record.start, record.end + 1), error: null }));
     },
   }; return q;
 }
-const scope = { backendId: 'http://127.0.0.1:28622', accountId: 'a', participantId: 'participant', relationshipId: 'period' };
+const scope = { backendId: 'http://127.0.0.1:28622', accountId: 'a', participantId: 'participant', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
 beforeEach(() => { mocks.account = 'a'; mocks.rows = {}; mocks.progress = []; mocks.requests = []; mocks.afterRead = null; });
 describe('recording data and account boundaries', () => {
   it('uses the server saved calendar, keeps tombstoned history, and pages complete activity', async () => {

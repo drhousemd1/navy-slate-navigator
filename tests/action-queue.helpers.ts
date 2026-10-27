@@ -1,13 +1,12 @@
-import type { ActionReceipt } from '@/domain/actions/types';
-import { decodeQueueEntry, type ActionQueueScope, type NewQueueEntry, type QueueEntry, type RewardCommand, type QueuedActionCommand } from '@/data/actions/contracts';
+import { decodeQueueEntry, type ActionQueueScope, type NewQueueEntry, type QueueEntry, type RewardCommand, type QueuedActionCommand, type StoredActionReceipt } from '@/data/actions/contracts';
 import type { ActionQueueStore } from '@/data/actions/store';
 import type { QueueConnection } from '@/data/actions/queue';
 
 export const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-export const scope: ActionQueueScope = { backendId: 'http://127.0.0.1:28622', accountId: uuid(1), participantId: uuid(2), relationshipId: uuid(3) };
+export const scope: ActionQueueScope = { backendId: 'http://127.0.0.1:28622', accountId: uuid(1), participantId: uuid(2), relationshipId: uuid(3), relationshipSessionId: uuid(1000) };
 export const command: RewardCommand = { commandId: uuid(4), expectedRelationshipId: scope.relationshipId, kind: 'reward_buy', rewardId: uuid(5), expectedCost: 20 };
-export const receipt = (value: QueuedActionCommand = command): { -readonly [K in keyof ActionReceipt]: ActionReceipt[K] } => ({
-  commandId: value.commandId, relationshipId: value.expectedRelationshipId, eventIds: [uuid(6)], confirmedAt: '2026-10-26T12:00:00+00:00',
+export const receipt = (value: QueuedActionCommand = command): { -readonly [K in keyof StoredActionReceipt]: StoredActionReceipt[K] } => ({
+  commandId: value.commandId, relationshipId: value.expectedRelationshipId, relationshipSessionId: scope.relationshipSessionId, eventIds: [uuid(6)], confirmedAt: '2026-10-26T12:00:00+00:00',
   balances: [{ participantId: scope.participantId, currency: 'sub', balance: 17 }], availableRewardQuantities: [], refunds: [], feedback: [],
 });
 export function deferred<T>() {
