@@ -108,7 +108,13 @@ test('atomic task completion and Undo on isolated local fixtures', {
     ...(kind==='undo'?{p_event_id:rewardId}:{p_reward_id:rewardId}),...extra});
   const rewardCommand = (a,payload) => rpc(a,'execute_reward_command',payload);
   const command = (a,payload) => rpc(a,'execute_task_command',payload);
-  const taskBody = (id,extra={}) => ({p_command_id:randomUUID(),...scopeFor(period),p_action:'task_complete',p_task_id:id,...extra});
+  // Build context only for a NEW intended action. command() never refreshes a
+  // saved payload; explicit guard probes below retain their captured context.
+  const taskProbe = (id,extra={}) => ({p_command_id:randomUUID(),...scopeFor(period),p_action:'task_complete',p_task_id:id,...extra});
+  const taskBody = async (id,extra={}) => {
+    const reviewed=await progress(dom,id);assert.ok(reviewed.expectedContext);
+    return {...taskProbe(id),p_expected_context:structuredClone(reviewed.expectedContext),...extra};
+  };
   const undoBody = (id,extra={}) => ({p_command_id:randomUUID(),...scopeFor(period),p_event_id:id,...extra});
   const undo = (a,payload) => rpc(a,'undo_action',payload);
   const progress = async (a,id) => ok(await rpc(a,'get_task_progress',{p_expected_relationship_id:period,p_task_id:id}));
@@ -157,7 +163,7 @@ test('atomic task completion and Undo on isolated local fixtures', {
     await legacyHistory(weekly,new Date(weekStart-1).toISOString());
 
     await t.test('activation preserves count-only history, fails atomically without saved timezone, and fabricates no awards',async()=>{
-      denied(await command(dom,taskBody(daily.id)),'ACCOUNTING_NOT_ENABLED');
+      denied(await command(dom,taskProbe(daily.id)),'ACCOUNTING_NOT_ENABLED');
       ok(await req('PATCH',`/rest/v1/profiles?id=eq.${sub.id}`,service,{timezone:null}));
       denied(await activate(),'TIMEZONE_REQUIRED');
       assert.equal((await rows('action_accounting_periods',`relationship_id=eq.${period}&select=*`)).length,0);
@@ -178,7 +184,7 @@ test('atomic task completion and Undo on isolated local fixtures', {
     });
 
     await t.test('both actors complete the intended role task; retry is identical and each accepted completion awards once',async()=>{
-      dailyPayload=taskBody(daily.id);
+      dailyPayload=await taskBody(daily.id);
       const results=await Promise.all([command(dom,dailyPayload),command(dom,dailyPayload)]);
       dailyReceipt=ok(results[0]); assert.deepEqual(ok(results[1]),dailyReceipt);
       assert.equal(dailyReceipt.taskProgress.currentCount,3); assert.equal(dailyReceipt.taskProgress.completed,true);
@@ -190,21 +196,21 @@ test('atomic task completion and Undo on isolated local fixtures', {
       assert.equal(originalEvent.calendar.weekStartDate,monday(subDate));
       const h=(await rows('task_completion_history',`action_event_id=eq.${originalEvent.id}&select=*`))[0];
       assert.equal(h.user_id,sub.id); assert.equal(h.completed_at,originalEvent.recorded_at);
-      denied(await command(sub,taskBody(daily.id)),'TASK_TARGET_REACHED');
+      denied(await command(sub,await taskBody(daily.id)),'TASK_TARGET_REACHED');
       denied(await command(dom,{...dailyPayload,p_task_id:weekly.id}),'COMMAND_ID_REUSED');
       denied(await command(sub,dailyPayload),'COMMAND_ACTOR_MISMATCH');
-      const completeDom=ok(await command(sub,taskBody(weekly.id)));
+      const completeDom=ok(await command(sub,await taskBody(weekly.id)));
       assert.equal(completeDom.taskProgress.timeZone,domTZ); assert.equal(completeDom.taskProgress.localDate,domDate);
       assert.equal(completeDom.taskProgress.currentCount,2); assert.equal(completeDom.pointDeltas[0].currency,'dom');
       assert.equal(await balance('dom'),17);
-      denied(await command(dom,taskBody(weekly.id)),'TASK_TARGET_REACHED');
+      denied(await command(dom,await taskBody(weekly.id)),'TASK_TARGET_REACHED');
     });
 
     await t.test('current permissions apply to new actions while accepted command retries stay confirmed',async()=>{
       ok(await rpc(dom,'set_relationship_permissions',{...scopeFor(period),p_permissions:{task_complete:'sub',task_undo:'sub'}}));
       assert.deepEqual(ok(await command(dom,dailyPayload)),dailyReceipt);
-      denied(await command(dom,taskBody(permissionTask.id)),'ACTION_NOT_ALLOWED');
-      const allowed=ok(await command(sub,taskBody(permissionTask.id)));
+      denied(await command(dom,await taskBody(permissionTask.id)),'ACTION_NOT_ALLOWED');
+      const allowed=ok(await command(sub,await taskBody(permissionTask.id)));
       denied(await undo(dom,undoBody(allowed.eventIds[0])),'ACTION_NOT_ALLOWED');
       ok(await undo(sub,undoBody(allowed.eventIds[0])));
       ok(await rpc(dom,'set_relationship_permissions',{...scopeFor(period),p_permissions:{task_complete:'both',task_undo:'both'}}));
@@ -223,12 +229,12 @@ test('atomic task completion and Undo on isolated local fixtures', {
       assert.equal((await rows('task_completion_history',`action_event_id=eq.${event.id}&select=id`)).length,0);
       denied(await req('POST','/rest/v1/task_completion_history',sub.token,{task_id:daily.id,user_id:sub.id,completed_at:event.recorded_at,action_event_id:event.id}),'ATOMIC_ACTION_COMMAND_REQUIRED');
       assert.equal((await rows('task_completion_history',`task_id=eq.${daily.id}&action_event_id=is.null&select=id`)).length,2);
-      const again=ok(await command(sub,taskBody(daily.id)));
+      const again=ok(await command(sub,await taskBody(daily.id)));
       assert.equal(again.taskProgress.currentCount,3); assert.equal(await balance('sub'),5);
     });
 
     await t.test('spent award Undo creates the exact negative balance despite task title, value, role and frequency edits',async()=>{
-      const completion=ok(await command(dom,taskBody(spend.id)));
+      const completion=ok(await command(dom,await taskBody(spend.id)));
       const before=await balance('sub'); assert.equal(before,15);
       ok(await req('PATCH',`/rest/v1/rewards?id=eq.${shop.id}`,dom.token,{cost:before}));
       const purchase=ok(await rewardCommand(sub,{...body('reward_buy',shop.id),p_expected_cost:before}));
@@ -247,22 +253,22 @@ test('atomic task completion and Undo on isolated local fixtures', {
     });
 
     await t.test('zero-point completions and definition edits preserve progress without retroactive pricing',async()=>{
-      const zeroReceipt=ok(await command(sub,taskBody(zero.id)));
+      const zeroReceipt=ok(await command(sub,await taskBody(zero.id)));
       assert.equal(zeroReceipt.pointDeltas[0].amount,0); assert.equal(await balance('sub'),5);
       ok(await undo(dom,undoBody(zeroReceipt.eventIds[0]))); assert.equal(await balance('sub'),5);
       ok(await req('PATCH',`/rest/v1/tasks?id=eq.${daily.id}`,dom.token,{points:50,frequency_count:2}));
       assert.equal((await progress(dom,daily.id)).currentCount,3);
-      denied(await command(sub,taskBody(daily.id)),'TASK_TARGET_REACHED');
+      denied(await command(sub,await taskBody(daily.id)),'TASK_TARGET_REACHED');
       ok(await req('PATCH',`/rest/v1/tasks?id=eq.${daily.id}`,dom.token,{frequency:'weekly',frequency_count:4}));
       assert.equal((await progress(dom,daily.id)).currentCount,3);
-      const extra=ok(await command(dom,taskBody(daily.id)));
+      const extra=ok(await command(dom,await taskBody(daily.id)));
       assert.equal(extra.pointDeltas[0].amount,50); assert.equal(extra.taskProgress.currentCount,4);
-      denied(await command(sub,taskBody(daily.id)),'TASK_TARGET_REACHED');
+      denied(await command(sub,await taskBody(daily.id)),'TASK_TARGET_REACHED');
     });
 
     await t.test('concurrent completions cannot exceed the target or double-credit the actor wallet',async()=>{
       const before=await balance('sub');
-      const a=taskBody(race.id),b=taskBody(race.id);
+      const a=await taskBody(race.id),b=await taskBody(race.id);
       const results=await Promise.all([command(dom,a),command(sub,b)]);
       assert.equal(results.filter(x=>x.status<300).length,1);
       denied(results.find(x=>x.status>=400),'TASK_TARGET_REACHED');
@@ -273,9 +279,9 @@ test('atomic task completion and Undo on isolated local fixtures', {
     });
 
     await t.test('soft removal retains evidence and permits Undo; direct counter/history/balance and stale-period bypasses fail',async()=>{
-      const complete=ok(await command(sub,taskBody(deleted.id)));
+      const complete=ok(await command(sub,await taskBody(deleted.id)));
       ok(await req('PATCH',`/rest/v1/tasks?id=eq.${deleted.id}`,dom.token,{deleted_at:new Date().toISOString()}));
-      denied(await command(sub,taskBody(deleted.id)),'TASK_DELETED');
+      denied(await command(sub,await taskBody(deleted.id)),'TASK_DELETED');
       const undone=ok(await undo(dom,undoBody(complete.eventIds[0])));
       assert.equal(undone.taskProgress.deleted,true); assert.equal(undone.pointDeltas[0].amount,-4);
       assert.equal((await rows('action_events',`id=eq.${complete.eventIds[0]}&select=id`)).length,1);
@@ -283,8 +289,8 @@ test('atomic task completion and Undo on isolated local fixtures', {
       denied(await req('PATCH',`/rest/v1/tasks?id=eq.${daily.id}`,sub.token,{usage_data:[999,0,0,0,0,0,0]}),'ATOMIC_TASK_COMMAND_REQUIRED');
       denied(await rpc(sub,'record_task_completion',{task_id_param:daily.id,user_id_param:sub.id}),'ATOMIC_ACTION_COMMAND_REQUIRED');
       denied(await req('PATCH',`/rest/v1/profiles?id=eq.${sub.id}`,sub.token,{points:999}),'ATOMIC_BALANCE_COMMAND_REQUIRED');
-      denied(await command(stranger,taskBody(daily.id)),'STALE_RELATIONSHIP');
-      denied(await command(sub,{...taskBody(daily.id),p_expected_relationship_id:randomUUID()}),'STALE_RELATIONSHIP');
+      denied(await command(stranger,await taskBody(daily.id)),'STALE_RELATIONSHIP');
+      denied(await command(sub,{...await taskBody(daily.id),p_expected_relationship_id:randomUUID()}),'STALE_RELATIONSHIP');
       denied(await rpc(sub,'_actions_task_progress',{p_period:period,p_task:daily.id,p_at:'2020-01-01T00:00:00Z'}));
       const before=hash(await rows('tasks',`relationship_id=eq.${period}&select=*`));
       await progress(sub,daily.id);
@@ -300,7 +306,9 @@ test('atomic task completion and Undo on isolated local fixtures', {
       const fresh=await task(5,1);
       assert.equal((await rows('action_accounting_periods',`relationship_id=eq.${period}&select=accounting_enabled`))[0].accounting_enabled,true);
       assert.equal((await progress(sub,fresh.id)).currentCount,0);assert.equal(await balance('sub'),0);
-      denied(await command(sub,taskBody(daily.id)),'TASK_NOT_FOUND');
+      // An intentionally absent old target cannot produce new progress. Keep its
+      // originally reviewed context on this explicit negative probe.
+      denied(await command(sub,taskProbe(daily.id,{p_expected_context:dailyPayload.p_expected_context})),'TASK_NOT_FOUND');
       assert.equal((await rows('action_events',`relationship_id=eq.${previous}&select=id`,sub.token)).length,0);
     });
   } finally {

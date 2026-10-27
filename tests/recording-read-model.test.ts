@@ -1,3 +1,4 @@
+import { ruleContext, uuid } from './action-queue.helpers';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readRecordingData, recordingDefinitionValues, recordingKey, recordingUndoReason, removeRecordingDefinition, saveRecordingDefinition, savedWeekday } from '@/data/recordings/readModel';
 const mocks = vi.hoisted(() => ({ account: 'a', rows: {} as Record<string, any[]>, requests: [] as any[], progress: [] as any[], afterRead: null as (() => void) | null }));
@@ -23,11 +24,11 @@ const scope = { backendId: 'http://127.0.0.1:28622', accountId: 'a', participant
 beforeEach(() => { mocks.account = 'a'; mocks.rows = {}; mocks.progress = []; mocks.requests = []; mocks.afterRead = null; });
 describe('recording data and account boundaries', () => {
   it('uses the server saved calendar, keeps tombstoned history, and pages complete activity', async () => {
-    mocks.rows.rules = [{ id: 'r', relationship_id: 'period', deleted_at: null }, { id: 'removed', relationship_id: 'period', deleted_at: '2026-01-01' }];
-    mocks.progress = [{ subjectType: 'rule', subjectId: 'r', localDate: '2026-10-26', timeZone: 'Pacific/Kiritimati', usageData: [2,0,0,0,0,0,0] }];
+    mocks.rows.rules = [{ id: uuid(73), relationship_id: 'period', deleted_at: null }, { id: 'removed', relationship_id: 'period', deleted_at: '2026-01-01' }];
+    mocks.progress = [{ subjectType: 'rule', subjectId: uuid(73), beneficiaryParticipantId: uuid(2), localDate: '2026-10-26', weekStartDate: '2026-10-26', timeZone: 'Pacific/Kiritimati', usageData: [2,0,0,0,0,0,0], expectedContext: { ...ruleContext(), sub: { ...ruleContext().sub, timeZone: 'Pacific/Kiritimati' } } }];
     mocks.rows.action_events = Array.from({ length: 501 }, (_, i) => ({ id: String(i), rule_id: 'removed', relationship_id: 'period' }));
     const data = await readRecordingData(scope, 'rule', true);
-    expect(data.definitions.map(x => x.id)).toEqual(['r']); expect(data.events).toHaveLength(501);
+    expect(data.definitions.map(x => x.id)).toEqual([uuid(73)]); expect(data.events).toHaveLength(501);
     expect(data.progress[0].usageData[0]).toBe(2); expect(data.progress[0].timeZone).toBe('Pacific/Kiritimati');
     expect(mocks.requests.filter(x => x.table === 'action_events')).toHaveLength(2);
     expect(mocks.requests.every(x => x.headers.Authorization === 'Bearer token-a')).toBe(true);
@@ -54,10 +55,20 @@ describe('recording data and account boundaries', () => {
     await expect(readRecordingData(scope, 'rule', true)).rejects.toThrow('account changed');
   });
   it('rejects foreign periods and malformed progress instead of displaying them', async () => {
-    mocks.rows.rules = [{ id: 'r', relationship_id: 'old' }]; await expect(readRecordingData(scope, 'rule', true)).rejects.toThrow('different relationship');
-    mocks.rows.rules = [{ id: 'r', relationship_id: 'period' }];mocks.progress = [{ subjectType: 'rule', subjectId: 'r', usageData: [99] }];
+    mocks.rows.rules = [{ id: uuid(73), relationship_id: 'old' }]; await expect(readRecordingData(scope, 'rule', true)).rejects.toThrow('different relationship');
+    mocks.rows.rules = [{ id: uuid(73), relationship_id: 'period' }];mocks.progress = [{ subjectType: 'rule', subjectId: uuid(73), usageData: [99] }];
     await expect(readRecordingData(scope, 'rule', true)).rejects.toThrow('Invalid weekly');
     expect(recordingKey(scope, 'rule')).not.toEqual(recordingKey({ ...scope, relationshipId: 'new' }, 'rule'));
+  });
+  it('rejects mismatched punishment values and beneficiary calendars from independent reads', async () => {
+    const { punishmentContext } = await import('./action-queue.helpers');
+    const expectedContext = punishmentContext();
+    mocks.rows.punishments = [{ id: expectedContext.subjectId, relationship_id: 'period', points: 5, dom_points: 99, deleted_at: null }];
+    mocks.progress = [{ subjectType: 'punishment', subjectId: expectedContext.subjectId, beneficiaryParticipantId: uuid(2),
+      ...expectedContext.sub, usageData: [0,0,0,0,0,0,0], expectedContext }];
+    await expect(readRecordingData(scope, 'punishment', true)).rejects.toThrow('changed while loading');
+    mocks.rows.punishments[0].dom_points = 3; mocks.progress[0].localDate = '2026-10-27';
+    await expect(readRecordingData(scope, 'punishment', true)).rejects.toThrow('changed while loading');
   });
   it('preserves zero/customization fields while excluding counters, owner, stock and arbitrary columns', () => {
     const values = recordingDefinitionValues('punishment', { title: 'P', points: 0, dom_points: 0, background_opacity: 0, focal_point_x: 0,
@@ -66,8 +77,8 @@ describe('recording data and account boundaries', () => {
     expect(() => recordingDefinitionValues('punishment', { title: 'P', points: -1, dom_points: 1 })).toThrow('whole numbers');
   });
   it('pins the intended account and period for saves without transferring ownership', async () => {
-    await saveRecordingDefinition(scope, 'rule', { id: 'r', title: 'Changed', user_id: 'wrong', usage_data: [99] }, () => true);
-    expect(mocks.requests[0]).toMatchObject({ method: 'update', payload: { title: 'Changed' }, filters: { id: 'r', relationship_id: 'period', deleted_at: null }, headers: { Authorization: 'Bearer token-a' } });
+    await saveRecordingDefinition(scope, 'rule', { id: uuid(73), title: 'Changed', user_id: 'wrong', usage_data: [99] }, () => true);
+    expect(mocks.requests[0]).toMatchObject({ method: 'update', payload: { title: 'Changed' }, filters: { id: uuid(73), relationship_id: 'period', deleted_at: null }, headers: { Authorization: 'Bearer token-a' } });
     mocks.requests = []; await expect(saveRecordingDefinition(scope, 'rule', { title: 'New' }, () => false)).rejects.toThrow('relationship changed');expect(mocks.requests).toHaveLength(0);
     await saveRecordingDefinition(scope, 'rule', { title: 'New' }, () => true);
     expect(mocks.requests[0].payload).toEqual({ title: 'New', user_id: 'a', relationship_id: 'period' });

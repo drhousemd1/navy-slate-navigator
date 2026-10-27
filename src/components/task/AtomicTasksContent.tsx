@@ -7,9 +7,9 @@ import TasksList from './TasksList';
 import { TaskActivity } from './TaskActivity';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { removeTaskDefinition, saveTaskDefinition, taskActionKey, taskPermission, useTaskActionData } from '@/data/tasks/actionReadModel';
+import { reviewedTaskContext, removeTaskDefinition, saveTaskDefinition, taskActionKey, taskPermission, useTaskActionData } from '@/data/tasks/actionReadModel';
 import type { TaskFormValues, TaskWithId } from '@/data/tasks/types';
-import { scopeKey } from '@/data/actions/contracts';
+import { scopeKey, blocksNewAction } from '@/data/actions/contracts';
 
 export function AtomicTasksContent() {
   const actions = useActionCommands();
@@ -24,7 +24,7 @@ export function AtomicTasksContent() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   useEffect(() => { setEditing(null); setEditorOpen(false); setError(null); setSaving(false); }, [key]);
-  const pending = actions.entries.some(entry => entry.canReplay && ['pending', 'sending', 'confirmation_unknown'].includes(entry.state.status));
+  const pending = actions.entries.some(entry => blocksNewAction(entry, actions.scope));
   const canManage = taskPermission(identity.permissions ?? {}, identity.currentRole, 'definition_manage');
   const canComplete = taskPermission(identity.permissions ?? {}, identity.currentRole, 'task_complete');
   const refresh = () => queryClient.invalidateQueries({ queryKey: taskActionKey(actions.scope), exact: true });
@@ -39,7 +39,12 @@ export function AtomicTasksContent() {
   const complete = async (taskId: string) => {
     if (!canComplete || pending || saving) return;
     setError(null); setSaving(true);
-    try { await actions.enqueue({ kind: 'task_complete', taskId }); }
+    try {
+      const task = query.data?.tasks.find(item => item.id === taskId && !item.deleted_at);
+      if (!task) throw new Error('Refresh and review the current task before completing it.');
+      const expectedContext = reviewedTaskContext(task, query.data?.progress[taskId]);
+      await actions.enqueue({ kind: 'task_complete', taskId, expectedContext });
+    }
     catch (e) { if (currentKey.current === key) setError(e instanceof Error ? e.message : 'Task completion could not be saved.'); }
     finally { if (currentKey.current === key) setSaving(false); }
   };
@@ -50,6 +55,9 @@ export function AtomicTasksContent() {
   }}>
     <div className="p-4 pt-6 max-w-4xl mx-auto">
       <TasksHeader onCreateTask={() => {}} />
+      {[...new Set(Object.values(query.data?.progress ?? {}).filter(value => value.expectedContext).map(value =>
+        `${value.currency === 'dom' ? 'Dom' : 'Sub'} actions: ${value.localDate} · ${value.timeZone}`))].map(calendar =>
+        <p key={calendar} className="mb-2 text-xs text-gray-300">{calendar}</p>)}
       {(actions.error || query.error || error) && <div role="alert" className="mb-3 rounded border border-amber-500 bg-navy p-3 text-white">
         <p>{error || query.error?.message || actions.error}</p>
         <button className="underline" onClick={() => { setError(null); void actions.refresh(); }}>Refresh confirmed data</button>

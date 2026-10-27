@@ -1,3 +1,4 @@
+import type { TaskExpectedContext, RuleExpectedContext, PunishmentExpectedContext, ActionCalendar } from '@/domain/actions/types';
 import { decodeQueueEntry, type ActionQueueScope, type NewQueueEntry, type QueueEntry, type RewardCommand, type QueuedActionCommand, type StoredActionReceipt } from '@/data/actions/contracts';
 import type { ActionQueueStore } from '@/data/actions/store';
 import type { QueueConnection } from '@/data/actions/queue';
@@ -48,3 +49,11 @@ export class TestConnection implements QueueConnection {
   subscribe = (changed: () => void) => { this.listeners.add(changed); return () => { this.listeners.delete(changed); }; };
   setOnline(value: boolean) { this.online = value; for (const listener of this.listeners) listener(); }
 }
+
+export const calendarContext = (participantId = scope.participantId): ActionCalendar => ({ participantId, timeZone: 'America/Boise', localDate: '2026-10-26', weekStartDate: '2026-10-26' });
+export const taskContext = (subjectId = uuid(71)): TaskExpectedContext => ({ version: 1, kind: 'task_complete', subjectId,
+  beneficiaryParticipantId: scope.participantId, currency: 'sub', points: 5, frequency: 'daily', target: 2,
+  timeZone: 'America/Boise', localDate: '2026-10-26', weekStartDate: '2026-10-26' });
+export const ruleContext = (subjectId = uuid(73)): RuleExpectedContext => ({ version: 1, kind: 'rule_violation', subjectId, sub: calendarContext() });
+export const punishmentContext = (subjectId = uuid(75)): PunishmentExpectedContext => ({ version: 1, kind: 'punishment_apply', subjectId,
+  subDeduction: 5, domAward: 3, sub: calendarContext(), dom: calendarContext(uuid(78)) });

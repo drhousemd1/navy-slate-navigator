@@ -108,9 +108,18 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
     ...(kind==='undo'?{p_event_id:rewardId}:{p_reward_id:rewardId}),...extra});
   const rewardCommand = (a,payload) => rpc(a,'execute_reward_command',payload);
   const command = (a,payload) => rpc(a,'execute_recording_command',payload);
-  const record = (kind,id,extra={}) => ({p_command_id:randomUUID(),...scopeFor(period),p_action:kind,
+  // Read assumptions at creation only; retries send the original object.
+  const recordProbe = (kind,id,extra={}) => ({p_command_id:randomUUID(),...scopeFor(period),p_action:kind,
     ...(kind==='rule_violation'?{p_rule_id:id}:{p_punishment_id:id}),...extra});
-  const taskBody = (id,extra={}) => ({p_command_id:randomUUID(),...scopeFor(period),p_action:'task_complete',p_task_id:id,...extra});
+  const record = async (kind,id,extra={},reader=dom) => {
+    const reviewed=await progress(reader,kind==='rule_violation'?'rule':'punishment',id);assert.ok(reviewed.expectedContext);
+    return {...recordProbe(kind,id),p_expected_context:structuredClone(reviewed.expectedContext),...extra};
+  };
+  const taskBody = async (id,extra={}) => {
+    const reviewed=ok(await rpc(dom,'get_task_progress',{p_expected_relationship_id:period,p_task_id:id}));assert.ok(reviewed.expectedContext);
+    return {p_command_id:randomUUID(),...scopeFor(period),p_action:'task_complete',p_task_id:id,
+      p_expected_context:structuredClone(reviewed.expectedContext),...extra};
+  };
   const undoBody = (id,extra={}) => ({p_command_id:randomUUID(),...scopeFor(period),p_event_id:id,...extra});
   const undo = (a,payload) => rpc(a,'undo_action',payload);
   const progress = async (a,type,id) => ok(await rpc(a,'get_recording_progress',{p_expected_relationship_id:period,p_subject_type:type,p_subject_id:id}));
@@ -165,7 +174,7 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
       relationship_id:period,day_of_week:0,points_deducted:99,applied_date:null}));
 
     await t.test('service cutover freezes raw legacy history with count-only calendar and no fabricated point awards',async()=>{
-      denied(await command(sub,record('rule_violation',rule.id)),'ACCOUNTING_NOT_ENABLED');
+      denied(await command(sub,recordProbe('rule_violation',rule.id)),'ACCOUNTING_NOT_ENABLED');
       denied(await rpc(sub,'activate_action_accounting',{p_relationship_id:period}));
       ok(await req('PATCH',`/rest/v1/profiles?id=eq.${sub.id}`,service,{timezone:null}));
       denied(await activate(),'TIMEZONE_REQUIRED');
@@ -189,7 +198,7 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
 
     await t.test('either actor may log violations repeatedly; retries are one event, never a point penalty or automatic punishment',async()=>{
       const beforeSub=await balance('sub'),beforeDom=await balance('dom'),beforePunishment=hash(await rows('punishment_history'));
-      rulePayload=record('rule_violation',rule.id);
+      rulePayload=await record('rule_violation',rule.id);
       const responses=await Promise.all([command(dom,rulePayload),command(dom,rulePayload)]);
       ruleReceipt=ok(responses[0]);assert.deepEqual(ok(responses[1]),ruleReceipt);
       assert.deepEqual(ruleReceipt.pointDeltas,[]);assert.equal(ruleReceipt.recordingProgress.currentCount,2);
@@ -200,7 +209,7 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
       const h=(await rows('rule_violations',`action_event_id=eq.${e.id}&select=*`))[0];
       assert.equal(h.user_id,sub.id);assert.equal(h.violation_date,e.recorded_at);
       assert.equal(h.day_of_week,(new Date(`${e.calendar.localDate}T00:00:00Z`).getUTCDay()+6)%7);
-      const next=ok(await command(sub,record('rule_violation',rule.id)));assert.equal(next.recordingProgress.currentCount,3);
+      const next=ok(await command(sub,await record('rule_violation',rule.id)));assert.equal(next.recordingProgress.currentCount,3);
       assert.equal(await balance('sub'),beforeSub);assert.equal(await balance('dom'),beforeDom);assert.equal(hash(await rows('punishment_history')),beforePunishment);
       denied(await command(dom,{...rulePayload,p_rule_id:otherRule.id}),'COMMAND_ID_REUSED');
       denied(await command(sub,rulePayload),'COMMAND_ACTOR_MISMATCH');
@@ -208,7 +217,7 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
     });
 
     await t.test('Punish clamps the actual Sub debit and awards full independent Dom points with both saved calendars',async()=>{
-      punishmentPayload=record('punishment_apply',punishment.id);
+      punishmentPayload=await record('punishment_apply',punishment.id);
       const responses=await Promise.all([command(dom,punishmentPayload),command(dom,punishmentPayload)]);
       punishmentReceipt=ok(responses[0]);assert.deepEqual(ok(responses[1]),punishmentReceipt);
       assert.deepEqual(punishmentReceipt.pointDeltas,[{participantId:domParticipant,currency:'dom',amount:4},{participantId:subParticipant,currency:'sub',amount:-3}]);
@@ -224,7 +233,7 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
       assert.notEqual(ledger[0].calendar.localDate,ledger[1].calendar.localDate);
       const h=(await rows('punishment_history',`action_event_id=eq.${e.id}&select=*`))[0];
       assert.equal(h.points_deducted,3);assert.equal(h.user_id,sub.id);assert.equal(h.applied_date,e.recorded_at);
-      secondPunishment=ok(await command(sub,record('punishment_apply',punishment.id)));
+      secondPunishment=ok(await command(sub,await record('punishment_apply',punishment.id)));
       assert.equal(secondPunishment.pointDeltas.find(x=>x.currency==='sub').amount,0);assert.equal(await balance('dom'),9);
       assert.equal(secondPunishment.recordingProgress.currentCount,3);
       assert.equal((await rows('punishments',`id=eq.${punishment.id}&select=dom_supply`))[0].dom_supply,0);
@@ -235,11 +244,11 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
     await t.test('all four recording and Undo permissions apply to new commands, while confirmed retry receipts remain stable',async()=>{
       ok(await rpc(dom,'set_relationship_permissions',{...scopeFor(period),p_permissions:{rule_violation:'dom',rule_violation_undo:'dom',punishment_apply:'sub',punishment_undo:'sub'}}));
       assert.deepEqual(ok(await command(dom,punishmentPayload)),punishmentReceipt);
-      denied(await command(sub,record('rule_violation',otherRule.id)),'ACTION_NOT_ALLOWED');
-      denied(await command(dom,record('punishment_apply',zero.id)),'ACTION_NOT_ALLOWED');
+      denied(await command(sub,await record('rule_violation',otherRule.id)),'ACTION_NOT_ALLOWED');
+      denied(await command(dom,await record('punishment_apply',zero.id)),'ACTION_NOT_ALLOWED');
       denied(await undo(sub,undoBody(ruleReceipt.eventIds[0])),'ACTION_NOT_ALLOWED');
       denied(await undo(dom,undoBody(punishmentReceipt.eventIds[0])),'ACTION_NOT_ALLOWED');
-      const allowed=ok(await command(sub,record('punishment_apply',zero.id)));ok(await undo(sub,undoBody(allowed.eventIds[0])));
+      const allowed=ok(await command(sub,await record('punishment_apply',zero.id)));ok(await undo(sub,undoBody(allowed.eventIds[0])));
       ok(await rpc(dom,'set_relationship_permissions',{...scopeFor(period),p_permissions:{rule_violation:'both',rule_violation_undo:'both',punishment_apply:'both',punishment_undo:'both'}}));
     });
 
@@ -268,7 +277,7 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
       const e=await originalEvent(receipt);assert.equal(e.subject.title,'Synthetic punishment');assert.equal(e.definition_values.subDeduction,10);
       assert.deepEqual((await entries(receipt)).map(x=>x.calendar),(await entries(punishmentReceipt)).map(x=>x.calendar));
       assert.equal((await rows('punishment_history',`id=eq.${legacyPunishment.id}&select=*`))[0].points_deducted,99);
-      denied(await command(sub,record('punishment_apply',punishment.id)),'DEFINITION_DELETED');
+      denied(await command(sub,await record('punishment_apply',punishment.id)),'DEFINITION_DELETED');
       denied(await undo(dom,undoBody(punishmentReceipt.eventIds[0])),'ACTION_ALREADY_UNDONE');
       denied(await rewardCommand(dom,body('reward_buy',domShop.id,{p_expected_cost:9})),'INSUFFICIENT_POINTS');
       // The shared dispatcher still routes accepted reward events correctly.
@@ -276,13 +285,13 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
     });
 
     await t.test('new punishment cannot forgive a negative correction balance; zero amounts remain recordable',async()=>{
-      const completed=ok(await rpc(sub,'execute_task_command',taskBody(task.id)));assert.equal(await balance('sub'),8);
+      const completed=ok(await rpc(sub,'execute_task_command',await taskBody(task.id)));assert.equal(await balance('sub'),8);
       ok(await rewardCommand(sub,body('reward_buy',subShop.id,{p_expected_cost:8})));assert.equal(await balance('sub'),0);
       ok(await undo(dom,undoBody(completed.eventIds[0])));assert.equal(await balance('sub'),-5);
-      const receipt=ok(await command(sub,record('punishment_apply',negative.id)));
+      const receipt=ok(await command(sub,await record('punishment_apply',negative.id)));
       assert.equal(receipt.pointDeltas.find(x=>x.currency==='sub').amount,0);assert.equal(await balance('sub'),-5);
       ok(await undo(dom,undoBody(receipt.eventIds[0])));assert.equal(await balance('sub'),-5);
-      const noChange=ok(await command(dom,record('punishment_apply',zero.id)));
+      const noChange=ok(await command(dom,await record('punishment_apply',zero.id)));
       assert.deepEqual(noChange.pointDeltas,[{participantId:subParticipant,currency:'sub',amount:0}]);
       assert.equal((await originalEvent(noChange)).definition_values.domAwardOmittedReason,'zero_configured_award');
       assert.equal(noChange.feedback.length,1);ok(await undo(sub,undoBody(noChange.eventIds[0])));
@@ -290,8 +299,8 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
 
     await t.test('a failure after the Sub delta rolls back both wallets, history, outbox and receipt',async()=>{
       ok(await req('PATCH',`/rest/v1/tasks?id=eq.${task.id}`,dom.token,{points:10}));
-      ok(await rpc(sub,'execute_task_command',taskBody(task.id)));assert.equal(await balance('sub'),5);
-      const before=await snapshot(),payload=record('punishment_apply',overflow.id);
+      ok(await rpc(sub,'execute_task_command',await taskBody(task.id)));assert.equal(await balance('sub'),5);
+      const before=await snapshot(),payload=await record('punishment_apply',overflow.id);
       const failed=await command(dom,payload);denied(failed);assert.equal(failed.data.code,'22003');
       assert.deepEqual(await snapshot(),before);
       assert.equal((await rows('action_command_receipts',`command_id=eq.${payload.p_command_id}&select=id`)).length,0);
@@ -309,11 +318,11 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
       ok(await rpc(dom,'set_relationship_permissions',{...scopeFor(period),p_permissions:{definition_manage:'dom'}}));
       denied(await req('PATCH',`/rest/v1/rules?id=eq.${rule.id}`,sub.token,{title:'Disallowed'}),'ACTION_NOT_ALLOWED');
       ok(await req('PATCH',`/rest/v1/rules?id=eq.${rule.id}`,dom.token,{deleted_at:now}));
-      denied(await command(sub,record('rule_violation',rule.id)),'DEFINITION_DELETED');
-      denied(await command(stranger,record('rule_violation',otherRule.id)),'STALE_RELATIONSHIP');
-      denied(await command(null,record('punishment_apply',zero.id)));
-      denied(await command(sub,record('punishment_apply',zero.id,{p_rule_id:otherRule.id})),'INVALID_ACTION_COMMAND');
-      denied(await command(sub,record('rule_violation',otherRule.id,{p_expected_relationship_id:randomUUID()})),'STALE_RELATIONSHIP');
+      denied(await command(sub,await record('rule_violation',rule.id)),'DEFINITION_DELETED');
+      denied(await command(stranger,await record('rule_violation',otherRule.id)),'STALE_RELATIONSHIP');
+      denied(await command(null,await record('punishment_apply',zero.id)));
+      denied(await command(sub,await record('punishment_apply',zero.id,{p_rule_id:otherRule.id})),'INVALID_ACTION_COMMAND');
+      denied(await command(sub,await record('rule_violation',otherRule.id,{p_expected_relationship_id:randomUUID()})),'STALE_RELATIONSHIP');
       denied(await rpc(sub,'_actions_recording_calendar',{p_period:period,p_participant:domParticipant,p_at:now}));
       denied(await req('PATCH',`/rest/v1/action_point_entries?event_id=eq.${punishmentReceipt.eventIds[0]}`,sub.token,{amount:999}));
       denied(await req('PATCH',`/rest/v1/profiles?id=eq.${sub.id}`,sub.token,{points:999}),'ATOMIC_BALANCE_COMMAND_REQUIRED');
@@ -322,6 +331,8 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
 
     await t.test('solo Sub records without a phantom Dom, and solo Dom gets a clear missing-Sub rejection',async()=>{
       const paired=period;
+      const pairedRuleContext=(await progress(dom,'rule',otherRule.id)).expectedContext;
+      const pairedPunishmentContext=(await progress(dom,'punishment',zero.id)).expectedContext;
       const soloSub=await account('sub'),soloDom=await account('dom');
       ok(await rpc(soloSub,'set_my_timezone',{p_timezone:subTZ}));ok(await rpc(soloDom,'set_my_timezone',{p_timezone:domTZ}));
       for(const [a,role] of [[soloSub,'sub'],[soloDom,'dom']]) {
@@ -329,28 +340,31 @@ test('atomic rule violation, punishment and Undo on isolated local fixtures', {
         const r=await newRule(a),p=await newPunishment(10,4,a);
         ok(await req('PATCH',`/rest/v1/profiles?id=eq.${a.id}`,service,{points:2,dom_points:5}));ok(await activate());
         if(role==='sub') {
-          const receipt=ok(await command(a,record('punishment_apply',p.id)));
+          const receipt=ok(await command(a,await record('punishment_apply',p.id,{},a)));
           assert.equal(receipt.pointDeltas.length,1);assert.equal(receipt.pointDeltas[0].amount,-2);
           assert.equal((await originalEvent(receipt)).definition_values.domAwardOmittedReason,'dom_participant_absent');
           assert.equal((await rows('action_wallets',`relationship_id=eq.${period}&select=*`)).length,1);
-          ok(await command(a,record('rule_violation',r.id)));ok(await undo(a,undoBody(receipt.eventIds[0])));assert.equal(await balance('sub'),2);
+          ok(await command(a,await record('rule_violation',r.id,{},a)));ok(await undo(a,undoBody(receipt.eventIds[0])));assert.equal(await balance('sub'),2);
         } else {
-          denied(await command(a,record('rule_violation',r.id)),'SUB_PARTICIPANT_REQUIRED');
-          denied(await command(a,record('punishment_apply',p.id)),'SUB_PARTICIPANT_REQUIRED');
+          // No Sub exists to produce a new context. Reuse a frozen real context
+          // solely to reach the pre-context missing-participant guard.
+          denied(await command(a,recordProbe('rule_violation',r.id,{p_expected_context:pairedRuleContext})),'SUB_PARTICIPANT_REQUIRED');
+          denied(await command(a,recordProbe('punishment_apply',p.id,{p_expected_context:pairedPunishmentContext})),'SUB_PARTICIPANT_REQUIRED');
         }
       }
       period=paired;
     });
 
     await t.test('fresh same-pair periods cannot inherit old counts or reverse old activity',async()=>{
-      const previous=period;await setReady(dom,true);await setReady(sub,true);
+      const previous=period,oldRuleContext=(await progress(dom,'rule',otherRule.id)).expectedContext;
+      await setReady(dom,true);await setReady(sub,true);
       const solo=ok(await rpc(dom,'unlink_my_partner',{...scopeFor(period)}));fixturePeriods.add(solo.relationship_id);
       fixturePeriods.add((await identity(sub)).relationship_id);period=await link(dom,sub);
       denied(await undo(dom,undoBody(secondPunishment.eventIds[0],{p_expected_relationship_id:previous})),'STALE_RELATIONSHIP');
       const r=await newRule();
       assert.equal((await rows('action_accounting_periods',`relationship_id=eq.${period}&select=accounting_enabled`))[0].accounting_enabled,true);assert.equal((await progress(sub,'rule',r.id)).currentCount,0);
       assert.equal(await balance('sub'),0);assert.equal(await balance('dom'),0);
-      denied(await command(sub,record('rule_violation',otherRule.id)),'RECORDING_SUBJECT_NOT_FOUND');
+      denied(await command(sub,recordProbe('rule_violation',otherRule.id,{p_expected_context:oldRuleContext})),'RECORDING_SUBJECT_NOT_FOUND');
       assert.equal((await rows('action_events',`relationship_id=eq.${previous}&select=id`,sub.token)).length,0);
     });
   } finally {

@@ -1,3 +1,4 @@
+import { blocksNewAction } from '@/data/actions/contracts';
 import { useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -8,7 +9,7 @@ export function TaskActivity({ data }: { data: TaskActionData | undefined }) {
   const actions = useActionCommands();
   const identity = useUserIds();
   const [error, setError] = useState<string | null>(null);
-  const busy = actions.entries.some(entry => entry.canReplay && ['pending', 'sending', 'confirmation_unknown'].includes(entry.state.status));
+  const busy = actions.entries.some(entry => blocksNewAction(entry, actions.scope));
   const undo = async (eventId: string) => { setError(null); try { await actions.enqueue({ kind: 'undo', eventId }); } catch (e) { setError(e instanceof Error ? e.message : 'Undo could not be saved.'); } };
   return <section className="mb-6 space-y-3 text-white" aria-label="Task actions">
     <SavedActions />

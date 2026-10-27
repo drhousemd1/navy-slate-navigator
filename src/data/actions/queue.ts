@@ -1,5 +1,5 @@
 import {
-  decodeActionReceipt, decodeActionScope, decodeActionCommand, scopeKey,
+  decodeActionReceipt, decodeActionScope, decodeActionCommand, scopeKey, needsContextReview, blocksNewAction,
   type ActionProblem, type ActionQueueScope, type StoredActionScope, type CommandOutcome, type QueueEntry, type ActionIntent, type ActionTransport, type ReceiptRecoveryOutcome,
 } from './contracts';
 import type { ActionQueueStore } from './store';
@@ -120,9 +120,9 @@ export class ActionCommandQueue {
     const entries = await this.options.store.list();
     if (generation !== this.generation) return [];
     return entries.filter(e => e.scope.backendId === scope.backendId && e.scope.accountId === scope.accountId)
-      .sort((a, b) => a.sequence - b.sequence).map(entry => ({ ...entry, canReplay: this.same(entry.scope),
-        canCancel: this.same(entry.scope) && entry.state.status === 'pending' && !entry.everSent && !entry.lease,
-        canReconcile: !this.same(entry.scope) && entry.state.status !== 'confirmed' && (!entry.lease || entry.lease.until <= this.now()) }));
+      .sort((a, b) => a.sequence - b.sequence).map(entry => ({ ...entry, canReplay: this.same(entry.scope) && !needsContextReview(entry),
+        canCancel: this.same(entry.scope) && !needsContextReview(entry) && entry.state.status === 'pending' && !entry.everSent && !entry.lease,
+        canReconcile: (!this.same(entry.scope) || needsContextReview(entry)) && entry.state.status !== 'confirmed' && (!entry.lease || entry.lease.until <= this.now()) }));
   }
 
   /** Historical scopes are immutable. Only an authenticated read can recover
@@ -134,7 +134,7 @@ export class ActionCommandQueue {
     const entry = (await this.options.store.list()).find(row => row.command.commandId === commandId);
     if (!isCurrent() || !entry || entry.scope.backendId !== context.backendId || entry.scope.accountId !== context.accountId) throw new Error('This receipt is unavailable in the current account.');
     if (entry.state.status === 'confirmed') return 'confirmed';
-    if (this.same(entry.scope) || (entry.lease && entry.lease.until > this.now())) throw new Error('This action is not ready for historical receipt recovery.');
+    if ((this.same(entry.scope) && !needsContextReview(entry)) || (entry.lease && entry.lease.until > this.now())) throw new Error('This action is not ready for historical receipt recovery.');
     const controller = new AbortController(); this.recoveryRequests.add(controller);
     let timeout: ReturnType<typeof setTimeout>;
     let cancel: () => void;
@@ -169,7 +169,7 @@ export class ActionCommandQueue {
   async cancelUnsent(commandId: string): Promise<boolean> {
     let cancelled = false;
     await this.options.store.update(commandId, entry => {
-      if (!this.same(entry.scope) || entry.state.status !== 'pending' || entry.everSent || entry.lease) return entry;
+      if (!this.same(entry.scope) || needsContextReview(entry) || entry.state.status !== 'pending' || entry.everSent || entry.lease) return entry;
       cancelled = true; return null;
     });
     if (cancelled) { this.notify(); this.kick(); }
@@ -182,7 +182,7 @@ export class ActionCommandQueue {
   async retry(commandId: string): Promise<void> {
     if (this.disposed) throw new Error('This queue has been disposed.');
     const result = await this.options.store.update(commandId, entry => {
-      if (!this.same(entry.scope) || entry.state.status === 'confirmed' || (entry.lease && entry.lease.until > this.now())) throw new Error('Action is not ready to retry in this account and period');
+      if (!this.same(entry.scope) || needsContextReview(entry) || entry.state.status === 'confirmed' || (entry.lease && entry.lease.until > this.now())) throw new Error('Action is not ready to retry in this account and period');
       return { ...entry, state: { status: entry.everSent && entry.state.status !== 'rejected' ? 'confirmation_unknown' : 'pending', command: entry.command },
         nextAttemptAt: this.now(), problem: null, lease: null, updatedAt: this.now() };
     });
@@ -209,8 +209,8 @@ export class ActionCommandQueue {
       if (!this.same(scope) || generation !== this.generation) return;
       // Preserve order: a possibly-committed purchase must be reconciled before
       // a later use/delete. Definitively rejected entries do not block others.
-      const candidate = rows.find(e => ['pending', 'sending', 'confirmation_unknown'].includes(e.state.status));
-      if (!candidate) return;
+      const candidate = rows.find(e => ['pending', 'sending', 'confirmation_unknown'].includes(e.state.status) && (!needsContextReview(e) || blocksNewAction(e, scope)));
+      if (!candidate || needsContextReview(candidate)) return;
       const forced = this.manualRetries.has(candidate.command.commandId);
       if (candidate.lease && candidate.lease.until > this.now()) { this.schedule(candidate.lease.until); return; }
       // A tab closed/crashed after saving 'sending'. Its expired lease never
@@ -228,7 +228,7 @@ export class ActionCommandQueue {
       let previous: QueueEntry | null = null;
       const claimed = await this.options.store.update(candidate.command.commandId, current => {
         if (!this.same(scope) || generation !== this.generation || scopeKey(current.scope) !== scopeKey(scope) ||
-            current.state.status === 'confirmed' || (!forced && current.state.status === 'rejected') ||
+            needsContextReview(current) || current.state.status === 'confirmed' || (!forced && current.state.status === 'rejected') ||
             (current.lease && current.lease.until > this.now()) ||
             (!forced && (current.attempts >= this.maxAttempts || current.problem?.retryable === false || current.nextAttemptAt > this.now()))) return current;
         previous = current;

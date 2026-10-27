@@ -1,3 +1,5 @@
+import { decodeQueueEntry } from '@/data/actions/contracts';
+import { taskContext, uuid, scope as queueScope } from './action-queue.helpers';
 import React from 'react';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -21,27 +23,33 @@ vi.mock('@/components/TaskEditor', () => ({ default: () => null }));
 vi.mock('@/components/task/TaskIcon', () => ({ default: () => null }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {}, supabaseBackendId: 'local' }));
 vi.mock('@/data/tasks/actionReadModel', async original => ({ ...await original<any>(), useTaskActionData: () => ({ data: mocks.data, error: null, isError: false }) }));
-const task = { id: 'task', title: 'Morning task', description: '', frequency: 'daily', frequency_count: 2, points: 5, priority: 'medium', is_dom_task: false, completed: true, usage_data: [99,99,99,99,99,99,99] };
-const progress = { taskId: 'task', beneficiaryParticipantId: 'sub-participant', currency: 'sub', frequency: 'daily', target: 2, currentCount: 0, usageData: [0,0,0,0,0,0,0], completed: false,
+const task = { id: uuid(71), title: 'Morning task', description: '', frequency: 'daily', frequency_count: 2, points: 5, priority: 'medium', is_dom_task: false, completed: true, usage_data: [99,99,99,99,99,99,99] };
+const progress = { taskId: task.id, beneficiaryParticipantId: uuid(2), currency: 'sub', frequency: 'daily', target: 2, currentCount: 0, usageData: [0,0,0,0,0,0,0], completed: false,
   localDate: '2026-10-25', weekStartDate: '2026-10-19', weekIdentifier: '2026-W43', timeZone: 'Pacific/Honolulu', lastCompletedDate: null, deleted: false };
-const completion = { id: 'completion', task_id: 'task', kind: 'task_completed', provenance: 'command', recorded_at: '2026-10-25T13:00:00Z', subject: { title: 'Original task name', role: 'sub' }, actor_participant_id: 'sub-participant', beneficiary_participant_id: 'sub-participant', calendar: { localDate: '2026-10-25', timeZone: 'Pacific/Honolulu' } };
+const completion = { id: 'completion', task_id: task.id, kind: 'task_completed', provenance: 'command', recorded_at: '2026-10-25T13:00:00Z', subject: { title: 'Original task name', role: 'sub' }, actor_participant_id: 'sub-participant', beneficiary_participant_id: 'sub-participant', calendar: { localDate: '2026-10-25', timeZone: 'Pacific/Honolulu' } };
 beforeEach(() => {
   mocks.actions = { scope: { accountId: 'account', participantId: 'sub-participant', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' }, mode: 'atomic', entries: [], confirmed: [], error: null, enqueue: vi.fn().mockResolvedValue(undefined), refresh: vi.fn(), retry: vi.fn(), cancelUnsent: vi.fn() };
   mocks.identity = { canAccessData: true, currentUserId: 'account', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090', currentRole: 'sub', participantId: 'sub-participant', permissions: { task_complete: 'both', task_undo: 'both', definition_manage: 'both' }, subUserId: 'account', domUserId: 'other', isLoadingUserIds: false };
-  mocks.data = { tasks: [{ ...task, deleted_at: null }], events: [], imported: [], points: [], progress: { task: { ...progress } }, progressErrors: {} };
+  mocks.data = { tasks: [{ ...task, deleted_at: null }], events: [], imported: [], points: [], progress: { [task.id]: { ...progress, expectedContext: { ...taskContext(task.id), timeZone: progress.timeZone, localDate: progress.localDate, weekStartDate: progress.weekStartDate } } }, progressErrors: {} };
   mocks.legacy.mockReset().mockReturnValue({ tasks: [], isLoading: false, error: null, checkAndReloadTasks: mocks.resets });
   mocks.toggle.mockReset().mockReturnValue({ mutateAsync: vi.fn() }); mocks.resets.mockReset();
 });
 afterEach(cleanup);
 function mount() { return render(<QueryClientProvider client={new QueryClient()}><Tasks /></QueryClientProvider>); }
 describe('mounted task page and server progress', () => {
-  it('saves task identity only; ignores stale row completion/counters and mounts no legacy reset or mutation', async () => {
+  it('saves the displayed task and its server-reviewed context; ignores stale row completion/counters and mounts no legacy reset or mutation', async () => {
     mount();
     expect(screen.getByText('0/2')).toBeTruthy();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Complete' }));
-    expect(mocks.actions.enqueue).toHaveBeenCalledWith({ kind: 'task_complete', taskId: 'task' });
+    expect(mocks.actions.enqueue).toHaveBeenCalledWith({ kind: 'task_complete', taskId: task.id, expectedContext: mocks.data.progress[task.id].expectedContext });
     expect(screen.getByText('0/2')).toBeTruthy();
     expect(mocks.legacy).not.toHaveBeenCalled(); expect(mocks.toggle).not.toHaveBeenCalled(); expect(mocks.resets).not.toHaveBeenCalled();
+  });
+  it('refuses to save when displayed points or role diverge from the server-reviewed context', async () => {
+    mocks.data.tasks[0].points = 99; mount();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Complete' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/changed while loading/);
+    expect(mocks.actions.enqueue).not.toHaveBeenCalled();
   });
   it('retains the legacy branch only for a verified disabled period', () => {
     mocks.actions.mode = 'legacy'; mount();
@@ -56,7 +64,7 @@ describe('mounted task page and server progress', () => {
     expect(screen.getByRole('alert').textContent).toContain('Status unavailable'); expect(mocks.legacy).not.toHaveBeenCalled();
   });
   it('uses weekly total and the cap, not today’s array cell', () => {
-    mocks.data.tasks[0].frequency = 'weekly'; mocks.data.progress.task = { ...progress, frequency: 'weekly', usageData: [1,1,0,0,0,0,0], currentCount: 2, completed: true };
+    mocks.data.tasks[0].frequency = 'weekly'; mocks.data.progress[task.id] = { ...progress, frequency: 'weekly', usageData: [1,1,0,0,0,0,0], currentCount: 2, completed: true };
     mount(); expect(screen.getByText('2/2')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Completed' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('Monday–Sunday · Pacific/Honolulu')).toBeTruthy();
@@ -67,13 +75,19 @@ describe('mounted task page and server progress', () => {
     expect(screen.queryByLabelText('Monday: 0 completions, today')).toBeNull();
   });
   it('keeps invalid task definitions editable without fabricating zero progress', () => {
-    mocks.data.progress = {}; mocks.data.progressErrors.task = 'The person assigned this task needs a saved timezone in Profile.';
+    mocks.data.progress = {}; mocks.data.progressErrors[task.id] = 'The person assigned this task needs a saved timezone in Profile.';
     mount(); expect(screen.getByLabelText('Task progress unavailable')).toBeTruthy(); expect(screen.queryByText('0/2')).toBeNull();
     expect(screen.getByRole('button', { name: 'Edit Morning task' })).toBeTruthy(); expect((screen.getByRole('button', { name: 'Complete' }) as HTMLButtonElement).disabled).toBe(true);
   });
   it('gates role permissions and pending uncertainty without losing the saved retry', () => {
     mocks.identity.permissions.task_complete = 'dom'; mocks.identity.permissions.definition_manage = 'dom';
-    mocks.actions.entries = [{ command: { commandId: 'pending', kind: 'task_complete' }, state: { status: 'confirmation_unknown' }, canReplay: true, canCancel: false, problem: { message: 'Retry the same action.' } }];
+    mocks.actions.scope = queueScope;
+    const command = { commandId: uuid(902), expectedRelationshipId: queueScope.relationshipId, kind: 'task_complete', taskId: task.id,
+      expectedContext: mocks.data.progress[task.id].expectedContext };
+    const saved = decodeQueueEntry({ version: 1, sequence: 1, scope: queueScope, command, createdAt: 1, updatedAt: 1,
+      state: { status: 'confirmation_unknown', command }, attempts: 1, everSent: true, nextAttemptAt: 1, lease: null,
+      problem: { code: 'CONNECTION_LOST', message: 'Retry the same action.', retryable: true } });
+    mocks.actions.entries = [{ ...saved, canReplay: true, canCancel: false, canReconcile: false }];
     mount(); expect((screen.getByRole('button', { name: 'Complete' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole('button', { name: 'Edit Morning task' })).toBeNull(); expect(screen.getByRole('button', { name: 'Retry same action' })).toBeTruthy();
   });
@@ -106,7 +120,7 @@ describe('task corrections and preserved history', () => {
     expect(within(screen.getByText('Completed: Unknown actor').closest('article')!).getByText('Recorded by: Not recorded')).toBeTruthy();
   });
   it('renders original imported timestamps without fabricated points, owner, or Undo', async () => {
-    mocks.data.imported = [{ id: 'old', task_id: 'task', completed_at: '2025-04-01T07:13:00+00:00' }];
+    mocks.data.imported = [{ id: 'old', task_id: task.id, completed_at: '2025-04-01T07:13:00+00:00' }];
     render(<TaskActivity data={mocks.data} />); await userEvent.setup().click(screen.getByText('Task History'));
     expect(screen.getByText('2025-04-01T07:13:00+00:00')).toBeTruthy(); expect(screen.getByText(/actor, affected role, timezone/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Undo completion' })).toBeNull();

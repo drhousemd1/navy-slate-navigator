@@ -1,4 +1,4 @@
-import { decodeActionScope, decodeQueueEntry, type NewQueueEntry, type QueueEntry } from './contracts';
+import { decodeActionScope, decodeActionCommand, decodeQueueEntry, type NewQueueEntry, type QueueEntry } from './contracts';
 
 export interface ActionQueueStore {
   insert(entry: NewQueueEntry): Promise<QueueEntry>;
@@ -38,6 +38,7 @@ export class IndexedDBActionQueueStore implements ActionQueueStore {
   async insert(entry: NewQueueEntry): Promise<QueueEntry> {
     // Validate before writing; malformed intent must never become a durable job.
     decodeActionScope(entry.scope);
+    decodeActionCommand(entry.command);
     decodeQueueEntry({ ...entry, sequence: 1 });
     const db = await this.open();
     return new Promise((resolve, reject) => {

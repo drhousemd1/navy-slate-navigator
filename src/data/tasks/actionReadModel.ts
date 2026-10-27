@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
 import { actionScopeToken, assertCurrentActionScope, type RewardEventRow, type RewardPointRow } from '@/data/rewards/actionReadModel';
-import type { ActionQueueScope } from '@/data/actions/contracts';
-import type { TaskProgress, Currency } from '@/domain/actions/types';
+import { taskExpectedContextSchema, type ActionQueueScope } from '@/data/actions/contracts';
+import type { TaskProgress, Currency, TaskExpectedContext } from '@/domain/actions/types';
 import type { TaskFormValues, TaskWithId } from './types';
 
 export interface TaskEventRow extends Omit<RewardEventRow, 'reward_id'> { task_id: string }
@@ -16,7 +16,7 @@ export interface TaskActionData {
 }
 const integer = z.number().int().nonnegative();
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const progressSchema = z.object({ taskId: z.string().uuid(), beneficiaryParticipantId: z.string().uuid(), currency: z.enum(['dom', 'sub']),
+const progressSchema = z.object({ expectedContext: taskExpectedContextSchema.optional(), taskId: z.string().uuid(), beneficiaryParticipantId: z.string().uuid(), currency: z.enum(['dom', 'sub']),
   timeZone: z.string().min(1), localDate: date, weekStartDate: date, weekIdentifier: z.string(),
   frequency: z.enum(['daily', 'weekly']), target: integer.positive(), currentCount: integer,
   usageData: z.array(integer).length(7), completed: z.boolean(), lastCompletedDate: date.nullable(), deleted: z.boolean() });
@@ -28,10 +28,22 @@ export function decodeTaskProgress(value: unknown): TaskProgress {
   if (count !== progress.currentCount || progress.completed !== (count >= progress.target)) throw new Error('Invalid task counters.');
   return progress;
 }
+/** A separately fetched row must match the server facts whose calendar the card shows. */
+export function reviewedTaskContext(task: Pick<TaskDefinition, 'id' | 'points' | 'is_dom_task' | 'frequency' | 'frequency_count'>, progress?: TaskProgress): TaskExpectedContext {
+  const context = taskExpectedContextSchema.parse(progress?.expectedContext) as TaskExpectedContext;
+  if (!progress || context.subjectId !== task.id || progress.taskId !== task.id || context.points !== task.points ||
+      context.currency !== (task.is_dom_task ? 'dom' : 'sub') || context.frequency !== task.frequency || context.target !== task.frequency_count ||
+      context.beneficiaryParticipantId !== progress.beneficiaryParticipantId || context.currency !== progress.currency ||
+      context.frequency !== progress.frequency || context.target !== progress.target || context.timeZone !== progress.timeZone ||
+      context.localDate !== progress.localDate || context.weekStartDate !== progress.weekStartDate) throw new Error('Task details changed while loading. Refresh and review them before completing it.');
+  return context;
+}
 /** Date-only arithmetic: the browser timezone must never shift the affected person's date. */
 export const taskDayIndex = (progress: Pick<TaskProgress, 'localDate' | 'weekStartDate'>) =>
   (Date.parse(`${progress.localDate}T00:00:00Z`) - Date.parse(`${progress.weekStartDate}T00:00:00Z`)) / 86_400_000;
 export const taskActionKey = (scope: ActionQueueScope | null) => ['task-action-state', supabaseBackendId, scope?.accountId, scope?.relationshipId, scope?.relationshipSessionId] as const;
+// Forward-migration RPCs are not yet present in the generated Supabase types.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const database = supabase as any;
 const fields = 'id,relationship_id,title,description,frequency,frequency_count,points,priority,icon_name,icon_color,icon_url,title_color,subtext_color,calendar_color,background_image_url,background_images,background_opacity,focal_point_x,focal_point_y,highlight_effect,image_meta,is_dom_task,created_at,updated_at,deleted_at';
 async function rows<T>(table: string, selected: string, scope: ActionQueueScope, token: string, signal?: AbortSignal): Promise<T[]> {
@@ -85,6 +97,13 @@ export async function readTaskActionData(scope: ActionQueueScope, signal?: Abort
       progress[parsed.taskId] = parsed;
     }
     for (const task of tasks.filter(task => !task.deleted_at)) if (!progress[task.id]) throw new Error('Task progress is incomplete.');
+  }
+  for (const task of tasks.filter(task => !task.deleted_at)) if (progress[task.id]) {
+    try { reviewedTaskContext(task, progress[task.id]); }
+    catch {
+      delete progress[task.id];
+      progressErrors[task.id] = 'Task details changed or could not be verified. Refresh and review this task before completing it.';
+    }
   }
   await assertCurrentActionScope(scope, token, signal);
   return { tasks, imported: imported.filter(row => !row.action_event_id), events: allEvents.filter(event => event.task_id), points, progress, progressErrors };

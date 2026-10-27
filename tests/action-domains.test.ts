@@ -3,11 +3,11 @@ import type { ActionReceipt, RecordingProgress, TaskProgress } from '@/domain/ac
 import { decodeActionCommand, decodeActionReceipt, type ActionIntent, type CommandOutcome, type QueuedActionCommand } from '@/data/actions/contracts';
 import { actionCommandRequest, createActionTransport, unknownProblem, type ActionRpcResponse } from '@/data/actions/transport';
 import { ActionCommandQueue, RewardCommandQueue } from '@/data/actions/queue';
-import { MemoryQueueStore, TestConnection, command, receipt, scope, uuid } from './action-queue.helpers';
+import { MemoryQueueStore, TestConnection, command, receipt, scope, uuid, taskContext, ruleContext, punishmentContext } from './action-queue.helpers';
 
-const taskCommand: QueuedActionCommand = { kind: 'task_complete', commandId: uuid(70), expectedRelationshipId: scope.relationshipId, taskId: uuid(71) };
-const ruleCommand: QueuedActionCommand = { kind: 'rule_violation', commandId: uuid(72), expectedRelationshipId: scope.relationshipId, ruleId: uuid(73) };
-const punishmentCommand: QueuedActionCommand = { kind: 'punishment_apply', commandId: uuid(74), expectedRelationshipId: scope.relationshipId, punishmentId: uuid(75) };
+const taskCommand: QueuedActionCommand = { kind: 'task_complete', commandId: uuid(70), expectedRelationshipId: scope.relationshipId, taskId: uuid(71), expectedContext: taskContext() };
+const ruleCommand: QueuedActionCommand = { kind: 'rule_violation', commandId: uuid(72), expectedRelationshipId: scope.relationshipId, ruleId: uuid(73), expectedContext: ruleContext() };
+const punishmentCommand: QueuedActionCommand = { kind: 'punishment_apply', commandId: uuid(74), expectedRelationshipId: scope.relationshipId, punishmentId: uuid(75), expectedContext: punishmentContext() };
 const undoCommand: QueuedActionCommand = { kind: 'undo', commandId: uuid(76), expectedRelationshipId: scope.relationshipId, eventId: uuid(77) };
 const taskProgress = (taskId = uuid(71)): TaskProgress => ({ taskId, beneficiaryParticipantId: scope.participantId, currency: 'sub',
   timeZone: 'America/Boise', localDate: '2026-10-26', weekStartDate: '2026-10-26', weekIdentifier: '2026-W44', frequency: 'daily', target: 2,
@@ -32,9 +32,9 @@ describe('shared action routing and receipt boundary', () => {
     const adapter = createActionTransport({ backendId: scope.backendId, readSession: async () => ({ accountId: scope.accountId, accessToken: 'synthetic-token' }), callRpc });
     expect((await adapter.execute(input, scope, new AbortController().signal)).kind).toBe('confirmed');
     const common = { p_command_id: input.commandId, p_expected_relationship_id: input.expectedRelationshipId, p_expected_relationship_session_id: scope.relationshipSessionId };
-    const expected = input.kind === 'task_complete' ? { name: 'execute_task_command', parameters: { ...common, p_action: 'task_complete', p_task_id: input.taskId, p_event_id: null } }
-      : input.kind === 'rule_violation' ? { name: 'execute_recording_command', parameters: { ...common, p_action: 'rule_violation', p_rule_id: input.ruleId, p_punishment_id: null, p_event_id: null } }
-      : input.kind === 'punishment_apply' ? { name: 'execute_recording_command', parameters: { ...common, p_action: 'punishment_apply', p_rule_id: null, p_punishment_id: input.punishmentId, p_event_id: null } }
+    const expected = input.kind === 'task_complete' ? { name: 'execute_task_command', parameters: { ...common, p_action: 'task_complete', p_task_id: input.taskId, p_event_id: null, p_expected_context: input.expectedContext } }
+      : input.kind === 'rule_violation' ? { name: 'execute_recording_command', parameters: { ...common, p_action: 'rule_violation', p_rule_id: input.ruleId, p_punishment_id: null, p_event_id: null, p_expected_context: input.expectedContext } }
+      : input.kind === 'punishment_apply' ? { name: 'execute_recording_command', parameters: { ...common, p_action: 'punishment_apply', p_rule_id: null, p_punishment_id: input.punishmentId, p_event_id: null, p_expected_context: input.expectedContext } }
       : { name: 'undo_action', parameters: { ...common, p_event_id: uuid(77) } };
     expect(callRpc).toHaveBeenCalledWith(expected, 'synthetic-token', expect.any(AbortSignal));
   });

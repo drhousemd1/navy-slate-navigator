@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { createSupabaseRewardTransport } from '@/data/actions/supabase-transport';
 import type { QueuedActionCommand } from '@/data/actions/contracts';
-import { command, receipt, scope, uuid } from './action-queue.helpers';
+import { command, receipt, scope, uuid, taskContext, ruleContext, punishmentContext } from './action-queue.helpers';
 
 const mocks = vi.hoisted(() => ({ network: vi.fn() }));
 vi.mock('@/integrations/supabase/client', async () => {
@@ -54,9 +54,9 @@ describe('real SDK reward adapter (network stubbed)', () => {
     vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce(session(scope.accountId)).mockResolvedValue(session(uuid(99)));
     const transport = createSupabaseRewardTransport();
     const input: QueuedActionCommand = { commandId: uuid(4), expectedRelationshipId: scope.relationshipId,
-      ...(kind === 'task_complete' ? { kind, taskId: uuid(5) }
-        : kind === 'rule_violation' ? { kind, ruleId: uuid(5) }
-        : kind === 'punishment_apply' ? { kind, punishmentId: uuid(5) } : { kind, eventId: uuid(5) }) };
+      ...(kind === 'task_complete' ? { kind, taskId: uuid(5), expectedContext: taskContext(uuid(5)) }
+        : kind === 'rule_violation' ? { kind, ruleId: uuid(5), expectedContext: ruleContext(uuid(5)) }
+        : kind === 'punishment_apply' ? { kind, punishmentId: uuid(5), expectedContext: punishmentContext(uuid(5)) } : { kind, eventId: uuid(5) }) };
     const data = receipt(input);
     const progress = { beneficiaryParticipantId: scope.participantId, timeZone: 'America/Boise', localDate: '2026-10-26',
       weekStartDate: '2026-10-26', weekIdentifier: '2026-W44', usageData: [1,0,0,0,0,0,0], currentCount: 1, deleted: false };
@@ -70,6 +70,7 @@ describe('real SDK reward adapter (network stubbed)', () => {
     expect(new Headers(init.headers).get('Authorization')).toBe(`Bearer synthetic-${scope.accountId}`);
     const payload = JSON.parse(init.body as string);
     expect(payload).toMatchObject({ p_command_id: input.commandId, p_expected_relationship_id: scope.relationshipId, [target]: uuid(5), p_expected_relationship_session_id: scope.relationshipSessionId });
+    if ('expectedContext' in input) expect(payload.p_expected_context).toEqual(input.expectedContext);
     if (kind === 'undo') expect(Object.keys(payload).sort()).toEqual(['p_command_id', 'p_event_id', 'p_expected_relationship_id', 'p_expected_relationship_session_id']);
   });
 });

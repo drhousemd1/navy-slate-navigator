@@ -1,3 +1,4 @@
+import { blocksNewAction } from '@/data/actions/contracts';
 import { useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -9,7 +10,7 @@ export function RecordingActivity({ type, data, error, refresh }: { type: Record
   const identity = useUserIds();
   const [operationError, setOperationError] = useState<string | null>(null);
   const perform = async (operation: () => Promise<void>) => { setOperationError(null); try { await operation(); } catch (e) { setOperationError(e instanceof Error ? e.message : 'The action could not be saved.'); } };
-  const busy = actions.entries.some(entry => entry.canReplay && ['pending', 'sending', 'confirmation_unknown'].includes(entry.state.status));
+  const busy = actions.entries.some(entry => blocksNewAction(entry, actions.scope));
   const latest = [...actions.confirmed].reverse().find(entry => {
     const command = entry.command;
     if (command.kind === 'rule_violation') return true;

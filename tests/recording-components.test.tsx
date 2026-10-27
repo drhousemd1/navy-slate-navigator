@@ -1,3 +1,5 @@
+import { decodeQueueEntry } from '@/data/actions/contracts';
+import { ruleContext, punishmentContext, uuid, scope as queueScope } from './action-queue.helpers';
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,9 +16,9 @@ vi.mock('@/components/common/PointsBubbles', () => ({ default: () => <div>Confir
 vi.mock('@/components/RuleEditor', () => ({ default: ({ ruleData, preserveHistory }: any) => <div role="dialog">{ruleData?.title ?? 'New rule'} {preserveHistory && 'History preserved'}</div> }));
 vi.mock('@/components/PunishmentEditor', () => ({ default: ({ punishmentData, preserveHistory }: any) => <div role="dialog">{punishmentData?.title ?? 'New punishment'} {preserveHistory && 'History preserved'}</div> }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), debug: vi.fn(), info: vi.fn() } }));
-const base = { id: 'definition', relationship_id: 'period', title: 'Fixture', description: 'Description', priority: 'High', calendar_color: '#123456', title_color: '#ffffff', subtext_color: '#ffffff',
+const base = { id: uuid(73), relationship_id: 'period', title: 'Fixture', description: 'Description', priority: 'High', calendar_color: '#123456', title_color: '#ffffff', subtext_color: '#ffffff',
   deleted_at: null, points: 10, dom_points: 4, dom_supply: 0, created_at: '2026-01-01', background_opacity: 0, focal_point_x: 0, focal_point_y: 0 };
-const progress = { subjectId: 'definition', subjectType: 'rule', localDate: '2026-10-26', timeZone: 'Pacific/Kiritimati', usageData: [1,0,0,0,0,0,0], currentCount: 1 };
+const progress = { subjectId: base.id, subjectType: 'rule', beneficiaryParticipantId: uuid(2), localDate: '2026-10-26', weekStartDate: '2026-10-26', timeZone: 'Pacific/Kiritimati', expectedContext: { ...ruleContext(base.id), sub: { ...ruleContext().sub, timeZone: 'Pacific/Kiritimati' } }, usageData: [1,0,0,0,0,0,0], currentCount: 1 };
 const event = { id: 'event', relationship_id: 'period', rule_id: null, punishment_id: 'definition', kind: 'punishment_applied', provenance: 'command', actor_participant_id: 'partner',
   subject: { title: 'Original title' }, calendar: { localDate: '2026-10-26', timeZone: 'Pacific/Kiritimati' }, recorded_at: '2026-10-26T10:00:00Z', reverses_event_id: null };
 beforeEach(() => {
@@ -33,7 +35,7 @@ describe('actual recording page components', () => {
     const { container } = render(<AtomicRulesContent />);
     const button = screen.getByRole('button', { name: 'Rule Broken' });
     fireEvent.click(button);fireEvent.click(button);
-    expect(mocks.actions.enqueue).toHaveBeenCalledExactlyOnceWith({ kind: 'rule_violation', ruleId: 'definition' });
+    expect(mocks.actions.enqueue).toHaveBeenCalledExactlyOnceWith({ kind: 'rule_violation', ruleId: base.id, expectedContext: progress.expectedContext });
     expect(mocks.navigate).not.toHaveBeenCalled();expect(button.hasAttribute('disabled')).toBe(true);
     expect(container.querySelectorAll('[style*="background-color: rgb(18, 52, 86)"]')).toHaveLength(1);
     done();await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith('/punishments'));
@@ -45,14 +47,31 @@ describe('actual recording page components', () => {
     expect(mocks.state.data.progress[0].currentCount).toBe(1);
   });
   it('records punishment even with zero legacy supply; pending prevents repeats without optimistic count updates', async () => {
+    mocks.actions.scope = queueScope;
+    mocks.state.data.progress = [{ ...progress, subjectType: 'punishment', expectedContext: { ...punishmentContext(base.id), subDeduction: 10, domAward: 4, sub: { ...punishmentContext().sub, timeZone: progress.timeZone } } }];
     const ref = { current: {} };const { rerender } = render(<AtomicPunishmentsContent contentRef={ref} />);
     fireEvent.click(screen.getByRole('button', { name: 'Punish' }));
-    await waitFor(() => expect(mocks.actions.enqueue).toHaveBeenCalledExactlyOnceWith({ kind: 'punishment_apply', punishmentId: 'definition' }));
+    await waitFor(() => expect(mocks.actions.enqueue).toHaveBeenCalledExactlyOnceWith({ kind: 'punishment_apply', punishmentId: base.id, expectedContext: mocks.state.data.progress[0].expectedContext }));
     expect(mocks.state.data.progress[0].currentCount).toBe(1);
-    mocks.state.pending = true;mocks.actions.entries = [{ command: { commandId: 'pending', kind: 'punishment_apply' }, state: { status: 'pending' }, canReplay: true, canCancel: true }];
+    const command = { commandId: uuid(901), expectedRelationshipId: queueScope.relationshipId, kind: 'punishment_apply', punishmentId: base.id,
+      expectedContext: mocks.state.data.progress[0].expectedContext };
+    const saved = decodeQueueEntry({ version: 1, sequence: 1, scope: queueScope, command, createdAt: 1, updatedAt: 1,
+      state: { status: 'pending', command }, attempts: 0, everSent: false, nextAttemptAt: 1, problem: null, lease: null });
+    mocks.state.pending = true;mocks.actions.entries = [{ ...saved, canReplay: true, canCancel: true, canReconcile: false }];
     rerender(<AtomicPunishmentsContent contentRef={ref} />);
     expect(screen.getByRole('button', { name: 'Punish' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByText(/Pending; saved on this device/)).toBeTruthy();
+  });
+  it('shows both affected calendars and saves the same reviewed punishment values, not the browser date', async () => {
+    const expectedContext = { ...punishmentContext(base.id), subDeduction: 10, domAward: 4,
+      sub: { ...punishmentContext().sub, timeZone: progress.timeZone },
+      dom: { ...punishmentContext().dom, localDate: '2026-10-25', weekStartDate: '2026-10-19' } };
+    mocks.state.data.progress = [{ ...progress, subjectType: 'punishment', expectedContext }];
+    render(<AtomicPunishmentsContent contentRef={{ current: {} }} />);
+    expect(screen.getByText('Sub actions: 2026-10-26 · Pacific/Kiritimati')).toBeTruthy();
+    expect(screen.getByText('Dom award: 2026-10-25 · America/Boise')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Punish' }));
+    await waitFor(() => expect(mocks.actions.enqueue).toHaveBeenCalledWith({ kind: 'punishment_apply', punishmentId: base.id, expectedContext }));
   });
   it('shows permission and missing-Sub explanations while preserving editor access when allowed', () => {
     mocks.state.actionReason = 'Link a Sub partner before recording this action.';

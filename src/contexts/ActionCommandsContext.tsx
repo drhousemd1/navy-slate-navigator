@@ -6,7 +6,7 @@ import { supabaseBackendId } from '@/integrations/supabase/client';
 import { ActionCommandQueue } from '@/data/actions/queue';
 import { IndexedDBActionQueueStore } from '@/data/actions/store';
 import { createSupabaseActionTransport } from '@/data/actions/supabase-transport';
-import { decodeActionScope, scopeKey, type ActionQueueScope, type QueueEntry, type ActionIntent } from '@/data/actions/contracts';
+import { blocksNewAction, decodeActionScope, scopeKey, type ActionQueueScope, type QueueEntry, type ActionIntent } from '@/data/actions/contracts';
 import { accountingStatusKey, readAccountingEnabled, readRewardActionData, rewardActionKey, type RewardActionData } from '@/data/rewards/actionReadModel';
 import { TaskFeedback } from '@/components/task/TaskFeedback';
 import { RewardFeedback } from '@/components/rewards/RewardFeedback';
@@ -117,7 +117,7 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
     savingIntent.current = true;
     try {
       const saved = await queue.list();
-      if (saved.some(entry => entry.canReplay && ['pending', 'sending', 'confirmation_unknown'].includes(entry.state.status))) throw new Error('Resolve the pending action before starting another.');
+      if (saved.some(entry => blocksNewAction(entry, scope))) throw new Error('Resolve the pending action before starting another.');
       if (currentScope.current !== scope) throw new Error('Your account or relationship changed.');
       await queue.enqueue(intent);
     } finally { savingIntent.current = false; }

@@ -1,7 +1,7 @@
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
 import { actionScopeToken, assertCurrentActionScope } from '@/data/rewards/actionReadModel';
-import type { ActionQueueScope } from '@/data/actions/contracts';
-import type { ActionCalendar, Currency, RecordingProgress } from '@/domain/actions/types';
+import { decodeExpectedContext, type ActionQueueScope } from '@/data/actions/contracts';
+import type { ActionCalendar, Currency, RecordingProgress, RuleExpectedContext, PunishmentExpectedContext } from '@/domain/actions/types';
 import type { Rule } from '@/data/interfaces/Rule';
 import type { PunishmentData } from '@/contexts/punishments/types';
 
@@ -46,6 +46,18 @@ async function rows<T>(table: string, fields: string, scope: ActionQueueScope, t
     if (data.length < 500) return result;
   }
 }
+/** Prevent a definition/progress read race from changing the facts reviewed on the card. */
+export function reviewedRecordingContext(type: RecordingType, definition: RecordingDefinition, progress?: RecordingProgress): RuleExpectedContext | PunishmentExpectedContext {
+  const context = decodeExpectedContext(progress?.expectedContext);
+  if (context.kind !== (type === 'rule' ? 'rule_violation' : 'punishment_apply') ||
+      !progress || progress.subjectType !== type || progress.subjectId !== definition.id || context.subjectId !== definition.id ||
+      context.sub.participantId !== progress.beneficiaryParticipantId || context.sub.timeZone !== progress.timeZone ||
+      context.sub.localDate !== progress.localDate || context.sub.weekStartDate !== progress.weekStartDate ||
+      (context.kind === 'punishment_apply' && (context.subDeduction !== (definition as PunishmentData).points || context.domAward !== (definition as PunishmentData).dom_points))) {
+    throw new Error('Action details changed while loading. Refresh and review them before recording an action.');
+  }
+  return context;
+}
 export async function readRecordingData(scope: ActionQueueScope, type: RecordingType, hasSub: boolean, signal?: AbortSignal): Promise<RecordingData> {
   const token = await actionScopeToken(scope, signal);
   const progressRequest = hasSub ? database.rpc('get_recording_progress', { p_expected_relationship_id: scope.relationshipId, p_subject_type: type })
@@ -65,6 +77,14 @@ export async function readRecordingData(scope: ActionQueueScope, type: Recording
     !Array.isArray(item.usageData) || item.usageData.length !== 7 || item.usageData.some(n => !Number.isSafeInteger(n) || n < 0))) {
     throw new Error('Invalid weekly activity received.');
   }
+  const seen = new Set<string>();
+  for (const item of progress.data as RecordingProgress[]) {
+    const definition = definitions.find(row => row.id === item.subjectId && !row.deleted_at);
+    if (!definition || seen.has(item.subjectId)) throw new Error('The current activity details changed. Refresh to review them.');
+    seen.add(item.subjectId);
+    reviewedRecordingContext(type, definition, item);
+  }
+  if (hasSub && definitions.some(row => !row.deleted_at && !seen.has(row.id))) throw new Error('The current activity details are incomplete. Refresh to review them.');
   const selectedEvents = events.filter(event => type === 'rule' ? event.rule_id : event.punishment_id);
   const ids = new Set(selectedEvents.map(event => event.id));
   return { definitions: definitions.filter(row => !row.deleted_at), progress: progress.data, events: selectedEvents, points: points.filter(row => ids.has(row.event_id)),

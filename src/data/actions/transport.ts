@@ -1,5 +1,6 @@
+import type { TaskExpectedContext, RuleExpectedContext, PunishmentExpectedContext } from '@/domain/actions/types';
 import type { ActionProblem, ActionQueueScope, CommandOutcome, QueuedActionCommand, RewardCommand, ActionTransport, ReceiptRecoveryOutcome, StoredActionScope } from './contracts';
-import { decodeActionReceipt, decodeActionCommand, decodeActionScope, decodeStoredActionScope, decodeRewardCommand } from './contracts';
+import { decodeActionReceipt, decodeActionCommand, decodeActionScope, decodeStoredActionScope, decodeStoredActionCommand, decodeRewardCommand } from './contracts';
 
 export interface RewardRpcParameters {
   p_command_id: string;
@@ -18,10 +19,10 @@ interface ReceiptRpcParameters { p_command_id: string; p_expected_relationship_i
 interface ScopedRpcParameters extends ReceiptRpcParameters { p_expected_relationship_session_id: string }
 export type ActionRpcCall =
   | { name: 'execute_reward_command'; parameters: RewardRpcParameters }
-  | { name: 'execute_task_command'; parameters: ScopedRpcParameters & { p_action: 'task_complete'; p_task_id: string; p_event_id: null } }
+  | { name: 'execute_task_command'; parameters: ScopedRpcParameters & { p_action: 'task_complete'; p_task_id: string; p_event_id: null; p_expected_context: TaskExpectedContext } }
   | { name: 'execute_recording_command'; parameters: ScopedRpcParameters & (
-      { p_action: 'rule_violation'; p_rule_id: string; p_punishment_id: null; p_event_id: null } |
-      { p_action: 'punishment_apply'; p_rule_id: null; p_punishment_id: string; p_event_id: null }) }
+      { p_action: 'rule_violation'; p_rule_id: string; p_punishment_id: null; p_event_id: null; p_expected_context: RuleExpectedContext } |
+      { p_action: 'punishment_apply'; p_rule_id: null; p_punishment_id: string; p_event_id: null; p_expected_context: PunishmentExpectedContext }) }
   | { name: 'undo_action'; parameters: ScopedRpcParameters & { p_event_id: string } }
   | { name: 'get_my_action_receipt'; parameters: ReceiptRpcParameters };
 export interface ActionTransportDependencies {
@@ -33,6 +34,12 @@ export interface ActionTransportDependencies {
 export type RewardTransportDependencies = ActionTransportDependencies;
 
 const messages: Record<string, string> = {
+  ACTION_CONTEXT_REQUIRED: 'This saved action does not include the details originally reviewed. Check its result; it will not be sent again.',
+  ACTION_CONTEXT_INVALID: 'The saved action’s reviewed details could not be verified. Check its result before taking another action.',
+  ACTION_BENEFICIARY_CHANGED: 'The person affected by this action changed. Review the current details before taking a new action.',
+  ACTION_DEFINITION_CHANGED: 'The points, assigned role, or target changed. Review the current details before taking a new action.',
+  ACTION_TIMEZONE_CHANGED: 'An affected person’s saved timezone changed. Review the current calendar before taking a new action.',
+  ACTION_DATE_CHANGED: 'The day changed for an affected person. This saved action was not moved to today. Review the current calendar before taking a new action.',
   UNDO_USE_FIRST: 'Undo the use of this reward before undoing its purchase.',
   TIMEZONE_REQUIRED: 'A participant affected by this action needs a saved timezone before it can be recorded.',
   STALE_RELATIONSHIP: 'This action belongs to a previous relationship period. Review it without moving it to the current period.',
@@ -91,9 +98,9 @@ export function actionCommandRequest(input: QueuedActionCommand, inputScope: Act
   const scope = { p_command_id: command.commandId, p_expected_relationship_id: command.expectedRelationshipId,
     p_expected_relationship_session_id: actionScope.relationshipSessionId };
   switch (command.kind) {
-    case 'task_complete': return { name: 'execute_task_command', parameters: { ...scope, p_action: command.kind, p_task_id: command.taskId, p_event_id: null } };
-    case 'rule_violation': return { name: 'execute_recording_command', parameters: { ...scope, p_action: command.kind, p_rule_id: command.ruleId, p_punishment_id: null, p_event_id: null } };
-    case 'punishment_apply': return { name: 'execute_recording_command', parameters: { ...scope, p_action: command.kind, p_rule_id: null, p_punishment_id: command.punishmentId, p_event_id: null } };
+    case 'task_complete': return { name: 'execute_task_command', parameters: { ...scope, p_action: command.kind, p_task_id: command.taskId, p_event_id: null, p_expected_context: command.expectedContext } };
+    case 'rule_violation': return { name: 'execute_recording_command', parameters: { ...scope, p_action: command.kind, p_rule_id: command.ruleId, p_punishment_id: null, p_event_id: null, p_expected_context: command.expectedContext } };
+    case 'punishment_apply': return { name: 'execute_recording_command', parameters: { ...scope, p_action: command.kind, p_rule_id: null, p_punishment_id: command.punishmentId, p_event_id: null, p_expected_context: command.expectedContext } };
     case 'undo': return { name: 'undo_action', parameters: { ...scope, p_event_id: command.eventId } };
     default: return { name: 'execute_reward_command', parameters: rewardCommandParameters(command, actionScope) };
   }
@@ -152,7 +159,7 @@ export function createActionTransport(dependencies: ActionTransportDependencies)
     const unavailable = (code: string): ReceiptRecoveryOutcome => ({ kind: 'unavailable', problem: { code, retryable: true,
       message: 'The original receipt could not be checked. The saved action is unchanged; no action was sent.' } });
     try {
-      decodeActionCommand(input); decodeStoredActionScope(scope);
+      decodeStoredActionCommand(input); decodeStoredActionScope(scope);
       if (scope.backendId !== dependencies.backendId || scope.relationshipId !== input.expectedRelationshipId) return unavailable('SCOPE_MISMATCH');
       const session = await dependencies.readSession();
       if (!session?.accessToken || session.accountId !== scope.accountId || signal.aborted) return unavailable('IDENTITY_UNAVAILABLE');

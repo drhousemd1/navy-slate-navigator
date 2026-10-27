@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { actionLabels, savedActionStatus } from '@/lib/offline/action-status';
-import { scopeKey } from '@/data/actions/contracts';
+import { scopeKey, needsContextReview, hasExpectedContext } from '@/data/actions/contracts';
 /** Shared durable queue: domain pages never implement a second retry path. */
 export function SavedActions() {
   const actions = useActionCommands();
@@ -39,7 +39,11 @@ export function SavedActions() {
       {pending.map(entry => <div key={entry.command.commandId} className="border-t border-light-navy pt-2 text-sm">
         <p><strong>{actionLabels[entry.command.kind] ?? 'Action'}</strong> — {savedActionStatus(entry.state.status, !entry.canReplay)}</p>
         {entry.problem && <p>{entry.problem.message}</p>}
-        {!entry.canReplay && <p>{entry.scope.relationshipSessionId ? 'Saved before your connection changed or was reconnected. It will not be sent again.' : 'This older saved action cannot be sent again here. You can check whether it was already completed.'}</p>}
+        {!entry.canReplay && <p>{needsContextReview(entry) ? (hasExpectedContext(entry.command) ? 'These reviewed details changed. This saved action will not be sent again.' : 'This older action does not include the details originally reviewed. It will not be sent again.') : entry.scope.relationshipSessionId ? 'Saved before your connection changed or was reconnected. It will not be sent again.' : 'This older saved action cannot be sent again here. You can check whether it was already completed.'}</p>}
+        {actions.scope && scopeKey(entry.scope) === scopeKey(actions.scope) && needsContextReview(entry) && (entry.state.status === 'rejected' || (entry.state.status === 'pending' && !entry.everSent)) &&
+          <a className="mr-4 underline" href={entry.command.kind === 'task_complete' ? '/tasks' : entry.command.kind === 'rule_violation' ? '/rules' : '/punishments'}>Review current details</a>}
+        {needsContextReview(entry) && ['sending', 'confirmation_unknown'].includes(entry.state.status) &&
+          <p>Check the result before taking another action. An unknown result is not a failed action.</p>}
         {entry.canReconcile && <button disabled={checkingId !== null} className="mr-4 underline disabled:opacity-50" onClick={() => void reconcile(entry.command.commandId)}>{checkingId === entry.command.commandId ? 'Checking result…' : 'Check result'}</button>}
         {entry.canReplay && entry.state.status !== 'sending' && <button className="mr-4 underline" onClick={() => void perform(() => actions.retry(entry.command.commandId))}>Retry same action</button>}
         {entry.canCancel && <button className="underline" onClick={() => void perform(() => actions.cancelUnsent(entry.command.commandId))}>Cancel unsent action</button>}

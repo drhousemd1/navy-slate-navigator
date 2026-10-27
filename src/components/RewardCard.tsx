@@ -1,3 +1,4 @@
+import { blocksNewAction } from '@/data/actions/contracts';
 
 import React, { useState } from 'react';
 import { Card } from './ui/card';
@@ -33,7 +34,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
   const atomic = actions.mode === 'atomic';
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const busy = saving || actions.entries.some(entry => entry.canReplay && ['pending', 'sending', 'confirmation_unknown'].includes(entry.state.status));
+  const busy = saving || actions.entries.some(entry => blocksNewAction(entry, actions.scope));
   const inventory = rewardInventory(actions.data?.lots ?? [], reward.id);
   const perform = async (operation: () => Promise<void>) => {
     setActionError(null); setSaving(true);

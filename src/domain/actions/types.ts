@@ -39,14 +39,18 @@ export type ActionCommand = {
   readonly commandId: string;
   readonly expectedRelationshipId: string;
 } & (
-  | { readonly kind: 'task_complete'; readonly taskId: string }
-  | { readonly kind: 'rule_violation'; readonly ruleId: string }
-  | { readonly kind: 'punishment_apply'; readonly punishmentId: string }
+  | { readonly kind: 'task_complete'; readonly taskId: string; readonly expectedContext: TaskExpectedContext }
+  | { readonly kind: 'rule_violation'; readonly ruleId: string; readonly expectedContext: RuleExpectedContext }
+  | { readonly kind: 'punishment_apply'; readonly punishmentId: string; readonly expectedContext: PunishmentExpectedContext }
   | RewardBuyCommand
   | { readonly kind: 'reward_delete' | 'reward_gift'; readonly rewardId: string }
   | { readonly kind: 'reward_redeem'; readonly rewardId: string; readonly inventoryCurrency?: Currency }
   | { readonly kind: 'undo'; readonly eventId: string }
 );
+
+type HistoricalCommand<T> = T extends { expectedContext: unknown } ? Omit<T, 'expectedContext'> & { readonly expectedContext?: T['expectedContext'] } : T;
+/** Durable history can predate expected-context checks; new ActionCommand remains strict. */
+export type StoredActionCommand = HistoricalCommand<ActionCommand>;
 
 export interface PointDelta {
   readonly participantId: string;
@@ -60,6 +64,37 @@ export interface ActionCalendar {
   readonly localDate: string;
   readonly weekStartDate: string;
 }
+
+/** Reviewed server facts are consent preconditions, never instructions to backdate or set points. */
+export interface TaskExpectedContext {
+  readonly version: 1;
+  readonly kind: 'task_complete';
+  readonly subjectId: string;
+  readonly beneficiaryParticipantId: string;
+  readonly currency: Currency;
+  readonly points: number;
+  readonly frequency: 'daily' | 'weekly';
+  readonly target: number;
+  readonly timeZone: string;
+  readonly localDate: string;
+  readonly weekStartDate: string;
+}
+export interface RuleExpectedContext {
+  readonly version: 1;
+  readonly kind: 'rule_violation';
+  readonly subjectId: string;
+  readonly sub: ActionCalendar;
+}
+export interface PunishmentExpectedContext {
+  readonly version: 1;
+  readonly kind: 'punishment_apply';
+  readonly subjectId: string;
+  readonly subDeduction: number;
+  readonly domAward: number;
+  readonly sub: ActionCalendar;
+  readonly dom: ActionCalendar | null;
+}
+export type ActionExpectedContext = TaskExpectedContext | RuleExpectedContext | PunishmentExpectedContext;
 
 export interface WalletBalance {
   readonly participantId: string;
@@ -139,6 +174,8 @@ export interface ActionEvent {
 
 /** Authoritative current counters; existing task-row counters are legacy data. */
 export interface TaskProgress {
+  /** Absent on original stored receipts; required for a newly reviewed command. */
+  readonly expectedContext?: TaskExpectedContext;
   readonly taskId: string;
   readonly beneficiaryParticipantId: string;
   readonly currency: Currency;
@@ -157,6 +194,8 @@ export interface TaskProgress {
 
 /** Weekly event counts; rule/punishment cards render a filled mark for counts above zero. */
 export interface RecordingProgress {
+  /** Absent on original stored receipts; required for a newly reviewed command. */
+  readonly expectedContext?: RuleExpectedContext | PunishmentExpectedContext;
   readonly subjectType: 'rule' | 'punishment';
   readonly subjectId: string;
   readonly beneficiaryParticipantId: string;
@@ -210,9 +249,9 @@ export type ActionFeedback = {
 );
 
 export type PendingActionState =
-  | { readonly status: 'pending' | 'sending' | 'confirmation_unknown'; readonly command: ActionCommand }
+  | { readonly status: 'pending' | 'sending' | 'confirmation_unknown'; readonly command: StoredActionCommand }
   | { readonly status: 'confirmed'; readonly receipt: ActionReceipt }
-  | { readonly status: 'rejected'; readonly command: ActionCommand; readonly reason: string };
+  | { readonly status: 'rejected'; readonly command: StoredActionCommand; readonly reason: string };
 
 export interface RefundTotal {
   readonly participantId: string;

@@ -90,7 +90,18 @@ test('lifecycle accounting transitions and session-bound intentions', {
   async function unlink(a){const result=ok(await rpc(a,'unlink_my_partner',scope(await identity(a))));await Promise.all(accounts.map(identity));return result;}
   const wallets=async p=>await rows('action_wallets',`relationship_id=eq.${p}&select=*`);
   const balance=async(p,role)=>(await wallets(p)).find(w=>w.currency===role)?.balance;
-  const taskCommand=(a,i,id,extra={})=>rpc(a,'execute_task_command',{...scope(i),p_command_id:randomUUID(),p_action:'task_complete',p_task_id:id,...extra});
+  // Capture only when forming a NEW intention. Existing replay/stale-session
+  // objects below stay frozen; the RPC dispatcher never infers fresh context.
+  async function forwardBody(a,i,kind,id){
+    const type=kind==='task_complete'?'task':kind==='rule_violation'?'rule':'punishment';
+    const reviewed=ok(await rpc(a,type==='task'?'get_task_progress':'get_recording_progress',
+      {p_expected_relationship_id:i.relationship_id,...(type==='task'?{p_task_id:id}:{p_subject_type:type,p_subject_id:id})}));
+    assert.ok(reviewed.expectedContext);
+    return {...scope(i),p_command_id:randomUUID(),p_action:kind,
+      ...(type==='task'?{p_task_id:id}:type==='rule'?{p_rule_id:id}:{p_punishment_id:id}),
+      p_expected_context:structuredClone(reviewed.expectedContext)};
+  }
+  const taskCommand=async(a,i,id,extra={})=>rpc(a,'execute_task_command',{...await forwardBody(a,i,'task_complete',id),...extra});
   const rewardCommand=(a,i,id,kind='reward_buy',extra={})=>rpc(a,'execute_reward_command',{...scope(i),p_command_id:randomUUID(),p_action:kind,p_reward_id:id,...extra});
   const undo=(a,i,event)=>rpc(a,'undo_action',{...scope(i),p_command_id:randomUUID(),p_event_id:event});
   async function insert(a,table,body){const i=await identity(a);return ok(await req('POST',`/rest/v1/${table}`,a.token,{user_id:a.id,relationship_id:i.relationship_id,...body},i.relationship_session_id))[0];}
@@ -147,7 +158,7 @@ test('lifecycle accounting transitions and session-bound intentions', {
       reward=await insert(sub,'rewards',{title:'Lifecycle reward',cost:20,supply:0,is_dom_reward:false});
       rule=await insert(sub,'rules',{title:'Lifecycle rule'});
       punishment=await insert(sub,'punishments',{title:'Lifecycle punishment',points:10,dom_points:4});
-      confirmedPayload={...scope(oldIdentity),p_command_id:randomUUID(),p_action:'task_complete',p_task_id:task.id};
+      confirmedPayload=await forwardBody(sub,oldIdentity,'task_complete',task.id);
       const concurrent=await Promise.all([rpc(sub,'execute_task_command',confirmedPayload),rpc(sub,'execute_task_command',confirmedPayload)]);
       confirmedReceipt=ok(concurrent[0]);assert.deepEqual(ok(concurrent[1]),confirmedReceipt);
       assert.equal(confirmedReceipt.relationshipSessionId,oldIdentity.relationship_session_id);
@@ -159,9 +170,9 @@ test('lifecycle accounting transitions and session-bound intentions', {
       const used=ok(await rewardCommand(sub,oldIdentity,reward.id,'reward_redeem',{p_inventory_currency:'sub'}));
       ok(await undo(dom,oldDomIdentity,used.eventIds[0]));
       assert.equal(await balance(pair,'sub'),80);assert.equal(await balance(pair,'dom'),80);
-      const punished=ok(await rpc(sub,'execute_recording_command',{...scope(oldIdentity),p_command_id:randomUUID(),p_action:'punishment_apply',p_punishment_id:punishment.id}));
+      const punished=ok(await rpc(sub,'execute_recording_command',await forwardBody(sub,oldIdentity,'punishment_apply',punishment.id)));
       ok(await undo(dom,oldDomIdentity,punished.eventIds[0]));
-      const broken=ok(await rpc(dom,'execute_recording_command',{...scope(oldDomIdentity),p_command_id:randomUUID(),p_action:'rule_violation',p_rule_id:rule.id}));
+      const broken=ok(await rpc(dom,'execute_recording_command',await forwardBody(dom,oldDomIdentity,'rule_violation',rule.id)));
       ok(await undo(sub,oldIdentity,broken.eventIds[0]));
       assert.equal(await balance(pair,'sub'),80);assert.equal(await balance(pair,'dom'),80);
       assert.equal((await rows('reward_inventory_lots',`relationship_id=eq.${pair}&status=eq.available&select=id`)).length,2);
@@ -172,7 +183,7 @@ test('lifecycle accounting transitions and session-bound intentions', {
       }
       denied(await req('PATCH',`/rest/v1/tasks?id=eq.${task.id}`,sub.token,{title:'Stale edit'},randomUUID()),'STALE_RELATIONSHIP_SESSION');
       ok(await req('PATCH',`/rest/v1/tasks?id=eq.${task.id}`,sub.token,{title:'Reviewed edit'},oldIdentity.relationship_session_id));
-      denied(await taskCommand(other,oldIdentity,task.id),'STALE_RELATIONSHIP');
+      denied(await rpc(other,'execute_task_command',{...confirmedPayload,p_command_id:randomUUID()}),'STALE_RELATIONSHIP');
       denied(await rpc(null,'execute_task_command',confirmedPayload));
       denied(await rpc(sub,'_execute_task_before_session',{p_command_id:randomUUID(),p_expected_relationship_id:pair,p_action:'task_complete',p_task_id:task.id}));
       denied(await req('PATCH',`/rest/v1/relationship_periods?id=eq.${pair}`,sub.token,{relationship_session_id:randomUUID()}));
@@ -293,7 +304,9 @@ test('lifecycle accounting transitions and session-bound intentions', {
       await unlink(dom);result=await link(dom,other);assert.notEqual(result.relationship_id,fresh);
       assert.equal(await balance(result.relationship_id,'dom'),0);assert.equal(await balance(result.relationship_id,'sub'),0);
       assert.equal((await rows('action_events',`relationship_id=eq.${previous}&select=id`,other.token)).length,0);
-      denied(await taskCommand(other,await identity(other),task.id),'TASK_NOT_FOUND');
+      // This explicit missing-target probe retains the original reviewed context;
+      // it must not fetch or infer assumptions for an inaccessible old task.
+      denied(await rpc(other,'execute_task_command',{...confirmedPayload,...scope(await identity(other)),p_command_id:randomUUID()}),'TASK_NOT_FOUND');
       assert.deepEqual(await ledger(previous),before);
     });
 
@@ -309,7 +322,7 @@ test('lifecycle accounting transitions and session-bound intentions', {
 
     await t.test('racing completion and unlink serialize: accepted award is carried, otherwise no award occurs',async()=>{
       const i=await identity(other),raceTask=await insert(other,'tasks',{title:'Race task',points:7,frequency:'daily',frequency_count:1,is_dom_task:false});
-      const payload={...scope(i),p_command_id:randomUUID(),p_action:'task_complete',p_task_id:raceTask.id};
+      const payload=await forwardBody(other,i,'task_complete',raceTask.id);
       const results=await Promise.all([rpc(other,'execute_task_command',payload),rpc(dom,'unlink_my_partner',scope(await identity(dom)))]);
       ok(results[1]);await Promise.all(accounts.map(identity));const s=await identity(other);
       if(results[0].status<300)assert.equal(await balance(s.relationship_id,'sub'),7);

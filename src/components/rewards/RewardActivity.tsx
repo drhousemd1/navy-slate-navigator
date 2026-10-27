@@ -1,3 +1,4 @@
+import { blocksNewAction } from '@/data/actions/contracts';
 import { SavedActions } from '@/components/activity/SavedActions';
 import { useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
@@ -12,7 +13,7 @@ export function RewardActivity() {
   const [error, setError] = useState<string | null>(null);
   const perform = async (operation: () => Promise<void>) => { setError(null); try { await operation(); } catch (e) { setError(e instanceof Error ? e.message : 'Action could not be saved.'); } };
   const pending = actions.entries.filter(entry => entry.state.status !== 'confirmed');
-  const busy = pending.some(entry => entry.canReplay && ['pending', 'sending', 'confirmation_unknown'].includes(entry.state.status));
+  const busy = pending.some(entry => blocksNewAction(entry, actions.scope));
   if (actions.mode === 'legacy') return null;
   return <section className="mb-6 space-y-3 text-white" aria-label="Reward actions">
     {(actions.error || error) && <div role="alert" className="rounded border border-amber-500 bg-navy p-3"><p>{error || actions.error}</p><button className="underline" onClick={() => void perform(actions.refresh)}>Refresh confirmed data</button></div>}

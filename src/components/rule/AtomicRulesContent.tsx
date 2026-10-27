@@ -5,7 +5,7 @@ import RuleCard from './RuleCard';
 import RuleEditor from '@/components/RuleEditor';
 import { RecordingActivity } from '@/components/recordings/RecordingActivity';
 import { useRecordingData } from '@/data/recordings/useRecordingData';
-import { savedWeekday } from '@/data/recordings/readModel';
+import { reviewedRecordingContext, savedWeekday, type RecordingDefinition } from '@/data/recordings/readModel';
 import type { Rule } from '@/data/interfaces/Rule';
 import { sortRulesByPriorityAndDate } from '@/lib/ruleSorting';
 
@@ -22,7 +22,11 @@ export function AtomicRulesContent() {
   const record = async (rule: Rule) => {
     if (clickLock.current) return;
     clickLock.current = true; setSavingAction(true); setError(null);
-    try { await state.actions.enqueue({ kind: 'rule_violation', ruleId: rule.id }); navigate('/punishments'); }
+    try {
+      const expectedContext = reviewedRecordingContext('rule', rule as RecordingDefinition, state.data?.progress.find(item => item.subjectId === rule.id));
+      if (expectedContext.kind !== 'rule_violation') throw new Error('Refresh this rule before recording it.');
+      await state.actions.enqueue({ kind: 'rule_violation', ruleId: rule.id, expectedContext }); navigate('/punishments');
+    }
     catch (e) { setError(e instanceof Error ? e.message : 'The violation could not be saved.'); }
     finally { clickLock.current = false; setSavingAction(false); }
   };
@@ -35,9 +39,11 @@ export function AtomicRulesContent() {
     {state.data && rules.length === 0 && <p className="text-gray-300">No rules yet. Use Add to create one.</p>}
     <div className="space-y-4 mt-4">{sortRulesByPriorityAndDate(rules).map(rule => {
       const progress = state.data?.progress.find(item => item.subjectId === rule.id);
-      return <RuleCard key={rule.id} rule={{ ...rule, usage_data: [...(progress?.usageData ?? [0,0,0,0,0,0,0])] }}
-        currentDayIndex={savedWeekday(progress?.localDate)} disabled={!!state.actionReason || state.pending || savingAction || !progress}
-        editDisabled={!state.canManage} onRuleBroken={() => void record(rule)} onEditRule={value => setEditor({ rule: value })} />;
+      return <div key={rule.id}>
+        {progress?.expectedContext && <p className="mb-1 text-xs text-gray-300">Sub actions: {progress.localDate} · {progress.timeZone}</p>}
+        <RuleCard rule={{ ...rule, usage_data: [...(progress?.usageData ?? [0,0,0,0,0,0,0])] }}
+        currentDayIndex={savedWeekday(progress?.localDate)} disabled={!!state.actionReason || state.pending || savingAction || !progress?.expectedContext}
+        editDisabled={!state.canManage} onRuleBroken={() => void record(rule)} onEditRule={value => setEditor({ rule: value })} /></div>;
     })}</div>
     {editor && <RuleEditor isOpen preserveHistory ruleData={editor.rule} onClose={() => setEditor(null)}
       onSave={async values => { await state.save(values); setEditor(null); }}

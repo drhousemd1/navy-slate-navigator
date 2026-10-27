@@ -8,7 +8,7 @@ import PunishmentCardFooter from './PunishmentCardFooter';
 import { Card } from '@/components/ui/card';
 import { RecordingActivity } from '@/components/recordings/RecordingActivity';
 import { useRecordingData } from '@/data/recordings/useRecordingData';
-import { savedWeekday } from '@/data/recordings/readModel';
+import { reviewedRecordingContext, savedWeekday, type RecordingDefinition } from '@/data/recordings/readModel';
 import type { PunishmentData } from '@/contexts/punishments/types';
 
 export function AtomicPunishmentsContent({ contentRef }: { contentRef: MutableRefObject<{ handleAddNewPunishment?: () => void }> }) {
@@ -22,7 +22,11 @@ export function AtomicPunishmentsContent({ contentRef }: { contentRef: MutableRe
   const record = async (punishment: PunishmentData) => {
     if (!punishment.id || clickLock.current) return;
     clickLock.current = true; setSavingAction(true); setError(null);
-    try { await state.actions.enqueue({ kind: 'punishment_apply', punishmentId: punishment.id }); }
+    try {
+      const expectedContext = reviewedRecordingContext('punishment', punishment as RecordingDefinition, state.data?.progress.find(item => item.subjectId === punishment.id));
+      if (expectedContext.kind !== 'punishment_apply') throw new Error('Refresh this punishment before recording it.');
+      await state.actions.enqueue({ kind: 'punishment_apply', punishmentId: punishment.id, expectedContext });
+    }
     catch (e) { setError(e instanceof Error ? e.message : 'The punishment could not be saved.'); }
     finally { clickLock.current = false; setSavingAction(false); }
   };
@@ -38,8 +42,12 @@ export function AtomicPunishmentsContent({ contentRef }: { contentRef: MutableRe
         <PunishmentBackground {...punishment} />
         <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
           <PunishmentCardHeader points={punishment.points} dom_points={punishment.dom_points} dom_supply={punishment.dom_supply}
-            onPunish={() => void record(punishment)} disabled={!!state.actionReason || state.pending || savingAction || !progress} />
+            onPunish={() => void record(punishment)} disabled={!!state.actionReason || state.pending || savingAction || !progress?.expectedContext} />
           <PunishmentCardContent {...punishment} />
+          {progress?.expectedContext?.kind === 'punishment_apply' && <div className="text-xs text-gray-300">
+            <p>Sub actions: {progress.expectedContext.sub.localDate} · {progress.expectedContext.sub.timeZone}</p>
+            {progress.expectedContext.dom && <p>Dom award: {progress.expectedContext.dom.localDate} · {progress.expectedContext.dom.timeZone}</p>}
+          </div>}
           <PunishmentCardFooter frequency_count={progress?.currentCount ?? 0} usage_data={[...(progress?.usageData ?? [0,0,0,0,0,0,0])]}
             calendar_color={punishment.calendar_color} currentDayIndex={savedWeekday(progress?.localDate)} editDisabled={!state.canManage}
             onEdit={() => setEditor({ punishment })} />

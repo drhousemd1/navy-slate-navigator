@@ -22,8 +22,9 @@ function builder(initial: any) {
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const scope = { backendId: 'http://127.0.0.1:28622', accountId: 'account', participantId: id(3), relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
 const progress = { taskId: id(1), beneficiaryParticipantId: id(3), currency: 'sub', timeZone: 'Pacific/Honolulu', localDate: '2026-10-25', weekStartDate: '2026-10-19', weekIdentifier: '2026-W43', frequency: 'weekly', target: 2, currentCount: 1, usageData: [1,0,0,0,0,0,0], completed: false, lastCompletedDate: '2026-10-19', deleted: false };
+const expectedContext = { version: 1, kind: 'task_complete', subjectId: id(1), beneficiaryParticipantId: id(3), currency: 'sub', points: 5, frequency: 'weekly', target: 2, timeZone: progress.timeZone, localDate: progress.localDate, weekStartDate: progress.weekStartDate };
 const form = { title: 'Task', frequency: 'daily', frequency_count: 2, points: 0, icon_url: undefined, background_image_url: undefined } as any;
-beforeEach(() => { mocks.account = 'account'; mocks.requests = []; mocks.rows = { tasks: [{ id: id(1), relationship_id: 'period', deleted_at: null }] }; mocks.rpc = { all: { data: [progress], error: null } }; mocks.after = null; });
+beforeEach(() => { mocks.account = 'account'; mocks.requests = []; mocks.rows = { tasks: [{ id: id(1), relationship_id: 'period', deleted_at: null, points: 5, frequency: 'weekly', frequency_count: 2, is_dom_task: false }] }; mocks.rpc = { all: { data: [{ ...progress, expectedContext }], error: null } }; mocks.after = null; });
 describe('task reads and definition boundary', () => {
   it('pins the current account token and expected period; keeps imported rows without Auth IDs or private intent', async () => {
     mocks.rows.task_completion_history = [{ id: id(10), relationship_id: 'period', task_id: id(1), completed_at: '2025-04-01T12:00:00+00:00', action_event_id: null }, { id: id(11), relationship_id: 'period', action_event_id: id(12) }];
@@ -38,19 +39,29 @@ describe('task reads and definition boundary', () => {
   });
   it('isolates one repairable task while retaining other progress and history', async () => {
     mocks.rows.tasks.push({ id: id(2), relationship_id: 'period', deleted_at: null });
-    mocks.rpc = { all: { data: null, error: { message: 'TASK_OWNER_MISSING' } }, [id(1)]: { data: progress, error: null }, [id(2)]: { data: null, error: { message: 'TASK_OWNER_MISSING' } } };
+    mocks.rpc = { all: { data: null, error: { message: 'TASK_OWNER_MISSING' } }, [id(1)]: { data: { ...progress, expectedContext }, error: null }, [id(2)]: { data: null, error: { message: 'TASK_OWNER_MISSING' } } };
     const data = await readTaskActionData(scope); expect(data.tasks).toHaveLength(2); expect(data.progress[id(1)]).toBeTruthy(); expect(data.progressErrors[id(2)]).toContain('selected role');
   });
   it('fails closed on network errors, cross-period rows, or incomplete progress', async () => {
     mocks.rpc.all = { error: { message: 'Network unavailable' } }; await expect(readTaskActionData(scope)).rejects.toThrow('could not be loaded');
     expect(mocks.requests.filter(row => row.rpc)).toHaveLength(1);
-    mocks.rpc.all = { data: [progress] }; mocks.rows.tasks[0].relationship_id = 'old'; await expect(readTaskActionData(scope)).rejects.toThrow('different relationship');
+    mocks.rpc.all = { data: [{ ...progress, expectedContext }] }; mocks.rows.tasks[0].relationship_id = 'old'; await expect(readTaskActionData(scope)).rejects.toThrow('different relationship');
     mocks.rows.tasks[0].relationship_id = 'period'; mocks.rpc.all = { data: [] }; await expect(readTaskActionData(scope)).rejects.toThrow('incomplete');
   });
   it('rejects inconsistent counters and isolates account/period caches', () => {
     expect(() => decodeTaskProgress({ ...progress, currentCount: 0 })).toThrow('counters');
     expect(() => decodeTaskProgress({ ...progress, localDate: '2026-10-26' })).toThrow('calendar');
     expect(taskActionKey(scope)).not.toEqual(taskActionKey({ ...scope, accountId: 'other' })); expect(taskActionKey(scope)).not.toEqual(taskActionKey({ ...scope, relationshipId: 'other' }));
+  });
+  it('disables a raced definition instead of capturing its newer points under an older displayed card', async () => {
+    mocks.rows.tasks[0].points = 9;
+    const data = await readTaskActionData(scope);
+    expect(data.tasks[0].points).toBe(9); expect(data.progress[id(1)]).toBeUndefined();
+    expect(data.progressErrors[id(1)]).toMatch(/Refresh and review/);
+  });
+  it('does not synthesize review facts for old progress lacking context', async () => {
+    mocks.rpc.all = { data: [progress], error: null };
+    const data = await readTaskActionData(scope); expect(data.progress[id(1)]).toBeUndefined(); expect(data.progressErrors[id(1)]).toBeTruthy();
   });
   it('saves only definition fields, explicitly clears images and preserves zero points', async () => {
     const payload = taskDefinitionPayload({ ...form, completed: true, usage_data: [9,9,9,9,9,9,9], user_id: 'forged', relationship_id: 'forged', deleted_at: 'forged' });

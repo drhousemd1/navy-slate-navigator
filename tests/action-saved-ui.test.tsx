@@ -2,7 +2,7 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SavedActions } from '@/components/activity/SavedActions';
-import { command, deferred, scope, uuid } from './action-queue.helpers';
+import { command, deferred, scope, uuid, taskContext } from './action-queue.helpers';
 const mocks = vi.hoisted(() => ({ actions: {} as Record<string, unknown>, reconcile: vi.fn(), retry: vi.fn(), cancel: vi.fn() }));
 vi.mock('@/contexts/ActionCommandsContext', () => ({ useActionCommands: () => mocks.actions }));
 const entry = () => ({ command, scope: { ...scope, relationshipSessionId: uuid(900) }, state: { status: 'pending' }, canReplay: false, canCancel: false, canReconcile: true });
@@ -39,6 +39,26 @@ describe('saved-result controls remain scoped during asynchronous work', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Check result' }));
     await screen.findByText('This action was already completed. It has not been repeated.');
     expect(mocks.retry).not.toHaveBeenCalled(); expect(screen.queryByText(/relationshipSessionId|receipt|UUID/)).toBeNull();
+  });
+  it('offers current details for a known rejection without retrying or replacing the saved action', () => {
+    const task = { commandId: uuid(70), expectedRelationshipId: scope.relationshipId, kind: 'task_complete', taskId: uuid(71), expectedContext: taskContext() };
+    mocks.actions = { ...mocks.actions, entries: [{ ...entry(), scope, command: task, state: { status: 'rejected', reason: 'Day changed' },
+      problem: { code: 'ACTION_DATE_CHANGED', message: 'The affected day changed.', retryable: false } }] };
+    render(<SavedActions />);
+    expect(screen.getByRole('link', { name: 'Review current details' }).getAttribute('href')).toBe('/tasks');
+    expect(screen.queryByRole('button', { name: 'Retry same action' })).toBeNull();
+    expect(mocks.retry).not.toHaveBeenCalled(); expect(mocks.reconcile).not.toHaveBeenCalled();
+  });
+  it('keeps a same-connection unknown action receipt-only with no replacement link', async () => {
+    const task = { commandId: uuid(70), expectedRelationshipId: scope.relationshipId, kind: 'task_complete', taskId: uuid(71) };
+    mocks.reconcile.mockResolvedValue('not_found');
+    mocks.actions = { ...mocks.actions, entries: [{ ...entry(), scope, command: task, state: { status: 'confirmation_unknown' }, everSent: true }] };
+    render(<SavedActions />);
+    expect(screen.getByText(/unknown result is not a failed action/)).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Review current details' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Check result' }));
+    await screen.findByText('No saved confirmation was found. This action remains saved and will not be sent again.');
+    expect(mocks.retry).not.toHaveBeenCalled(); expect(mocks.cancel).not.toHaveBeenCalled();
   });
   it('shows an interrupted old send as unknown instead of claiming it is still sending', () => {
     mocks.actions = { ...mocks.actions, entries: [{ ...entry(), state: { status: 'sending' } }] };

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
-import { scopeKey } from '@/data/actions/contracts';
+import { scopeKey, blocksNewAction } from '@/data/actions/contracts';
 import { readRecordingData, recordingKey, removeRecordingDefinition, saveRecordingDefinition, type RecordingType } from './readModel';
 import type { Rule } from '@/data/interfaces/Rule';
 import type { PunishmentData } from '@/contexts/punishments/types';
@@ -32,7 +32,7 @@ export function useRecordingData(type: RecordingType) {
     await removeRecordingDefinition(scope, type, id, () => current.current === scopeId); await refresh();
     if (current.current !== scopeId) throw new Error('Your relationship changed. Reload before continuing.');
   };
-  const pending = actions.entries.some(entry => entry.canReplay && ['pending', 'sending', 'confirmation_unknown'].includes(entry.state.status));
+  const pending = actions.entries.some(entry => blocksNewAction(entry, actions.scope));
   const operation = type === 'rule' ? 'rule_violation' : 'punishment_apply';
   const allowed = !!identity.currentRole && ['both', identity.currentRole].includes(identity.permissions?.[operation]);
   const actionReason = !identity.subUserId ? 'Link a Sub partner before recording this action.' : !allowed ? 'Your relationship settings do not allow recording this action.' : null;
