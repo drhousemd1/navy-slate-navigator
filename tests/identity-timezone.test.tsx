@@ -7,6 +7,7 @@ import TimezoneSection from '@/components/profile/TimezoneSection';
 import { decodeIdentity, isValidTimezone, type IdentityState } from '@/lib/identity';
 
 const mocks = vi.hoisted(() => ({ fetch: vi.fn(), command: vi.fn(), auth: {} as Record<string, unknown>, browserZone: 'America/Boise', toastSuccess: vi.fn(), toastError: vi.fn() }));
+vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'http://127.0.0.1:28622' }));
 vi.mock('@/data/identity', () => ({ fetchIdentity: mocks.fetch, callIdentityCommand: mocks.command, fetchLinkPreview: vi.fn(), identityCommandError: (error: Error) => error.message }));
 vi.mock('@/lib/identity', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/identity')>(), getBrowserTimezone: () => mocks.browserZone }));
 vi.mock('@/contexts/auth', () => ({ useAuth: () => mocks.auth }));

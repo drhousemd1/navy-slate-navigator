@@ -9,6 +9,7 @@ import { UserIdsProvider, useUserIds } from '@/contexts/UserIdsContext';
 import { emptyIdentity, resolveIdentity, type IdentityState } from '@/lib/identity';
 
 const mocks = vi.hoisted(() => ({ fetch: vi.fn(), command: vi.fn(), preview: vi.fn(), prepare: vi.fn(), auth: {} as Record<string, unknown>, success: vi.fn(), error: vi.fn() }));
+vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'http://127.0.0.1:28622' }));
 vi.mock('@/data/identity', () => ({ fetchIdentity: mocks.fetch, callIdentityCommand: mocks.command, fetchLinkPreview: mocks.preview, identityCommandError: (error: Error) => error.message }));
 vi.mock('@/contexts/auth', () => ({ useAuth: () => mocks.auth }));
 vi.mock('@/data/indexedDB/useIndexedDB', () => ({ prepareIdentityCacheScope: mocks.prepare }));

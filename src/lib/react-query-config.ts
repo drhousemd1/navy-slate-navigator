@@ -19,11 +19,9 @@ export const createQueryClient = () => {
       },
     }),
     mutationCache: new MutationCache({
-      onError: (error: Error, variables: unknown, context: unknown, mutation: Mutation<unknown, Error, unknown, unknown>) => {
+      onError: (error: Error, _variables: unknown, _context: unknown, mutation: Mutation<unknown, Error, unknown, unknown>) => {
         logger.error(
-          `[Mutation Cache Error] Mutation Key: ${JSON.stringify(mutation.options.mutationKey || 'N/A')} \nVariables: ${JSON.stringify(variables)} \nError:`,
-          error,
-          "\nContext:", context
+          `[Mutation Cache Error] Mutation Key: ${JSON.stringify(mutation.options.mutationKey || 'N/A')} \nError:`, error
         );
       },
     }),
@@ -39,8 +37,10 @@ export const createQueryClient = () => {
         networkMode: 'online', // Default to online, persister handles offline for queries if configured
       },
       mutations: {
-        networkMode: 'offlineFirst', // Queue mutations when offline
-        retry: 3, // Increased retry attempts for mutations as well
+        // Only the explicit durable command queue may replay writes. Legacy
+        // mutations fail immediately rather than pausing/retrying invisibly.
+        networkMode: 'always',
+        retry: false,
         // Global onError for mutations is now handled by mutationCache
       },
     },

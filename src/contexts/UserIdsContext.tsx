@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth';
@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { getErrorMessage } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import type { ProfileRole } from '@/types/profile';
+import { supabaseBackendId } from '@/integrations/supabase/client';
+import { forgetRecovery, reconcileRecoveryAccount, recoveryAccess, subscribeRecovery } from '@/lib/offline/recovery';
+import { OfflineRecovery } from '@/components/offline/OfflineRecovery';
 
 interface UserIdsContextType extends IdentityState {
   isLoadingUserIds: boolean;
@@ -35,6 +38,10 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
   const scope = identityCacheScope(identity);
   const subUserId = identity.subUserId;
   const domUserId = identity.domUserId;
+  const recovery = useSyncExternalStore(subscribeRecovery, () => accountId ? recoveryAccess(supabaseBackendId, accountId) : 'checking');
+  useEffect(() => {
+    if (!authLoading) reconcileRecoveryAccount(supabaseBackendId, accountId);
+  }, [accountId, authLoading]);
 
   useEffect(() => {
     let active = true;
@@ -96,12 +103,15 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
     }
   };
   const needsBoundary = !!accountId && (!effectiveIdentity.canAccessData || isLoadingUserIds);
+  const signOutAndRemoveRecovery = async () => { forgetRecovery(supabaseBackendId); await signOut(); };
   const canSetRole = identity.status === 'invalid' && !identity.partnerUserId &&
     (identity.problem === 'missing_profile' || identity.problem === 'invalid_role');
 
   return (
     <UserIdsContext.Provider value={value}>
       {needsBoundary && !publicAccountPaths.has(pathname) ? (
+        !authLoading && recovery === 'unreachable' && !cacheError ? <OfflineRecovery key={accountId} backendId={supabaseBackendId} accountId={accountId}
+          checking={isLoadingUserIds} onRetry={() => void repair(initializeUserIds)} onSignOut={() => void repair(signOutAndRemoveRecovery)} /> :
         <main className="flex h-full min-h-0 items-center justify-center overflow-y-auto bg-dark-navy p-6 text-white">
           <section className="w-full max-w-md rounded-lg border border-light-navy bg-navy p-6 space-y-4" aria-labelledby="identity-heading">
             <h1 id="identity-heading" className="text-xl font-semibold">{isLoadingUserIds ? 'Loading your account' : canSetRole ? 'Set up your role' : 'Account connection needs attention'}</h1>
@@ -118,7 +128,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
             </div>}
             {!isLoadingUserIds && <div className="flex gap-3">
               <Button disabled={isRepairing} onClick={() => void repair(initializeUserIds)}>Retry</Button>
-              <Button disabled={isRepairing} variant="outline" onClick={() => void repair(signOut)}>Sign out</Button>
+              <Button disabled={isRepairing} variant="outline" onClick={() => void repair(signOutAndRemoveRecovery)}>Sign out</Button>
             </div>}
           </section>
         </main>

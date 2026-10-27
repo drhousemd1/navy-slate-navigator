@@ -5,6 +5,8 @@ import { decodeIdentity, emptyIdentity, getBrowserTimezone, type IdentityState, 
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { toastManager } from '@/lib/toastManager';
+import { supabaseBackendId } from '@/integrations/supabase/client';
+import { clearRecoverySnapshot, isTransportUnavailable, recoveryAccess, setRecoveryAccess, verifyRecoveryScope } from '@/lib/offline/recovery';
 
 export const usePartnerLinking = (user: User | null) => {
   const accountId = user?.id ?? null;
@@ -22,16 +24,23 @@ export const usePartnerLinking = (user: User | null) => {
     const requestGeneration = ++generation.current;
     request.current?.abort();
     const controller = new AbortController();
+    let timedOut = false;
+    let rejectTimeout: (error: Error) => void;
+    const timeoutResult = new Promise<never>((_, reject) => { rejectTimeout = reject; });
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); rejectTimeout(new Error('Identity connection timed out')); }, 12_000);
     request.current = controller;
     const isCurrent = () => mounted.current && currentAccount.current === accountId && generation.current === requestGeneration;
     if (!accountId) {
+      clearTimeout(timeout);
       const signedOut = emptyIdentity('signed-out');
       if (isCurrent()) setIdentity(signedOut);
       return signedOut;
     }
     setIdentity(emptyIdentity('loading', accountId));
+    // Preserve an already-visible frozen recovery screen during its retry.
+    if (recoveryAccess(supabaseBackendId, accountId) !== 'unreachable') setRecoveryAccess(supabaseBackendId, accountId, 'checking');
     try {
-      let next = await fetchIdentity(accountId, controller.signal);
+      let next = await Promise.race([fetchIdentity(accountId, controller.signal), timeoutResult]);
       if (!isCurrent()) return null;
       if (next.canAccessData && next.timezone === null) {
         try {
@@ -39,7 +48,7 @@ export const usePartnerLinking = (user: User | null) => {
           if (!timezone) throw new Error('Browser timezone unavailable');
           // The server compares NULL under its identity lock. A simultaneous
           // login or explicit save may win; always keep the returned saved value.
-          const receipt = await callIdentityCommand(accountId, 'initialize_my_timezone', { p_timezone: timezone });
+          const receipt = await Promise.race([callIdentityCommand(accountId, 'initialize_my_timezone', { p_timezone: timezone }), timeoutResult]);
           if (!isCurrent()) return null;
           const initialized = decodeIdentity(accountId, receipt);
           if (!initialized.timezone) throw new Error('Timezone initialization was not confirmed');
@@ -49,15 +58,22 @@ export const usePartnerLinking = (user: User | null) => {
           next = { ...next, timezoneInitializationError: 'Your default timezone could not be saved. Choose and save your timezone in Profile, or retry loading your account.' };
         }
       }
+      if (next.canAccessData && next.relationshipStatus === 'active' && next.relationshipId && next.participantId) {
+        verifyRecoveryScope({ backendId: supabaseBackendId, accountId, relationshipId: next.relationshipId, participantId: next.participantId });
+      } else {
+        clearRecoverySnapshot(supabaseBackendId);
+        setRecoveryAccess(supabaseBackendId, accountId, 'denied');
+      }
       setIdentity(next);
       return next;
     } catch (error) {
-      if (!isCurrent() || controller.signal.aborted) return null;
+      if (!isCurrent() || (controller.signal.aborted && !timedOut)) return null;
+      setRecoveryAccess(supabaseBackendId, accountId, timedOut || isTransportUnavailable(error) ? 'unreachable' : 'denied');
       logger.error('Account identity could not be loaded:', getErrorMessage(error));
       const failed = emptyIdentity('error', accountId, 'Your account and partner connection could not be loaded. Check your connection and try again.');
       setIdentity(failed);
       return failed;
-    }
+    } finally { clearTimeout(timeout); }
   }, [accountId]);
 
   const cancelCurrentRequests = useCallback(() => {
@@ -72,6 +88,17 @@ export const usePartnerLinking = (user: User | null) => {
     void refreshIdentity();
     return cancelCurrentRequests;
   }, [refreshIdentity, cancelCurrentRequests]);
+
+  useEffect(() => {
+    if (!accountId || identity.status !== 'error' || recoveryAccess(supabaseBackendId, accountId) !== 'unreachable') return;
+    // A server outage need not change navigator.onLine. Poll only this failed
+    // read, with a bounded cadence; never replay a mutation from here.
+    const retry = () => { if (document.visibilityState !== 'hidden') void refreshIdentity(); };
+    const interval = setInterval(retry, 15_000);
+    window.addEventListener('online', retry);
+    window.addEventListener('focus', retry);
+    return () => { clearInterval(interval); window.removeEventListener('online', retry); window.removeEventListener('focus', retry); };
+  }, [accountId, identity.status, refreshIdentity]);
 
   // Account changes must hide old getters in this render, before effects run.
   const relationshipIdentity = identity.currentUserId === accountId

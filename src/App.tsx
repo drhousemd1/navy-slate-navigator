@@ -1,13 +1,11 @@
 import React from 'react';
 import AppRoutes from './AppRoutes';
-import { OfflineBanner } from './components/OfflineBanner';
 import Hydrate from './components/Hydrate';
 
 function App() {
   return (
-    <Hydrate fallbackMessage="Failed to load application data. Please try clearing site data or contact support.">
+    <Hydrate fallbackMessage="Application data could not be loaded. Retry or contact support. Keep site data to preserve saved actions.">
       <AppRoutes />
-      <OfflineBanner />
     </Hydrate>
   );
 }

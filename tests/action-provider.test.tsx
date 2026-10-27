@@ -3,9 +3,11 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActionCommandsProvider, useActionCommands } from '@/contexts/ActionCommandsContext';
+import { verifyRecoveryScope } from '@/lib/offline/recovery';
 import { uuid, receipt } from './action-queue.helpers';
 
 const mocks = vi.hoisted(() => ({ identity: null as any, gate: vi.fn(), read: vi.fn(), send: vi.fn(), online: true }));
+vi.mock('@/data/identity', () => ({ fetchIdentity: async () => mocks.identity }));
 vi.mock('@/contexts/UserIdsContext', () => ({ useUserIds: () => mocks.identity }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: mocks.identity?.currentUserId ? { id: mocks.identity.currentUserId } : null }) }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {}, supabaseBackendId: 'http://127.0.0.1:28622' }));
@@ -20,6 +22,7 @@ vi.mock('@/data/actions/store', async () => {
 });
 beforeEach(() => {
   mocks.identity = { canAccessData: true, isLoadingUserIds: false, currentUserId: uuid(1), participantId: uuid(2), relationshipId: uuid(3), relationshipStatus: 'active' };
+  verifyRecoveryScope({ backendId: 'http://127.0.0.1:28622', accountId: uuid(1), participantId: uuid(2), relationshipId: uuid(3) });
   mocks.gate.mockReset().mockResolvedValue(true);
   mocks.read.mockReset().mockResolvedValue({ rewards: [], wallets: [], lots: [], events: [], points: [], deliveries: [], acknowledged: [] });
   mocks.send.mockReset(); mocks.online = true;

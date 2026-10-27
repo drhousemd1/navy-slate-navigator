@@ -1,63 +1,56 @@
-const CACHE_NAME = 'navy-slate-navigator-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png'
-];
+// Replaced with the exact Vite output manifest during a production build.
+// The source worker deliberately has no installable offline shell.
+const BUILD = /* OBEDIENCE_SHELL_MANIFEST */ { version: 'unbuilt', assets: [] };
+const CACHE_PREFIX = 'obedience-shell-';
+const CACHE_NAME = CACHE_PREFIX + BUILD.version;
+const assetPaths = new Set(BUILD.assets);
+const privatePath = path => /^\/(?:auth|forgot-password|reset-password|admin)(?:\/|$)/.test(path) ||
+  /^\/(?:api|rest|auth|storage|functions|realtime)(?:\/|$)/.test(path);
 
-// Install event
-self.addEventListener('install', (event) => {
-  console.log('[SW] Service Worker installing…');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Caching app shell');
-        return cache.addAll(urlsToCache);
-      })
-      .catch((error) => {
-        console.error('[SW] Cache install failed:', error);
-      })
-  );
-  self.skipWaiting();
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    if (!BUILD.assets.includes('/index.html')) throw new Error('A built shell manifest is required');
+    const cache = await caches.open(CACHE_NAME);
+    try {
+      for (const path of BUILD.assets) {
+        const response = await fetch(new Request(path, { cache: 'reload', credentials: 'omit' }));
+        if (!response.ok || response.type === 'opaque' || response.headers.has('set-cookie') ||
+            /(?:private|no-store)/i.test(response.headers.get('cache-control') || '')) throw new Error('Shell asset was not cacheable');
+        await cache.put(path, response);
+      }
+    } catch (error) { await caches.delete(CACHE_NAME); throw error; }
+  })());
+  // No skipWaiting: an update cannot replace the code under an existing tab.
 });
 
-// Activate event
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Service Worker activating…');
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
-  console.log('[SW] Service Worker activated and ready');
+self.addEventListener('activate', event => {
+  event.waitUntil(caches.keys().then(names => Promise.all(names
+    .filter(name => (name.startsWith(CACHE_PREFIX) || name === 'navy-slate-navigator-v1') && name !== CACHE_NAME)
+    .map(name => caches.delete(name)))));
+  // No clients.claim: a first visit becomes controlled on its next navigation.
 });
 
-// Fetch event
-self.addEventListener('fetch', (event) => {
-  // Private documents must use authenticated network requests, never an offline
-  // app-shell fallback or a cached response from an earlier account.
-  const requestUrl = new URL(event.request.url);
-  if (requestUrl.pathname.includes('/storage/v1/object/') &&
-      requestUrl.pathname.includes('/admin-documents/')) return;
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        return response || fetch(event.request);
-      })
-      .catch(() => {
-        return caches.match('/index.html');
-      })
-  );
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  const url = new URL(request.url);
+  // Network-only means no respondWith at all, including on failure. Never turn
+  // an API/Auth error, private request or POST into a successful HTML response.
+  if (request.method !== 'GET' || url.origin !== self.location.origin ||
+      request.headers.has('authorization') || request.headers.has('apikey') || privatePath(url.pathname) ||
+      url.searchParams.has('code') || url.searchParams.has('token') || url.searchParams.has('token_hash') ||
+      url.searchParams.has('access_token') || url.searchParams.has('refresh_token')) return;
+  if (request.mode === 'navigate') {
+    event.respondWith(fetch(request).catch(async () => {
+      const cached = await (await caches.open(CACHE_NAME)).match('/index.html');
+      return cached || Response.error();
+    }));
+    return;
+  }
+  if (!assetPaths.has(url.pathname) || url.search) return;
+  event.respondWith((async () => {
+    const cached = await (await caches.open(CACHE_NAME)).match(url.pathname);
+    return cached || fetch(request);
+  })());
 });
 
 // FIXED: Push event handler
@@ -175,14 +168,3 @@ self.addEventListener('notificationclick', (event) => {
       })
   );
 });
-
-// Background sync event
-self.addEventListener('sync', (event) => {
-  console.log('[SW] Background sync:', event.tag);
-
-  if (event.tag === 'background-sync') {
-    event.waitUntil(Promise.resolve());
-  }
-});
-
-console.log('[SW] Service worker loaded successfully');

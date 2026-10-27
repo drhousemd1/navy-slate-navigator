@@ -1,7 +1,8 @@
 
 import React, { createContext, useState, useEffect, useContext, useRef, ReactNode } from 'react';
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
+import { forgetRecovery } from '@/lib/offline/recovery';
 import { toast } from '@/hooks/use-toast';
 import { queryClient } from '@/data/queryClient';
 import localforage from 'localforage';
@@ -199,6 +200,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const clearAllCaches = async () => {
+    forgetRecovery(supabaseBackendId);
     try {
       logger.info('[AuthContext] Starting cache clear...');
       queryClient.clear();
@@ -219,6 +221,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signOut = async () => {
+    forgetRecovery(supabaseBackendId);
     logger.info("AuthContext: signOut called");
     const { error } = await supabase.auth.signOut();
     

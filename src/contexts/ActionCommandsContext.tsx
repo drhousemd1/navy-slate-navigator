@@ -10,6 +10,9 @@ import { scopeKey, type ActionQueueScope, type QueueEntry, type ActionIntent } f
 import { accountingStatusKey, readAccountingEnabled, readRewardActionData, rewardActionKey, type RewardActionData } from '@/data/rewards/actionReadModel';
 import { TaskFeedback } from '@/components/task/TaskFeedback';
 import { RewardFeedback } from '@/components/rewards/RewardFeedback';
+import { fetchIdentity } from '@/data/identity';
+import { withCurrentVerification } from '@/lib/offline/verified-transport';
+import { clearRecoverySnapshot, projectRecoverySnapshot, saveRecoverySnapshot } from '@/lib/offline/recovery';
 
 export type VisibleCommand = QueueEntry & { canReplay: boolean; canCancel: boolean };
 interface ActionCommandsValue {
@@ -52,8 +55,23 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
     staleTime: 0, refetchOnMount: 'always', refetchInterval: 10_000 });
 
   useEffect(() => {
+    if (scope && status.data === false) clearRecoverySnapshot(scope.backendId);
+    if (scope && atomic && status.isSuccess && readModel.isSuccess && readModel.data) {
+      let saved = false;
+      try { saved = saveRecoverySnapshot(projectRecoverySnapshot(scope, readModel.data, readModel.dataUpdatedAt)); } catch { /* A bad projection cannot crash the live application. */ }
+      if (!saved) {
+        setStorageError('The last confirmed summary could not be saved for offline recovery. Saved actions use their separate durable store.');
+      }
+    }
+  }, [scope, atomic, status.data, status.isSuccess, readModel.data, readModel.dataUpdatedAt, readModel.isSuccess]);
+
+  useEffect(() => {
     const store = new IndexedDBActionQueueStore();
-    const instance = new ActionCommandQueue({ store, transport: createSupabaseActionTransport(),
+    const transport = withCurrentVerification(createSupabaseActionTransport(), {
+      identity: fetchIdentity, accounting: readAccountingEnabled,
+      isCurrent: expected => !!currentScope.current && scopeKey(expected) === scopeKey(currentScope.current),
+    });
+    const instance = new ActionCommandQueue({ store, transport,
       onStorageError: error => setStorageError(error.message),
       onObserverError: () => setStorageError('The action was recorded, but its display could not refresh. Reload confirmed data.'),
       onConfirmed: entry => {
