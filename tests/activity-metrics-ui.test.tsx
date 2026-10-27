@@ -92,10 +92,13 @@ describe('shared Throne query and visible result states', () => {
     expect(mocks.source).toHaveBeenCalledTimes(2);
   });
   it('labels retained earlier records as all dates, separate from exact current counts', () => {
-    const metrics = projectActivity({ ...source(), legacy: [{ id: 'old', kind: 'task', role: null, recordedAt: '2020-01-01T00:00:00Z' }] }, [metricRange('week', 'sub', 'UTC', new Date())]);
+    const metrics = projectActivity({ ...source(), legacy: [{ id: 'old', kind: 'task', role: null, recordedAt: '2020-01-01T00:00:00Z' },
+      { id: 'old-reward', kind: 'reward', role: null, recordedAt: '2020-01-01T00:00:00Z' }] }, [metricRange('week', 'sub', 'UTC', new Date())]);
     render(<ActivityMetricsNotice metrics={metrics} />);
     expect(screen.getByText('Earlier records — all retained dates in this relationship')).toBeTruthy();
     expect(screen.getByText(/1 task completions/)).toBeTruthy();
+    expect(screen.getByText(/1 reward-use records/)).toBeTruthy();
+    expect(screen.queryByText(/1 reward uses/)).toBeNull();
     expect(screen.getByText(/preserved separately/).textContent).toContain('cannot be assigned accurately');
   });
 });

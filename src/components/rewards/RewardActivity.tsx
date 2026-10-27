@@ -20,7 +20,7 @@ export function RewardActivity() {
     {actions.mode === 'atomic' && <details className="rounded border border-light-navy bg-navy p-3">
       <summary className="cursor-pointer font-semibold">Reward History</summary>
       {!actions.data ? <p className="mt-3">Loading confirmed history…</p> : <div className="mt-3 space-y-3">
-        {actions.data.events.length === 0 && <p>No reward events yet.</p>}
+        {actions.data.events.length === 0 && <p>No new reward events yet.</p>}
         {[...actions.data.events].sort((a, b) => b.recorded_at.localeCompare(a.recorded_at) || b.id.localeCompare(a.id)).map(event => {
           const reason = rewardUndoReason(event, actions.data!, identity.participantId!, identity.currentRole!, identity.permissions ?? {});
           const reversible = ['reward_purchased', 'reward_redeemed'].includes(event.kind);
@@ -35,6 +35,16 @@ export function RewardActivity() {
             {reversible && <><button className="mt-2 underline disabled:opacity-50" disabled={!!reason || busy} onClick={() => void perform(() => actions.enqueue({ kind: 'undo', eventId: event.id }))}>Undo {event.kind === 'reward_purchased' ? 'purchase' : 'Use'}</button>{reason && <p className="text-gray-300">{reason}</p>}</>}
           </article>;
         })}
+        {actions.data.importedUsage.length > 0 && <section aria-label="Imported reward-use history" className="border-t border-light-navy pt-3 space-y-3">
+          <h3 className="font-semibold">Imported reward-use history</h3>
+          <p className="text-xs text-gray-300">These older records describe saved Use status, not purchases. Original price, reward role, actor, point effects and timezone were not reliably recorded. Current titles are references, not historical snapshots. These entries are read-only and cannot be undone.</p>
+          {[...actions.data.importedUsage].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '') || b.id.localeCompare(a.id)).map(row => <article key={row.id} className="border-t border-light-navy pt-3 text-sm">
+            <p className="font-semibold">Imported reward-use record</p>
+            <p>{row.currentTitle ? `Current title: ${row.currentTitle}` : 'Original reward title is unavailable.'}</p>
+            <p>Saved timestamp: {row.created_at ? <time dateTime={row.created_at}>{row.created_at}</time> : 'Not recorded'}</p>
+            <p>Saved status: {row.used === true ? 'Used' : row.used === false ? 'Not marked used' : 'Not recorded'}</p>
+          </article>)}
+        </section>}
       </div>}
     </details>}
   </section>;

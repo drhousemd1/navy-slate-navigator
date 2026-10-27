@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RewardsProvider, useRewards } from '@/contexts/RewardsContext';
@@ -22,7 +22,7 @@ const event = (values: Partial<RewardEventRow> = {}): RewardEventRow => ({ id: '
 const data = (): RewardActionData => ({ rewards: [{ ...reward }], wallets: [
   { participant_id: 'sub-participant', relationship_id: 'period', currency: 'sub', balance: 30 },
   { participant_id: 'dom-participant', relationship_id: 'period', currency: 'dom', balance: 50 },
-], lots: [lot()], events: [event()], points: [], deliveries: [], acknowledged: [] });
+], lots: [lot()], events: [event()], points: [], deliveries: [], acknowledged: [], importedUsage: [] });
 beforeEach(() => {
   mocks.actions = { scope: { backendId: 'http://127.0.0.1:28622', accountId: 'sub', participantId: 'sub-participant', relationshipId: 'period' }, mode: 'atomic', data: data(), entries: [], confirmed: [], error: null, enqueue: vi.fn().mockResolvedValue(undefined), refresh: vi.fn().mockResolvedValue(undefined), retry: vi.fn(), cancelUnsent: vi.fn() };
   mocks.identity = { currentRole: 'sub', participantId: 'sub-participant', permissions: { definition_manage: 'both', sub_reward_redeem: 'both', sub_reward_redeem_undo: 'both' } };
@@ -87,6 +87,25 @@ describe('actual reward controls use the recorded command path', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Undo Use' }));
     expect(mocks.actions.enqueue).toHaveBeenCalledWith({ kind: 'undo', eventId: 'use' });
     expect(screen.getByText('Purchased: Quiet evening')).toBeTruthy();
+  });
+  it('shows imported Use records as read-only evidence without inventing purchases, price, role or actor', async () => {
+    mocks.actions.data.importedUsage = [
+      { id: 'old-used', relationship_id: 'period', reward_id: 'reward', action_event_id: null, created_at: '2025-01-01T12:00:00Z', used: true, currentTitle: 'Renamed reward' },
+      { id: 'old-false', relationship_id: 'period', reward_id: null, action_event_id: null, created_at: '2025-01-02T12:00:00Z', used: false },
+      { id: 'old-unknown', relationship_id: 'period', reward_id: null, action_event_id: null, created_at: null, used: null },
+    ];
+    render(<RewardsProvider><RewardActivity /></RewardsProvider>);
+    await userEvent.setup().click(screen.getByText('Reward History'));
+    const imported = within(screen.getByRole('region', { name: 'Imported reward-use history' }));
+    expect(imported.getAllByRole('article')).toHaveLength(3);
+    expect(imported.getByText('Current title: Renamed reward')).toBeTruthy();
+    expect(imported.getByText(/not historical snapshots/)).toBeTruthy();
+    expect(imported.getByText('2025-01-01T12:00:00Z').getAttribute('dateTime')).toBe('2025-01-01T12:00:00Z');
+    expect(imported.getByText('Saved status: Used')).toBeTruthy();expect(imported.getByText('Saved status: Not marked used')).toBeTruthy();
+    expect(imported.getByText('Saved status: Not recorded')).toBeTruthy();expect(imported.getByText('Saved timestamp: Not recorded')).toBeTruthy();
+    expect(imported.queryByRole('button')).toBeNull();expect(imported.queryByText(/Sub reward|Dom reward|Sub balance|Dom balance|Purchased:/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Undo purchase' })).toBeTruthy();
+    expect(mocks.actions.enqueue).not.toHaveBeenCalled();
   });
   it('shows unknown balances as dashes until the scoped reward state is loaded', () => {
     mocks.actions.mode = 'loading';
