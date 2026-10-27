@@ -140,9 +140,12 @@ const Profile: React.FC = () => {
 
   const handleDeleteAccount = async () => {
     if (!user || !deleteAccount) return;
+    setError(null);
     try {
-      await deleteAccount();
-      toastManager.success("Account Deletion Initiated", "Your account is scheduled for deletion. You will be logged out.");
+      const result = await deleteAccount();
+      // The account service returns failures rather than throwing them. It owns
+      // the popup; keep the same failure visible here instead of adding success.
+      if (result.error) setError(getErrorMessage(result.error));
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error);
       logger.error('Error deleting account:', errorMessage);
