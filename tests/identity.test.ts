@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyIdentity, identityScopeUserIds, resolveIdentity, decodeIdentity, identityCacheScope, decodeLinkPreview, type IdentityProfile } from '@/lib/identity';
+import { emptyIdentity, identityScopeUserIds, resolveIdentity, decodeIdentity, identityCacheScope, decodeLinkPreview, decodePartnerLinkOptions, type IdentityProfile } from '@/lib/identity';
 
 const sub: IdentityProfile = { id: 'sub-account', role: 'sub', linked_partner_id: 'dom-account' };
 const dom: IdentityProfile = { id: 'dom-account', role: 'dom', linked_partner_id: 'sub-account' };
@@ -45,6 +45,30 @@ describe('authoritative relationship resolution', () => {
       status: 'error', canAccessData: false, subUserId: null, domUserId: null,
     });
     expect(() => identityScopeUserIds(null, null)).toThrow('identity must be loaded');
+  });
+});
+
+describe('masked invitation options boundary', () => {
+  const period = '00000000-0000-4000-8000-000000000001', session = '00000000-0000-4000-8000-000000000090';
+  const prior = '00000000-0000-4000-8000-000000000002';
+  const payload = { relationship_id: period, relationship_session_id: session, can_generate_fresh: true,
+    invitation: { code: 'A'.repeat(32), mode: 'continue', previous_relationship_id: prior },
+    archived_relationships: [{ relationship_id: prior, started_at: '2025-01-01T00:00:00Z', ended_at: '2025-02-01T00:00:00Z', former_partner_label: 'Former partner', can_generate_continue: true }] };
+  it('copies only masked fields and exact saved mode/dates, never arbitrary profile metadata', () => {
+    const decoded = decodePartnerLinkOptions({ ...payload, former_user_id: 'private', archived_relationships: [{ ...payload.archived_relationships[0], avatar: 'private' }] }, period, session);
+    expect(decoded.invitation).toEqual({ code: 'A'.repeat(32), mode: 'continue', previousRelationshipId: prior });
+    expect(decoded.archivedRelationships[0]).toEqual({ relationshipId: prior, startedAt: '2025-01-01T00:00:00Z', endedAt: '2025-02-01T00:00:00Z', formerPartnerLabel: 'Former partner', canGenerateContinue: true });
+    expect(JSON.stringify(decoded)).not.toContain('private');
+  });
+  it.each([
+    { relationship_id: prior }, { relationship_session_id: prior }, { can_generate_fresh: 'true' },
+    { invitation: { code: 'A'.repeat(32), mode: 'fresh', previous_relationship_id: prior } },
+    { archived_relationships: [] },
+    { archived_relationships: [{ ...payload.archived_relationships[0], former_partner_label: 'Actual name' }] },
+    { archived_relationships: [{ ...payload.archived_relationships[0], started_at: 'invalid' }] },
+    { archived_relationships: [...payload.archived_relationships, ...payload.archived_relationships] },
+  ])('rejects mismatched, incomplete or unsafe options %o', change => {
+    expect(() => decodePartnerLinkOptions({ ...payload, ...change }, period, session)).toThrow('invalid invitation choices');
   });
 });
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { callIdentityCommand, fetchIdentity, fetchLinkPreview, identityCommandError } from '@/data/identity';
-import { decodeIdentity, emptyIdentity, getBrowserTimezone, isRelationshipSessionId, type IdentityState, type LinkPreview, type LinkMode, type PermissionChoice } from '@/lib/identity';
+import { callIdentityCommand, fetchIdentity, fetchLinkPreview, fetchPartnerLinkOptions, identityCommandError } from '@/data/identity';
+import { decodeIdentity, emptyIdentity, getBrowserTimezone, isRelationshipSessionId, type IdentityState, type LinkPreview, type LinkMode, type PartnerLinkOptions, type PermissionChoice } from '@/lib/identity';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { toastManager } from '@/lib/toastManager';
@@ -20,6 +20,9 @@ export const usePartnerLinking = (user: User | null) => {
   const contextKey = JSON.stringify([accountId, identity.relationshipId, identity.relationshipSessionId]);
   const currentContext = useRef(contextKey); currentContext.current = contextKey;
   const [busyAccount, setBusyAccount] = useState<string | null>(null);
+  const optionsRequest = useRef(0);
+  const optionsController = useRef<AbortController | null>(null);
+  const [optionsState, setOptionsState] = useState<{ scope: string; data: PartnerLinkOptions | null; loading: boolean; error: string | null } | null>(null);
 
   const refreshIdentity = useCallback(async (): Promise<IdentityState | null> => {
     if (!mounted.current || currentAccount.current !== accountId) return null;
@@ -83,6 +86,8 @@ export const usePartnerLinking = (user: User | null) => {
     generation.current++;
     commandGeneration.current++;
     request.current?.abort();
+    optionsRequest.current++;
+    optionsController.current?.abort();
   }, []);
 
   useEffect(() => {
@@ -105,6 +110,33 @@ export const usePartnerLinking = (user: User | null) => {
   // Account changes must hide old getters in this render, before effects run.
   const relationshipIdentity = identity.currentUserId === accountId
     ? identity : emptyIdentity(accountId ? 'loading' : 'signed-out', accountId);
+
+  const optionsCurrent = optionsState?.scope === contextKey && relationshipIdentity.status === 'unlinked';
+  const partnerLinkOptions = optionsCurrent ? optionsState.data : null;
+  const reloadPartnerLinkOptions = useCallback(async (): Promise<PartnerLinkOptions | null> => {
+    const period = identity.relationshipId, session = identity.relationshipSessionId;
+    if (!accountId || identity.currentUserId !== accountId || identity.status !== 'unlinked' || !period || !isRelationshipSessionId(session) ||
+      !mounted.current || currentAccount.current !== accountId || currentContext.current !== contextKey) return null;
+    const operation = ++optionsRequest.current, startingRead = generation.current;
+    optionsController.current?.abort();
+    const controller = new AbortController(); optionsController.current = controller;
+    let timer: ReturnType<typeof setTimeout>;
+    const deadline = new Promise<never>((_, reject) => { timer = setTimeout(() => {
+      controller.abort(); reject(new Error('Invitation choices could not be loaded. Check your connection and retry.'));
+    }, 12_000); });
+    const isCurrent = () => mounted.current && currentAccount.current === accountId && currentContext.current === contextKey &&
+      generation.current === startingRead && optionsRequest.current === operation;
+    setOptionsState({ scope: contextKey, data: null, loading: true, error: null });
+    try {
+      const next = await Promise.race([fetchPartnerLinkOptions(accountId, period, session, controller.signal), deadline]);
+      if (!isCurrent()) return null;
+      setOptionsState({ scope: contextKey, data: next, loading: false, error: null });
+      return next;
+    } catch (error) {
+      if (isCurrent()) setOptionsState({ scope: contextKey, data: null, loading: false, error: identityCommandError(error) });
+      return null;
+    } finally { clearTimeout(timer!); }
+  }, [accountId, contextKey, identity.currentUserId, identity.status, identity.relationshipId, identity.relationshipSessionId]);
 
   const runCommand = async (command: () => Promise<unknown>, successMessage?: string, failureTitle = 'Unable to update partner connection'): Promise<IdentityState | null> => {
     if (!accountId || !mounted.current || currentAccount.current !== accountId || currentContext.current !== contextKey) return null;
@@ -137,11 +169,44 @@ export const usePartnerLinking = (user: User | null) => {
   const generateLinkCode = async (mode: LinkMode = 'fresh', previousRelationshipId: string | null = null): Promise<string | null> => {
     const expectedPeriod = relationshipIdentity.relationshipId;
     const expectedSession = relationshipIdentity.relationshipSessionId;
-    if (!expectedPeriod || !isRelationshipSessionId(expectedSession)) return null;
-    const next = await runCommand(() => callIdentityCommand(accountId, 'generate_partner_link_code', {
-      p_expected_relationship_id: expectedPeriod, p_expected_relationship_session_id: expectedSession, p_mode: mode, p_previous_relationship_id: previousRelationshipId,
-    }));
-    return next?.partnerLinkCode ?? null;
+    if (!expectedPeriod || !isRelationshipSessionId(expectedSession) || !accountId || !mounted.current ||
+      currentAccount.current !== accountId || currentContext.current !== contextKey || !partnerLinkOptions ||
+      (mode === 'fresh' ? !partnerLinkOptions.canGenerateFresh || previousRelationshipId !== null
+        : !partnerLinkOptions.archivedRelationships.some(row => row.relationshipId === previousRelationshipId && row.canGenerateContinue))) return null;
+    const operation = ++commandGeneration.current, startingRead = generation.current;
+    const isCurrent = () => mounted.current && currentAccount.current === accountId && currentContext.current === contextKey &&
+      commandGeneration.current === operation && generation.current === startingRead;
+    setBusyAccount(accountId);
+    // Replacement may succeed even if its response is lost. Never keep offering
+    // the previous code as though it were still verified after that uncertainty.
+    optionsRequest.current++; optionsController.current?.abort();
+    setOptionsState({ scope: contextKey, data: null, loading: true, error: null });
+    let timer: ReturnType<typeof setTimeout>;
+    const deadline = new Promise<never>((_, reject) => { timer = setTimeout(() => {
+      reject(new Error('Could not confirm invitation generation. Reload invitation choices before sharing a code. The request will not be sent again automatically.'));
+    }, 12_000); });
+    try {
+      // A timeout does not mean the server rolled back. Stop waiting, retain the
+      // uncertainty, and ignore a later response; recovery only reads metadata.
+      const receipt = await Promise.race([callIdentityCommand(accountId, 'generate_partner_link_code', {
+        p_expected_relationship_id: expectedPeriod, p_expected_relationship_session_id: expectedSession, p_mode: mode, p_previous_relationship_id: previousRelationshipId,
+      }), deadline]);
+      clearTimeout(timer!);
+      if (!isCurrent()) return null;
+      const next = await reloadPartnerLinkOptions();
+      if (!isCurrent() || !next) return null;
+      const code = receipt && typeof receipt === 'object' && 'code' in receipt ? receipt.code : null;
+      if (next.invitation?.code !== code || next.invitation.mode !== mode || next.invitation.previousRelationshipId !== previousRelationshipId) {
+        throw new Error('The invitation changed. Review the current invitation before sharing it.');
+      }
+      return next.invitation.code;
+    } catch (error) {
+      if (isCurrent()) setOptionsState({ scope: contextKey, data: null, loading: false, error: identityCommandError(error) });
+      return null;
+    } finally {
+      clearTimeout(timer!);
+      if (mounted.current && currentAccount.current === accountId && commandGeneration.current === operation) setBusyAccount(null);
+    }
   };
 
   const previewPartnerCode = async (code: string): Promise<LinkPreview | null> => {
@@ -208,6 +273,10 @@ export const usePartnerLinking = (user: User | null) => {
 
   return {
     relationshipIdentity,
+    partnerLinkOptions,
+    partnerLinkOptionsLoading: optionsCurrent && optionsState.loading,
+    partnerLinkOptionsError: optionsCurrent ? optionsState.error : null,
+    reloadPartnerLinkOptions,
     refreshIdentity,
     generateLinkCode,
     previewPartnerCode,
@@ -216,7 +285,7 @@ export const usePartnerLinking = (user: User | null) => {
     linkToPartner,
     unlinkFromPartner,
     getLinkedPartnerInfo,
-    getCurrentLinkCode: (): string | null => currentAccount.current === accountId ? relationshipIdentity.partnerLinkCode ?? null : null,
+    getCurrentLinkCode: (): string | null => currentAccount.current === accountId && currentContext.current === contextKey ? partnerLinkOptions?.invitation?.code ?? null : null,
     getLinkedPartnerId: (): string | null => currentAccount.current === accountId && relationshipIdentity.status === 'linked' ? relationshipIdentity.partnerUserId : null,
     loading: busyAccount === accountId && !!accountId,
     partnerLinkingAvailable: relationshipIdentity.lifecycleReady === true && isRelationshipSessionId(relationshipIdentity.relationshipSessionId),

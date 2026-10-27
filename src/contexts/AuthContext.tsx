@@ -40,6 +40,10 @@ export interface AuthContextType extends AuthState {
   checkAdminStatus: () => Promise<boolean>;
   // Partner linking functions
   generateLinkCode: ReturnType<typeof usePartnerLinking>['generateLinkCode'];
+  partnerLinkOptions: ReturnType<typeof usePartnerLinking>['partnerLinkOptions'];
+  partnerLinkOptionsLoading: boolean;
+  partnerLinkOptionsError: string | null;
+  reloadPartnerLinkOptions: ReturnType<typeof usePartnerLinking>['reloadPartnerLinkOptions'];
   previewPartnerCode: ReturnType<typeof usePartnerLinking>['previewPartnerCode'];
   updateRelationshipPermissions: ReturnType<typeof usePartnerLinking>['updateRelationshipPermissions'];
   updateTimezone: ReturnType<typeof usePartnerLinking>['updateTimezone'];
@@ -252,6 +256,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkAdminStatus,
     // Partner linking functions
     generateLinkCode: partnerLinkingUtils.generateLinkCode,
+    partnerLinkOptions: partnerLinkingUtils.partnerLinkOptions,
+    partnerLinkOptionsLoading: partnerLinkingUtils.partnerLinkOptionsLoading,
+    partnerLinkOptionsError: partnerLinkingUtils.partnerLinkOptionsError,
+    reloadPartnerLinkOptions: partnerLinkingUtils.reloadPartnerLinkOptions,
     previewPartnerCode: partnerLinkingUtils.previewPartnerCode,
     updateRelationshipPermissions: partnerLinkingUtils.updateRelationshipPermissions,
     updateTimezone: partnerLinkingUtils.updateTimezone,

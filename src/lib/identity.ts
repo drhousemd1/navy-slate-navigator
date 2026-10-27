@@ -4,6 +4,20 @@ export type IdentityStatus = 'signed-out' | 'loading' | 'error' | 'unlinked' | '
 export type PermissionChoice = 'dom' | 'sub' | 'both';
 export type LinkMode = 'fresh' | 'continue';
 export interface LinkPreview { mode: LinkMode; previousRelationshipId: string | null; canContinuePrevious: boolean }
+export interface ArchivedLinkOption {
+  relationshipId: string;
+  startedAt: string;
+  endedAt: string | null;
+  formerPartnerLabel: 'Former partner' | 'Deleted account';
+  canGenerateContinue: boolean;
+}
+export interface PartnerLinkOptions {
+  relationshipId: string;
+  relationshipSessionId: string;
+  canGenerateFresh: boolean;
+  invitation: { code: string; mode: LinkMode; previousRelationshipId: string | null } | null;
+  archivedRelationships: ArchivedLinkOption[];
+}
 
 export interface IdentityProfile {
   id: string;
@@ -152,6 +166,39 @@ export function decodeLinkPreview(payload: unknown): LinkPreview {
     throw new Error('The account service returned an invalid link preview.');
   }
   return { mode: record.mode, previousRelationshipId: record.previous_relationship_id as string | null, canContinuePrevious: record.can_continue_previous };
+}
+
+/** Copy only the masked DTO, never arbitrary profile fields from a response. */
+export function decodePartnerLinkOptions(payload: unknown, expectedPeriod: string, expectedSession: string): PartnerLinkOptions {
+  const fail = (): never => { throw new Error('The account service returned invalid invitation choices. Refresh and try again.'); };
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return fail();
+  const record = payload as Record<string, unknown>;
+  if (record.relationship_id !== expectedPeriod || record.relationship_session_id !== expectedSession ||
+    !isRelationshipSessionId(expectedSession) || typeof record.can_generate_fresh !== 'boolean' || !Array.isArray(record.archived_relationships)) return fail();
+  const validDate = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));
+  const seen = new Set<string>();
+  const archivedRelationships = record.archived_relationships.map((value): ArchivedLinkOption => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return fail();
+    const row = value as Record<string, unknown>;
+    if (!isRelationshipSessionId(row.relationship_id) || seen.has(row.relationship_id) || !validDate(row.started_at) ||
+      (row.ended_at !== null && !validDate(row.ended_at)) ||
+      (row.former_partner_label !== 'Former partner' && row.former_partner_label !== 'Deleted account') ||
+      typeof row.can_generate_continue !== 'boolean') return fail();
+    seen.add(row.relationship_id);
+    return { relationshipId: row.relationship_id, startedAt: row.started_at, endedAt: row.ended_at as string | null,
+      formerPartnerLabel: row.former_partner_label, canGenerateContinue: row.can_generate_continue };
+  });
+  let invitation: PartnerLinkOptions['invitation'] = null;
+  if (record.invitation !== null) {
+    if (!record.invitation || typeof record.invitation !== 'object' || Array.isArray(record.invitation)) return fail();
+    const inv = record.invitation as Record<string, unknown>;
+    if (typeof inv.code !== 'string' || !/^[A-F0-9]{32}$/.test(inv.code) ||
+      (inv.mode !== 'fresh' && inv.mode !== 'continue') ||
+      (inv.mode === 'fresh' && inv.previous_relationship_id !== null) ||
+      (inv.mode === 'continue' && (typeof inv.previous_relationship_id !== 'string' || !seen.has(inv.previous_relationship_id)))) return fail();
+    invitation = { code: inv.code, mode: inv.mode, previousRelationshipId: inv.previous_relationship_id as string | null };
+  }
+  return { relationshipId: expectedPeriod, relationshipSessionId: expectedSession, canGenerateFresh: record.can_generate_fresh, invitation, archivedRelationships };
 }
 
 export function identityCacheScope(identity: IdentityState): string | null {

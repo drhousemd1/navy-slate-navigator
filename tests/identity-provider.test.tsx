@@ -8,9 +8,9 @@ import { usePartnerLinking } from '@/contexts/auth/usePartnerLinking';
 import { UserIdsProvider, useUserIds } from '@/contexts/UserIdsContext';
 import { emptyIdentity, resolveIdentity, type IdentityState } from '@/lib/identity';
 
-const mocks = vi.hoisted(() => ({ fetch: vi.fn(), command: vi.fn(), preview: vi.fn(), prepare: vi.fn(), auth: {} as Record<string, unknown>, success: vi.fn(), error: vi.fn() }));
+const mocks = vi.hoisted(() => ({ fetch: vi.fn(), command: vi.fn(), preview: vi.fn(), options: vi.fn(), prepare: vi.fn(), auth: {} as Record<string, unknown>, success: vi.fn(), error: vi.fn() }));
 vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'http://127.0.0.1:28622' }));
-vi.mock('@/data/identity', () => ({ fetchIdentity: mocks.fetch, callIdentityCommand: mocks.command, fetchLinkPreview: mocks.preview, identityCommandError: (error: Error) => error.message }));
+vi.mock('@/data/identity', () => ({ fetchIdentity: mocks.fetch, callIdentityCommand: mocks.command, fetchLinkPreview: mocks.preview, fetchPartnerLinkOptions: mocks.options, identityCommandError: (error: Error) => error.message }));
 vi.mock('@/contexts/auth', () => ({ useAuth: () => mocks.auth }));
 vi.mock('@/data/indexedDB/useIndexedDB', () => ({ prepareIdentityCacheScope: mocks.prepare }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn() } }));
@@ -33,6 +33,108 @@ afterEach(cleanup);
 beforeEach(() => { vi.resetAllMocks(); mocks.prepare.mockResolvedValue(undefined); });
 
 describe('authoritative identity request lifecycle', () => {
+  const choices = (id = 'A', session = solo(id).relationshipSessionId) => ({ relationshipId: `period-${id}`, relationshipSessionId: session,
+    canGenerateFresh: true, invitation: null, archivedRelationships: [{ relationshipId: 'previous', startedAt: '2025-01-01T00:00:00Z', endedAt: '2025-02-01T00:00:00Z', formerPartnerLabel: 'Former partner', canGenerateContinue: true }] });
+
+  it('loads scoped choices on demand and drops delayed responses after an account switch', async () => {
+    const pending = deferred<ReturnType<typeof choices>>();
+    mocks.fetch.mockImplementation((id: string) => Promise.resolve(solo(id))); mocks.options.mockReturnValue(pending.promise);
+    const { result, rerender } = renderHook(({ account }) => usePartnerLinking(account), { initialProps: { account: user('A') } });
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
+    expect(mocks.options).not.toHaveBeenCalled();
+    let loading!: Promise<unknown>; act(() => { loading = result.current.reloadPartnerLinkOptions(); });
+    expect(mocks.options).toHaveBeenCalledWith('A', 'period-A', solo('A').relationshipSessionId, expect.any(AbortSignal));
+    rerender({ account: user('B') }); await waitFor(() => expect(result.current.relationshipIdentity.currentUserId).toBe('B'));
+    await act(async () => { pending.resolve(choices()); await loading; });
+    expect(result.current.partnerLinkOptions).toBeNull(); expect(result.current.getCurrentLinkCode()).toBeNull();
+  });
+
+  it('rejects delayed options from an earlier connection generation without replacing the verified identity', async () => {
+    const pending = deferred<ReturnType<typeof choices>>();
+    mocks.fetch.mockResolvedValue(solo('A')); mocks.options.mockReturnValue(pending.promise);
+    const { result } = renderHook(() => usePartnerLinking(user('A')));
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
+    let loading!: Promise<unknown>; act(() => { loading = result.current.reloadPartnerLinkOptions(); });
+    const newer = { ...solo('A'), relationshipSessionId: '00000000-0000-4000-8000-000000000091' }; mocks.fetch.mockResolvedValue(newer);
+    await act(async () => { await result.current.refreshIdentity(); });
+    await act(async () => { pending.resolve(choices()); expect(await loading).toBeNull(); });
+    expect(result.current.partnerLinkOptions).toBeNull();
+    expect(result.current.relationshipIdentity.relationshipSessionId).toBe(newer.relationshipSessionId);
+  });
+
+  it('generates exact Continue consent and exposes only the read-back invitation metadata', async () => {
+    const code = 'A'.repeat(32);
+    mocks.fetch.mockResolvedValue(solo('A')); mocks.options.mockResolvedValueOnce(choices()).mockResolvedValueOnce({ ...choices(), invitation: { code, mode: 'continue', previousRelationshipId: 'previous' } });
+    mocks.command.mockResolvedValue({ code, mode: 'continue', previous_relationship_id: 'previous' });
+    const { result } = renderHook(() => usePartnerLinking(user('A')));
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
+    await act(async () => { await result.current.reloadPartnerLinkOptions(); });
+    await act(async () => { expect(await result.current.generateLinkCode('continue', 'previous')).toBe(code); });
+    expect(mocks.command).toHaveBeenCalledExactlyOnceWith('A', 'generate_partner_link_code', { p_expected_relationship_id: 'period-A', p_expected_relationship_session_id: solo('A').relationshipSessionId, p_mode: 'continue', p_previous_relationship_id: 'previous' });
+    expect(result.current.partnerLinkOptions?.invitation?.mode).toBe('continue'); expect(result.current.getCurrentLinkCode()).toBe(code);
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides an uncertain replacement and restores only authoritative metadata after a manual reload', async () => {
+    const initial = { ...choices(), invitation: { code: 'A'.repeat(32), mode: 'fresh', previousRelationshipId: null } };
+    const replacement = { ...choices(), invitation: { code: 'B'.repeat(32), mode: 'continue', previousRelationshipId: 'previous' } };
+    mocks.fetch.mockResolvedValue(solo('A')); mocks.options.mockResolvedValueOnce(initial).mockResolvedValueOnce(replacement);
+    mocks.command.mockRejectedValue(new Error('Response unavailable'));
+    const { result } = renderHook(() => usePartnerLinking(user('A')));
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
+    await act(async () => { await result.current.reloadPartnerLinkOptions(); });
+    await act(async () => { expect(await result.current.generateLinkCode('continue', 'previous')).toBeNull(); });
+    expect(result.current.getCurrentLinkCode()).toBeNull(); expect(result.current.partnerLinkOptionsError).toBe('Response unavailable');
+    expect(result.current.relationshipIdentity.status).toBe('unlinked');
+    await act(async () => { await result.current.reloadPartnerLinkOptions(); });
+    expect(result.current.getCurrentLinkCode()).toBe('B'.repeat(32)); expect(mocks.command).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not claim generation success when the read-back fails or the connection changes during creation', async () => {
+    mocks.fetch.mockResolvedValue(solo('A')); mocks.options.mockResolvedValueOnce(choices()).mockRejectedValueOnce(new Error('Read unavailable'));
+    mocks.command.mockResolvedValue({ code: 'A'.repeat(32) });
+    const { result } = renderHook(() => usePartnerLinking(user('A')));
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
+    await act(async () => { await result.current.reloadPartnerLinkOptions(); });
+    await act(async () => { expect(await result.current.generateLinkCode('fresh', null)).toBeNull(); });
+    expect(result.current.getCurrentLinkCode()).toBeNull(); expect(result.current.partnerLinkOptionsError).toBe('Read unavailable');
+    mocks.options.mockResolvedValue(choices()); await act(async () => { await result.current.reloadPartnerLinkOptions(); });
+    const pending = deferred<unknown>(); mocks.command.mockReturnValue(pending.promise);
+    let generation!: Promise<string | null>; act(() => { generation = result.current.generateLinkCode('fresh', null); });
+    mocks.fetch.mockResolvedValue({ ...solo('A'), relationshipSessionId: '00000000-0000-4000-8000-000000000091' });
+    await act(async () => { await result.current.refreshIdentity(); });
+    await act(async () => { pending.resolve({ code: 'B'.repeat(32) }); expect(await generation).toBeNull(); });
+    expect(result.current.getCurrentLinkCode()).toBeNull(); expect(result.current.partnerLinkOptions).toBeNull();
+    expect(mocks.success).not.toHaveBeenCalled();
+  });
+
+  it('releases a never-settling generation after its deadline, recovers by read only, and ignores a late response', async () => {
+    const pending = deferred<unknown>();
+    const before = { ...choices(), invitation: { code: 'A'.repeat(32), mode: 'fresh', previousRelationshipId: null } };
+    const recovered = { ...choices(), invitation: { code: 'B'.repeat(32), mode: 'continue', previousRelationshipId: 'previous' } };
+    mocks.fetch.mockResolvedValue(solo('A')); mocks.options.mockResolvedValueOnce(before).mockResolvedValueOnce(recovered);
+    mocks.command.mockReturnValue(pending.promise);
+    const { result } = renderHook(() => usePartnerLinking(user('A')));
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
+    await act(async () => { await result.current.reloadPartnerLinkOptions(); });
+    vi.useFakeTimers();
+    try {
+      let saving!: Promise<string | null>;
+      act(() => { saving = result.current.generateLinkCode('continue', 'previous'); });
+      expect(result.current.loading).toBe(true); expect(result.current.getCurrentLinkCode()).toBeNull();
+      await act(async () => { await vi.advanceTimersByTimeAsync(12_000); expect(await saving).toBeNull(); });
+      expect(result.current.loading).toBe(false); expect(result.current.partnerLinkOptionsLoading).toBe(false);
+      expect(result.current.partnerLinkOptionsError).toContain('Could not confirm invitation generation. Reload invitation choices before sharing a code.');
+      expect(result.current.getCurrentLinkCode()).toBeNull();
+      await act(async () => { await result.current.reloadPartnerLinkOptions(); });
+      expect(result.current.getCurrentLinkCode()).toBe('B'.repeat(32)); expect(result.current.partnerLinkOptionsError).toBeNull();
+      await act(async () => pending.resolve({ code: 'C'.repeat(32) }));
+      expect(result.current.getCurrentLinkCode()).toBe('B'.repeat(32));
+      expect(mocks.command).toHaveBeenCalledTimes(1); expect(mocks.options).toHaveBeenCalledTimes(2);
+      expect(mocks.success).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
+
   it('discards a delayed A response after switching to B, including old metadata-facing getters', async () => {
     const pendingA = deferred<IdentityState>();
     mocks.fetch.mockImplementation((id: string) => id === 'A' ? pendingA.promise : Promise.resolve(solo('B')));

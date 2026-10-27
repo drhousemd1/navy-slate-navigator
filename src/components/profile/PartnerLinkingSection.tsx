@@ -5,20 +5,35 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth';
 import { Copy, Users, Unlink } from 'lucide-react';
 import { toastManager } from '@/lib/toastManager';
-import type { LinkPreview } from '@/lib/identity';
+import type { ArchivedLinkOption, LinkMode, LinkPreview } from '@/lib/identity';
+
+const periodDates = (period: ArchivedLinkOption) => `${new Date(period.startedAt).toLocaleString()} – ${period.endedAt ? new Date(period.endedAt).toLocaleString() : 'end date not recorded'}`;
 
 const PartnerLinkingSection: React.FC = () => {
   const { generateLinkCode, previewPartnerCode, linkToPartner, unlinkFromPartner,
-    relationshipIdentity: identity, partnerLinkingLoading, partnerLinkingAvailable } = useAuth();
+    relationshipIdentity: identity, partnerLinkingLoading, partnerLinkingAvailable, partnerLinkOptions,
+    partnerLinkOptionsLoading, partnerLinkOptionsError, reloadPartnerLinkOptions } = useAuth();
   const [partnerCode, setPartnerCode] = useState('');
   const [review, setReview] = useState<{ code: string; consent: LinkPreview; scope: string } | null>(null);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const [selection, setSelection] = useState<{ scope: string; mode: LinkMode | ''; period: string }>({ scope: '', mode: '', period: '' });
   const scope = JSON.stringify([identity.currentUserId, identity.relationshipId, identity.relationshipSessionId]);
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const isLinked = identity.status === 'linked';
-  const linkCode = identity.partnerLinkCode;
+  const options = partnerLinkOptions?.relationshipId === identity.relationshipId &&
+    partnerLinkOptions.relationshipSessionId === identity.relationshipSessionId ? partnerLinkOptions : null;
+  const invitation = options?.invitation;
+  const linkCode = invitation?.code;
+  const mode = selection.scope === scope ? selection.mode : '';
+  const selectedPeriod = selection.scope === scope ? options?.archivedRelationships.find(row => row.relationshipId === selection.period) : null;
+  const invitedPeriod = options?.archivedRelationships.find(row => row.relationshipId === invitation?.previousRelationshipId);
   const disabled = partnerLinkingLoading || !partnerLinkingAvailable || !identity.relationshipSessionId;
+  const canGenerate = mode === 'fresh' ? options?.canGenerateFresh : mode === 'continue' && selectedPeriod?.canGenerateContinue;
+
+  useEffect(() => {
+    if (identity.status === 'unlinked' && identity.relationshipSessionId) void reloadPartnerLinkOptions();
+  }, [scope, identity.status, reloadPartnerLinkOptions]);
 
   useEffect(() => {
     setPartnerCode('');
@@ -30,9 +45,9 @@ const PartnerLinkingSection: React.FC = () => {
     if (!linkCode) return;
     try {
       await navigator.clipboard.writeText(linkCode);
-      toastManager.success('Copied!', 'Link code copied to clipboard.');
+      if (currentScope.current === scope) toastManager.success('Copied!', 'Link code copied to clipboard.');
     } catch {
-      toastManager.error('Copy unavailable', 'Select the code and copy it manually.');
+      if (currentScope.current === scope) toastManager.error('Copy unavailable', 'Select the code and copy it manually.');
     }
   };
 
@@ -74,18 +89,47 @@ const PartnerLinkingSection: React.FC = () => {
         </div>
       ) : identity.status === 'unlinked' ? <>
         <div>
-          <Label htmlFor="yourLinkCode" className="block text-sm font-medium text-gray-300 mb-2">Your Link Code</Label>
-          <p className="text-sm text-gray-400 mb-3">Invite your partner to start a fresh shared period. Previous relationship history and balances are not imported.</p>
-          <div className="flex gap-2">
-            {linkCode && <>
+          <Label htmlFor="invitationMode" className="block text-sm font-medium text-gray-300 mb-2">Invite your partner</Label>
+          <select id="invitationMode" value={mode} onChange={event => setSelection({ scope, mode: event.target.value as LinkMode | '', period: '' })}
+            disabled={disabled || partnerLinkOptionsLoading || !options} className="w-full rounded border bg-navy border-light-navy text-gray-200 p-2">
+            <option value="">Choose Fresh or Continue</option>
+            <option value="fresh">Start fresh</option>
+            <option value="continue">Continue a previous relationship</option>
+          </select>
+          {mode === 'continue' && <div className="mt-3 space-y-2">
+            <Label htmlFor="previousRelationship">Previous relationship period</Label>
+            <select id="previousRelationship" value={selectedPeriod?.relationshipId ?? ''}
+              onChange={event => setSelection({ scope, mode: 'continue', period: event.target.value })}
+              disabled={disabled || partnerLinkOptionsLoading} className="w-full rounded border bg-navy border-light-navy text-gray-200 p-2">
+              <option value="">Choose a saved period</option>
+              {options?.archivedRelationships.map((period, index) => <option key={period.relationshipId} value={period.relationshipId} disabled={!period.canGenerateContinue}>
+                {index + 1}. {period.formerPartnerLabel} · {periodDates(period)}{period.canGenerateContinue ? '' : ' · Unavailable'}
+              </option>)}
+            </select>
+            {!options?.archivedRelationships.length && <p className="text-sm text-gray-400">You have no saved shared periods to continue.</p>}
+            <p className="text-xs text-gray-400">Dates use this device’s timezone. Former identities stay hidden. Availability here does not show a former partner’s current connection; both accounts are checked when they accept.</p>
+          </div>}
+          {mode === 'fresh' && <p className="text-sm text-gray-300 mt-3">By generating this invitation, you agree to start a new shared period with zero balances. Previous history stays separate. Your partner must also agree.</p>}
+          {mode === 'continue' && selectedPeriod && <p className="text-sm text-gray-300 mt-3">By generating this invitation, you agree to continue the saved period from {periodDates(selectedPeriod)}, including its history and saved balances. Only the same original partner can accept, and they must also agree.</p>}
+          <Button onClick={() => { if (mode && canGenerate) void generateLinkCode(mode, mode === 'continue' ? selectedPeriod!.relationshipId : null); }}
+            className="bg-cyan-600 hover:bg-cyan-700 mt-3" disabled={disabled || partnerLinkOptionsLoading || !canGenerate}>
+            {linkCode ? 'Replace Code' : 'Generate Link Code'}
+          </Button>
+          {partnerLinkOptionsLoading && <p role="status" className="text-sm text-gray-400 mt-2">Loading invitation choices…</p>}
+          {partnerLinkOptionsError && <div role="alert" className="text-sm text-gray-300 mt-3 space-y-2">
+            <p>{partnerLinkOptionsError}</p><Button variant="outline" disabled={partnerLinkingLoading} onClick={() => void reloadPartnerLinkOptions()}>Reload invitation choices</Button>
+          </div>}
+          {options && !options.canGenerateFresh && partnerLinkingAvailable && <p role="status" className="text-sm text-gray-400 mt-3">Invitations are unavailable until your saved balances can be verified.</p>}
+          {linkCode && <div className="mt-4 rounded border border-light-navy p-3 space-y-2" role="group" aria-label="Current invitation">
+            <Label htmlFor="yourLinkCode">Your Link Code</Label>
+            <p className="text-sm text-gray-300">{invitation.mode === 'fresh' ? 'Current invitation: Start fresh with zero balances.'
+              : `Current invitation: Continue the saved period from ${periodDates(invitedPeriod!)} with its history and saved balances.`}</p>
+            <div className="flex gap-2">
               <Input id="yourLinkCode" value={linkCode} readOnly className="min-w-0 bg-navy border-light-navy font-mono" />
               <Button onClick={() => void handleCopyCode()} aria-label="Copy link code" variant="outline" className="border-cyan-500 text-cyan-400"><Copy className="w-4 h-4" /></Button>
-            </>}
-            <Button onClick={() => void generateLinkCode('fresh', null)} className="bg-cyan-600 hover:bg-cyan-700" disabled={disabled}>
-              {linkCode ? 'Replace Code' : 'Generate Link Code'}
-            </Button>
-          </div>
-          {linkCode && <p className="text-xs text-gray-400 mt-2">Replacing this code makes the old invitation unusable.</p>}
+            </div>
+            <p className="text-xs text-gray-400">Choosing another option does not change this invitation until you replace the code. Replacing it makes the old code unusable.</p>
+          </div>}
         </div>
         <div>
           <Label htmlFor="partnerCode" className="block text-sm font-medium text-gray-300 mb-2">Connect to Partner</Label>
@@ -98,6 +142,8 @@ const PartnerLinkingSection: React.FC = () => {
             <p className="text-sm text-gray-300">{review.consent.mode === 'continue'
               ? 'Your previous partner has invited you to continue the same archived relationship period, including its history and saved balances. Accept only if you want to resume that period together.'
               : 'Your partner has invited you to start fresh. This creates a new shared period with zero balances; previous relationship history remains separate.'}</p>
+            {review.consent.mode === 'continue' && options?.archivedRelationships.filter(row => row.relationshipId === review.consent.previousRelationshipId)
+              .map(row => <p key={row.relationshipId} className="text-sm text-gray-300">Saved period: {periodDates(row)}.</p>)}
             {review.consent.mode === 'fresh' && review.consent.canContinuePrevious && <p className="text-sm text-gray-400">You have a previous period together. Continuing it requires a continuation invitation instead of this fresh invitation.</p>}
             <div className="flex gap-2">
               <Button disabled={disabled} onClick={() => void confirmConnection()} className="bg-green-600 hover:bg-green-700">{review.consent.mode === 'continue' ? 'Agree and continue' : 'Agree and start fresh'}</Button>

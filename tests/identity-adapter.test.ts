@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { callIdentityCommand, fetchIdentity, fetchLinkPreview } from '@/data/identity';
+import { callIdentityCommand, fetchIdentity, fetchLinkPreview, fetchPartnerLinkOptions } from '@/data/identity';
 
 const mocks = vi.hoisted(() => ({ network: vi.fn() }));
 vi.mock('@/integrations/supabase/client', async () => {
@@ -21,6 +21,17 @@ beforeEach(() => {
 });
 
 describe('real Supabase identity transport actor binding', () => {
+  it('pins invitation choices to the checked account and reviewed connection generation', async () => {
+    const period = '00000000-0000-4000-8000-000000000001', generation = '00000000-0000-4000-8000-000000000090';
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce(sessionResult('A')).mockResolvedValue(sessionResult('B'));
+    mocks.network.mockResolvedValue(response({ relationship_id: period, relationship_session_id: generation, can_generate_fresh: true, invitation: null, archived_relationships: [] }));
+    expect(await fetchPartnerLinkOptions('A', period, generation)).toMatchObject({ relationshipId: period, relationshipSessionId: generation });
+    const [url, init] = mocks.network.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/rest/v1/rpc/get_my_partner_link_options');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer fixture-access-A');
+    expect(JSON.parse(init.body as string)).toEqual({ p_expected_relationship_id: period, p_expected_relationship_session_id: generation });
+  });
+
   it('rejects an A-origin command if the session resolves as B before token capture', async () => {
     const pending = deferred<ReturnType<typeof sessionResult>>();
     vi.spyOn(supabase.auth, 'getSession').mockReturnValueOnce(pending.promise);

@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { decodeIdentity, decodeLinkPreview, type IdentityState, type LinkMode, type PermissionChoice } from '@/lib/identity';
+import { decodeIdentity, decodeLinkPreview, decodePartnerLinkOptions, type IdentityState, type LinkMode, type PermissionChoice } from '@/lib/identity';
 
 interface IdentityCommands {
   set_my_profile_role: { p_role: 'dom' | 'sub' };
@@ -7,6 +7,7 @@ interface IdentityCommands {
   initialize_my_timezone: { p_timezone: string };
   generate_partner_link_code: { p_expected_relationship_id: string; p_expected_relationship_session_id: string; p_mode: LinkMode; p_previous_relationship_id: string | null };
   preview_partner_link_code: { p_code: string };
+  get_my_partner_link_options: { p_expected_relationship_id: string; p_expected_relationship_session_id: string };
   accept_partner_link_code: { p_expected_relationship_id: string; p_expected_relationship_session_id: string; p_code: string; p_mode: LinkMode; p_previous_relationship_id: string | null };
   unlink_my_partner: { p_expected_relationship_id: string; p_expected_relationship_session_id: string };
   set_relationship_permissions: { p_permissions: Record<string, PermissionChoice>; p_expected_relationship_id: string; p_expected_relationship_session_id: string };
@@ -52,6 +53,15 @@ export async function fetchLinkPreview(expectedAccountId: string, code: string) 
   return decodeLinkPreview(await callIdentityCommand(expectedAccountId, 'preview_partner_link_code', { p_code: code.trim().toUpperCase() }));
 }
 
+export async function fetchPartnerLinkOptions(accountId: string, period: string, session: string, signal?: AbortSignal) {
+  const { data, error } = await requestIdentity(accountId, 'get_my_partner_link_options', {
+    p_expected_relationship_id: period, p_expected_relationship_session_id: session,
+  }, signal);
+  if (signal?.aborted) throw new DOMException('Invitation request cancelled', 'AbortError');
+  if (error) throw new Error(error.message);
+  return decodePartnerLinkOptions(data, period, session);
+}
+
 export function identityCommandError(error: unknown): string {
   const message = error instanceof Error ? error.message : 'The account request failed. Please try again.';
   const messages: Record<string, string> = {
@@ -70,6 +80,7 @@ export function identityCommandError(error: unknown): string {
     ALREADY_LINKED_OR_INCOMPLETE: 'One account already has a connection that needs to be resolved before linking.',
     CONSENT_MISMATCH: 'The invitation changed. Preview the current code and review the connection again.',
     PREVIOUS_RELATIONSHIP_CHANGED: 'That previous relationship is no longer available to resume.',
+    INVALID_PREVIOUS_RELATIONSHIP: 'That previous relationship is no longer available to resume. Refresh the choices before trying again.',
     UNLINK_BEFORE_ROLE_CHANGE: 'Disconnect your current partner before changing your role.',
     UNLINK_BEFORE_LINKING: 'Disconnect your current partner before creating a new link code.',
     PROFILE_SETUP_REQUIRED: 'Finish setting up your profile role before connecting.',
