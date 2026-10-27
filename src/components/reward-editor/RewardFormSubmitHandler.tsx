@@ -29,9 +29,9 @@ const mapRewardDataToFormValues = (reward: Reward): RewardFormValues => {
     calendar_color: reward.calendar_color || '#7E69AB',
     highlight_effect: reward.highlight_effect || false,
     background_image_url: reward.background_image_url,
-    background_opacity: reward.background_opacity || 100,
-    focal_point_x: reward.focal_point_x || 50,
-    focal_point_y: reward.focal_point_y || 50,
+    background_opacity: reward.background_opacity ?? 100,
+    focal_point_x: reward.focal_point_x ?? 50,
+    focal_point_y: reward.focal_point_y ?? 50,
     image_meta: reward.image_meta,
   };
 };
@@ -54,7 +54,6 @@ const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
       logger.debug("Form submission prevented - already saving");
       return;
     }
-    logger.debug("Form submitted with values:", values);
     
     const dataToSave: RewardFormValues = {
       ...values,
@@ -62,7 +61,6 @@ const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
       background_image_url: imagePreview,
     };
     
-    logger.debug("Attempting to save reward data:", dataToSave);
     
     try {
       setIsSaving(true);

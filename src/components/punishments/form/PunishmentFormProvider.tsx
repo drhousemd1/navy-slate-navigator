@@ -1,5 +1,8 @@
 
 import React from 'react';
+import { useEditorDraftScope } from '@/hooks/useEditorDraftScope';
+import { editorDraftKey, type EditorDraftScope } from '@/lib/editorDrafts';
+import { EditorDraftNotice } from '@/components/common/EditorDraftNotice';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,6 +16,7 @@ export const punishmentFormSchema = z.object({
   points: z.number().min(0, "Points must be 0 or greater"),
   dom_points: z.number().min(0, "Dom Points must be 0 or greater").default(0),
   dom_supply: z.number().min(0, "Supply must be 0 or greater").default(0),
+  icon_name: z.string().nullable().optional(),
   icon_color: z.string().default('#ea384c'), // Made default explicit, was optional
   title_color: z.string().default('#FFFFFF'),
   subtext_color: z.string().default('#8E9196'),
@@ -31,17 +35,21 @@ interface PunishmentFormProviderProps {
   punishmentData?: PunishmentData;
   children: (
     form: UseFormReturn<PunishmentFormValues>,
-    clearPersistedState: () => Promise<void>
+    clearPersistedState: () => Promise<boolean>
   ) => React.ReactNode;
   formBaseId: string;
-  persisterExclude?: (keyof PunishmentFormValues)[];
 }
 
-const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
+const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = (props) => {
+  const scope = useEditorDraftScope();
+  if (!scope) return <p role="status">Checking your draft account…</p>;
+  return <PunishmentFormSession key={editorDraftKey(scope, `${props.formBaseId}-${props.punishmentData?.id || 'new'}`)} {...props} scope={scope} />;
+};
+
+const PunishmentFormSession: React.FC<PunishmentFormProviderProps & { scope: EditorDraftScope }> = ({ scope,
   punishmentData,
   children,
-  formBaseId,
-  persisterExclude
+  formBaseId
 }) => {
   const form = useForm<PunishmentFormValues>({
     resolver: zodResolver(punishmentFormSchema),
@@ -50,8 +58,9 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
       title: punishmentData?.title || '',
       description: punishmentData?.description ?? '', // Use ?? for existing data, schema handles new
       points: punishmentData?.points ?? 5, // Use ?? for existing data
-      dom_points: punishmentData?.dom_points ?? Math.ceil((punishmentData?.points || 5) / 2) ?? 2, // Use ??
+      dom_points: punishmentData?.dom_points ?? Math.ceil((punishmentData?.points ?? 5) / 2), // Use ??
       dom_supply: punishmentData?.dom_supply ?? 0,
+      icon_name: punishmentData?.icon_url ? `custom:${punishmentData.icon_url}` : punishmentData?.icon_name ?? null,
       icon_color: punishmentData?.icon_color ?? '#ea384c', // Use ??
       title_color: punishmentData?.title_color ?? '#FFFFFF', // Use ??
       subtext_color: punishmentData?.subtext_color ?? '#8E9196', // Use ??
@@ -65,22 +74,12 @@ const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = ({
     }
   });
 
-  const persisterFormId = `${formBaseId}-${punishmentData?.id || 'new'}`;
-  const { clearPersistedState: originalClearPersistedState } = useFormStatePersister<PunishmentFormValues>(
-    persisterFormId,
-    form,
-    {
-      exclude: persisterExclude ?? []
-    }
-  );
-
-  const clearPersistedStateForChild = async (): Promise<void> => {
-    await originalClearPersistedState();
-  };
-
+  const draft = useFormStatePersister<PunishmentFormValues>(`${formBaseId}-${punishmentData?.id || 'new'}`, form, { scope });
+  if (!draft.ready) return <p role="status">Loading your draft…</p>;
   return (
     <Form {...form}>
-      {children(form, clearPersistedStateForChild)}
+      <EditorDraftNotice draft={draft} />
+      {children(form, draft.clearPersistedState)}
     </Form>
   );
 };

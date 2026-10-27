@@ -1,11 +1,13 @@
 
 import React from 'react';
+import { useEditorDraftScope } from '@/hooks/useEditorDraftScope';
+import { editorDraftKey, type EditorDraftScope } from '@/lib/editorDrafts';
+import { EditorDraftNotice } from '@/components/common/EditorDraftNotice';
 import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
-import { logger } from '@/lib/logger';
 
 const rewardFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -29,17 +31,21 @@ interface RewardFormProviderProps {
   rewardData?: Reward;
   children: (
     form: UseFormReturn<RewardFormValues>,
-    clearPersistedState: () => Promise<void>
+    clearPersistedState: () => Promise<boolean>
   ) => React.ReactNode;
   formBaseId: string;
-  persisterExclude?: (keyof RewardFormValues)[];
 }
 
-const RewardFormProvider: React.FC<RewardFormProviderProps> = ({
+const RewardFormProvider: React.FC<RewardFormProviderProps> = (props) => {
+  const scope = useEditorDraftScope();
+  if (!scope) return <p role="status">Checking your draft account…</p>;
+  return <RewardFormSession key={editorDraftKey(scope, `${props.formBaseId}-${props.rewardData?.id || 'new'}`)} {...props} scope={scope} />;
+};
+
+const RewardFormSession: React.FC<RewardFormProviderProps & { scope: EditorDraftScope }> = ({ scope,
   rewardData,
   children,
-  formBaseId,
-  persisterExclude
+  formBaseId
 }) => {
   const form = useForm<RewardFormValues>({
     resolver: zodResolver(rewardFormSchema),
@@ -47,7 +53,7 @@ const RewardFormProvider: React.FC<RewardFormProviderProps> = ({
     defaultValues: {
       title: rewardData?.title || '',
       description: rewardData?.description || '',
-      cost: rewardData?.cost || 10,
+      cost: rewardData?.cost ?? 10,
       is_dom_reward: rewardData?.is_dom_reward ?? false,
       icon_name: rewardData?.icon_name || null,
       icon_color: rewardData?.icon_color || '#9b87f5',
@@ -56,27 +62,21 @@ const RewardFormProvider: React.FC<RewardFormProviderProps> = ({
       calendar_color: rewardData?.calendar_color || '#7E69AB',
       highlight_effect: rewardData?.highlight_effect || false,
       background_image_url: rewardData?.background_image_url || null,
-      background_opacity: rewardData?.background_opacity || 100,
-      focal_point_x: rewardData?.focal_point_x || 50,
-      focal_point_y: rewardData?.focal_point_y || 50,
+      background_opacity: rewardData?.background_opacity ?? 100,
+      focal_point_x: rewardData?.focal_point_x ?? 50,
+      focal_point_y: rewardData?.focal_point_y ?? 50,
       image_meta: rewardData?.image_meta || null,
     }
   });
 
-  const persisterFormId = `${formBaseId}-${rewardData?.id || 'new'}`;
-  const { clearPersistedState: originalClearPersistedState } = useFormStatePersister<RewardFormValues>(
-    persisterFormId,
-    form,
-    {
-      exclude: persisterExclude ?? []
-    }
+  const draft = useFormStatePersister<RewardFormValues>(`${formBaseId}-${rewardData?.id || 'new'}`, form, { scope });
+  if (!draft.ready) return <p role="status">Loading your draft…</p>;
+  return (
+    <>
+      <EditorDraftNotice draft={draft} />
+      {children(form, draft.clearPersistedState)}
+    </>
   );
-
-  const clearPersistedStateForChild = async (): Promise<void> => {
-    await originalClearPersistedState();
-  };
-
-  return children(form, clearPersistedStateForChild);
 };
 
 export default RewardFormProvider;

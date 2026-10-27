@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,10 @@ import DeleteRuleDialog from './DeleteRuleDialog';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
-import { handleImageUpload } from '@/utils/image/ruleIntegration';
+import { readBackgroundDraft, captureDraftImageSession, chooseDraftIcon, reportDraftImageError, editorDraftKey, type EditorDraftScope } from '@/lib/editorDrafts';
+import { useEditorDraftScope } from '@/hooks/useEditorDraftScope';
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
+import { EditorDraftNotice } from '@/components/common/EditorDraftNotice';
 
 interface RuleFormValues {
   title: string;
@@ -45,14 +48,18 @@ interface RuleEditorFormProps {
   onCancel: () => void;
 }
 
-const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
+const RuleEditorForm: React.FC<RuleEditorFormProps> = (props) => {
+  const scope = useEditorDraftScope();
+  if (!scope) return <p role="status">Checking your draft account…</p>;
+  return <RuleEditorSession key={editorDraftKey(scope, `rule-editor-${props.ruleData?.id || 'new'}`)} {...props} scope={scope} />;
+};
+
+const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScope }> = ({ scope,
   ruleData, preserveHistory = false,
   onSave,
   onDelete,
   onCancel,
 }) => {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -60,91 +67,54 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   const form = useForm<RuleFormValues>({
     shouldFocusError: false,
     defaultValues: {
-      title: '',
-      description: '',
-      priority: 'medium',
-      background_image_url: undefined,
-      background_opacity: 100,
-      icon_url: undefined,
-      icon_name: undefined,
-      title_color: '#FFFFFF',
-      subtext_color: '#8E9196',
-      calendar_color: '#7E69AB',
-      icon_color: '#FF6B6B',
-      highlight_effect: false,
-      focal_point_x: 50,
-      focal_point_y: 50,
-      image_meta: null,
+      title: ruleData?.title ?? '',
+      description: ruleData?.description ?? '',
+      priority: ruleData?.priority ?? 'medium',
+      background_image_url: ruleData?.background_image_url ?? undefined,
+      background_opacity: ruleData?.background_opacity ?? 100,
+      icon_url: ruleData?.icon_url ?? undefined,
+      icon_name: ruleData?.icon_name ?? undefined,
+      title_color: ruleData?.title_color ?? '#FFFFFF',
+      subtext_color: ruleData?.subtext_color ?? '#8E9196',
+      calendar_color: ruleData?.calendar_color ?? '#7E69AB',
+      icon_color: ruleData?.icon_color ?? '#FF6B6B',
+      highlight_effect: ruleData?.highlight_effect ?? false,
+      focal_point_x: ruleData?.focal_point_x ?? 50,
+      focal_point_y: ruleData?.focal_point_y ?? 50,
+      image_meta: ruleData?.image_meta ?? null,
     },
   });
 
-  const { reset, setValue, control, handleSubmit: formHandleSubmit, getValues } = form;
-
-  useEffect(() => {
-    if (ruleData) {
-      reset({
-        title: ruleData.title || '',
-        description: ruleData.description || '',
-        priority: ruleData.priority || 'medium',
-        background_image_url: ruleData.background_image_url || undefined,
-        background_opacity: ruleData.background_opacity ?? 100,
-        icon_url: ruleData.icon_url || undefined,
-        icon_name: ruleData.icon_name || undefined,
-        title_color: ruleData.title_color || '#FFFFFF',
-        subtext_color: ruleData.subtext_color || '#8E9196',
-        calendar_color: ruleData.calendar_color || '#7E69AB',
-        icon_color: ruleData.icon_color || '#FF6B6B',
-        highlight_effect: ruleData.highlight_effect || false,
-        focal_point_x: ruleData.focal_point_x ?? 50,
-        focal_point_y: ruleData.focal_point_y ?? 50,
-        image_meta: ruleData.image_meta || null,
-      });
-      setImagePreview(ruleData.background_image_url || null);
-      setIconPreview(ruleData.icon_url || null);
-    }
-  }, [ruleData, reset]);
+  const draft = useFormStatePersister(`rule-editor-${ruleData?.id || 'new'}`, form, { scope });
+  const { setValue, control, handleSubmit: formHandleSubmit, getValues } = form;
+  const imagePreview = form.watch('background_image_url') ?? null;
+  const iconPreview = form.watch('icon_url') ?? null;
+  const handleCancelWithClear = async () => { if (await draft.clearPersistedState()) onCancel(); };
 
   const handleImageUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      try {
-        logger.debug('[RuleEditorForm] Starting image upload');
-        await handleImageUpload(file, setValue, setImagePreview);
-        logger.debug('[RuleEditorForm] Image upload completed successfully');
-      } catch (error) {
-        logger.error('[RuleEditorForm] Error handling image upload:', error);
-        toast({ title: "Error", description: "Failed to process image. Please try again.", variant: "destructive" });
-      }
-    }
+    if (!file) return;
+    const applyImage = captureDraftImageSession(form);
+    try {
+      const { url, metadata } = await readBackgroundDraft(file);
+      applyImage(() => {
+        setValue('background_image_url', url, { shouldDirty: true });
+        setValue('image_meta', metadata, { shouldDirty: true });
+      });
+    } catch { reportDraftImageError(); }
   };
 
   const handleIconUpload = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-      if (e.target instanceof HTMLInputElement && e.target.files) {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64String = reader.result as string;
-            setIconPreview(base64String);
-            setValue('icon_url', base64String);
-            setValue('icon_name', undefined);
-            toast({ title: "Icon uploaded successfully" });
-          };
-          reader.readAsDataURL(file);
-        }
-      }
-    };
-    input.click();
+    const applyImage = captureDraftImageSession(form);
+    chooseDraftIcon(url => applyImage(() => {
+      setValue('icon_url', url, { shouldDirty: true });
+      setValue('icon_name', undefined, { shouldDirty: true });
+    }));
   };
 
   const handleIconSelect = (iconName: string) => {
     if (iconName.startsWith('custom:')) {
       const iconUrl = iconName.substring(7);
-      setIconPreview(iconUrl);
       setValue('icon_url', iconUrl);
       setValue('icon_name', undefined);
       
@@ -153,7 +123,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         description: "Custom icon has been applied to the rule",
       });
     } else {
-      setIconPreview(null);
       setValue('icon_name', iconName);
       setValue('icon_url', undefined); 
       
@@ -165,7 +134,6 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
   };
   
   const handleRemoveIcon = () => {
-    setIconPreview(null);
     setValue('icon_url', undefined);
     setValue('icon_name', undefined);
     toast({ title: "Icon removed" });
@@ -185,8 +153,8 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
         icon_url: iconPreview || null,
       };
       
-      logger.debug('[RuleEditorForm] Saving rule:', ruleToSave);
       await onSave(ruleToSave);
+      await draft.clearPersistedState();
       onCancel();
     } catch (error) {
       logger.error('[RuleEditorForm] Error saving rule:', error);
@@ -202,6 +170,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
       setIsDeleting(true);
       try {
         await onDelete(ruleData.id);
+        await draft.clearPersistedState();
         setIsDeleteDialogOpen(false);
         onCancel();
       } catch (error) {
@@ -213,8 +182,10 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
     }
   };
 
+  if (!draft.ready) return <p role="status">Loading your draft…</p>;
   return (
     <Form {...form}>
+      <EditorDraftNotice draft={draft} />
       <form onSubmit={formHandleSubmit(onSubmitWrapped)} className="space-y-6">
         <FormField
           control={control}
@@ -258,12 +229,12 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
             control={control}
             imagePreview={imagePreview}
             initialPosition={{ 
-              x: getValues('focal_point_x') || 50, 
-              y: getValues('focal_point_y') || 50 
+              x: form.watch('focal_point_x') ?? 50,
+              y: form.watch('focal_point_y') ?? 50
             }}
             onRemoveImage={() => {
-              setImagePreview(null);
               setValue('background_image_url', undefined);
+              setValue('image_meta', null);
             }}
             onImageUpload={handleImageUploadWrapper}
             setValue={setValue}
@@ -275,17 +246,17 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
               <IconSelector
-                selectedIconName={getValues('icon_name')}
+                selectedIconName={form.watch('icon_name')}
                 iconPreview={iconPreview}
-                iconColor={getValues('icon_color')}
+                iconColor={form.watch('icon_color')}
                 onSelectIcon={handleIconSelect}
                 onUploadIcon={handleIconUpload}
                 onRemoveIcon={handleRemoveIcon}
               />
             </div>
             <PredefinedIconsGrid
-              selectedIconName={getValues('icon_name')}
-              iconColor={getValues('icon_color')}
+              selectedIconName={form.watch('icon_name')}
+              iconColor={form.watch('icon_color')}
               onSelectIcon={handleIconSelect}
             />
           </div>
@@ -328,7 +299,7 @@ const RuleEditorForm: React.FC<RuleEditorFormProps> = ({
           <Button
             type="button"
             variant="destructive"
-            onClick={onCancel}
+            onClick={handleCancelWithClear}
             className="bg-red-700 border-light-navy text-white hover:bg-red-600"
           >
             Cancel

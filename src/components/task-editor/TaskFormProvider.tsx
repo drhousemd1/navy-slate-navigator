@@ -1,5 +1,9 @@
 import React from 'react';
+import { useEditorDraftScope } from '@/hooks/useEditorDraftScope';
+import { editorDraftKey, type EditorDraftScope } from '@/lib/editorDrafts';
+import { EditorDraftNotice } from '@/components/common/EditorDraftNotice';
 import { useForm, UseFormReturn } from 'react-hook-form';
+import { useFormStatePersister } from '@/hooks/useFormStatePersister';
 import { Form } from '@/components/ui/form';
 
 // Local interface to avoid circular type issues
@@ -10,13 +14,13 @@ interface LocalTaskFormValues {
   frequency_count: number;
   points: number;
   priority: 'low' | 'medium' | 'high';
-  icon_name?: string;
+  icon_name?: string | null;
   icon_color: string;
-  icon_url?: string;
+  icon_url?: string | null;
   title_color: string;
   subtext_color: string;
   calendar_color: string;
-  background_image_url?: string;
+  background_image_url?: string | null;
   background_images?: any;
   background_opacity: number;
   focal_point_x: number;
@@ -29,17 +33,21 @@ interface LocalTaskFormValues {
 interface TaskFormProviderProps {
   taskData?: any;
   formBaseId: string;
-  persisterExclude?: string[];
   children: (
     form: UseFormReturn<LocalTaskFormValues>,
-    clearPersistedState: () => Promise<void>
+    clearPersistedState: () => Promise<boolean>
   ) => React.ReactNode;
 }
 
-const TaskFormProvider: React.FC<TaskFormProviderProps> = ({
+const TaskFormProvider: React.FC<TaskFormProviderProps> = (props) => {
+  const scope = useEditorDraftScope();
+  if (!scope) return <p role="status">Checking your draft account…</p>;
+  return <TaskFormSession key={editorDraftKey(scope, `${props.formBaseId}-${props.taskData?.id || 'new'}`)} {...props} scope={scope} />;
+};
+
+const TaskFormSession: React.FC<TaskFormProviderProps & { scope: EditorDraftScope }> = ({ scope,
   taskData,
   formBaseId,
-  persisterExclude = [],
   children
 }) => {
   const form = useForm<LocalTaskFormValues>({
@@ -62,18 +70,18 @@ const TaskFormProvider: React.FC<TaskFormProviderProps> = ({
       focal_point_x: taskData?.focal_point_x ?? 50,
       focal_point_y: taskData?.focal_point_y ?? 50,
       priority: taskData?.priority || 'medium',
+      background_images: taskData?.background_images ?? null,
       image_meta: taskData?.image_meta || undefined,
       is_dom_task: taskData?.is_dom_task || false,
     },
   });
 
-  const clearPersistedStateForChild = async (): Promise<void> => {
-    // Simplified - will add back useFormStatePersister once types are stable
-  };
-
+  const draft = useFormStatePersister<LocalTaskFormValues>(`${formBaseId}-${taskData?.id || 'new'}`, form, { scope });
+  if (!draft.ready) return <p role="status">Loading your draft…</p>;
   return (
     <Form {...form}>
-      {children(form, clearPersistedStateForChild)}
+      <EditorDraftNotice draft={draft} />
+      {children(form, draft.clearPersistedState)}
     </Form>
   );
 };

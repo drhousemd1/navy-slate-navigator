@@ -64,8 +64,7 @@ const LegacyTasks: React.FC = () => {
   const handleSaveTask = async (taskData: TaskFormValues) => {
     try {
       if (!user?.id) {
-        toastManager.error("Authentication Error", "You must be logged in to save tasks.");
-        return;
+        throw new Error("You must be logged in to save tasks. Your draft has been kept.");
       }
 
       let payload: CreateTaskVariables | UpdateTaskVariables;
@@ -86,7 +85,8 @@ const LegacyTasks: React.FC = () => {
         } as CreateTaskVariables;
       }
 
-      await saveTask(payload);
+      const savedTask = await saveTask(payload);
+      if (!savedTask?.id) throw new Error("Task save was not confirmed. Your draft has been kept.");
       setIsEditorOpen(false);
       setEditingTask(null);
       
@@ -94,6 +94,7 @@ const LegacyTasks: React.FC = () => {
       const descriptiveMessage = getErrorMessage(error);
       logger.error("Error saving task:", descriptiveMessage, error);
       toastManager.error("Save Error", descriptiveMessage);
+      throw error;
     }
   };
 

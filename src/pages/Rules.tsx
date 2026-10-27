@@ -84,11 +84,14 @@ const RulesPageContent: React.FC = () => {
 
   const handleSaveRule = async (ruleData: Partial<Rule>) => {
     try {
-      await saveRule(ruleData);
+      if (!user?.id) throw new Error("You must be logged in to save rules. Your draft has been kept.");
+      const savedRule = await saveRule(ruleData);
+      if (!savedRule?.id) throw new Error("Rule save was not confirmed. Your draft has been kept.");
       setIsEditorOpen(false);
       setCurrentRule(null);
     } catch (err: unknown) {
       logger.error('Error in handleSaveRule:', getErrorMessage(err));
+      throw err;
     }
   };
 

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
-import { handleImageUpload } from '@/utils/image/taskIntegration';
+import { readBackgroundDraft, captureDraftImageSession, chooseDraftIcon, reportDraftImageError } from '@/lib/editorDrafts';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskEditorFormProps {
@@ -36,8 +36,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   onDelete,
   onCancel
 }) => {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -55,35 +53,19 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
     }
   }, [isMobile]);
 
-  useEffect(() => {
-    if (taskData) {
-      setImagePreview(taskData.background_image_url || null);
-      setIconPreview(taskData.icon_url || null);
-    } else {
-      setImagePreview(null);
-      setIconPreview(null);
-    }
-  }, [taskData]);
-
   return (
     <TaskFormProvider
       taskData={taskData}
       formBaseId="task-editor"
-      persisterExclude={['background_image_url', 'icon_url', 'image_meta']}
     >
       {(form, clearPersistedState) => {
+        const imagePreview = form.watch('background_image_url') ?? null;
+        const iconPreview = form.watch('icon_url') ?? null;
         const handleSaveWithClear = async (formData: LocalTaskFormValues) => {
           setOperationError(null);
           setLoading(true);
           try {
-            const taskToSave: LocalTaskFormValues = {
-              ...formData,
-              background_image_url: imagePreview || formData.background_image_url,
-              icon_url: iconPreview || formData.icon_url,
-              icon_name: form.watch('icon_name'),
-            };
-            
-            await onSave(taskToSave);
+            await onSave(formData);
             await clearPersistedState(); 
             onCancel();
           } catch (e: unknown) {
@@ -100,9 +82,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
           }
         };
 
-        const handleCancelWithClear = () => {
-          clearPersistedState();
-          onCancel();
+        const handleCancelWithClear = async () => {
+          if (await clearPersistedState()) onCancel();
         };
 
         const handleDeleteWithClear = async (taskId: string) => {
@@ -111,6 +92,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             setLoading(true);
             try {
               await onDelete(taskId);
+              await clearPersistedState();
               onCancel();
             } catch (error) {
               logger.error('[TaskEditorForm] Error deleting task:', error);
@@ -124,61 +106,38 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
 
         const handleImageUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
           const file = e.target.files?.[0];
-          if (file) {
-            try {
-              await handleImageUpload(
-                file,
-                form.setValue,
-                setImagePreview
-              );
-            } catch (error) {
-              logger.error('Error handling image upload:', error);
-              toast({
-                title: "Image Upload Error",
-                description: "Failed to process the uploaded image",
-                variant: "destructive"
-              });
-            }
-          }
+          if (!file) return;
+          const applyImage = captureDraftImageSession(form);
+          try {
+            const { url, metadata } = await readBackgroundDraft(file);
+            applyImage(() => {
+              form.setValue('background_image_url', url, { shouldDirty: true });
+              form.setValue('image_meta', metadata, { shouldDirty: true });
+            });
+          } catch { reportDraftImageError(); }
         };
 
         const handleIconUpload = () => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'image/*';
-          input.onchange = (e) => {
-            if (e.target instanceof HTMLInputElement && e.target.files) {
-              const file = e.target.files[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  const base64String = reader.result as string;
-                  setIconPreview(base64String);
-                  form.setValue('icon_url', base64String);
-                  form.setValue('icon_name', undefined);
-                };
-                reader.readAsDataURL(file);
-              }
-            }
-          };
-          input.click();
+          const applyImage = captureDraftImageSession(form);
+          chooseDraftIcon(url => applyImage(() => {
+            form.setValue('icon_url', url, { shouldDirty: true });
+            form.setValue('icon_name', null, { shouldDirty: true });
+          }));
         };
 
         const handleIconSelect = (iconName: string) => {
           if (iconName.startsWith('custom:')) {
             const iconUrl = iconName.substring(7);
-            setIconPreview(iconUrl);
             form.setValue('icon_url', iconUrl);
-            form.setValue('icon_name', undefined);
+            form.setValue('icon_name', null);
             
             toast({
               title: "Custom icon selected",
               description: "Custom icon has been applied to the task",
             });
           } else {
-            setIconPreview(null);
             form.setValue('icon_name', iconName);
-            form.setValue('icon_url', undefined); 
+            form.setValue('icon_url', null);
             
             toast({
               title: "Icon selected",
@@ -238,12 +197,12 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                 control={form.control}
                 imagePreview={imagePreview} 
                 initialPosition={{ 
-                  x: form.watch('focal_point_x') || 50, 
-                  y: form.watch('focal_point_y') || 50 
+                  x: form.watch('focal_point_x') ?? 50,
+                  y: form.watch('focal_point_y') ?? 50
                 }}
                 onRemoveImage={() => {
-                  setImagePreview(null);
-                  form.setValue('background_image_url', undefined);
+                  form.setValue('background_image_url', null);
+                  form.setValue('image_meta', null);
                 }}
                 onImageUpload={handleImageUploadWrapper}
                 setValue={form.setValue} 
@@ -261,9 +220,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
                     onSelectIcon={handleIconSelect}
                     onUploadIcon={handleIconUpload}
                     onRemoveIcon={() => {
-                      setIconPreview(null);
-                      form.setValue('icon_url', undefined);
-                      form.setValue('icon_name', undefined);
+                      form.setValue('icon_url', null);
+                      form.setValue('icon_name', null);
                     }}
                   />
                 </div>

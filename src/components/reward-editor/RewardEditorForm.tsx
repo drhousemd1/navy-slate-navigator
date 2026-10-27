@@ -8,13 +8,12 @@ import RewardFormActions from './RewardFormActions';
 import RewardFormProvider from './RewardFormProvider';
 import RewardFormSubmitHandler from './RewardFormSubmitHandler';
 import DeleteRewardDialog from './DeleteRewardDialog';
-import { useRewardIcon } from './hooks/useRewardIcon';
-import { useRewardBackground } from './hooks/useRewardBackground';
 import { useDeleteDialog } from './hooks/useDeleteDialog';
 import { useRewards } from '@/contexts/RewardsContext';
 import { UseFormReturn } from 'react-hook-form';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { readBackgroundDraft, captureDraftImageSession, chooseDraftIcon, reportDraftImageError } from '@/lib/editorDrafts';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RewardEditorFormProps {
@@ -40,23 +39,6 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     setIsDeleteDialogOpen 
   } = useDeleteDialog();
   
-  const {
-    selectedIconName,
-    iconPreview,
-    handleSelectIcon,
-    handleUploadIcon,
-    handleRemoveIcon,
-    setSelectedIconName,
-    setIconPreview
-  } = useRewardIcon(rewardData?.icon_name || undefined);
-  
-  const {
-    imagePreview,
-    handleImageUpload,
-    handleRemoveImage,
-    setImagePreview
-  } = useRewardBackground(rewardData?.background_image_url);
-
   // Defensive blur for mobile to prevent auto-focus
   useEffect(() => {
     if (isMobile) {
@@ -69,25 +51,21 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     }
   }, [isMobile]);
 
-  useEffect(() => {
-    if (rewardData) {
-      setSelectedIconName(rewardData.icon_name || null);
-      setIconPreview(null); // Rewards don't have icon_url property
-      setImagePreview(rewardData.background_image_url || null);
-    } else {
-      setSelectedIconName(null);
-      setIconPreview(null);
-      setImagePreview(null);
-    }
-  }, [rewardData, setSelectedIconName, setImagePreview, setIconPreview]);
-
   return (
     <RewardFormProvider
       rewardData={rewardData}
       formBaseId="reward-editor"
-      persisterExclude={['background_image_url', 'image_meta']} 
     >
       {(form, clearPersistedState) => {
+        const selectedIconName = form.watch('icon_name') ?? null;
+        const iconPreview = selectedIconName?.startsWith('custom:') ? selectedIconName.slice(7) : null;
+        const imagePreview = form.watch('background_image_url') ?? null;
+        const handleSelectIcon = (name: string) => form.setValue('icon_name', name, { shouldDirty: true });
+        const handleUploadIcon = () => {
+          const applyImage = captureDraftImageSession(form);
+          chooseDraftIcon(url => applyImage(() => handleSelectIcon(`custom:${url}`)));
+        };
+        const handleRemoveIcon = () => form.setValue('icon_name', null, { shouldDirty: true });
         const handleSaveWithClear = async (dataFromFormSubmitHandler: RewardFormValues): Promise<Reward> => {
           try {
             const savedData = await onSave(dataFromFormSubmitHandler);
@@ -99,9 +77,8 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           }
         };
 
-        const handleCancelWithClear = () => {
-          clearPersistedState(); 
-          onCancel();
+        const handleCancelWithClear = async () => {
+          if (await clearPersistedState()) onCancel();
         };
 
         const handleDeleteWithClear = async () => {
@@ -119,14 +96,22 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
           }
         };
 
-        const handleImageUploadWrapper = (e: React.ChangeEvent<HTMLInputElement>) => {
-          handleImageUpload(e, form.setValue);
+        const handleImageUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const applyImage = captureDraftImageSession(form);
+          try {
+            const { url, metadata } = await readBackgroundDraft(file);
+            applyImage(() => {
+              form.setValue('background_image_url', url, { shouldDirty: true });
+              form.setValue('image_meta', metadata, { shouldDirty: true });
+            });
+          } catch { reportDraftImageError(); }
         };
 
         const handleRemoveImageWrapper = () => {
-          form.setValue('background_image_url', null);
-          form.setValue('image_meta', null);
-          handleRemoveImage();
+          form.setValue('background_image_url', null, { shouldDirty: true });
+          form.setValue('image_meta', null, { shouldDirty: true });
         };
 
         return (

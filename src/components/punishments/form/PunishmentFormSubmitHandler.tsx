@@ -26,6 +26,9 @@ const mapPunishmentDataToFormValues = (punishment: PunishmentData): PunishmentFo
                 ? punishment.dom_points 
                 : Math.ceil(punishment.points / 2),
     dom_supply: punishment.dom_supply ?? 0,
+    icon_name: punishment.icon_url ? `custom:${punishment.icon_url}` : punishment.icon_name ?? null,
+    background_image_url: punishment.background_image_url ?? null,
+    image_meta: punishment.image_meta ?? null,
     icon_color: punishment.icon_color || '#ea384c',
     title_color: punishment.title_color || '#FFFFFF',
     subtext_color: punishment.subtext_color || '#8E9196',
@@ -55,7 +58,6 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       logger.debug("Form submission prevented - already saving");
       return;
     }
-    logger.debug("Form submitted with values:", values);
     
     const points = Number(values.points);
     const dom_points = values.dom_points !== undefined 
@@ -75,7 +77,6 @@ const PunishmentFormSubmitHandler: React.FC<PunishmentFormSubmitHandlerProps> = 
       dataToSave.id = punishmentData.id;
     }
     
-    logger.debug("Attempting to save punishment data:", dataToSave);
     
     try {
       setIsSaving(true);

@@ -6,7 +6,7 @@ import RewardEditorForm from '@/components/reward-editor/RewardEditorForm';
 
 vi.mock('@/contexts/RewardsContext', () => ({ useRewards: () => ({ atomicAccounting: true }) }));
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
-vi.mock('@/components/reward-editor/RewardFormProvider', () => ({ default: ({ children }: any) => children({ watch: () => 50, setValue: vi.fn() }, vi.fn()) }));
+vi.mock('@/components/reward-editor/RewardFormProvider', () => ({ default: ({ children }: any) => children({ watch: (name: string) => name === 'icon_name' || name === 'background_image_url' ? null : 50, setValue: vi.fn() }, vi.fn().mockResolvedValue(true)) }));
 vi.mock('@/components/reward-editor/RewardFormSubmitHandler', () => ({ default: ({ children }: any) => <>{children}</> }));
 vi.mock('@/components/reward-editor/RewardBasicDetails', () => ({ default: () => null }));
 vi.mock('@/components/reward-editor/RewardIconSection', () => ({ default: () => null }));
