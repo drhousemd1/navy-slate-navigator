@@ -21,7 +21,7 @@ const RewardFormActions: React.FC<RewardFormActionsProps> = ({
   isSaving = false
 }) => {
   return (
-    <div className="pt-4 w-full flex items-center justify-end space-x-3">
+    <div className="pt-4 w-full flex flex-wrap items-center justify-end gap-3">
       {rewardData?.id && onDelete && (
         <Button
           type="button"

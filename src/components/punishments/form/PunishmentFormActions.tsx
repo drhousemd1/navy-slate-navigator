@@ -25,7 +25,7 @@ const PunishmentFormActions: React.FC<PunishmentFormActionsProps> = ({
 }) => {
   return (
     <div className="flex flex-col space-y-4 mt-6 md:mt-8">
-      <div className="flex items-center justify-end space-x-3 pt-4">
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-4">
         {punishmentData?.id && onDelete && (
           <Button 
             type="button" 

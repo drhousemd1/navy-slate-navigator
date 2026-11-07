@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Task } from '@/lib/taskUtils';
 import TaskFormProvider, { LocalTaskFormValues } from './task-editor/TaskFormProvider';
 import { TaskFormValues } from '@/data/tasks/types';
@@ -19,7 +19,6 @@ import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { readBackgroundDraft, captureDraftImageSession, chooseDraftIcon, reportDraftImageError } from '@/lib/editorDrafts';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskEditorFormProps {
   atomicAccounting?: boolean;
@@ -39,19 +38,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const isMobile = useIsMobile();
-
-  // Defensive blur for mobile to prevent auto-focus
-  useEffect(() => {
-    if (isMobile) {
-      const timer = setTimeout(() => {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isMobile]);
 
   return (
     <TaskFormProvider

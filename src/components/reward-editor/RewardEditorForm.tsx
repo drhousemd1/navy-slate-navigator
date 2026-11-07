@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Reward, RewardFormValues } from '@/data/rewards/types';
 import RewardBasicDetails from './RewardBasicDetails';
 import RewardIconSection from './RewardIconSection';
@@ -14,7 +14,6 @@ import { UseFormReturn } from 'react-hook-form';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { readBackgroundDraft, captureDraftImageSession, chooseDraftIcon, reportDraftImageError } from '@/lib/editorDrafts';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RewardEditorFormProps {
   rewardData?: Reward;
@@ -29,7 +28,6 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
   onCancel,
   onDelete
 }) => {
-  const isMobile = useIsMobile();
   const { atomicAccounting } = useRewards();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -39,18 +37,6 @@ const RewardEditorForm: React.FC<RewardEditorFormProps> = ({
     setIsDeleteDialogOpen 
   } = useDeleteDialog();
   
-  // Defensive blur for mobile to prevent auto-focus
-  useEffect(() => {
-    if (isMobile) {
-      const timer = setTimeout(() => {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isMobile]);
-
   return (
     <RewardFormProvider
       rewardData={rewardData}

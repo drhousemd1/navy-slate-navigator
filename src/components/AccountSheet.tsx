@@ -94,7 +94,7 @@ const AccountSheet = () => {
       <SheetContent 
         side="left"
         aria-describedby={undefined}
-        className="w-[75vw] sm:w-[300px] bg-navy border-r border-light-navy text-foreground"
+        className="w-[75vw] sm:w-[300px] overflow-y-auto overscroll-y-contain bg-navy border-r border-light-navy text-foreground"
       >
         <SheetHeader>
           <SheetTitle className="text-foreground">Account</SheetTitle>

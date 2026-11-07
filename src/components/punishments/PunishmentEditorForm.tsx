@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { PunishmentData } from '@/contexts/punishments/types'; // Updated import path
 import PunishmentBasicDetails from './form/PunishmentBasicDetails';
 import PunishmentIconSection from './form/PunishmentIconSection';
@@ -13,7 +13,6 @@ import { UseFormReturn } from 'react-hook-form';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { readBackgroundDraft, captureDraftImageSession, chooseDraftIcon, reportDraftImageError } from '@/lib/editorDrafts';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PunishmentEditorFormProps {
   punishmentData?: PunishmentData;
@@ -29,25 +28,11 @@ const PunishmentEditorForm: React.FC<PunishmentEditorFormProps> = ({
   onCancel,
   onDelete
 }) => {
-  const isMobile = useIsMobile();
-  
   const { 
     isDeleteDialogOpen, 
     setIsDeleteDialogOpen 
   } = useDeleteDialog();
   
-  // Defensive blur for mobile to prevent auto-focus
-  useEffect(() => {
-    if (isMobile) {
-      const timer = setTimeout(() => {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isMobile]);
-
   return (
     <PunishmentFormProvider
       punishmentData={punishmentData}

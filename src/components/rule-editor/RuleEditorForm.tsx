@@ -285,7 +285,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
           )}
         />
         
-        <div className="pt-4 w-full flex items-center justify-end gap-3">
+        <div className="pt-4 w-full flex flex-wrap items-center justify-end gap-3">
           {ruleData?.id && onDelete && (
             <DeleteRuleDialog
               isDeleting={isDeleting}

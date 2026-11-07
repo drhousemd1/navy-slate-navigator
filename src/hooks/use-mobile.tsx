@@ -4,7 +4,10 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState(false)
+  // Choose the correct editor shell on its first render, rather than replacing
+  // an already-open desktop Dialog with a mobile Sheet and losing its opener.
+  const [isMobile, setIsMobile] = React.useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT)
 
   React.useEffect(() => {
     // Function to check if the screen is mobile width
