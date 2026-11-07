@@ -66,6 +66,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const isRulesPage = location.pathname === '/rules';
   const isThroneRoomPage = location.pathname === '/throne-room';
   const useCircleButton = isRewardsPage || isTasksPage || isPunishmentsPage || isRulesPage;
+  const addButtonLabel = isTasksPage ? 'Add new task'
+    : isRulesPage ? 'Add new rule'
+    : isRewardsPage ? 'Add new reward'
+    : 'Add new punishment';
 
   return (
     <div className="flex flex-col h-full bg-dark-navy prevent-overscroll overflow-x-hidden">
@@ -114,21 +118,35 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             <AccountSheet />
             
             {/* Throne Room icon */}
-            <Crown 
-              className={`w-5 h-5 cursor-pointer transition-colors ${
-                isThroneRoomPage ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7] neon-icon') : 'text-muted-foreground hover:text-foreground'
-              }`}
+            <button
+              type="button"
+              aria-label="Open Throne Room"
+              className="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
               onClick={() => navigate('/throne-room')}
-            />
+            >
+              <Crown
+                aria-hidden="true"
+                className={`w-5 h-5 cursor-pointer transition-colors ${
+                  isThroneRoomPage ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7] neon-icon') : 'text-muted-foreground hover:text-foreground'
+                }`}
+              />
+            </button>
 
             {/* Messaging icon with notification badge */}
             <div className="relative">
-              <MessageSquare 
-                className={`w-5 h-5 cursor-pointer transition-colors ${
-                  isMessagesPage ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7] neon-icon') : 'text-muted-foreground hover:text-foreground'
-                }`}
+              <button
+                type="button"
+                aria-label={isMessagesPage ? 'Return home' : 'Open messages'}
+                className="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                 onClick={handleMessagingClick}
-              />
+              >
+                <MessageSquare
+                  aria-hidden="true"
+                  className={`w-5 h-5 cursor-pointer transition-colors ${
+                    isMessagesPage ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7] neon-icon') : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                />
+              </button>
               {unreadCount === null ? (unreadError && <span aria-label="Unread message count unavailable" title="Unread messages could not be checked" className={`absolute -top-1 -right-1 text-xs ${isLightScheme ? 'text-foreground' : 'text-amber-200'}`}>?</span>) : <span title={unreadError ? 'Last confirmed unread count; refresh unavailable' : undefined}><NotificationBadge count={unreadCount} />{unreadError && <span aria-label="Unread count may be outdated" className={`absolute -bottom-2 right-0 text-xs ${isLightScheme ? 'text-foreground' : 'text-amber-200'}`}>!</span>}</span>}
             </div>
           </div>
@@ -145,16 +163,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
       {shouldShowAddButton && !isMessagesPage && (
         <div className={`fixed left-0 right-0 flex justify-center z-40`} style={{bottom: `calc(3rem + env(safe-area-inset-bottom))`}}>
           <Button 
+            aria-label={addButtonLabel}
             className={`${useCircleButton 
               ? 'bg-green-500 hover:bg-green-600 w-10 h-10 rounded-full shadow-xl p-0 flex items-center justify-center' 
               : 'bg-navy border border-light-navy text-nav-active rounded-full shadow-lg px-6'}`}
             onClick={handleAddNewItem}
           >
             {useCircleButton ? (
-              <Plus className="w-6 h-6 text-white" />
+              <Plus aria-hidden="true" className="w-6 h-6 text-white" />
             ) : (
               <>
-                <Plus className="w-5 h-5 mr-2" /> Add New Item
+                <Plus aria-hidden="true" className="w-5 h-5 mr-2" /> Add New Item
               </>
             )}
           </Button>
