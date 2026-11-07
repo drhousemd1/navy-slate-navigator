@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors'; // Added import
 
@@ -30,10 +29,6 @@ export function useForgotPassword() {
         logger.error("Password reset error:", resetError);
         setError(getErrorMessage(resetError)); // Used getErrorMessage
       } else {
-        toast({
-          title: "Password reset link sent",
-          description: "Please check your email for instructions on how to reset your password.",
-        });
         setLoading(false); // Ensure loading is set to false on success
         return true;
       }
