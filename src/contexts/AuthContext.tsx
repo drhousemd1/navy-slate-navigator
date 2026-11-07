@@ -10,6 +10,7 @@ import localforage from 'localforage';
 import { STORAGE_PREFIX as FORM_STATE_PREFIX } from '@/hooks/useFormStatePersister';
 import { useAuthOperations } from './auth/useAuthOperations';
 import { useUserProfile } from './auth/useUserProfile';
+import { useRoleTransitions } from './auth/useRoleTransitions';
 import { usePartnerLinking } from './auth/usePartnerLinking';
 import { logger } from '@/lib/logger';
 
@@ -38,6 +39,7 @@ export interface AuthContextType extends AuthState {
   uploadProfileImageAndUpdateState: ReturnType<typeof useUserProfile>['uploadProfileImageAndUpdateState'];
   deleteUserProfileImage: ReturnType<typeof useUserProfile>['deleteUserProfileImage'];
   updateUserRole: ReturnType<typeof useUserProfile>['updateUserRole'];
+  roleTransitions: ReturnType<typeof useRoleTransitions>;
   checkAdminStatus: () => Promise<boolean>;
   // Partner linking functions
   generateLinkCode: ReturnType<typeof usePartnerLinking>['generateLinkCode'];
@@ -87,6 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     getRole: () => partnerLinkingUtils.relationshipIdentity.currentRole,
     refresh: partnerLinkingUtils.refreshIdentity,
   });
+  const roleTransitions = useRoleTransitions(authState.user?.id ?? null, partnerLinkingUtils.relationshipIdentity, partnerLinkingUtils.refreshIdentity);
 
   // On-demand admin check function
   const checkAdminStatus = async (): Promise<boolean> => {
@@ -260,6 +263,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     uploadProfileImageAndUpdateState: userProfileUtils.uploadProfileImageAndUpdateState,
     deleteUserProfileImage: userProfileUtils.deleteUserProfileImage,
     updateUserRole: userProfileUtils.updateUserRole,
+    roleTransitions,
     checkAdminStatus,
     // Partner linking functions
     generateLinkCode: partnerLinkingUtils.generateLinkCode,

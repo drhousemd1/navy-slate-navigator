@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,15 +9,17 @@ import { ProfileRole } from '@/types/profile';
 import { useQueryClient } from '@tanstack/react-query';
 import { handleAvatarImageUpload } from '@/utils/image/avatarIntegration';
 import { callIdentityCommand, identityCommandError } from '@/data/identity';
-import type { IdentityState } from '@/lib/identity';
+import { decodeIdentity, type IdentityState } from '@/lib/identity';
 
 export function useUserProfile(user: User | null, setUser: (user: User | null) => void, identity: {
   getRole: () => ProfileRole | null;
   refresh: () => Promise<IdentityState | null>;
 }) {
   const queryClient = useQueryClient();
-  const currentAccount = useRef(user?.id);
-  currentAccount.current = user?.id;
+  const currentAccount = useRef({ id: user?.id });
+  if (currentAccount.current.id !== user?.id) currentAccount.current = { id: user?.id };
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   // Update user nickname in both user_metadata and profiles table
   const updateNickname = async (nickname: string) => {
@@ -140,14 +142,21 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
 
   // Update user role in profiles table (not user metadata)
   const updateUserRole = async (role: ProfileRole) => {
-    if (!user || currentAccount.current !== user.id) return;
+    const accountView = currentAccount.current;
+    const isCurrent = () => mounted.current && currentAccount.current === accountView;
+    if (!user || accountView.id !== user.id || !isCurrent()) return;
     
     try {
-      await callIdentityCommand(user.id, 'set_my_profile_role', { p_role: role });
-      if (currentAccount.current !== user.id) return;
+      const rawReceipt = await callIdentityCommand(user.id, 'set_my_profile_role', { p_role: role });
+      if (!isCurrent()) return;
+      const receipt = decodeIdentity(user.id, rawReceipt);
+      if (!receipt.canAccessData || receipt.currentRole !== role || !receipt.relationshipId || !receipt.relationshipSessionId) {
+        throw new Error('Your role setup could not be verified. Refresh your account before continuing.');
+      }
       const refreshed = await identity.refresh();
-      if (currentAccount.current !== user.id) return;
-      if (!refreshed?.canAccessData || refreshed.currentUserId !== user.id || refreshed.currentRole !== role) {
+      if (!isCurrent()) return;
+      if (!refreshed?.canAccessData || refreshed.currentUserId !== user.id || refreshed.currentRole !== role ||
+        refreshed.relationshipId !== receipt.relationshipId || refreshed.relationshipSessionId !== receipt.relationshipSessionId) {
         throw new Error('Your role change could not be verified. Refresh your account before continuing.');
       }
       
@@ -159,7 +168,7 @@ export function useUserProfile(user: User | null, setUser: (user: User | null) =
         description: `Your role has been updated to ${role}`,
       });
     } catch (error: unknown) {
-      if (currentAccount.current !== user?.id) return;
+      if (!isCurrent()) return;
       const failure = new Error(identityCommandError(error));
       logger.error('Exception during user role update:', error);
       toast({

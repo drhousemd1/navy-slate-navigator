@@ -14,10 +14,10 @@ import { DeleteAvatarDialog } from '@/components/profile/DeleteAvatarDialog';
 
 import PartnerLinkingSection from '@/components/profile/PartnerLinkingSection';
 import TimezoneSection from '@/components/profile/TimezoneSection';
+import { RoleSelectionSection } from '@/components/profile/RoleSelectionSection';
 
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
-import { ProfileRole } from '@/types/profile';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -29,8 +29,6 @@ const Profile: React.FC = () => {
     uploadProfileImageAndUpdateState, 
     deleteUserProfileImage, 
     signOut,
-    relationshipIdentity,
-    updateUserRole,
     deleteAccount 
   } = useAuth();
   const [nickname, setNickname] = useState<string>('');
@@ -41,9 +39,6 @@ const Profile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
   const [isDeleteAvatarDialogOpen, setIsDeleteAvatarDialogOpen] = useState(false);
-  const currentRole = relationshipIdentity.currentRole;
-  const roleLocked = relationshipIdentity.status !== 'unlinked';
-  const [loadingRole, setLoadingRole] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -155,21 +150,6 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleRoleChange = async (newRole: ProfileRole) => {
-    if (!user || roleLocked || currentRole === newRole) return;
-    setLoadingRole(true);
-    setError(null);
-    try {
-      await updateUserRole(newRole);
-    } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error);
-      logger.error('Error updating role:', errorMessage);
-      // The profile hook owns the single popup; retain the failure on this page.
-      setError(errorMessage);
-    } finally {
-      setLoadingRole(false);
-    }
-  };
 
   if (!user) {
     return (
@@ -256,33 +236,7 @@ const Profile: React.FC = () => {
 
           <TimezoneSection />
 
-          {/* Role Selection Section */}
-          <div className="mb-8">
-            <Label className="block text-sm font-medium text-gray-300 mb-1">Current Role</Label>
-            <p className="text-gray-400 bg-navy p-3 rounded border border-light-navy capitalize mb-2">
-              {loadingRole ? 'Loading...' : (currentRole || 'Not set')}
-            </p>
-            <div className="flex space-x-2">
-              <Button 
-                onClick={() => handleRoleChange('sub')} 
-                variant={currentRole === 'sub' ? "default" : "ghost"}
-                className={currentRole === 'sub' ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-600 text-white hover:bg-gray-500 hover:text-white"}
-                disabled={loadingRole || roleLocked}
-              >
-                Set as Submissive
-              </Button>
-              <Button 
-                onClick={() => handleRoleChange('dom')} 
-                variant={currentRole === 'dom' ? "default" : "ghost"}
-                className={currentRole === 'dom' ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-600 text-white hover:bg-gray-500 hover:text-white"}
-                disabled={loadingRole || roleLocked}
-              >
-                Set as Dominant
-              </Button>
-            </div>
-          </div>
-
-          {roleLocked && <p className="text-sm text-gray-400 mb-6">Disconnect your partner before changing your Dom or Sub role. Partner changes may remain unavailable during the relationship history upgrade.</p>}
+          <RoleSelectionSection />
 
           {/* Partner Linking Section */}
           <PartnerLinkingSection />
