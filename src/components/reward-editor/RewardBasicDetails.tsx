@@ -62,36 +62,38 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
         render={({ field }) => (
           <FormItem>
             <FormLabel className="text-white">Cost (Points)</FormLabel>
-            <FormControl>
-              <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2">
                 <Button
                   type="button"
+                  aria-label="Decrease cost in points"
                   variant="outline"
                   size="icon"
                   onClick={decrementCost}
                   className="h-10 w-10 bg-dark-navy border-light-navy text-white hover:bg-light-navy"
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus aria-hidden="true" className="h-4 w-4" />
                 </Button>
-                <Input
-                  type="number"
-                  min="0"
-                  className="bg-dark-navy border-light-navy text-white text-center"
-                  {...field}
-                  value={field.value || 0}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                />
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="0"
+                    className="bg-dark-navy border-light-navy text-white text-center"
+                    {...field}
+                    value={field.value || 0}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  />
+                </FormControl>
                 <Button
                   type="button"
+                  aria-label="Increase cost in points"
                   variant="outline"
                   size="icon"
                   onClick={incrementCost}
                   className="h-10 w-10 bg-dark-navy border-light-navy text-white hover:bg-light-navy"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus aria-hidden="true" className="h-4 w-4" />
                 </Button>
-              </div>
-            </FormControl>
+            </div>
           </FormItem>
         )}
       />

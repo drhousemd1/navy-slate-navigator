@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Control, Controller, FieldValues, Path } from 'react-hook-form';
-import { FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { Control, FieldValues, Path } from 'react-hook-form';
+import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from '@/components/ui/input';
 
 interface ColorPickerFieldProps<T extends FieldValues> {
@@ -18,7 +18,7 @@ const ColorPickerField = <T extends FieldValues>({
   defaultColor = '#FFFFFF' 
 }: ColorPickerFieldProps<T>) => {
   return (
-    <Controller
+    <FormField
       control={control}
       name={name}
       render={({ field }) => {
@@ -28,25 +28,27 @@ const ColorPickerField = <T extends FieldValues>({
         return (
           <FormItem>
             <FormLabel className="text-white">{label}</FormLabel>
-            <FormControl>
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                 {/* Direct color input styled as a button */}
-                <input
-                  type="color"
-                  value={currentColor}
-                  onChange={(e) => field.onChange(e.target.value)}
-                  className="w-12 h-10 rounded border border-light-navy cursor-pointer bg-transparent"
-                  style={{ 
-                    backgroundColor: currentColor,
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                    appearance: 'none'
-                  }}
-                />
+                <FormControl>
+                  <input
+                    type="color"
+                    value={currentColor}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="w-12 h-10 rounded border border-light-navy cursor-pointer bg-transparent"
+                    style={{
+                      backgroundColor: currentColor,
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      appearance: 'none'
+                    }}
+                  />
+                </FormControl>
                 
                 {/* Text input showing the hex value */}
                 <Input
                   type="text"
+                  aria-label={`${label} hex value`}
                   value={currentColor}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -58,8 +60,7 @@ const ColorPickerField = <T extends FieldValues>({
                   placeholder="#FFFFFF"
                   className="flex-1 bg-dark-navy border-light-navy text-white font-mono text-sm"
                 />
-              </div>
-            </FormControl>
+            </div>
           </FormItem>
         );
       }}

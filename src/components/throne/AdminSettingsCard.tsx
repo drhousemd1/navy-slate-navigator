@@ -25,10 +25,13 @@ const AdminSettingsCard: React.FC = () => {
             </TooltipProvider>
           </div>
           <button 
+            type="button"
+            aria-label={showSettings ? 'Collapse admin settings' : 'Expand admin settings'}
+            aria-expanded={showSettings}
             onClick={() => setShowSettings(!showSettings)}
             className="text-gray-400 hover:text-white"
           >
-            {showSettings ? <ChevronUp /> : <ChevronDown />}
+            {showSettings ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
           </button>
         </div>
       </CardHeader>

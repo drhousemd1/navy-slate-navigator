@@ -25,12 +25,14 @@ const RewardFooter: React.FC<RewardFooterProps> = ({
       {onEdit && (
         <div className="flex space-x-2 ml-auto">
           <Button
+            type="button"
+            aria-label="Edit reward"
             variant="ghost"
             size="icon"
             className="bg-gray-700 text-white hover:bg-gray-600 hover:text-white rounded-full p-2 h-8 w-8 flex items-center justify-center"
             onClick={onEdit}
           >
-            <Edit className="h-4 w-4" />
+            <Edit aria-hidden="true" className="h-4 w-4" />
           </Button>
         </div>
       )}

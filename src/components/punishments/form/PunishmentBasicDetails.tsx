@@ -179,13 +179,14 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
             <div className="flex items-center space-x-2">
               <Button 
                 type="button"
+                aria-label="Decrease submissive points lost"
                 variant="outline" 
                 size="icon"
                 onClick={handleDecrementPoints}
                 className="bg-light-navy hover:bg-navy border-light-navy"
                 disabled={isSaving}
               >
-                <Minus className="h-4 w-4 text-white" />
+                <Minus aria-hidden="true" className="h-4 w-4 text-white" />
               </Button>
               <FormControl>
                 <Input
@@ -209,13 +210,14 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
               </FormControl>
               <Button 
                 type="button"
+                aria-label="Increase submissive points lost"
                 variant="outline" 
                 size="icon"
                 onClick={handleIncrementPoints}
                 className="bg-light-navy hover:bg-navy border-light-navy"
                 disabled={isSaving}
               >
-                <Plus className="h-4 w-4 text-white" />
+                <Plus aria-hidden="true" className="h-4 w-4 text-white" />
               </Button>
             </div>
           </FormItem>
@@ -232,13 +234,14 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
             <div className="flex items-center space-x-2">
               <Button 
                 type="button"
+                aria-label="Decrease Dom points earned"
                 variant="outline" 
                 size="icon"
                 onClick={handleDecrementDomPoints}
                 className="bg-light-navy hover:bg-navy border-light-navy"
                 disabled={isSaving}
               >
-                <Minus className="h-4 w-4 text-white" />
+                <Minus aria-hidden="true" className="h-4 w-4 text-white" />
               </Button>
               <FormControl>
                 <Input
@@ -262,13 +265,14 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
               </FormControl>
               <Button 
                 type="button"
+                aria-label="Increase Dom points earned"
                 variant="outline" 
                 size="icon"
                 onClick={handleIncrementDomPoints}
                 className="bg-light-navy hover:bg-navy border-light-navy"
                 disabled={isSaving}
               >
-                <Plus className="h-4 w-4 text-white" />
+                <Plus aria-hidden="true" className="h-4 w-4 text-white" />
               </Button>
             </div>
           </FormItem>

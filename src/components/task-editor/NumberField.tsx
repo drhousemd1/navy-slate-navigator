@@ -38,13 +38,14 @@ const NumberField = <T extends FieldValues>({
           <div className="flex items-center space-x-2">
             <Button
               type="button"
+              aria-label={`Decrease ${label.toLowerCase()}`}
               variant="outline"
               size="icon"
               onClick={onDecrement}
               className="bg-light-navy hover:bg-navy border-light-navy"
               disabled={disabled || (minValue !== undefined && Number(field.value) <= minValue)}
             >
-              <Minus className="h-4 w-4 text-white" />
+              <Minus aria-hidden="true" className="h-4 w-4 text-white" />
             </Button>
             <FormControl>
               <Input
@@ -67,13 +68,14 @@ const NumberField = <T extends FieldValues>({
             </FormControl>
             <Button
               type="button"
+              aria-label={`Increase ${label.toLowerCase()}`}
               variant="outline"
               size="icon"
               onClick={onIncrement}
               className="bg-light-navy hover:bg-navy border-light-navy"
               disabled={disabled || (maxValue !== undefined && Number(field.value) >= maxValue)}
             >
-              <Plus className="h-4 w-4 text-white" />
+              <Plus aria-hidden="true" className="h-4 w-4 text-white" />
             </Button>
           </div>
         </FormItem>
