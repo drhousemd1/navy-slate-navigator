@@ -71,7 +71,7 @@ function progressProblem(message: string) {
 export async function readTaskActionData(scope: ActionQueueScope, signal?: AbortSignal): Promise<TaskActionData> {
   const token = await actionScopeToken(scope, signal);
   const requestProgress = (taskId: string | null) => database.rpc('get_task_progress', { p_expected_relationship_id: scope.relationshipId, p_task_id: taskId })
-    .setHeader('Authorization', `Bearer ${token}`).abortSignal(signal);
+    .setHeader('Authorization', `Bearer ${token}`).setHeader('x-task-context-version', '2').abortSignal(signal);
   const [tasks, allEvents, points, imported, summary] = await Promise.all([
     rows<TaskDefinition>('tasks', fields, scope, token, signal),
     rows<TaskEventRow>('action_events', 'id,relationship_id,kind,task_id,actor_participant_id,beneficiary_participant_id,subject,recorded_at,calendar,definition_values,reverses_event_id,provenance', scope, token, signal),

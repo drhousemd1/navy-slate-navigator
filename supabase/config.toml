@@ -1,31 +1,72 @@
+# Release template, not a remote project selection. The isolated native runtime
+# has its own config. Resolve/check this template with scripts/prepare-release.py.
+project_id = "obedience"
 
-project_id = "ronqvzihpffgowyscgfm"
-site_url = "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com"
-redirect_urls = [
-  "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com",
-  "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com/auth",
-  "https://98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovableproject.com/reset-password",
-  "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app",
-  "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app/auth",
-  "https://id-preview--98e56b67-1df6-49a9-99c2-b6a9d4dcdf65.lovable.app/reset-password",
-  "http://localhost:3000",
-  "http://localhost:3000/auth",
-  "http://localhost:3000/reset-password",
-  "http://localhost:5173",
-  "http://localhost:5173/auth",
-  "http://localhost:5173/reset-password"
+[auth]
+# Unresolved deliberately: no Lovable, localhost or guessed production fallback.
+site_url = "env(OBEDIENCE_RELEASE_SITE_URL)"
+additional_redirect_urls = [
+  "env(OBEDIENCE_RELEASE_AUTH_REDIRECT_URL)",
+  "env(OBEDIENCE_RELEASE_RECOVERY_REDIRECT_URL)"
 ]
 
-[functions.get-vapid-public-key]
+# These handlers validate the live USER token with Auth, reject anon/service
+# credentials as user identity, and enforce current SQL permissions themselves.
+[functions.message-media]
+enabled = true
 verify_jwt = false
+entrypoint = "./functions/message-media/index.ts"
 
-[functions.send-push-notification]
+[functions.encyclopedia-admin]
+enabled = true
 verify_jwt = false
+entrypoint = "./functions/encyclopedia-admin/index.ts"
+
+[functions.app-branding]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/app-branding/index.ts"
+
+# Start checks live Auth. Status/resume use the exact job's secret capability
+# after Auth deletion; gateway JWT enforcement would break that recovery path.
+[functions.account-deletion]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/account-deletion/index.ts"
+
+# Public configuration only; no private key is returned. Missing key gives 503.
+[functions.get-vapid-public-key]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/get-vapid-public-key/index.ts"
+
+# Deploy these named tombstones to replace old code; they return 410 and do not
+# send notifications, schedule reminders or generate keys.
+[functions.send-push-notification]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/send-push-notification/index.ts"
+
+[functions.send-wellness-reminder]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/send-wellness-reminder/index.ts"
 
 [functions.generate-vapid-keys]
+enabled = true
 verify_jwt = false
+entrypoint = "./functions/generate-vapid-keys/index.ts"
 
-# The endpoint verifies the bearer USER token with Auth before any service operation.
-# Legacy gateway JWT checking alone accepts anon/service tokens and is insufficient.
-[functions.message-media]
+# Separate reviewed push rollout only. Its own worker secret is not a user JWT.
+# This does not stop a previously deployed worker or change delivery_enabled.
+[functions.dispatch-notifications]
+enabled = false
 verify_jwt = false
+entrypoint = "./functions/dispatch-notifications/index.ts"
+
+# Unsafe legacy account-reset implementation: never deploy or serve it.
+# enabled=false does NOT remove a copy already deployed on a hosted project.
+[functions.create-demo-user]
+enabled = false
+verify_jwt = true
+entrypoint = "./functions/create-demo-user/index.ts"

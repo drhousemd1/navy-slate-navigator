@@ -25,6 +25,7 @@ describe('real SDK reward adapter (network stubbed)', () => {
     const [url, init] = mocks.network.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://action-transport-fixture.invalid/rest/v1/rpc/execute_reward_command');
     expect(new Headers(init.headers).get('Authorization')).toBe(`Bearer synthetic-${scope.accountId}`);
+    expect(new Headers(init.headers).get('x-task-context-version')).toBe('2');
     expect(JSON.parse(init.body as string)).toMatchObject({ p_command_id: command.commandId, p_expected_relationship_id: scope.relationshipId, p_action: 'reward_buy', p_expected_relationship_session_id: scope.relationshipSessionId });
   });
   it('does not call RPC when the current account does not match the captured command account', async () => {
@@ -43,6 +44,7 @@ describe('real SDK reward adapter (network stubbed)', () => {
     const [url, init] = mocks.network.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://action-transport-fixture.invalid/rest/v1/rpc/get_my_action_receipt');
     expect(new Headers(init.headers).get('Authorization')).toBe(`Bearer synthetic-${scope.accountId}`);
+    expect(new Headers(init.headers).get('x-task-context-version')).toBe('2');
     expect(JSON.parse(init.body as string)).toEqual({ p_command_id: command.commandId, p_expected_relationship_id: scope.relationshipId });
   });
   it.each([
@@ -68,6 +70,7 @@ describe('real SDK reward adapter (network stubbed)', () => {
     const [url, init] = mocks.network.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(`https://action-transport-fixture.invalid/rest/v1/rpc/${rpc}`);
     expect(new Headers(init.headers).get('Authorization')).toBe(`Bearer synthetic-${scope.accountId}`);
+    expect(new Headers(init.headers).get('x-task-context-version')).toBe('2');
     const payload = JSON.parse(init.body as string);
     expect(payload).toMatchObject({ p_command_id: input.commandId, p_expected_relationship_id: scope.relationshipId, [target]: uuid(5), p_expected_relationship_session_id: scope.relationshipSessionId });
     if ('expectedContext' in input) expect(payload.p_expected_context).toEqual(input.expectedContext);

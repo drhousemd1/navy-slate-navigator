@@ -27,7 +27,7 @@ const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ atomicAccounting = 
   const text = useCoreTextClasses();
   return (
     <>
-      <Button disabled={disabled}
+      <Button type="button" disabled={disabled}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();

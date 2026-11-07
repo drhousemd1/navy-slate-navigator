@@ -31,6 +31,7 @@ describe('task reads and definition boundary', () => {
     const data = await readTaskActionData(scope); expect(data.imported).toHaveLength(1); expect(data.progress[id(1)].currentCount).toBe(1);
     expect(mocks.requests.every(row => row.headers.Authorization === 'Bearer token-account')).toBe(true);
     expect(mocks.requests.filter(row => !row.rpc).every(row => row.filters.relationship_id === 'period' && !/user_id|source_snapshot|intent|\*/.test(row.fields))).toBe(true);
+    expect(mocks.requests.find(row => row.rpc).headers['x-task-context-version']).toBe('2');
     expect(mocks.requests.find(row => row.rpc).args).toEqual({ p_expected_relationship_id: 'period', p_task_id: null });
   });
   it('rejects a different account before requests and after a late account change', async () => {

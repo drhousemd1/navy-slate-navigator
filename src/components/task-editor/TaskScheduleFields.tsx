@@ -16,7 +16,12 @@ export function TaskScheduleFields({ form, atomic, disabled }: { form: UseFormRe
     form.setValue('deadline_date', null, { shouldDirty: true });
     form.setValue('deadline_weekday', enabled && frequency === 'weekly' ? 7 : null, { shouldDirty: true });
   };
-  return <fieldset disabled={disabled} className={`space-y-4 ${text.primary}`}>
+  return <fieldset disabled={disabled} className={`space-y-4 ${text.primary}`} onKeyDown={event => {
+    // Enter confirms native schedule controls; saving is an explicit form action.
+    const target = event.target;
+    if (event.key === 'Enter' && (target instanceof HTMLSelectElement ||
+      (target instanceof HTMLInputElement && ['date', 'time'].includes(target.type)))) event.preventDefault();
+  }}>
     <legend className="sr-only">Task schedule</legend>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FrequencySelector control={form.control} allowOnce={atomic} onFrequencyChange={value => {
@@ -39,7 +44,7 @@ export function TaskScheduleFields({ form, atomic, disabled }: { form: UseFormRe
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {frequency === 'once' && <label className="space-y-1">Due date<Input className="text-foreground" type="date" required min="0001-01-01" max="9999-12-31"
             value={form.watch('deadline_date') ?? ''} onChange={event => form.setValue('deadline_date', event.target.value || null, { shouldDirty: true })} /></label>}
-          {frequency === 'weekly' && <label className="space-y-1">Due weekday<select className="block w-full rounded border border-light-navy bg-dark-navy p-2 text-foreground"
+          {frequency === 'weekly' && <label className="space-y-1">Due weekday<select aria-label="Due weekday" className="block w-full rounded border border-light-navy bg-dark-navy p-2 text-foreground"
             value={form.watch('deadline_weekday') ?? 7} onChange={event => form.setValue('deadline_weekday', Number(event.target.value), { shouldDirty: true })}>
             {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map((day, index) => <option key={day} value={index + 1}>{day}</option>)}
           </select></label>}

@@ -21,7 +21,7 @@ export function createSupabaseActionTransport() {
       return !error && data.session ? { accountId: data.session.user.id, accessToken: data.session.access_token } : null;
     },
     callRpc: ({ name, parameters }, accessToken, signal) => actionRpc(name, parameters)
-      .setHeader('Authorization', `Bearer ${accessToken}`).abortSignal(signal),
+      .setHeader('Authorization', `Bearer ${accessToken}`).setHeader('x-task-context-version', '2').abortSignal(signal),
   });
 }
 

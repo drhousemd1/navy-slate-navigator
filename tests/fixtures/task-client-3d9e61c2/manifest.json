@@ -1,0 +1,21 @@
+{
+  "commit": "3d9e61c20eb522e758be4a0ec3f7effbd7f9220e",
+  "files": {
+    "contracts": {
+      "source": "src/data/actions/contracts.ts",
+      "sha256": "8f2efdcba7888b7261cb5f4e4546e0caaaf843272c6d5148448ea00a8934e432"
+    },
+    "read-model": {
+      "source": "src/data/tasks/actionReadModel.ts",
+      "sha256": "587dc62159c0c3afd0c9c0de672cf149cdc50609eb0b5a53b0253e8666abd153"
+    },
+    "transport": {
+      "source": "src/data/actions/transport.ts",
+      "sha256": "fe090fee2cbf79eac9ea6dba9ca9ef05b817a8f9d2a5c88d2f01f85dc616fcc4"
+    }
+  },
+  "unchangedQueue": {
+    "source": "src/data/actions/queue.ts",
+    "sha256": "60897699bcfec983a0a6151d3084cca7289f0b40622660572f88ef85cb290c2e"
+  }
+}

@@ -34,6 +34,7 @@ export interface ActionTransportDependencies {
 export type RewardTransportDependencies = ActionTransportDependencies;
 
 const messages: Record<string, string> = {
+  TASK_CLIENT_UPDATE_REQUIRED: 'Update or reload this app, then review Undo again. No new action was recorded.',
   ACTION_CONTEXT_REQUIRED: 'This saved action does not include the details originally reviewed. Check its result; it will not be sent again.',
   ACTION_CONTEXT_INVALID: 'The saved action’s reviewed details could not be verified. Check its result before taking another action.',
   ACTION_BENEFICIARY_CHANGED: 'The person affected by this action changed. Review the current details before taking a new action.',

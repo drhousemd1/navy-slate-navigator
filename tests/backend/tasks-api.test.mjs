@@ -34,7 +34,7 @@ test('atomic task completion and Undo on isolated local fixtures', {
     assert.match(path,/^\/(auth|rest)\/v1\//);
     const url = new URL(path,api); assert.equal(url.origin,api);
     const response = await fetch(url,{method,headers:{apikey:token===service?service:anon,Authorization:`Bearer ${token}`,
-      'Content-Type':'application/json',Prefer:'return=representation',
+      'Content-Type':'application/json','x-task-context-version':'2',Prefer:'return=representation',
       ...(accountSessions.has(token)?{'x-relationship-session-id':accountSessions.get(token)}:{})},body:body===undefined?undefined:JSON.stringify(body),
       signal:AbortSignal.timeout(12_000),redirect:'error'});
     const text = await response.text(); let data; try { data=text?JSON.parse(text):null; } catch { data=null; }

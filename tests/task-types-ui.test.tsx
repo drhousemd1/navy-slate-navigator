@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { useForm } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
 import { TaskScheduleFields } from '@/components/task-editor/TaskScheduleFields';
+import TaskFormActions from '@/components/task-editor/TaskFormActions';
 import TaskCard from '@/components/TaskCard';
 import { TaskActivity } from '@/components/task/TaskActivity';
 import TaskFormProvider, { type LocalTaskFormValues } from '@/components/task-editor/TaskFormProvider';
@@ -22,15 +23,41 @@ vi.mock('@/components/activity/ActivityHistory', () => ({ ActivityHistory: ({ ch
 Element.prototype.hasPointerCapture ??= () => false;
 Element.prototype.scrollIntoView ??= () => {};
 afterEach(() => { cleanup(); localStorage.clear(); theme.currentScheme = 'default'; });
-function Editor({ initial = {}, atomic = true }: { initial?: Partial<LocalTaskFormValues>; atomic?: boolean }) {
+function Editor({ initial = {}, atomic = true, onSubmit }: { initial?: Partial<LocalTaskFormValues>; atomic?: boolean; onSubmit?: () => void }) {
   const form = useForm<LocalTaskFormValues>({ defaultValues: { frequency: 'daily', frequency_count: 3, mandatory: false, deadline_date: null, deadline_time: null, deadline_weekday: null, ...initial } });
-  return <Form {...form}><form><TaskScheduleFields form={form} atomic={atomic} disabled={false} /><output data-testid="values">{JSON.stringify(form.watch())}</output></form></Form>;
+  return <Form {...form}><form onSubmit={event => { event.preventDefault(); onSubmit?.(); }}><TaskScheduleFields form={form} atomic={atomic} disabled={false} /><output data-testid="values">{JSON.stringify(form.watch())}</output>{onSubmit && <button type="submit">Save</button>}</form></Form>;
 }
 const values = () => JSON.parse(screen.getByTestId('values').textContent!);
 const progress: TaskProgress = { taskId: 'task', beneficiaryParticipantId: 'sub', currency: 'sub', timeZone: 'Pacific/Honolulu', localDate: '2026-11-02', weekStartDate: '2026-11-02', weekIdentifier: '2026-W45',
   frequency: 'once', target: 1, currentCount: 0, usageData: [0,0,0,0,0,0,0], completed: false, lastCompletedDate: null, deleted: false, mandatory: true,
   deadline: { date: '2026-11-01', time: '09:00', weekday: null }, dueAt: '2026-11-01T19:00:00Z', overdue: true, lastCompletionLate: null };
 describe('task type interactions', () => {
+  it('Enter in date/time controls does not save; the explicit Save action still does', async () => {
+    const submit = vi.fn(), user = userEvent.setup();
+    render(<Editor initial={{ frequency: 'once', frequency_count: 1, deadline_date: '2026-11-07', deadline_time: '08:30' }} onSubmit={submit} />);
+    for (const label of ['Due date', 'Due time']) {
+      screen.getByLabelText(label).focus();
+      await user.keyboard('{Enter}');
+    }
+    expect(submit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Save', exact: true }));
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
+  it('implicit form submission never activates the Delete Task control', async () => {
+    const submit = vi.fn(), openDelete = vi.fn(), user = userEvent.setup();
+    render(<form onSubmit={event => { event.preventDefault(); submit(); }}>
+      <input aria-label="Task title" defaultValue="Task" />
+      <TaskFormActions taskData={{ id: 'task' }} isDeleteDialogOpen={false} setIsDeleteDialogOpen={openDelete}
+        onCancel={vi.fn()} onDelete={vi.fn()} />
+    </form>);
+    screen.getByLabelText('Task title').focus();
+    await user.keyboard('{Enter}');
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(openDelete).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Delete Task', exact: true }));
+    expect(openDelete).toHaveBeenCalledWith(true);
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
   it('switching frequency clears only the incompatible deadline and sets the one-time target', async () => {
     render(<Editor initial={{ deadline_time: '17:00' }} />);
     await userEvent.setup().click(screen.getByRole('combobox', { name: 'Frequency' }));

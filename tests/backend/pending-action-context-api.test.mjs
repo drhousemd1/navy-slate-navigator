@@ -36,7 +36,7 @@ test('pending task and recording assumptions remain explicit and immutable',{
     const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('Pinned local request exceeded12000ms'));},12_000);});
     try{return await Promise.race([deadline,(async()=>{
       const r=await fetch(url,{method,headers:{apikey:token===service?service:anon,Authorization:`Bearer ${token}`,
-        'Content-Type':'application/json',Prefer:'return=representation',...(session?{'x-relationship-session-id':session}:{})},
+        'Content-Type':'application/json','x-task-context-version':'2',Prefer:'return=representation',...(session?{'x-relationship-session-id':session}:{})},
         body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal,redirect:'error'});
       const text=await r.text();let data;try{data=text?JSON.parse(text):null;}catch{data=null;}return{status:r.status,data};
     })()]);}finally{clearTimeout(timer);}

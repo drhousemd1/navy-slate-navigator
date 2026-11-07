@@ -56,7 +56,7 @@ begin
   insert into public.task_completion_history(task_id,user_id,relationship_id,completed_at) values(imported,sub,period,'2020-01-01T12:00Z');
   perform public.activate_action_accounting(period);
   perform pg_temp.check_that((select count(*)=0 from public.action_events where relationship_id=period and task_id is not null),'cutover invents no task event/award');
-  perform set_config('request.headers',jsonb_build_object('x-relationship-session-id',generation)::text,true);
+  perform set_config('request.headers',jsonb_build_object('x-relationship-session-id',generation,'x-task-context-version','2')::text,true);
   perform set_config('request.jwt.claims',jsonb_build_object('sub',dom,'role','authenticated')::text,true);
   execute 'set local role authenticated';
   update public.tasks set frequency='once',frequency_count=1 where id=imported;
