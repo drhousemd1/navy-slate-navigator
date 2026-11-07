@@ -64,7 +64,7 @@ enabled = false
 verify_jwt = false
 entrypoint = "./functions/dispatch-notifications/index.ts"
 
-# Unsafe legacy account-reset implementation: never deploy or serve it.
+# Inert account-reset tombstone: keep disabled and excluded from this release.
 # enabled=false does NOT remove a copy already deployed on a hosted project.
 [functions.create-demo-user]
 enabled = false
