@@ -1,3 +1,4 @@
+import { captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +11,7 @@ import { getRewardsQueryKey } from '../queries';
 import { saveRewardsToDB } from '@/data/indexedDB/useIndexedDB';
 
 export const useDeleteReward = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
 
@@ -17,6 +19,7 @@ export const useDeleteReward = () => {
   const rewardsQueryKey = getRewardsQueryKey(subUserId, domUserId);
 
   return useDeleteOptimisticMutation<Reward, PostgrestError | Error, string>({
+    cacheToken,
     queryClient,
     queryKey: rewardsQueryKey,
     mutationFn: async (rewardId: string) => {
@@ -29,7 +32,7 @@ export const useDeleteReward = () => {
       if (usageError) {
         logger.warn(`Failed to delete reward usage history for reward ${rewardId}:`, usageError.message);
       }
-      
+
       // Delete the reward
       const { error } = await supabase.from('rewards').delete().eq('id', rewardId);
       if (error) throw error;
@@ -38,17 +41,17 @@ export const useDeleteReward = () => {
     idField: 'id',
     relatedQueryKey: ['reward-usage'],
     relatedIdField: 'reward_id',
-    onSuccessCallback: async (deletedId: string) => {
+    onSuccessCallback: async (deletedId: string, cacheToken) => {
       // Update the cache immediately after successful deletion
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (old = []) => {
         const updatedRewards = old.filter(reward => reward.id !== deletedId);
         // Also update IndexedDB cache
-        saveRewardsToDB(updatedRewards).catch(err => 
+        saveRewardsToDB(updatedRewards, cacheToken).catch(err =>
           logger.warn('Failed to update IndexedDB after reward deletion:', err)
         );
         return updatedRewards;
       });
-      
+
       // Force invalidate to ensure consistency
       await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
       logger.debug('[Delete Reward] Cache updated and invalidated for query key:', rewardsQueryKey);

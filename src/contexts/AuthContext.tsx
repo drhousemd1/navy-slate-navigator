@@ -1,13 +1,14 @@
 
-import React, { createContext, useState, useEffect, useContext, useRef, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef, useCallback, ReactNode } from 'react';
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
-import { supabase, supabaseBackendId, clearDeletedAccountSession } from '@/integrations/supabase/client';
-import { forgetRecovery } from '@/lib/offline/recovery';
+import { supabase, supabaseBackendId, supabaseAuthStorageKey, clearDeletedAccountSession, signOutCurrentSession, synchronizeRealtimeSession } from '@/integrations/supabase/client';
+import { forgetAccountRecovery } from '@/lib/offline/recovery';
 import { revokeCurrentPushDeviceBeforeSignOut } from '@/lib/pushDevice';
 import { toast } from '@/hooks/use-toast';
 import { queryClient } from '@/data/queryClient';
-import localforage from 'localforage';
-import { STORAGE_PREFIX as FORM_STATE_PREFIX } from '@/hooks/useFormStatePersister';
+import { invalidateAccountCacheScope } from '@/data/indexedDB/useIndexedDB';
+import { ownsDeletionQuery } from '@/data/accountDeletion/cleanup';
+import { sessionOwner, sameSessionOwner, storedSessionOwner, subscribeOwnedSignOut, type SessionOwner } from '@/lib/ownedSignOut';
 import { useAuthOperations } from './auth/useAuthOperations';
 import { useUserProfile } from './auth/useUserProfile';
 import { useAccountDeletion } from './auth/useAccountDeletion';
@@ -79,7 +80,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const authOperations = useAuthOperations();
   const currentAccountId = useRef(authState.user?.id ?? null);
-  currentAccountId.current = authState.user?.id ?? null;
+  const currentSession = useRef<Session | null>(null);
+  const authGeneration = useRef(0);
+  const endedSessions = useRef(new Set<string>());
   const wrappedSetUserForProfile = (updatedUser: User | null) => {
     const expectedAccountId = authState.user?.id;
     setAuthState(currentAuthState => {
@@ -98,7 +101,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const endDeletedSession = async (account: string) => {
     const result = await clearDeletedAccountSession(account);
     if (result === 'other_account' || currentAccountId.current !== account) return;
-    currentAccountId.current = null;
+    currentAccountId.current = null; currentSession.current = null; authGeneration.current++;
     setAuthState({ user: null, session: null, loading: false, isAuthenticated: false, isAdmin: false, userExists: false, sessionExists: false });
   };
   const accountDeletion = useAccountDeletion(authState.user?.id ?? null, partnerLinkingUtils.relationshipIdentity, endDeletedSession);
@@ -108,18 +111,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const checkAdminStatus = async (): Promise<boolean> => {
     if (!authState.user) return false;
     const requestedAccountId = authState.user.id;
-    
+
     try {
       const { data: hasAdminRole, error } = await supabase.rpc('has_role', {
         requested_user_id: requestedAccountId,
         requested_role: 'admin'
       });
-      
+
       if (error) {
         logger.error('Error checking admin role:', error);
         return false;
       }
-      
+
       const isAdmin = !!hasAdminRole;
       if (currentAccountId.current !== requestedAccountId) return false;
       setAuthState(prev => prev.user?.id === requestedAccountId ? { ...prev, isAdmin } : prev);
@@ -130,6 +133,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const clearDepartingView = useCallback((accountId: string) => {
+    invalidateAccountCacheScope(supabaseBackendId, accountId);
+    try { forgetAccountRecovery(supabaseBackendId, accountId); } catch (error) { logger.error('Account recovery display cleanup failed:', error); }
+    const predicate = (query: { queryKey: readonly unknown[] }) => ownsDeletionQuery(query.queryKey, { backendId: supabaseBackendId, accountId });
+    // No await followed by mutation of newer state. Pending command/draft stores
+    // and unidentified disk bytes are intentionally untouched on ordinary logout.
+    void queryClient.cancelQueries({ predicate }).catch(error => logger.error('Account query cancellation failed:', error));
+    queryClient.removeQueries({ predicate });
+  }, []);
+  const endOwnedSession = useCallback((owner: SessionOwner | null) => {
+    if (!owner || owner.backendId !== supabaseBackendId) return;
+    endedSessions.current.add(JSON.stringify(owner));
+    if (!sameSessionOwner(owner, sessionOwner(supabaseBackendId, currentSession.current))) return;
+    currentSession.current = null; currentAccountId.current = null; authGeneration.current++;
+    setAuthState({ user: null, session: null, loading: false, isAuthenticated: false, isAdmin: false, userExists: false, sessionExists: false });
+    synchronizeRealtimeSession();
+    if (!deletionAccounts.current.has(owner.accountId)) clearDepartingView(owner.accountId);
+  }, [clearDepartingView]);
+  useEffect(() => subscribeOwnedSignOut(supabaseBackendId, supabaseAuthStorageKey, endOwnedSession), [endOwnedSession]);
+
   useEffect(() => {
     logger.debug("AuthContext: Starting instant auth check...");
     let subscriptionCleanup: Subscription | null = null;
@@ -138,10 +161,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         // Set up auth state change listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event: AuthChangeEvent, newSession: Session | null) => {
+          (event: AuthChangeEvent, newSession: Session | null) => {
             logger.debug(`AuthContext: Auth state change: ${event}`);
-            
-            if (newSession && isDeletedAccount(supabaseBackendId, newSession.user.id)) return;
+
+            if (newSession && (isDeletedAccount(supabaseBackendId, newSession.user.id) || endedSessions.current.has(JSON.stringify(sessionOwner(supabaseBackendId, newSession))))) return;
+            // SDK broadcasts SIGNED_OUT without ownership. Ignore it if storage
+            // already holds a different/newer valid login; our own logout uses a scoped event.
+            if (!newSession && event === 'SIGNED_OUT' && storedSessionOwner(supabaseBackendId, supabaseAuthStorageKey, localStorage)) return;
+            authGeneration.current++;
+            currentSession.current = newSession;
             if (newSession) {
               currentAccountId.current = newSession.user.id;
               // User is authenticated - set state immediately
@@ -154,15 +182,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 userExists: true,
                 sessionExists: true,
               });
-              
+
               logger.debug("AuthContext: User authenticated, app ready");
             } else {
-              // User is not authenticated
-              if (event === 'SIGNED_OUT' && !deletionAccounts.current.has(currentAccountId.current ?? '')) {
-                logger.info(`AuthContext: ${event} - clearing caches`);
-                await clearAllCaches();
-              }
-              
+              const departingAccount = currentAccountId.current;
+              if (event === 'SIGNED_OUT' && departingAccount && !deletionAccounts.current.has(departingAccount)) clearDepartingView(departingAccount);
+
               currentAccountId.current = null;
               setAuthState({
                 user: null,
@@ -173,24 +198,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 userExists: false,
                 sessionExists: false,
               });
-              
+
               logger.debug("AuthContext: User not authenticated");
             }
           }
         );
-        
+
         subscriptionCleanup = subscription;
 
         // Check for existing session - this should be instant from localStorage
+        const initialGeneration = authGeneration.current;
         const { data: { session: existingSession }, error } = await supabase.auth.getSession();
-        
+        if (authGeneration.current !== initialGeneration) return;
+
         if (error) {
           logger.error("AuthContext: Error getting session:", error);
           setAuthState(prev => ({ ...prev, loading: false }));
           return;
         }
 
-        if (existingSession && !isDeletedAccount(supabaseBackendId, existingSession.user.id)) {
+        if (existingSession && !isDeletedAccount(supabaseBackendId, existingSession.user.id) && !endedSessions.current.has(JSON.stringify(sessionOwner(supabaseBackendId, existingSession)))) {
+          currentSession.current = existingSession; currentAccountId.current = existingSession.user.id;
           // User has existing session - set immediately
           setAuthState({
             user: existingSession.user,
@@ -201,7 +229,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             userExists: true,
             sessionExists: true,
           });
-          
+
           logger.debug("AuthContext: Existing session found, app ready");
         } else {
           // No session - stop loading immediately
@@ -221,14 +249,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logger.debug("AuthContext: Cleaning up auth subscription");
       subscriptionCleanup?.unsubscribe();
     };
-  }, []);
+  }, [clearDepartingView]);
 
   const reloadDeletion = accountDeletion.reload;
   useEffect(() => {
     const handleDeletion = () => {
       const account = currentAccountId.current;
       if (!account || !isDeletedAccount(supabaseBackendId, account)) return;
-      currentAccountId.current = null;
+      currentAccountId.current = null; currentSession.current = null; authGeneration.current++;
       setAuthState({ user: null, session: null, loading: false, isAuthenticated: false, isAdmin: false, userExists: false, sessionExists: false });
       void reloadDeletion();
     };
@@ -236,43 +264,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => window.removeEventListener('storage', handleDeletion);
   }, [reloadDeletion]);
 
-  const clearAllCaches = async () => {
-    forgetRecovery(supabaseBackendId);
-    try {
-      logger.info('[AuthContext] Starting cache clear...');
-      queryClient.clear();
-      
-      await localforage.removeItem('APP_QUERY_CACHE');
-      
-      const keys = await localforage.keys();
-      const formStateKeys = keys.filter(key => key.startsWith(FORM_STATE_PREFIX));
-      for (const key of formStateKeys) {
-        await localforage.removeItem(key);
-      }
-      
-      toast({ title: "Cache Cleared", description: "Application cache cleared." });
-      logger.info('[AuthContext] Cache clear completed');
-    } catch (error) {
-      logger.error("AuthContext: Error clearing caches:", error);
-    }
-  };
-
   const signOut = async () => {
-    const accountId = currentAccountId.current;
-    forgetRecovery(supabaseBackendId);
-    logger.info("AuthContext: signOut called");
-    const pushResult = await revokeCurrentPushDeviceBeforeSignOut(accountId);
-    // A different account may have signed in while device revocation waited.
-    // The original sign-out must not sign that new account out.
-    if (currentAccountId.current !== accountId) return;
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
+    const session = currentSession.current;
+    if (!session) return;
+    const owner = sessionOwner(supabaseBackendId, session);
+    try {
+      if (!owner) throw new Error('Session ownership could not be verified. Reload before signing out.');
+      const pushResult = await revokeCurrentPushDeviceBeforeSignOut(session.user.id);
+      // Includes same-account replacement logins, not just a change in user ID.
+      if (!sameSessionOwner(owner, sessionOwner(supabaseBackendId, currentSession.current))) return;
+      await signOutCurrentSession(session);
+      // The owner-specific event clears the departed view; never clear a newer view.
+      endOwnedSession(owner);
+      if (pushResult === 'unconfirmed' && !currentSession.current) toast({ title: 'Device notifications not confirmed off', description: 'You are signed out. To stop all alerts on this browser, turn off this site’s notifications in browser settings.' });
+    } catch (error) {
       logger.error('AuthContext: Error signing out:', error);
-      toast({ title: "Sign Out Error", description: error.message, variant: "destructive" });
-    } else {
-      logger.info("AuthContext: Sign out successful");
-      if (pushResult === 'unconfirmed') toast({ title: 'Device notifications not confirmed off', description: 'You are signed out. To stop all alerts on this browser, turn off this site’s notifications in browser settings.' });
+      if (currentSession.current === session || sameSessionOwner(owner, sessionOwner(supabaseBackendId, currentSession.current))) toast({ title: 'Sign Out Error', description: error instanceof Error ? error.message : 'Sign out needs another attempt.', variant: 'destructive' });
     }
   };
 

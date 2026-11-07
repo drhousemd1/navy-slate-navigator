@@ -9,7 +9,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import type { ProfileRole } from '@/types/profile';
 import { supabaseBackendId } from '@/integrations/supabase/client';
-import { forgetRecovery, reconcileRecoveryAccount, recoveryAccess, subscribeRecovery } from '@/lib/offline/recovery';
+import { forgetAccountRecovery, reconcileRecoveryAccount, recoveryAccess, subscribeRecovery } from '@/lib/offline/recovery';
 import { OfflineRecovery } from '@/components/offline/OfflineRecovery';
 
 interface UserIdsContextType extends IdentityState {
@@ -53,18 +53,19 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
     setCacheError(null);
     setActionError(null);
     setIsRepairing(false);
+    void prepareIdentityCacheScope(null, []);
     const prepare = async () => {
       try {
         await queryClient.cancelQueries();
         if (!isCurrent()) return;
         if (lastPrepared.current && lastPrepared.current.accountId !== accountId) {
-          // Preserve the existing account-switch reset. Ordinary identity refresh
+          // Preserve the existing query-only account-switch fence. Ordinary identity refresh
           // must not discard paused mutations or offline work for this account.
-          queryClient.clear();
+          queryClient.removeQueries();
         } else if (scope && lastPrepared.current?.scope !== scope) {
           queryClient.removeQueries();
         }
-        await prepareIdentityCacheScope(scope, scope ? identityScopeUserIds(subUserId, domUserId) : []);
+        await prepareIdentityCacheScope(scope && accountId ? { backendId: supabaseBackendId, accountId, relationshipId: identity.relationshipId, relationshipSessionId: identity.relationshipSessionId } : null, scope ? identityScopeUserIds(subUserId, domUserId) : []);
         if (isCurrent()) {
           lastPrepared.current = { accountId, scope: scope ?? (lastPrepared.current?.accountId === accountId ? lastPrepared.current.scope : null) };
           setPreparedScope(scope);
@@ -77,7 +78,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
     };
     void prepare();
     return () => { active = false; };
-  }, [accountId, scope, repairScope, subUserId, domUserId, queryClient]);
+  }, [accountId, scope, repairScope, subUserId, domUserId, queryClient, identity.relationshipId, identity.relationshipSessionId]);
 
   const initializeUserIds = useCallback(async () => {
     setCacheError(null);
@@ -105,7 +106,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
     }
   };
   const needsBoundary = !!accountId && (!effectiveIdentity.canAccessData || isLoadingUserIds);
-  const signOutAndRemoveRecovery = async () => { forgetRecovery(supabaseBackendId); await signOut(); };
+  const signOutAndRemoveRecovery = async () => { if (accountId) forgetAccountRecovery(supabaseBackendId, accountId); await signOut(); };
   const canSetRole = identity.status === 'invalid' && !identity.partnerUserId &&
     (identity.problem === 'missing_profile' || identity.problem === 'invalid_role');
 

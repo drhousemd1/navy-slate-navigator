@@ -1,3 +1,4 @@
+import { captureCacheToken, legacyQueryKey, isCurrentCacheToken, requireCurrentCacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +17,7 @@ interface CreateRuleViolationParams {
 }
 
 export const useCreateRuleViolation = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   const { getPartnerId } = usePartnerHelper();
@@ -25,7 +27,7 @@ export const useCreateRuleViolation = () => {
     mutationFn: async ({ ruleId, userId }: CreateRuleViolationParams) => {
       const now = new Date();
       const currentDay = getMondayBasedDay();
-      
+
       // Calculate week number in YYYY-Www format
       const year = now.getFullYear();
       const startOfYear = new Date(year, 0, 1);
@@ -48,14 +50,18 @@ export const useCreateRuleViolation = () => {
         throw error;
       }
     },
-    onSuccess: async (data, variables) => {
+    onMutate: () => { requireCurrentCacheToken(cacheToken); return { cacheToken }; },
+    onSuccess: async (data, variables, context) => {
+      const cacheToken = context?.cacheToken ?? null;
+      if (!isCurrentCacheToken(cacheToken)) return;
       // Invalidate rules query to refetch and update violation counts
-      queryClient.invalidateQueries({ 
-        queryKey: [...RULES_QUERY_KEY, subUserId, domUserId] 
+      queryClient.invalidateQueries({
+        queryKey: legacyQueryKey(RULES_QUERY_KEY, cacheToken)
       });
-      
+
       // Send push notification to partner about rule violation
       const partnerId = await getPartnerId();
+      if (!isCurrentCacheToken(cacheToken)) return;
       if (partnerId && variables.ruleName) {
         try {
           await sendRuleBrokenNotification(partnerId, variables.ruleName);
@@ -64,7 +70,8 @@ export const useCreateRuleViolation = () => {
         }
       }
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _variables, context) => {
+      if (!isCurrentCacheToken(context?.cacheToken ?? null)) return;
       logger.error('Failed to record rule violation:', error);
       toast({
         title: "Error",

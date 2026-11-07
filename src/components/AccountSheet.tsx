@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -15,6 +16,8 @@ import { logger } from '@/lib/logger';
 import { useAdminDocumentAccess } from '@/features/admin-documents/useAdminDocumentAccess';
 
 const AccountSheet = () => {
+  const { currentScheme } = useColorScheme();
+  const isLightScheme = currentScheme === 'light-turquoise';
   const navigate = useNavigate();
   const { user, getNickname, getProfileImage, getUserRoleSync, signOut, isAdmin } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -27,10 +30,8 @@ const AccountSheet = () => {
   };
 
   const handleLogout = async () => {
-    await signOut();
-    logger.debug('AccountSheet: User signed out. Cache purging handled by AuthContext.');
-    navigate('/auth');
     setSheetOpen(false);
+    await signOut(); // The authenticated route redirects only after this session actually ends.
   };
   
   const handleEncyclopediaClick = () => {
@@ -87,15 +88,16 @@ const AccountSheet = () => {
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger asChild>
         <button type="button" aria-label="Open account menu" className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
-          <UserCircle2 aria-hidden="true" className="w-5 h-5 text-gray-300 cursor-pointer hover:text-cyan-500 transition-colors" />
+          <UserCircle2 aria-hidden="true" className="w-5 h-5 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
         </button>
       </SheetTrigger>
       <SheetContent 
-        side="left" 
-        className="w-[75vw] sm:w-[300px] bg-navy border-r border-light-navy text-white"
+        side="left"
+        aria-describedby={undefined}
+        className="w-[75vw] sm:w-[300px] bg-navy border-r border-light-navy text-foreground"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">Account</SheetTitle>
+          <SheetTitle className="text-foreground">Account</SheetTitle>
         </SheetHeader>
         
         <div className="py-6">
@@ -111,7 +113,7 @@ const AccountSheet = () => {
                   }}
                 />
               ) : null}
-              <AvatarFallback className="bg-light-navy text-nav-active flex items-center justify-center">
+              <AvatarFallback className={`bg-light-navy flex items-center justify-center ${isLightScheme ? 'text-foreground' : 'text-nav-active'}`}>
                 {user && nickname ? (
                   nickname.charAt(0).toUpperCase()
                 ) : (
@@ -125,14 +127,14 @@ const AccountSheet = () => {
                   <p className="text-lg font-medium">
                     {nickname}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    {userRole} {isAdmin && <span className="text-cyan-400">(Admin)</span>}
+                  <p className={`text-sm ${isLightScheme ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    {userRole} {isAdmin && <span className={isLightScheme ? 'text-foreground' : 'text-cyan-400'}>(Admin)</span>}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="text-lg font-medium">Not Logged In</p>
-                  <p className="text-sm text-gray-400">Please log in or sign up</p>
+                  <p className={`text-sm ${isLightScheme ? 'text-foreground' : 'text-muted-foreground'}`}>Please log in or sign up</p>
                 </>
               )}
             </div>
@@ -141,7 +143,7 @@ const AccountSheet = () => {
           <div className="space-y-2 mt-6"> {/* Reduced space-y for tighter packing */}
             <Button 
               variant="ghost" 
-              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              className={`w-full justify-start text-foreground hover:bg-light-navy border ${isLightScheme ? 'hover:text-foreground border-border' : 'hover:text-cyan-300 border-white/50'}`}
               onClick={handleHomeClick}
             >
               <Home className="w-5 h-5 mr-3" />
@@ -149,7 +151,7 @@ const AccountSheet = () => {
             </Button>
             <Button 
               variant="ghost" 
-              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              className={`w-full justify-start text-foreground hover:bg-light-navy border ${isLightScheme ? 'hover:text-foreground border-border' : 'hover:text-cyan-300 border-white/50'}`}
               onClick={handleProfileClick}
               disabled={!user} // Disable if no user
             >
@@ -159,7 +161,7 @@ const AccountSheet = () => {
             
             <Button 
               variant="ghost" 
-              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              className={`w-full justify-start text-foreground hover:bg-light-navy border ${isLightScheme ? 'hover:text-foreground border-border' : 'hover:text-cyan-300 border-white/50'}`}
               onClick={handleEncyclopediaClick}
             >
               <BookOpen className="w-5 h-5 mr-3" />
@@ -168,7 +170,7 @@ const AccountSheet = () => {
 
             <Button 
               variant="ghost" 
-              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              className={`w-full justify-start text-foreground hover:bg-light-navy border ${isLightScheme ? 'hover:text-foreground border-border' : 'hover:text-cyan-300 border-white/50'}`}
               onClick={handleWellbeingClick}
             >
               <Activity className="w-5 h-5 mr-3" />
@@ -177,7 +179,7 @@ const AccountSheet = () => {
 
             <Button 
               variant="ghost" 
-              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              className={`w-full justify-start text-foreground hover:bg-light-navy border ${isLightScheme ? 'hover:text-foreground border-border' : 'hover:text-cyan-300 border-white/50'}`}
               onClick={handleColorSchemeClick}
             >
               <Palette className="w-5 h-5 mr-3" />
@@ -186,7 +188,7 @@ const AccountSheet = () => {
 
             <Button 
               variant="ghost" 
-              className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-white/50"
+              className={`w-full justify-start text-foreground hover:bg-light-navy border ${isLightScheme ? 'hover:text-foreground border-border' : 'hover:text-cyan-300 border-white/50'}`}
               onClick={handleNotificationsClick}
             >
               <Bell className="w-5 h-5 mr-3" />
@@ -196,10 +198,10 @@ const AccountSheet = () => {
             {documentAccess === 'allowed' && user && (
               <Button 
                 variant="ghost" 
-                className="w-full justify-start text-white hover:bg-light-navy hover:text-cyan-300 border border-cyan-500/50"
+                className={`w-full justify-start text-foreground hover:bg-light-navy border ${isLightScheme ? 'hover:text-foreground border-border' : 'hover:text-cyan-300 border-cyan-500/50'}`}
                 onClick={handleAdminPanelClick}
               >
-                <ShieldCheck className="w-5 h-5 mr-3 text-cyan-400" />
+                <ShieldCheck className={`w-5 h-5 mr-3 ${isLightScheme ? 'text-foreground' : 'text-cyan-400'}`} />
                 Admin Panel
               </Button>
             )}
@@ -207,7 +209,7 @@ const AccountSheet = () => {
             {user && ( // Only show logout if user is logged in
               <Button 
                 variant="ghost" 
-                className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-800/50 border border-red-500/50 mt-4" // Added margin top
+                className={`w-full justify-start border mt-4 ${isLightScheme ? 'text-red-700 hover:text-red-800 hover:bg-red-100 border-red-700/50' : 'text-red-400 hover:text-red-300 hover:bg-red-800/50 border-red-500/50'}`} // Added margin top
                 onClick={handleLogout}
               >
                 <LogOut className="w-5 h-5 mr-3" />
@@ -218,7 +220,7 @@ const AccountSheet = () => {
             {!user && ( // Show login if no user
                <Button 
                 variant="ghost" 
-                className="w-full justify-start text-cyan-400 hover:text-cyan-300 hover:bg-cyan-800/50 border border-cyan-500/50 mt-4"
+                className={`w-full justify-start border mt-4 ${isLightScheme ? 'text-foreground hover:text-foreground hover:bg-light-navy border-border' : 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-800/50 border-cyan-500/50'}`}
                 onClick={() => { navigate('/auth'); setSheetOpen(false); }}
               >
                 <LogOut className="w-5 h-5 mr-3" /> {/* Or UserPlus icon */}

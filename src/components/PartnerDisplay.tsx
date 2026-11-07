@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -10,6 +11,8 @@ import AvatarPreviewPopover from './AvatarPreviewPopover';
 import { logger } from '@/lib/logger';
 
 const PartnerDisplay: React.FC = () => {
+  const { currentScheme } = useColorScheme();
+  const isLightScheme = currentScheme === 'light-turquoise';
   const { data: partnerProfile } = usePartnerProfile();
   const partnerWellbeingQuery = useWellbeingQuery(partnerProfile?.id || null);
 
@@ -24,7 +27,7 @@ const PartnerDisplay: React.FC = () => {
   return (
     <div className="flex items-center">
       {/* Link icon */}
-      <Link2 className="w-4 h-4 text-gray-400 mr-2" />
+      <Link2 className="w-4 h-4 text-muted-foreground mr-2" />
       
       {/* Partner's wellbeing health bar - positioned to the left of avatar */}
       <WellbeingPopover
@@ -58,7 +61,7 @@ const PartnerDisplay: React.FC = () => {
               }}
             />
           ) : null}
-          <AvatarFallback className="bg-light-navy text-nav-active text-xs">
+          <AvatarFallback className={`bg-light-navy text-xs ${isLightScheme ? 'text-foreground' : 'text-nav-active'}`}>
             {partnerNickname ? partnerNickname.charAt(0).toUpperCase() : 'P'}
           </AvatarFallback>
         </Avatar>
@@ -66,8 +69,8 @@ const PartnerDisplay: React.FC = () => {
       
       {/* Partner name and role */}
       <div className="ml-2">
-        <p className="text-white text-sm font-medium leading-tight break-words">{partnerNickname}</p>
-        <p className="text-gray-400 text-xs leading-tight break-words">{partnerProfile.role}</p>
+        <p className="text-foreground text-sm font-medium leading-tight break-words">{partnerNickname}</p>
+        <p className={`text-xs leading-tight break-words ${isLightScheme ? 'text-foreground' : 'text-muted-foreground'}`}>{partnerProfile.role}</p>
       </div>
     </div>
   );

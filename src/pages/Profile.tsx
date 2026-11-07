@@ -130,7 +130,6 @@ const Profile: React.FC = () => {
 
   const handleLogout = async () => {
     await signOut();
-    logger.debug('Profile Page: User signed out. Cache purging handled by AuthContext.');
   };
 
   const handleDeleteAccount = async () => {

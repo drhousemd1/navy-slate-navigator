@@ -293,6 +293,17 @@ describe('real UserIds boundary', () => {
     expect(view.client.getMutationCache().getAll()).toContain(mutation); expect(view.clear).not.toHaveBeenCalled();
   });
 
+  it('removes unowned in-memory reads on account change without clearing pending mutations', async () => {
+    auth(solo('A')); const view = renderBoundary(); await screen.findByTestId('domain');
+    view.client.setQueryData(['old-ownerless-content'], { private: 'A' });
+    const mutation = view.client.getMutationCache().build(view.client, { mutationFn: async () => 'saved intent' });
+    auth(solo('B')); view.repaint(); await screen.findByTestId('domain');
+    expect(screen.getByTestId('domain').textContent).toContain('B');
+    expect(view.client.getQueryData(['old-ownerless-content'])).toBeUndefined();
+    expect(view.client.getMutationCache().getAll()).toContain(mutation); expect(view.clear).not.toHaveBeenCalled();
+    expect(mocks.prepare.mock.calls.at(-1)?.[0]).toEqual({ backendId: 'http://127.0.0.1:28622', accountId: 'B', relationshipId: 'period-B', relationshipSessionId: solo('B').relationshipSessionId });
+  });
+
   it('releases a pending repair when an invalid owned context changes generation without becoming valid', async () => {
     let reject!: (error: Error) => void;
     const invalid = { ...emptyIdentity('invalid', 'A', 'Partner invalid'), problem: 'same_role', partnerUserId: 'D', lifecycleReady: true,

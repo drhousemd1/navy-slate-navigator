@@ -1,3 +1,5 @@
+import { readCacheFactory } from './read-cache-fake';
+import { prepareIdentityCacheScope, captureCacheToken, saveTasksToDB, READ_CACHE_DATABASE, READ_CACHE_STORE, legacyQueryKey } from '@/data/indexedDB/useIndexedDB';
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'https://deletion.invalid', supabase: { rpc: vi.fn(), auth: { getSession: vi.fn() } } }));
@@ -72,4 +74,18 @@ describe('exact account/backend deletion cleanup', () => {
     expect(() => storeWellbeingDraft({ version: 1, scope, metrics: {} as never, pending: null }, null)).toThrow('This account was deleted');
     expect(localStorage.length).toBe(1);
   });
+  it('cleans the new owned snapshots across periods while preserving unknown rows, other accounts and backends', async () => {
+    const fake = readCacheFactory(); vi.stubGlobal('indexedDB', fake.factory);
+    const client = new QueryClient();
+    for (const current of [scope, { ...scope, relationshipId: id(77) }, { ...scope, accountId: id(90) }, { ...scope, backendId: 'https://other.invalid' }]) {
+      await prepareIdentityCacheScope(current, [current.accountId]); const token = captureCacheToken(); await saveTasksToDB([], token);
+      client.setQueryData(legacyQueryKey(['tasks'], token), []);
+    }
+    const rows = fake.rows(READ_CACHE_DATABASE, READ_CACHE_STORE); rows.set('unknown', { old: 'keep' });
+    const result = await cleanupDeletedAccount(scope, client, fake.factory);
+    expect(rows.size).toBe(3); expect(rows.get('unknown')).toEqual({ old: 'keep' }); expect(result.legacyPreserved).toBe(true);
+    for (const row of rows.values()) if ('scope' in (row as object)) expect((row as { scope: typeof scope }).scope.accountId !== scope.accountId || (row as { scope: typeof scope }).scope.backendId !== scope.backendId).toBe(true);
+    expect(client.getQueryCache().getAll()).toHaveLength(2);
+  });
+
 });

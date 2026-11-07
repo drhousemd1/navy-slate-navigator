@@ -1,14 +1,15 @@
+import { requireCurrentCacheToken, captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import { Reward, CreateRewardVariables } from '@/data/rewards/types';
-import { 
+import {
   REWARDS_POINTS_QUERY_KEY,
   REWARDS_DOM_POINTS_QUERY_KEY,
   REWARDS_SUPPLY_QUERY_KEY,
-  useRewardsQuery, 
+  useRewardsQuery,
   fetchTotalRewardsSupply,
   getRewardsQueryKey
-} from './queries'; 
+} from './queries';
 
 // Import types from the central types file
 import { useCreateRewardMutation, useUpdateRewardMutation } from '@/data/rewards/mutations/useSaveReward';
@@ -27,14 +28,15 @@ import { saveRewardsToDB } from '../indexedDB/useIndexedDB';
 import { useUserIds } from '@/contexts/UserIdsContext';
 
 export const useRewardsData = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
-  
+
   // Use the standardized query key function consistently
   const rewardsQueryKey = getRewardsQueryKey(subUserId, domUserId);
-  
+
   // Use the new usePointsManager hook
-  const { 
+  const {
     points: totalPointsFromManager,
     domPoints: domPointsFromManager,
     setTotalPoints: updatePointsInDatabase,
@@ -52,14 +54,14 @@ export const useRewardsData = () => {
   const {
     data: totalRewardsSupply = 0,
     refetch: refetchSupply
-  } = useQuery<number>({ 
+  } = useQuery<number>({
     queryKey: REWARDS_SUPPLY_QUERY_KEY,
-    queryFn: fetchTotalRewardsSupply, 
+    queryFn: fetchTotalRewardsSupply,
     ...STANDARD_QUERY_CONFIG
   });
-  
+
   const totalDomRewardsSupply = React.useMemo(() => {
-    return Array.isArray(rewards) ? rewards.reduce((total, reward) => { 
+    return Array.isArray(rewards) ? rewards.reduce((total, reward) => {
       return total + (reward.is_dom_reward && reward.supply !== -1 ? reward.supply : 0);
     }, 0) : 0;
   }, [rewards]);
@@ -68,8 +70,8 @@ export const useRewardsData = () => {
   useEffect(() => {
     const rewardsChannel = supabase
       .channel('rewards-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'rewards' }, 
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'rewards' },
         (payload) => {
           logger.debug('Real-time rewards update:', payload);
           queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
@@ -88,11 +90,11 @@ export const useRewardsData = () => {
     sessionData.then(({ data }) => {
       const userId = data?.session?.user.id;
       if (!userId) return;
-      
+
       const pointsChannel = supabase
         .channel(`profiles-changes-${userId}`)
-        .on('postgres_changes', 
-          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
           (payload) => {
             logger.debug('Real-time points/profile update for user:', userId, payload);
             queryClient.invalidateQueries({ queryKey: REWARDS_POINTS_QUERY_KEY});
@@ -101,7 +103,7 @@ export const useRewardsData = () => {
           }
         )
         .subscribe();
-        
+
       return () => {
         supabase.removeChannel(pointsChannel);
       };
@@ -114,13 +116,13 @@ export const useRewardsData = () => {
 
   const saveReward = async (saveParams: { rewardData: Partial<Reward>; currentIndex: number | null }) => {
     const { rewardData } = saveParams;
-    
+
     let result;
-    if (rewardData.id) { 
+    if (rewardData.id) {
       const { id, ...updateData } = rewardData;
       const updateVariables = { id, ...updateData };
       result = await updateRewardMutation.mutateAsync(updateVariables);
-    } else { 
+    } else {
       // Ensure all required fields for CreateRewardVariables are present
       if (rewardData.title === undefined || rewardData.cost === undefined || rewardData.is_dom_reward === undefined) {
         toast({ title: "Missing required fields for creation", description: "Title, cost, and DOM status are required.", variant: "destructive" });
@@ -141,30 +143,31 @@ export const useRewardsData = () => {
         calendar_color: rewardData.calendar_color || '#7E69AB',
         highlight_effect: rewardData.highlight_effect ?? false,
         focal_point_x: rewardData.focal_point_x ?? 50,
-        focal_point_y: rewardData.focal_point_y ?? 50,
-      };
+        focal_point_y: rewardData.focal_point_y ?? 50 };
       result = await createRewardMutation.mutateAsync(createVariables);
     }
-    
+
     // Update IndexedDB cache after successful save - use the standardized query key
+    requireCurrentCacheToken(cacheToken);
     const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
-    await saveRewardsToDB(updatedRewards);
-    
+    await saveRewardsToDB(updatedRewards, cacheToken);
+
     return result;
   };
 
   const deleteReward = async (rewardId: string) => {
     logger.debug('[useRewardsData] Deleting reward:', rewardId);
     const result = await deleteRewardMut.mutateAsync(rewardId);
-    
+
     // Force refresh the cache after deletion
     await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
     logger.debug('[useRewardsData] Cache invalidated after deletion');
-    
+
     // Update IndexedDB cache after successful delete
+    requireCurrentCacheToken(cacheToken);
     const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
-    await saveRewardsToDB(updatedRewards);
-    
+    await saveRewardsToDB(updatedRewards, cacheToken);
+
     return result;
   };
 
@@ -176,11 +179,11 @@ export const useRewardsData = () => {
   const buyReward = async ({ rewardId, cost, isDomReward }: { rewardId: string; cost: number; isDomReward: boolean }) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user?.id) throw new Error("User not authenticated for buying reward");
-    
+
     // Find the reward to get its current supply
     const reward = Array.isArray(rewards) ? rewards.find(r => r.id === rewardId) : undefined;
     if (!reward) throw new Error("Reward not found for buying");
-        
+
     let result;
     if (isDomReward) {
       const currentDomPoints = domPointsFromManager;
@@ -191,15 +194,16 @@ export const useRewardsData = () => {
       logger.debug("Buying Sub reward:", { rewardId, cost, currentPoints });
       result = await buySub({ rewardId, cost, currentSupply: reward.supply, currentPoints });
     }
-    
+
     // Update IndexedDB cache after successful purchase - use the standardized query key
+    requireCurrentCacheToken(cacheToken);
     const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
-    await saveRewardsToDB(updatedRewards);
-    
+    await saveRewardsToDB(updatedRewards, cacheToken);
+
     return result;
   };
 
-  const useReward = async ({ rewardId }: { rewardId: string }) => { 
+  const useReward = async ({ rewardId }: { rewardId: string }) => {
     const reward = Array.isArray(rewards) ? rewards.find(r => r.id === rewardId) : undefined;
     if (!reward) throw new Error("Reward not found for using");
 
@@ -215,14 +219,15 @@ export const useRewardsData = () => {
       logger.debug("Using Sub reward:", { rewardId, profileId });
       result = await redeemSub({ rewardId, currentSupply: reward.supply, profileId });
     }
-    
+
     // Update IndexedDB cache after successful redemption - use the standardized query key
+    requireCurrentCacheToken(cacheToken);
     const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
-    await saveRewardsToDB(updatedRewards);
-    
+    await saveRewardsToDB(updatedRewards, cacheToken);
+
     return result;
   };
-  
+
   const refetchRewardsTyped = (options?: RefetchOptions) => {
     return refetchRewardsQuery(options) as Promise<QueryObserverResult<Reward[], Error>>;
   };
@@ -238,10 +243,9 @@ export const useRewardsData = () => {
     saveReward,
     deleteReward,
     buyReward,
-    useReward, 
+    useReward,
     updatePoints: updatePointsInDatabase,
     updateDomPoints: updateDomPointsInDatabase,
     refetchRewards: refetchRewardsTyped,
-    refreshPointsFromDatabase,
-  };
+    refreshPointsFromDatabase };
 };

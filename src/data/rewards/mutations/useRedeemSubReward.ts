@@ -1,3 +1,4 @@
+import { type CacheToken, isCurrentCacheToken, requireCurrentCacheToken, captureCacheToken, legacyQueryKey } from '@/data/indexedDB/useIndexedDB';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +19,7 @@ interface RedeemSubRewardVariables {
 }
 
 interface RedeemSubRewardOptimisticContext {
+  cacheToken: CacheToken | null;
   previousRewards?: Reward[];
 }
 
@@ -38,12 +40,13 @@ const recordRewardUsage = async (rewardId: string, userId: string) => {
 };
 
 export const useRedeemSubReward = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   const { getPartnerId } = usePartnerHelper();
   const { sendRewardRedeemedNotification } = usePushNotifications();
 
-  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
+  const rewardsQueryKey = legacyQueryKey(REWARDS_QUERY_KEY, cacheToken);
 
   return useMutation<Reward, Error, RedeemSubRewardVariables, RedeemSubRewardOptimisticContext>({
     mutationFn: async ({ rewardId, currentSupply }) => {
@@ -54,7 +57,7 @@ export const useRedeemSubReward = () => {
       if (currentSupply <= 0) {
         throw new Error("Reward is out of stock, cannot use.");
       }
-      
+
       const newSupply = currentSupply - 1;
 
       const { error: supplyError } = await supabase
@@ -74,11 +77,13 @@ export const useRedeemSubReward = () => {
 
       if (fetchError) throw fetchError;
       if (!updatedReward) throw new Error('Failed to fetch updated reward after redeeming.');
-      
+
       return updatedReward as Reward;
     },
     onMutate: async (variables) => {
+      requireCurrentCacheToken(cacheToken);
       await queryClient.cancelQueries({ queryKey: rewardsQueryKey });
+      requireCurrentCacheToken(cacheToken);
       const previousRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey);
 
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (old = []) =>
@@ -88,37 +93,45 @@ export const useRedeemSubReward = () => {
             : reward
         )
       );
-      return { previousRewards };
+      return { previousRewards , cacheToken };
     },
     onError: (err, variables, context) => {
+      const cacheToken = context?.cacheToken ?? null;
+      if (!isCurrentCacheToken(cacheToken)) return;
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(rewardsQueryKey, context.previousRewards);
       }
     },
-    onSuccess: async (data, variables) => {
+    onSuccess: async (data, variables, context) => {
+      const cacheToken = context?.cacheToken ?? null;
+      if (!isCurrentCacheToken(cacheToken)) return;
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) => {
         return oldRewards.map(r => r.id === data.id ? data : r);
       });
-      
+
       // Send push notification to partner about reward redemption
       const partnerId = await getPartnerId();
+      if (!isCurrentCacheToken(cacheToken)) return;
       if (partnerId) {
         try {
           await sendRewardRedeemedNotification(
-            partnerId, 
+            partnerId,
             variables.rewardTitle || 'A reward'
           );
         } catch (error) {
           logger.error('Failed to send reward redemption notification:', error);
         }
       }
-      
+
+      if (!isCurrentCacheToken(cacheToken)) return;
       queryClient.invalidateQueries({ queryKey: ['reward-usage', variables.rewardId] });
     },
-    onSettled: (_data, _error, variables) => {
+    onSettled: (_data, _error, _variables, context) => {
+      const cacheToken = context?.cacheToken ?? null;
+      if (!isCurrentCacheToken(cacheToken)) return;
       // Only invalidate reward usage and points queries, NOT the rewards cache
       queryClient.invalidateQueries({ queryKey: ['reward-usage'] });
-      queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
+      queryClient.invalidateQueries({ queryKey: legacyQueryKey([USER_POINTS_QUERY_KEY_PREFIX, subUserId], cacheToken) });
       // REMOVED: queryClient.invalidateQueries({ queryKey: rewardsQueryKey }) - this was causing supply reset
     },
   });

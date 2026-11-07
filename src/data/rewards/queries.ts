@@ -1,3 +1,4 @@
+import { captureCacheToken, legacyQueryKey } from '@/data/indexedDB/useIndexedDB';
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
@@ -20,8 +21,8 @@ export const REWARDS_SUPPLY_QUERY_KEY = ['rewards', 'supply'];
 export { fetchRewards };
 
 // Centralized function to generate consistent query keys
-export const getRewardsQueryKey = (subUserId: string | null, domUserId: string | null) => {
-  return [...REWARDS_QUERY_KEY, subUserId, domUserId];
+export const getRewardsQueryKey = (subUserId: string | null, domUserId: string | null, cacheToken = captureCacheToken()) => {
+  return legacyQueryKey(REWARDS_QUERY_KEY, cacheToken);
 };
 
 export const fetchUserPoints = async (): Promise<number> => {
@@ -87,11 +88,12 @@ export const fetchTotalRewardsSupply = async (): Promise<number> => {
 };
 
 export function useRewardsQuery() {
+  const cacheToken = captureCacheToken();
   const { subUserId, domUserId } = useUserIds();
-  
+
   return useQuery<Reward[], Error>({
     queryKey: getRewardsQueryKey(subUserId, domUserId),
-    queryFn: () => fetchRewards(subUserId, domUserId),
+    queryFn: () => fetchRewards(subUserId, domUserId, cacheToken),
     ...STANDARD_QUERY_CONFIG,
     // Use proper caching strategy as per APP CODE GUIDE
     staleTime: 1000 * 60 * 30, // 30 minutes

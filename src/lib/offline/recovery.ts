@@ -30,7 +30,7 @@ export function isTransportUnavailable(error: unknown): boolean {
 export function setRecoveryAccess(backend: string, account: string, value: RecoveryAccess) {
   const key = accessKey(backend, account);
   if (value !== 'verified') verified.delete(key);
-  if (value === 'denied') clearRecoverySnapshot(backend);
+  if (value === 'denied') clearAccountRecoverySnapshot(backend, account);
   if (access.get(key) !== value) { access.set(key, value); changed(); }
 }
 export function clearRecoverySnapshot(backend: string) {
@@ -44,13 +44,18 @@ export function forgetRecovery(backend: string) {
   for (const [key, scope] of verified) if (scope.backendId === backend) verified.delete(key);
   changed();
 }
-/** Deletion cleanup is exact-account; ordinary logout keeps its existing behavior. */
-export function forgetAccountRecovery(backend: string, account: string) {
-  const raw = localStorage.getItem(storageKey(backend));
-  if (raw) { let value: unknown; try { value = JSON.parse(raw); } catch { value = null; }
-    const parsed = snapshotSchema.safeParse(value);
+/** Remove only a recognizable snapshot for this exact account. */
+function clearAccountRecoverySnapshot(backend: string, account: string) {
+  try {
+    const raw = localStorage.getItem(storageKey(backend));
+    if (!raw) return;
+    const parsed = snapshotSchema.safeParse(JSON.parse(raw));
     if (parsed.success && parsed.data.scope.backendId === backend && parsed.data.scope.accountId === account) localStorage.removeItem(storageKey(backend));
-  }
+  } catch { /* Unknown or unavailable bytes are not ours to erase. */ }
+}
+/** Logout and deletion cleanup invalidate only this account’s recovery display. */
+export function forgetAccountRecovery(backend: string, account: string) {
+  clearAccountRecoverySnapshot(backend, account);
   access.delete(accessKey(backend, account)); verified.delete(accessKey(backend, account)); changed();
 }
 export function readRecoverySnapshot(backend: string, account: string): RecoverySnapshot | null {
@@ -65,17 +70,18 @@ export function readRecoverySnapshot(backend: string, account: string): Recovery
 /** Call only after auth initialization. Initial user=null must not erase a
  * signed-in session's recovery snapshot before Supabase restores that session. */
 export function reconcileRecoveryAccount(backend: string, account: string | null) {
-  if (!account) { forgetRecovery(backend); return; }
   for (const [key, scope] of verified) if (scope.backendId === backend && scope.accountId !== account) verified.delete(key);
   for (const key of access.keys()) { const [storedBackend, storedAccount] = JSON.parse(key); if (storedBackend === backend && storedAccount !== account) access.delete(key); }
-  if (!readRecoverySnapshot(backend, account)) clearRecoverySnapshot(backend);
+  // A different tab may own the single historical display slot. Reconciliation
+  // invalidates this tab's provenance; it cannot erase another account's bytes.
+  changed();
 }
 export function verifyRecoveryScope(scope: ActionQueueScope) {
   // In particular, do not retain pre-session summaries when Continue brings
   // the same period/participant IDs back with a different session UUID.
   scopeSchema.parse(scope);
   const previous = readRecoverySnapshot(scope.backendId, scope.accountId);
-  if (!previous || scopeKey(previous.scope) !== scopeKey(scope)) clearRecoverySnapshot(scope.backendId);
+  if (previous && scopeKey(previous.scope) !== scopeKey(scope)) clearAccountRecoverySnapshot(scope.backendId, scope.accountId);
   verified.set(accessKey(scope.backendId, scope.accountId), { ...scope });
   setRecoveryAccess(scope.backendId, scope.accountId, 'verified');
 }

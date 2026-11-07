@@ -1,33 +1,28 @@
 import React, { Component, ReactNode } from 'react';
+import { applyColorScheme, getColorScheme } from '@/lib/colorSchemes';
 
-interface Props {
-  children: ReactNode;
-}
+export class ColorSchemeErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
 
-interface State {
-  hasError: boolean;
-}
-
-export class ColorSchemeErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(): State {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ColorScheme Error Boundary caught an error:', error, errorInfo);
+  componentDidCatch() {
+    // The fallback has independent colors even if applying CSS itself failed.
+    try { applyColorScheme(getColorScheme('default')!); } catch { /* Keep the independent fallback. */ }
   }
 
   render() {
     if (this.state.hasError) {
-      console.warn('ColorScheme component failed, rendering children without color scheme context');
-      return this.props.children;
+      return (
+        <main role="alert" style={{ minHeight: '100vh', background: '#151e2d', color: '#ffffff', padding: '2rem' }}>
+          <h1 className="text-xl font-bold mb-2">The app could not be displayed</h1>
+          <p className="mb-4">Reload to try again.</p>
+          <button type="button" className="rounded border px-4 py-2" onClick={() => window.location.reload()}>Reload app</button>
+        </main>
+      );
     }
-
     return this.props.children;
   }
 }

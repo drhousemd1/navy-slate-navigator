@@ -1,3 +1,4 @@
+import { captureCacheToken, requireCurrentCacheToken, readResetMarker, writeResetMarker, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
@@ -8,21 +9,25 @@ import { todayKey, currentWeekKey } from '@/lib/taskUtils';
 /**
  * Force reset ALL rule usage data to clear any existing violation data
  */
-export const forceResetAllRuleUsageData = async (): Promise<void> => {
+export const forceResetAllRuleUsageData = async (cacheToken: CacheToken | null = captureCacheToken()): Promise<void> => {
   try {
+    requireCurrentCacheToken(cacheToken);
     logger.debug(`[forceResetAllRuleUsageData] Force resetting ALL rule usage data`);
-    
+
     // Get the current authenticated session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+
     if (sessionError || !session?.user?.id) {
       logger.debug(`[forceResetAllRuleUsageData] No authenticated user, exiting early`);
       return;
     }
 
+    requireCurrentCacheToken(cacheToken);
+    if (session.user.id !== cacheToken.scope.accountId) throw new Error('Account changed before reset.');
     const userId = session.user.id;
 
     // Update ALL rules with usage_data: [0,0,0,0,0,0,0] (7-element array for Mon-Sun)
+    requireCurrentCacheToken(cacheToken);
     const { error: updateError } = await supabase
       .from('rules')
       .update({ usage_data: [0, 0, 0, 0, 0, 0, 0] })
@@ -34,7 +39,7 @@ export const forceResetAllRuleUsageData = async (): Promise<void> => {
     }
 
     // Sync updated rules to IndexedDB
-    const existingRules = await loadRulesFromDB();
+    const existingRules = await loadRulesFromDB(cacheToken);
     if (existingRules && Array.isArray(existingRules)) {
       // Update the existing rules with reset usage_data
       const updatedRules = existingRules.map(rule => {
@@ -43,8 +48,8 @@ export const forceResetAllRuleUsageData = async (): Promise<void> => {
         }
         return rule;
       });
-      
-      await saveRulesToDB(updatedRules);
+
+      await saveRulesToDB(updatedRules, cacheToken);
       logger.debug(`[forceResetAllRuleUsageData] Synced force reset rules to IndexedDB`);
     }
 
@@ -58,18 +63,21 @@ export const forceResetAllRuleUsageData = async (): Promise<void> => {
 /**
  * Reset rule usage data (weekly reset for all rules)
  */
-export const resetRuleUsageData = async (): Promise<void> => {
+export const resetRuleUsageData = async (cacheToken: CacheToken | null = captureCacheToken()): Promise<void> => {
   try {
+    requireCurrentCacheToken(cacheToken);
     logger.debug(`[resetRuleUsageData] Resetting rule usage data`);
-    
+
     // Get the current authenticated session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+
     if (sessionError || !session?.user?.id) {
       logger.debug(`[resetRuleUsageData] No authenticated user, exiting early`);
       return;
     }
 
+    requireCurrentCacheToken(cacheToken);
+    if (session.user.id !== cacheToken.scope.accountId) throw new Error('Account changed before reset.');
     const userId = session.user.id;
 
     // Fetch all rules for the user from Supabase
@@ -89,6 +97,7 @@ export const resetRuleUsageData = async (): Promise<void> => {
     }
 
     // Update all rules with usage_data: [0,0,0,0,0,0,0] (7-element array for Mon-Sun)
+    requireCurrentCacheToken(cacheToken);
     const { error: updateError } = await supabase
       .from('rules')
       .update({ usage_data: [0, 0, 0, 0, 0, 0, 0] })
@@ -100,7 +109,7 @@ export const resetRuleUsageData = async (): Promise<void> => {
     }
 
     // Sync updated rules to IndexedDB
-    const existingRules = await loadRulesFromDB();
+    const existingRules = await loadRulesFromDB(cacheToken);
     if (existingRules && Array.isArray(existingRules)) {
       // Update the existing rules with reset usage_data
       const updatedRules = existingRules.map(rule => {
@@ -109,8 +118,8 @@ export const resetRuleUsageData = async (): Promise<void> => {
         }
         return rule;
       });
-      
-      await saveRulesToDB(updatedRules);
+
+      await saveRulesToDB(updatedRules, cacheToken);
       logger.debug(`[resetRuleUsageData] Synced updated rules to IndexedDB`);
     }
 
@@ -125,18 +134,19 @@ export const resetRuleUsageData = async (): Promise<void> => {
  * Check if rule resets are needed and perform them
  * @returns boolean indicating whether any reset was performed
  */
-export const checkAndPerformRuleResets = async (): Promise<boolean> => {
+export const checkAndPerformRuleResets = async (cacheToken: CacheToken | null = captureCacheToken()): Promise<boolean> => {
   try {
+    requireCurrentCacheToken(cacheToken);
     const currentWeekly = currentWeekKey();
-    const lastWeekly = localStorage.getItem('lastWeek');
+    const lastWeekly = await readResetMarker('ruleWeekly', cacheToken);
 
     let resetPerformed = false;
 
     // Check for weekly reset only (rules reset weekly)
     if (lastWeekly !== currentWeekly) {
       logger.debug('[checkAndPerformRuleResets] Performing weekly rule reset');
-      await resetRuleUsageData();
-      localStorage.setItem('lastWeek', currentWeekly);
+      await resetRuleUsageData(cacheToken);
+      await writeResetMarker('ruleWeekly', currentWeekly, cacheToken);
       resetPerformed = true;
     }
 

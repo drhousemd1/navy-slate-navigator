@@ -1,3 +1,4 @@
+import { legacyQueryKey, requireCurrentCacheToken, captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 import { useCallback } from 'react';
 import { useRules } from '../rules/queries';
 import { Rule } from '@/data/interfaces/Rule';
@@ -15,20 +16,21 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { RULES_QUERY_KEY } from '../rules/queries';
 
 export const useRulesData = () => {
-  const { 
-    data: rules = [], 
-    isLoading, 
-    error, 
+  const cacheToken = captureCacheToken();
+  const {
+    data: rules = [],
+    isLoading,
+    error,
     refetch,
     isStale,
     dataUpdatedAt,
     errorUpdateCount
   } = useRules();
-  
+
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { subUserId, domUserId } = useUserIds();
-  
+
   const { mutateAsync: createRuleMutation } = useCreateRule();
   const { mutateAsync: updateRuleMutation } = useUpdateRule();
   const { mutateAsync: deleteRuleMutation } = useDeleteRule();
@@ -38,18 +40,19 @@ export const useRulesData = () => {
   const checkAndReloadRules = useCallback(async () => {
     try {
       logger.debug('[useRulesData] Checking for rule resets');
-      
+
       // Call checkAndPerformRuleResets and capture the boolean result
-      const resetPerformed = await checkAndPerformRuleResets();
-      
+      const resetPerformed = await checkAndPerformRuleResets(cacheToken);
+
       // Only if resetPerformed is true, update cache with fresh IndexedDB data
       if (resetPerformed) {
         logger.debug('[useRulesData] Resets performed, updating cache with fresh IndexedDB data');
-        
+
         // Load fresh rules from IndexedDB and set them on the cache with correct query key
-        const freshData = await loadRulesFromDB();
+        const freshData = await loadRulesFromDB(cacheToken);
+        requireCurrentCacheToken(cacheToken);
         if (freshData && Array.isArray(freshData)) {
-          queryClient.setQueryData([...RULES_QUERY_KEY, subUserId, domUserId], freshData);
+          queryClient.setQueryData(legacyQueryKey(RULES_QUERY_KEY, cacheToken), freshData);
           logger.debug('[useRulesData] Updated cache with fresh reset data');
         }
       } else {
@@ -58,14 +61,14 @@ export const useRulesData = () => {
     } catch (error) {
       logger.error('[useRulesData] Error during reset check:', error);
     }
-  }, [queryClient, subUserId, domUserId]);
+  }, [queryClient, cacheToken]);
 
   const saveRule = async (ruleData: Partial<Rule>): Promise<Rule> => {
     try {
       if (ruleData.id) {
         const { id, ...updates } = ruleData;
-        return await updateRuleMutation({ 
-          id, 
+        return await updateRuleMutation({
+          id,
           ...updates,
           user_id: user?.id // Add user_id to update mutation
         } as UpdateRuleVariables);
@@ -82,7 +85,7 @@ export const useRulesData = () => {
           icon_name: ruleData.icon_name,
           icon_url: ruleData.icon_url,
           icon_color: ruleData.icon_color || '#FFFFFF',
-          title_color: ruleData.title_color || '#FFFFFF', 
+          title_color: ruleData.title_color || '#FFFFFF',
           subtext_color: ruleData.subtext_color || '#FFFFFF',
           calendar_color: ruleData.calendar_color || '#9c7abb',
           background_image_url: ruleData.background_image_url,
@@ -90,8 +93,7 @@ export const useRulesData = () => {
           highlight_effect: ruleData.highlight_effect === undefined ? false : ruleData.highlight_effect,
           focal_point_x: ruleData.focal_point_x === undefined ? 50 : ruleData.focal_point_x,
           focal_point_y: ruleData.focal_point_y === undefined ? 50 : ruleData.focal_point_y,
-          image_meta: ruleData.image_meta,
-        };
+          image_meta: ruleData.image_meta };
         return await createRuleMutation(createVariables);
       }
     } catch (e: unknown) {
@@ -120,32 +122,31 @@ export const useRulesData = () => {
         throw new Error('User must be authenticated to mark rule as broken');
       }
 
-      await createRuleViolationMutation({ 
-        ruleId: rule.id, 
-        userId: user.id 
+      await createRuleViolationMutation({
+        ruleId: rule.id,
+        userId: user.id
       });
 
       // Get current day of week (0=Monday, 6=Sunday)
       const currentDay = getMondayBasedDay();
-      
+
       // Initialize usage_data as 7-element array if not already
       const currentUsageData = Array.isArray(rule.usage_data) ? rule.usage_data : [];
       const newUsageData = new Array(7).fill(0);
-      
+
       // Copy existing data if it exists and is properly formatted
       if (currentUsageData.length === 7) {
         for (let i = 0; i < 7; i++) {
           newUsageData[i] = currentUsageData[i] || 0;
         }
       }
-      
+
       // Mark current day as violated (set to 1)
       newUsageData[currentDay] = 1;
 
       await updateRuleMutation({
         id: rule.id,
-        usage_data: newUsageData as number[] & {toJSON?: () => any},
-      });
+        usage_data: newUsageData });
 
       // Remove duplicate toast - the mutation already handles this
       // toastManager.success("Rule Marked Broken", `${rule.title} marked as broken. Violation recorded and usage updated.`);
@@ -159,10 +160,10 @@ export const useRulesData = () => {
   };
 
   // Check if we're using cached data
-  const isUsingCachedData = 
-    (!!error && rules.length > 0) || 
+  const isUsingCachedData =
+    (!!error && rules.length > 0) ||
     (isStale && errorUpdateCount > 0 && rules.length > 0);
-  
+
   return {
     rules,
     isLoading,

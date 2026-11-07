@@ -73,11 +73,13 @@ describe('real identity boundary recovery path (mocked network and store)', () =
     expect(screen.queryByText('105')).toBeNull(); expect(mocks.list).not.toHaveBeenCalled();
     expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toBeNull();
   });
-  it('hides the previous account immediately and clears its snapshot', async () => {
+  it('hides the previous account immediately without adopting or erasing its snapshot', async () => {
     mocks.fetch.mockRejectedValue(new TypeError('Failed to fetch'));
     const rendered = view(); await screen.findByText('105');
     rendered.change(uuid(91)); expect(screen.queryByText('105')).toBeNull();
-    await waitFor(() => expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toBeNull());
+    await screen.findByText(/No confirmed totals/);
+    expect(readRecoverySnapshot(scope.backendId, uuid(91))).toBeNull();
+    expect(readRecoverySnapshot(scope.backendId, scope.accountId)?.wallets[0].balance).toBe(105);
   });
   it('removes the summary before signout and does not delete saved commands', async () => {
     mocks.fetch.mockRejectedValue(new TypeError('Failed to fetch'));

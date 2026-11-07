@@ -1,7 +1,8 @@
+import { legacyQueryKey, captureCacheToken, readResetMarker, writeResetMarker, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { currentWeekKey, resetTaskCompletions } from "@/lib/taskUtils";
 import { queryClient } from "../queryClient";
-import { loadRewardsFromDB, saveRewardsToDB, getLastSyncTimeForRewards, setLastSyncTimeForRewards } from "../indexedDB/useIndexedDB";
+import { loadRewardsFromDB, saveRewardsToDB, getLastSyncTimeForRewards } from "../indexedDB/useIndexedDB";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/lib/errors";
 import { Reward } from '@/data/rewards/types';
@@ -14,19 +15,20 @@ type RawRewardFromDBBeforeMigration = Omit<Reward, 'is_dom_reward'> & {
 };
 
 export function usePreloadRewards() {
+  const cacheToken = captureCacheToken();
   const { subUserId, domUserId } = useUserIds();
-  
+
   return async () => {
     try {
       // Reset weekly task completions if needed
-      if (localStorage.getItem("lastWeek") !== currentWeekKey()) {
-        await resetTaskCompletions("weekly");
-        localStorage.setItem("lastWeek", currentWeekKey());
+      if (await readResetMarker('taskWeekly', cacheToken) !== currentWeekKey()) {
+        await resetTaskCompletions("weekly", cacheToken);
+        await writeResetMarker('taskWeekly', currentWeekKey(), cacheToken);
       }
-      
+
       // Check if we have cached data and if it's fresh (30 minute sync strategy)
-      const dataFromDB = await loadRewardsFromDB(); 
-      const lastSync = await getLastSyncTimeForRewards();
+      const dataFromDB = await loadRewardsFromDB(cacheToken);
+      const lastSync = await getLastSyncTimeForRewards(cacheToken);
       let shouldFetch = true;
 
       if (lastSync) {
@@ -47,21 +49,20 @@ export function usePreloadRewards() {
           const { is_dominant, ...restOfReward } = r;
           return {
             ...restOfReward,
-            is_dom_reward: is_dominant ?? false,
-          } as Reward;
+            is_dom_reward: is_dominant ?? false } as Reward;
         });
-        
+
         // Update the cache with migrated data
-        queryClient.setQueryData([...REWARDS_QUERY_KEY, subUserId, domUserId], migratedRewards);
-        
+        queryClient.setQueryData(legacyQueryKey(REWARDS_QUERY_KEY, cacheToken), migratedRewards);
+
         // If we should not fetch (data is fresh), return early
         if (!shouldFetch) {
           logger.debug("[usePreloadRewards] Using fresh cached data");
           return null;
         }
-        
+
         // Persist the migrated data back to IndexedDB
-        await saveRewardsToDB(migratedRewards);
+        await saveRewardsToDB(migratedRewards, cacheToken);
       }
 
       // If we should fetch fresh data or have no cached data
@@ -69,7 +70,7 @@ export function usePreloadRewards() {
         logger.debug("[usePreloadRewards] Fetching fresh data from server");
         try {
           const freshData = await fetchRewards(subUserId, domUserId);
-          queryClient.setQueryData([...REWARDS_QUERY_KEY, subUserId, domUserId], freshData);
+          queryClient.setQueryData(legacyQueryKey(REWARDS_QUERY_KEY, cacheToken), freshData);
         } catch (error) {
           logger.error("[usePreloadRewards] Failed to fetch fresh data:", error);
           // Keep using cached data if available

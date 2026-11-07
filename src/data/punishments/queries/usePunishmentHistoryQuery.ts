@@ -1,3 +1,4 @@
+import { captureCacheToken, legacyQueryKey } from '@/data/indexedDB/useIndexedDB';
 
 import { useQuery, QueryObserverResult } from '@tanstack/react-query';
 import { PunishmentHistoryItem } from '@/contexts/punishments/types';
@@ -6,10 +7,11 @@ import { PUNISHMENT_HISTORY_QUERY_KEY } from './index';
 import { useUserIds } from '@/contexts/UserIdsContext';
 
 export const usePunishmentHistoryQuery = () => {
+  const cacheToken = captureCacheToken();
   const { subUserId, domUserId } = useUserIds();
-  
+
   return useQuery<PunishmentHistoryItem[], Error>({
-    queryKey: [...PUNISHMENT_HISTORY_QUERY_KEY, subUserId, domUserId],
+    queryKey: legacyQueryKey(PUNISHMENT_HISTORY_QUERY_KEY, cacheToken),
     queryFn: () => fetchCurrentWeekPunishmentHistory(subUserId, domUserId),
     staleTime: 1000 * 60 * 5, // 5 minutes, as it's not preloaded by usePreloadAppCoreData
     refetchOnWindowFocus: false, // Typically false for less aggressive fetching

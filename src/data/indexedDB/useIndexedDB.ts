@@ -1,12 +1,8 @@
-
-import localforage from 'localforage';
-import { Reward } from '@/data/rewards/types';
-import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
-import { Rule } from '@/data/interfaces/Rule';
-import { Task } from '@/data/tasks/types';
-import { logger } from '@/lib/logger';
+import type { Reward } from '@/data/rewards/types';
+import type { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as ContextPunishmentHistoryItem } from '@/contexts/punishments/types';
+import type { Rule } from '@/data/interfaces/Rule';
+import type { Task } from '@/data/tasks/types';
 import { requireUndeletedAccount } from '@/data/accountDeletion/tombstone';
-import { supabaseBackendId } from '@/integrations/supabase/client';
 
 // Wellbeing snapshot type
 export interface WellbeingSnapshot {
@@ -22,371 +18,121 @@ export interface WellbeingSnapshot {
 export type PunishmentData = ContextPunishmentData;
 export type PunishmentHistory = ContextPunishmentHistoryItem;
 
-const DB_NAME = 'appData';
-const REWARDS_STORE_NAME = 'rewards';
-const TASKS_STORE_NAME = 'tasks';
-const RULES_STORE_NAME = 'rules';
-const PUNISHMENTS_STORE_NAME = 'punishments';
-const PUNISHMENT_HISTORY_STORE_NAME = 'punishmentHistory';
-const LAST_SYNC_STORE_NAME = 'lastSyncTimes';
-const POINTS_STORE_NAME = 'points';
-const DOM_POINTS_STORE_NAME = 'domPoints';
-const WELLBEING_STORE_NAME = 'wellbeingSnapshots';
-// Configure localforage instance
-localforage.config({
-  driver: localforage.INDEXEDDB,
-  name: DB_NAME,
-});
+/** Fresh, attributable server snapshots only. Never open or adopt appData/localforage. */
+export const READ_CACHE_DATABASE = 'obedience-read-cache-v1';
+export const READ_CACHE_STORE = 'snapshots';
+export interface CacheScope { backendId: string; accountId: string; relationshipId: string | null; relationshipSessionId: string | null }
+export interface CacheToken { readonly scope: Readonly<CacheScope>; readonly owners: readonly string[]; readonly generation: number }
+export interface CacheSnapshot<T> { version: 1; scope: CacheScope; resource: string; subject: string | null; savedAt: string; data: T }
+let current: CacheToken | null = null;
+let generation = 0;
+const transactions = new Set<IDBTransaction>();
 
-const rewardsStore = localforage.createInstance({ name: DB_NAME, storeName: REWARDS_STORE_NAME });
-const tasksStore = localforage.createInstance({ name: DB_NAME, storeName: TASKS_STORE_NAME });
-const rulesStore = localforage.createInstance({ name: DB_NAME, storeName: RULES_STORE_NAME });
-const punishmentsStore = localforage.createInstance({ name: DB_NAME, storeName: PUNISHMENTS_STORE_NAME });
-const punishmentHistoryStore = localforage.createInstance({ name: DB_NAME, storeName: PUNISHMENT_HISTORY_STORE_NAME });
-const lastSyncStore = localforage.createInstance({ name: DB_NAME, storeName: LAST_SYNC_STORE_NAME });
-const pointsStore = localforage.createInstance({ name: DB_NAME, storeName: POINTS_STORE_NAME });
-const domPointsStore = localforage.createInstance({ name: DB_NAME, storeName: DOM_POINTS_STORE_NAME });
-const wellbeingStore = localforage.createInstance({ name: DB_NAME, storeName: WELLBEING_STORE_NAME });
-// NOTE: Notification preferences removed from IndexedDB to fix mobile cache conflicts
-
-// Namespace selection never deletes offline work. Legacy unscoped keys remain
-// quarantined until the offline migration can classify pending versus cached rows.
-// Request-start scope tokens are still required in legacy asynchronous writers
-// before relationship lifecycle transitions can be enabled for restored accounts.
-let activeScope: string | null = null;
-let activeOwners: ReadonlySet<string> = new Set();
-let cacheGeneration = 0;
-
-export async function prepareIdentityCacheScope(scope: string | null, userIds: readonly string[]): Promise<void> {
-  cacheGeneration++;
-  activeScope = scope;
-  activeOwners = new Set(userIds);
+export async function prepareIdentityCacheScope(scope: CacheScope | null, owners: readonly string[]): Promise<void> {
+  generation++;
+  for (const tx of transactions) { try { tx.abort(); } catch { /* Already completed. */ } }
+  current = scope ? Object.freeze({ scope: Object.freeze({ ...scope }), owners: Object.freeze([...owners]), generation }) : null;
 }
-
-const getUserKey = (baseKey: string, userId: string | null): string => {
-  if (!activeScope || (userId && !activeOwners.has(userId))) throw new Error('Identity cache scope is not ready for this account.');
-  return `${baseKey}:${activeScope}:${userId ?? 'shared'}`;
-};
-
-type CacheStore = ReturnType<typeof localforage.createInstance>;
-const belongsToScope = (value: unknown): boolean => {
-  if (Array.isArray(value)) return value.every(belongsToScope);
-  if (value && typeof value === 'object') {
-    return 'user_id' in value && typeof value.user_id === 'string' && activeOwners.has(value.user_id);
-  }
+export const captureCacheToken = (): CacheToken | null => current;
+export function requireCurrentCacheToken(token: CacheToken | null): asserts token is CacheToken {
+  if (!token || token !== current || token.generation !== generation) throw new Error('This account or relationship session changed. Retry in the current account.');
+  requireUndeletedAccount(token.scope.backendId, token.scope.accountId);
+}
+export function isCurrentCacheToken(token: CacheToken | null): token is CacheToken {
+  try { requireCurrentCacheToken(token); return true; } catch { return false; }
+}
+export function invalidateAccountCacheScope(backendId: string, accountId: string) {
+  if (current?.scope.backendId === backendId && current.scope.accountId === accountId) void prepareIdentityCacheScope(null, []);
+}
+export function legacyQueryKey(key: readonly unknown[], token: CacheToken | null = current): unknown[] {
+  return [key[0], 'owned-v1', token?.scope.backendId ?? null, token?.scope.accountId ?? null,
+    token?.scope.relationshipId ?? null, token?.scope.relationshipSessionId ?? null, ...key.slice(1)];
+}
+export function ownsLegacyQuery(key: readonly unknown[], owner: Partial<Pick<CacheScope, 'backendId' | 'accountId'>>): boolean {
+  return ['tasks', 'rules', 'rewards', 'punishments', 'punishment-history', 'userPoints', 'userDomPoints'].includes(String(key[0])) && key[1] === 'owned-v1' && key[2] === owner.backendId && key[3] === owner.accountId;
+}
+const scopeKey = (scope: CacheScope) => JSON.stringify([scope.backendId, scope.accountId, scope.relationshipId, scope.relationshipSessionId]);
+const keyFor = (scope: CacheScope, resource: string, subject: string | null) => JSON.stringify([scopeKey(scope), resource, subject]);
+function checkSubject(token: CacheToken, subject: string | null) {
+  if (subject && !token.owners.includes(subject)) throw new Error('This cached subject is outside the current relationship.');
+}
+function checkRows(token: CacheToken, value: unknown): boolean {
+  if (Array.isArray(value)) return value.every(item => checkRows(token, item));
+  if (value && typeof value === 'object' && 'user_id' in value) return typeof value.user_id === 'string' && token.owners.includes(value.user_id);
   return true;
-};
-
-async function readCached<T>(store: CacheStore, key: string): Promise<T | null> {
-  const scope = activeScope;
-  const generation = cacheGeneration;
-  const value = await store.getItem<T>(key);
-  return scope && generation === cacheGeneration && scope === activeScope && belongsToScope(value) ? value : null;
 }
-
-async function writeCached<T>(store: CacheStore, key: string, value: T): Promise<T> {
-  if (!activeScope || !belongsToScope(value)) throw new Error('Cached data does not belong to the current account or partner.');
-  const account = JSON.parse(activeScope)[0];
-  if (typeof account === 'string') requireUndeletedAccount(supabaseBackendId, account);
-  return store.setItem(key, value);
+function openCache(factory: IDBFactory = globalThis.indexedDB): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (!factory) { reject(new Error('Device cache storage is unavailable.')); return; }
+    const request = factory.open(READ_CACHE_DATABASE, 1);
+    request.onupgradeneeded = () => { request.result.createObjectStore(READ_CACHE_STORE); };
+    request.onerror = request.onblocked = () => reject(new Error('Device cache storage could not be opened.'));
+    request.onsuccess = () => resolve(request.result);
+  });
 }
+export async function readCacheSnapshot<T>(resource: string, token: CacheToken | null, subject: string | null = null): Promise<CacheSnapshot<T> | null> {
+  if (!isCurrentCacheToken(token)) return null;
+  checkSubject(token, subject);
+  let db: IDBDatabase;
+  try { db = await openCache(); } catch { return null; }
+  if (!isCurrentCacheToken(token)) { db.close(); return null; }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(READ_CACHE_STORE, 'readonly'); transactions.add(tx);
+    const request = tx.objectStore(READ_CACHE_STORE).get(keyFor(token.scope, resource, subject));
+    const finish = () => { transactions.delete(tx); db.close(); };
+    tx.oncomplete = () => {
+      finish(); const row = request.result as CacheSnapshot<T> | undefined;
+      resolve(isCurrentCacheToken(token) && row?.version === 1 && row.resource === resource && row.subject === subject &&
+        row.scope && scopeKey(row.scope) === scopeKey(token.scope) && typeof row.savedAt === 'string' && checkRows(token, row.data) ? row : null);
+    };
+    tx.onabort = tx.onerror = () => { finish(); resolve(null); };
+  });
+}
+export async function writeCacheSnapshot<T>(resource: string, data: T, token: CacheToken | null, subject: string | null = null): Promise<void> {
+  requireCurrentCacheToken(token); checkSubject(token, subject);
+  if (!checkRows(token, data)) throw new Error('Cached rows do not belong to the requested relationship.');
+  const db = await openCache();
+  try { requireCurrentCacheToken(token); } catch (error) { db.close(); throw error; }
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(READ_CACHE_STORE, 'readwrite', { durability: 'strict' }); transactions.add(tx);
+    const row: CacheSnapshot<T> = { version: 1, scope: { ...token.scope }, resource, subject, savedAt: new Date().toISOString(), data };
+    tx.objectStore(READ_CACHE_STORE).put(row, keyFor(token.scope, resource, subject));
+    const finish = () => { transactions.delete(tx); db.close(); };
+    tx.oncomplete = () => { finish(); resolve(); };
+    tx.onabort = tx.onerror = () => { finish(); reject(new Error('The device cache write was cancelled or failed.')); };
+  });
+}
+const read = async <T>(resource: string, token: CacheToken | null, subject?: string | null) => (await readCacheSnapshot<T>(resource, token, subject ?? null))?.data ?? null;
+const sync = async (resource: string, token: CacheToken | null, subject?: string | null) => (await readCacheSnapshot(resource, token, subject ?? null))?.savedAt ?? null;
 
-// Rewards specific functions
-export const loadRewardsFromDB = async (userId?: string | null): Promise<Reward[] | null> => {
-  try {
-    const key = getUserKey('allRewards', userId || null);
-    const rewards = await readCached<Reward[]>(rewardsStore, key);
-    return rewards;
-  } catch (error) {
-    logger.error('Error loading rewards from IndexedDB:', error);
-    return null;
-  }
-};
+export const loadRewardsFromDB = (token: CacheToken | null, userId?: string | null) => read<Reward[]>('rewards', token, userId);
+export const saveRewardsToDB = (value: Reward[], token: CacheToken | null, userId?: string | null) => writeCacheSnapshot('rewards', value, token, userId ?? null);
+export const getLastSyncTimeForRewards = (token: CacheToken | null, userId?: string | null) => sync('rewards', token, userId);
 
-export const saveRewardsToDB = async (rewards: Reward[], userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('allRewards', userId || null);
-    await writeCached(rewardsStore, key, rewards);
-  } catch (error) {
-    logger.error('Error saving rewards to IndexedDB:', error);
-  }
-};
+export const loadTasksFromDB = (token: CacheToken | null, userId?: string | null) => read<Task[]>('tasks', token, userId);
+export const saveTasksToDB = (value: Task[], token: CacheToken | null, userId?: string | null) => writeCacheSnapshot('tasks', value, token, userId ?? null);
+export const getLastSyncTimeForTasks = (token: CacheToken | null, userId?: string | null) => sync('tasks', token, userId);
 
-export const getLastSyncTimeForRewards = async (userId?: string | null): Promise<string | null> => {
-  try {
-    const key = getUserKey('rewardsLastSync', userId || null);
-    return await readCached<string>(lastSyncStore, key);
-  } catch (error) {
-    logger.error('Error getting last sync time for rewards:', error);
-    return null;
-  }
-};
+export const loadRulesFromDB = (token: CacheToken | null, userId?: string | null) => read<Rule[]>('rules', token, userId);
+export const saveRulesToDB = (value: Rule[], token: CacheToken | null, userId?: string | null) => writeCacheSnapshot('rules', value, token, userId ?? null);
+export const getLastSyncTimeForRules = (token: CacheToken | null, userId?: string | null) => sync('rules', token, userId);
 
-export const setLastSyncTimeForRewards = async (time: string, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('rewardsLastSync', userId || null);
-    await writeCached(lastSyncStore, key, time);
-  } catch (error) {
-    logger.error('Error setting last sync time for rewards:', error);
-  }
-};
+export const loadPunishmentsFromDB = (token: CacheToken | null, userId?: string | null) => read<PunishmentData[]>('punishments', token, userId);
+export const savePunishmentsToDB = (value: PunishmentData[], token: CacheToken | null, userId?: string | null) => writeCacheSnapshot('punishments', value, token, userId ?? null);
+export const getLastSyncTimeForPunishments = (token: CacheToken | null, userId?: string | null) => sync('punishments', token, userId);
 
-// Tasks specific functions
-export const loadTasksFromDB = async (userId?: string | null): Promise<Task[] | null> => {
-  try {
-    const key = getUserKey('allTasks', userId || null);
-    return await readCached<Task[]>(tasksStore, key);
-  } catch (error) {
-    logger.error('Error loading tasks from IndexedDB:', error);
-    return null;
-  }
-};
+export const loadPunishmentHistoryFromDB = (token: CacheToken | null, userId?: string | null) => read<PunishmentHistory[]>('punishmentHistory', token, userId);
+export const savePunishmentHistoryToDB = (value: PunishmentHistory[], token: CacheToken | null, userId?: string | null) => writeCacheSnapshot('punishmentHistory', value, token, userId ?? null);
 
-export const saveTasksToDB = async (tasks: Task[], userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('allTasks', userId || null);
-    await writeCached(tasksStore, key, tasks);
-  } catch (error) {
-    logger.error('Error saving tasks to IndexedDB:', error);
-  }
-};
+export const loadPointsFromDB = (token: CacheToken | null, userId?: string | null) => read<number>('points', token, userId);
+export const savePointsToDB = (value: number, token: CacheToken | null, userId?: string | null) => writeCacheSnapshot('points', value, token, userId ?? null);
 
-export const getLastSyncTimeForTasks = async (userId?: string | null): Promise<string | null> => {
-  try {
-    const key = getUserKey('tasksLastSync', userId || null);
-    return await readCached<string>(lastSyncStore, key);
-  } catch (error) {
-    logger.error('Error getting last sync time for tasks:', error);
-    return null;
-  }
-};
+export const loadDomPointsFromDB = (token: CacheToken | null, userId?: string | null) => read<number>('domPoints', token, userId);
+export const saveDomPointsToDB = (value: number, token: CacheToken | null, userId?: string | null) => writeCacheSnapshot('domPoints', value, token, userId ?? null);
 
-export const setLastSyncTimeForTasks = async (time: string, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('tasksLastSync', userId || null);
-    await writeCached(lastSyncStore, key, time);
-  } catch (error) {
-    logger.error('Error setting last sync time for tasks:', error);
-  }
-};
+export const loadWellbeingFromDB = (token: CacheToken | null, userId?: string | null) => read<WellbeingSnapshot>('wellbeing', token, userId);
+export const saveWellbeingToDB = (value: WellbeingSnapshot, token: CacheToken | null, userId?: string | null) => writeCacheSnapshot('wellbeing', value, token, userId ?? null);
+export const getLastSyncTimeForWellbeing = (token: CacheToken | null, userId?: string | null) => sync('wellbeing', token, userId);
 
-// Rules specific functions
-export const loadRulesFromDB = async (userId?: string | null): Promise<Rule[] | null> => {
-  try {
-    const key = getUserKey('allRules', userId || null);
-    return await readCached<Rule[]>(rulesStore, key);
-  } catch (error) {
-    logger.error('Error loading rules from IndexedDB:', error);
-    return null;
-  }
-};
-
-export const saveRulesToDB = async (rules: Rule[], userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('allRules', userId || null);
-    await writeCached(rulesStore, key, rules);
-  } catch (error) {
-    logger.error('Error saving rules to IndexedDB:', error);
-  }
-};
-
-export const getLastSyncTimeForRules = async (userId?: string | null): Promise<string | null> => {
-  try {
-    const key = getUserKey('rulesLastSync', userId || null);
-    return await readCached<string>(lastSyncStore, key);
-  } catch (error) {
-    logger.error('Error getting last sync time for rules:', error);
-    return null;
-  }
-};
-
-export const setLastSyncTimeForRules = async (time: string, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('rulesLastSync', userId || null);
-    await writeCached(lastSyncStore, key, time);
-  } catch (error) {
-    logger.error('Error setting last sync time for rules:', error);
-  }
-};
-
-// Punishments specific functions
-export const loadPunishmentsFromDB = async (userId?: string | null): Promise<PunishmentData[] | null> => {
-  try {
-    const key = getUserKey('allPunishments', userId || null);
-    const punishments = await readCached<PunishmentData[]>(punishmentsStore, key);
-    return punishments;
-  } catch (error) {
-    logger.error('Error loading punishments from IndexedDB:', error);
-    return null;
-  }
-};
-
-export const savePunishmentsToDB = async (punishments: PunishmentData[], userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('allPunishments', userId || null);
-    await writeCached(punishmentsStore, key, punishments.filter(p => p.id));
-  } catch (error) {
-    logger.error('Error saving punishments to IndexedDB:', error);
-  }
-};
-
-export const getLastSyncTimeForPunishments = async (userId?: string | null): Promise<string | null> => {
-  try {
-    const key = getUserKey('punishmentsLastSync', userId || null);
-    return await readCached<string>(lastSyncStore, key);
-  } catch (error) {
-    logger.error('Error getting last sync time for punishments:', error);
-    return null;
-  }
-};
-
-export const setLastSyncTimeForPunishments = async (time: string, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('punishmentsLastSync', userId || null);
-    await writeCached(lastSyncStore, key, time);
-  } catch (error) {
-    logger.error('Error setting last sync time for punishments:', error);
-  }
-};
-
-// Punishment History specific functions
-export const loadPunishmentHistoryFromDB = async (userId?: string | null): Promise<PunishmentHistory[] | null> => {
-  try {
-    const key = getUserKey('allPunishmentHistory', userId || null);
-    const history = await readCached<PunishmentHistory[]>(punishmentHistoryStore, key);
-    return history;
-  } catch (error) {
-    logger.error('Error loading punishment history from IndexedDB:', error);
-    return null;
-  }
-};
-
-export const savePunishmentHistoryToDB = async (history: PunishmentHistory[], userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('allPunishmentHistory', userId || null);
-    await writeCached(punishmentHistoryStore, key, history);
-  } catch (error) {
-    logger.error('Error saving punishment history to IndexedDB:', error);
-  }
-};
-
-// Points specific functions
-export const savePointsToDB = async (points: number, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('userPoints', userId || null);
-    await writeCached(pointsStore, key, points);
-  } catch (error) {
-    logger.error('Error saving points to IndexedDB:', error);
-  }
-};
-
-export const loadPointsFromDB = async (userId?: string | null): Promise<number | null> => {
-  try {
-    const key = getUserKey('userPoints', userId || null);
-    return await readCached<number>(pointsStore, key);
-  } catch (error) {
-    logger.error('Error loading points from IndexedDB:', error);
-    return null;
-  }
-};
-
-// Dom Points specific functions
-export const saveDomPointsToDB = async (points: number, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('userDomPoints', userId || null);
-    await writeCached(domPointsStore, key, points);
-  } catch (error) {
-    logger.error('Error saving dom points to IndexedDB:', error);
-  }
-};
-
-export const loadDomPointsFromDB = async (userId?: string | null): Promise<number | null> => {
-  try {
-    const key = getUserKey('userDomPoints', userId || null);
-    return await readCached<number>(domPointsStore, key);
-  } catch (error) {
-    logger.error('Error loading dom points from IndexedDB:', error);
-    return null;
-  }
-};
-
-// Wellbeing specific functions
-export const loadWellbeingFromDB = async (userId?: string | null): Promise<WellbeingSnapshot | null> => {
-  try {
-    const key = getUserKey('latestWellbeing', userId || null);
-    const wellbeing = await readCached<WellbeingSnapshot>(wellbeingStore, key);
-    return wellbeing;
-  } catch (error) {
-    logger.error('Error loading wellbeing from IndexedDB:', error);
-    return null;
-  }
-};
-
-export const saveWellbeingToDB = async (wellbeing: WellbeingSnapshot, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('latestWellbeing', userId || null);
-    await writeCached(wellbeingStore, key, wellbeing);
-  } catch (error) {
-    logger.error('Error saving wellbeing to IndexedDB:', error);
-  }
-};
-
-export const getLastSyncTimeForWellbeing = async (userId?: string | null): Promise<string | null> => {
-  try {
-    const key = getUserKey('wellbeingLastSync', userId || null);
-    return await readCached<string>(lastSyncStore, key);
-  } catch (error) {
-    logger.error('Error getting last sync time for wellbeing:', error);
-    return null;
-  }
-};
-
-export const setLastSyncTimeForWellbeing = async (time: string, userId?: string | null): Promise<void> => {
-  try {
-    const key = getUserKey('wellbeingLastSync', userId || null);
-    await writeCached(lastSyncStore, key, time);
-  } catch (error) {
-    logger.error('Error setting last sync time for wellbeing:', error);
-  }
-};
-
-// Notification Preferences functions REMOVED to fix mobile cache conflicts
-// Notification settings now use ONLY direct Supabase calls for reliability
-
-// Explicit cleanup of this user's keys in the active namespace only. Identity
-// refresh never calls this; quarantined legacy/offline rows are retained.
-export const clearUserDataFromDB = async (userId: string): Promise<void> => {
-  try {
-    const userKeys = [
-      getUserKey('allRewards', userId),
-      getUserKey('allTasks', userId),
-      getUserKey('allRules', userId),
-      getUserKey('allPunishments', userId),
-      getUserKey('allPunishmentHistory', userId),
-      getUserKey('userPoints', userId),
-      getUserKey('userDomPoints', userId),
-      getUserKey('latestWellbeing', userId),
-      getUserKey('rewardsLastSync', userId),
-      getUserKey('tasksLastSync', userId),
-      getUserKey('rulesLastSync', userId),
-      getUserKey('punishmentsLastSync', userId),
-      getUserKey('wellbeingLastSync', userId),
-    ];
-
-    await Promise.all([
-      ...userKeys.map(key => rewardsStore.removeItem(key).catch(() => {})),
-      ...userKeys.map(key => tasksStore.removeItem(key).catch(() => {})),
-      ...userKeys.map(key => rulesStore.removeItem(key).catch(() => {})),
-      ...userKeys.map(key => punishmentsStore.removeItem(key).catch(() => {})),
-      ...userKeys.map(key => punishmentHistoryStore.removeItem(key).catch(() => {})),
-      ...userKeys.map(key => pointsStore.removeItem(key).catch(() => {})),
-      ...userKeys.map(key => domPointsStore.removeItem(key).catch(() => {})),
-      ...userKeys.map(key => wellbeingStore.removeItem(key).catch(() => {})),
-      ...userKeys.map(key => lastSyncStore.removeItem(key).catch(() => {})),
-    ]);
-
-    logger.debug(`Cleared IndexedDB data for user: ${userId}`);
-  } catch (error) {
-    logger.error('Error clearing user data from IndexedDB:', error);
-  }
-};
+export const readResetMarker = (resource: 'taskDaily' | 'taskWeekly' | 'ruleWeekly', token: CacheToken | null) => read<string>(`reset:${resource}`, token);
+export const writeResetMarker = (resource: 'taskDaily' | 'taskWeekly' | 'ruleWeekly', value: string, token: CacheToken | null) => writeCacheSnapshot(`reset:${resource}`, value, token);

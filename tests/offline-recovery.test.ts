@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearRecoverySnapshot, forgetRecovery, isTransportUnavailable, projectRecoverySnapshot, readRecoverySnapshot, reconcileRecoveryAccount, recoveryAccess, recoveryCommands, saveRecoverySnapshot, setRecoveryAccess, verifyRecoveryScope } from '@/lib/offline/recovery';
+import { clearRecoverySnapshot, forgetRecovery, forgetAccountRecovery, isTransportUnavailable, projectRecoverySnapshot, readRecoverySnapshot, reconcileRecoveryAccount, recoveryAccess, recoveryCommands, saveRecoverySnapshot, setRecoveryAccess, verifyRecoveryScope } from '@/lib/offline/recovery';
 import { withCurrentVerification } from '@/lib/offline/verified-transport';
 import { emptyIdentity } from '@/lib/identity';
 import type { RewardActionData } from '@/data/rewards/actionReadModel';
@@ -32,7 +32,7 @@ describe('minimal confirmed recovery projection', () => {
     expect(readRecoverySnapshot(scope.backendId, uuid(9))).toBeNull();
     expect(readRecoverySnapshot('http://other.invalid', scope.accountId)).toBeNull();
   });
-  it('clears on logout, account or period switch and rejects late writes from the old scope', () => {
+  it('invalidates provenance on account change without erasing another account’s bytes; exact logout clears its owner', () => {
     const snapshot = projectRecoverySnapshot(scope, data(), 12345);
     verifyRecoveryScope(scope); saveRecoverySnapshot(snapshot);
     verifyRecoveryScope({ ...scope, relationshipId: uuid(10) });
@@ -40,11 +40,25 @@ describe('minimal confirmed recovery projection', () => {
     expect(saveRecoverySnapshot(snapshot)).toBe(false);
     verifyRecoveryScope(scope); saveRecoverySnapshot(snapshot);
     reconcileRecoveryAccount(scope.backendId, uuid(11));
-    expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toBeNull();
+    expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toEqual(snapshot);
+    expect(readRecoverySnapshot(scope.backendId, uuid(11))).toBeNull();
     expect(saveRecoverySnapshot(snapshot)).toBe(false);
     verifyRecoveryScope(scope); saveRecoverySnapshot(snapshot);
     reconcileRecoveryAccount(scope.backendId, null);
+    expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toEqual(snapshot);
+    expect(saveRecoverySnapshot(snapshot)).toBe(false);
+    forgetAccountRecovery(scope.backendId, scope.accountId);
     expect(localStorage.length).toBe(0);
+  });
+  it('does not erase another account or unknown summary bytes on denial or verification', () => {
+    verifyRecoveryScope(scope); const snapshot = projectRecoverySnapshot(scope, data(), 12345); saveRecoverySnapshot(snapshot);
+    setRecoveryAccess(scope.backendId, uuid(11), 'denied');
+    verifyRecoveryScope({ ...scope, accountId: uuid(11) });
+    expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toEqual(snapshot);
+    const key = `obedience-recovery-v1:${encodeURIComponent(scope.backendId)}`;
+    localStorage.setItem(key, '{unknown');
+    setRecoveryAccess(scope.backendId, scope.accountId, 'denied'); verifyRecoveryScope(scope);
+    expect(localStorage.getItem(key)).toBe('{unknown');
   });
   it('clears a Continued same-period snapshot and rejects pre-session summaries without inferring provenance', () => {
     verifyRecoveryScope(scope); const snapshot = projectRecoverySnapshot(scope, data(), 12345); saveRecoverySnapshot(snapshot);

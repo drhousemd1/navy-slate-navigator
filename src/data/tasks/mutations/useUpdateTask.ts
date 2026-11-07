@@ -1,10 +1,11 @@
+import { isCurrentCacheToken, legacyQueryKey, captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { TaskWithId, UpdateTaskVariables, Json } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries';
-import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
+import { loadTasksFromDB, saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
 import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -13,11 +14,13 @@ import { processImageForSave } from '@/utils/image/taskIntegration';
 export type { UpdateTaskVariables };
 
 export const useUpdateTask = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
 
   return useUpdateOptimisticMutation<TaskWithId, Error, UpdateTaskVariables>({
+    cacheToken,
     queryClient,
-    queryKey: TASKS_QUERY_KEY,
+    queryKey: legacyQueryKey(TASKS_QUERY_KEY, cacheToken),
     mutationFn: async (variables: UpdateTaskVariables) => {
       const { id, ...updatesFromVariables } = variables;
 
@@ -29,8 +32,7 @@ export const useUpdateTask = () => {
         ...updatesFromVariables,
         background_image_url: processedUrl,
         image_meta: updatesFromVariables.image_meta || metadata,
-        is_dom_task: updatesFromVariables.is_dom_task,
-      };
+        is_dom_task: updatesFromVariables.is_dom_task };
       if (updatesFromVariables.background_images !== undefined) {
         updatesForSupabase.background_images = updatesFromVariables.background_images as Json | null;
       }
@@ -44,26 +46,27 @@ export const useUpdateTask = () => {
 
       if (error) throw error;
       if (!data) throw new Error('Task update failed: No data returned.');
-      return data as TaskWithId; 
+      return data as TaskWithId;
     },
     entityName: 'Task',
     idField: 'id',
-    onSuccessCallback: async (updatedTaskData) => {
+    onSuccessCallback: async (updatedTaskData, _variables, cacheToken) => {
       logger.debug('[useUpdateTask onSuccessCallback] Task updated on server, updating IndexedDB.', updatedTaskData);
       try {
-        const localTasks = await loadTasksFromDB() || [];
+        const localTasks = await loadTasksFromDB(cacheToken) || [];
         const updatedLocalTasks = localTasks.map(t => t.id === updatedTaskData.id ? updatedTaskData : t);
-        await saveTasksToDB(updatedLocalTasks);
-        await setLastSyncTimeForTasks(new Date().toISOString());
+        await saveTasksToDB(updatedLocalTasks, cacheToken);
+
         logger.debug('[useUpdateTask onSuccessCallback] IndexedDB updated with updated task.');
         // Invalidate the tasks query to refetch and update the UI
-        await queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+        if (!isCurrentCacheToken(cacheToken)) return;
+        await queryClient.invalidateQueries({ queryKey: legacyQueryKey(TASKS_QUERY_KEY, cacheToken) });
         logger.debug('[useUpdateTask onSuccessCallback] Tasks query invalidated.');
       } catch (e: unknown) {
+        if (!isCurrentCacheToken(cacheToken)) return;
         const descriptiveMessage = getErrorMessage(e);
         logger.error('[useUpdateTask onSuccessCallback] Error updating IndexedDB or invalidating query:', descriptiveMessage, e);
         toastManager.error("Local Save Error", `Failed to save updated task locally or refresh list: ${descriptiveMessage}`);
       }
-    },
-  });
+    } });
 };

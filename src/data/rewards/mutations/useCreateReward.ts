@@ -1,3 +1,4 @@
+import { isCurrentCacheToken, captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +11,7 @@ import { logger } from '@/lib/logger';
 import { saveRewardsToDB } from '@/data/indexedDB/useIndexedDB';
 
 export const useCreateRewardMutation = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId, currentUserId, status, canAccessData } = useUserIds();
   const ownerId = canAccessData ? (status === 'unlinked' ? currentUserId : subUserId) : null;
@@ -18,6 +20,7 @@ export const useCreateRewardMutation = () => {
   const rewardsQueryKey = getRewardsQueryKey(subUserId, domUserId);
 
   return useCreateOptimisticMutation<Reward, Error, CreateRewardVariables>({
+    cacheToken,
     queryClient,
     queryKey: rewardsQueryKey,
     mutationFn: async (variables: CreateRewardVariables) => {
@@ -70,23 +73,22 @@ export const useCreateRewardMutation = () => {
       supply: 0, // Supply starts at 0 and is managed automatically
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: ownerId || '',
-    } as Reward),
-    onSuccessCallback: async (newReward) => {
+      user_id: ownerId || '' } as Reward),
+    onSuccessCallback: async (newReward, _variables, cacheToken) => {
       logger.debug('[Create Reward] Reward created successfully');
-      
+
       // Force update the cache with the new reward at the top
       queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldData = []) => {
         const filteredData = oldData.filter(reward => reward.id !== newReward.id);
         return [newReward, ...filteredData];
       });
-      
+
       // Update IndexedDB cache
       const updatedRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey) || [];
-      await saveRewardsToDB(updatedRewards);
-      
+      await saveRewardsToDB(updatedRewards, cacheToken);
+
+      if (!isCurrentCacheToken(cacheToken)) return;
       // Force refetch to ensure consistency
       await queryClient.invalidateQueries({ queryKey: rewardsQueryKey });
-    },
-  });
+    } });
 };

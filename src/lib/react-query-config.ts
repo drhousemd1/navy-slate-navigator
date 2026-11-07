@@ -1,11 +1,10 @@
 import { QueryClient, QueryKey, Query, Mutation, QueryCache, MutationCache } from '@tanstack/react-query';
-import localforage from "localforage";
 import { logger } from '@/lib/logger';
 
-// Version identifier for cache invalidation with the persister
+// Historical version marker; there is no React Query disk persister mounted.
 export const APP_CACHE_VERSION = '1.0.1'; // Incremented version
 
-// Create a centralized QueryClient with optimized settings for persistence
+// Shared in-memory QueryClient; durable commands and owned snapshots are separate.
 export const createQueryClient = () => {
   const queryClient = new QueryClient({
     queryCache: new QueryCache({
@@ -27,14 +26,14 @@ export const createQueryClient = () => {
     }),
     defaultOptions: {
       queries: {
-        staleTime: Infinity,    // Data is fresh indefinitely, relies on manual invalidation or buster
+        staleTime: Infinity,    // Data is fresh indefinitely, relies on manual invalidation when explicitly invalidated
         gcTime: 1000 * 60 * 60, // Garbage collect after 1 hour of inactivity
         refetchOnWindowFocus: false,
         refetchOnMount: false, // Components will use cached data first
         refetchOnReconnect: false,
         retry: false, // Updated: Per request, set retry to false
         retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-        networkMode: 'online', // Default to online, persister handles offline for queries if configured
+        networkMode: 'online', // No implicit disk hydration or mutation replay
       },
       mutations: {
         // Only the explicit durable command queue may replay writes. Legacy
@@ -59,14 +58,12 @@ export const STANDARD_QUERY_CONFIG = {
   refetchOnReconnect: false,
 };
 
-// Helper function to purge the cache manually (useful for development or user actions)
+// Diagnostic reset affects only in-memory queries, never pending mutations or
+// unknown old localforage data. No persisted React Query cache is mounted.
 export const purgeQueryCache = async (queryClient: QueryClient) => {
-  queryClient.clear(); // Clears in-memory cache
-  // The persister handles clearing persisted storage based on buster or manual clear of localforage
-  await localforage.removeItem('REACT_QUERY_OFFLINE_CACHE'); // Default key for react-query-persist-client
-  // Or, if a custom persister key is used, clear that.
-  // For a full clear if unsure about the key: await localforage.clear();
-  logger.debug('Query cache (in-memory and persisted via localforage) purged manually');
+  await queryClient.cancelQueries();
+  queryClient.removeQueries();
+  logger.debug('In-memory queries cleared; durable work and disk bytes preserved.');
 };
 
 // Centralized helper for performance logging
@@ -77,12 +74,12 @@ export const logQueryPerformance = (
 ) => {
   const endTime = performance.now();
   const duration = endTime - startTime;
-  
+
   logger.debug(
-    `[${operationName}] Operation completed in ${duration.toFixed(2)}ms` + 
+    `[${operationName}] Operation completed in ${duration.toFixed(2)}ms` +
     (dataLength !== undefined ? `, returned ${dataLength} items` : '')
   );
-  
+
   if (duration > 300) {
     logger.warn(`[${operationName}] Operation was slow: ${duration.toFixed(2)}ms`);
   }

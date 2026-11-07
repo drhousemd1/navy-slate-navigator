@@ -1,3 +1,4 @@
+import { captureCacheToken, legacyQueryKey, isCurrentCacheToken, requireCurrentCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,17 +15,19 @@ import { usePartnerHelper } from '@/hooks/usePartnerHelper';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface OptimisticApplyContext {
+  cacheToken: CacheToken | null;
   previousHistoryData?: PunishmentHistoryItem[];
   optimisticId?: string;
 }
 
 export const useApplyPunishment = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
   const { getPartnerId } = usePartnerHelper();
   const { sendPunishmentPerformedNotification } = usePushNotifications();
 
-  const historyQueryKey = [...PUNISHMENT_HISTORY_QUERY_KEY, subUserId, domUserId];
+  const historyQueryKey = legacyQueryKey(PUNISHMENT_HISTORY_QUERY_KEY, cacheToken);
 
   return useMutation<PunishmentHistoryItem, Error, ApplyPunishmentArgs, OptimisticApplyContext>({
     mutationFn: async (args: ApplyPunishmentArgs) => {
@@ -33,7 +36,7 @@ export const useApplyPunishment = () => {
       }
 
       logger.debug('[useApplyPunishment] Applying punishment with args:', args);
-      
+
       const historyEntryData = {
         punishment_id: args.punishmentId,
         points_deducted: args.pointsDeducted,
@@ -60,7 +63,7 @@ export const useApplyPunishment = () => {
       // Update submissive points
       const { error: pointsError } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           points: Math.max(0, (args.currentPoints || 0) - args.pointsDeducted)
         })
         .eq('id', subUserId);
@@ -88,7 +91,7 @@ export const useApplyPunishment = () => {
         const currentDomPoints = domProfile?.dom_points || 0;
         const { error: domPointsError } = await supabase
           .from('profiles')
-          .update({ 
+          .update({
             dom_points: currentDomPoints + args.domPointsAwarded
           })
           .eq('id', domUserId);
@@ -105,9 +108,11 @@ export const useApplyPunishment = () => {
       return historyData as PunishmentHistoryItem;
     },
     onMutate: async (args: ApplyPunishmentArgs) => {
+      requireCurrentCacheToken(cacheToken);
       await queryClient.cancelQueries({ queryKey: historyQueryKey });
+      requireCurrentCacheToken(cacheToken);
       const previousHistoryData = queryClient.getQueryData<PunishmentHistoryItem[]>(historyQueryKey);
-      
+
       const optimisticId = uuidv4();
       const optimisticEntry: PunishmentHistoryItem = {
         id: optimisticId,
@@ -119,47 +124,53 @@ export const useApplyPunishment = () => {
       };
 
       queryClient.setQueryData<PunishmentHistoryItem[]>(historyQueryKey, (old = []) => [optimisticEntry, ...old]);
-      
-      return { previousHistoryData, optimisticId };
+
+      return { previousHistoryData, optimisticId, cacheToken };
     },
     onSuccess: async (data, variables, context) => {
+      const cacheToken = context?.cacheToken ?? null;
+      if (!isCurrentCacheToken(cacheToken)) return;
       queryClient.setQueryData<PunishmentHistoryItem[]>(historyQueryKey, (old = []) => {
         const filteredList = old.filter(item => !(context?.optimisticId && item.id === context.optimisticId));
         return [data, ...filteredList];
       });
-      
+
       // Send push notification to partner about punishment
       const partnerId = await getPartnerId();
+      if (!isCurrentCacheToken(cacheToken)) return;
       if (partnerId) {
         try {
           await sendPunishmentPerformedNotification(
-            partnerId, 
-            variables.punishmentTitle || 'A punishment', 
+            partnerId,
+            variables.punishmentTitle || 'A punishment',
             variables.pointsDeducted
           );
         } catch (error) {
           logger.error('Failed to send punishment notification:', error);
         }
       }
-      
+
+      if (!isCurrentCacheToken(cacheToken)) return;
       // Invalidate both submissive and dominant points caches
-      queryClient.invalidateQueries({ queryKey: [USER_POINTS_QUERY_KEY_PREFIX, subUserId] });
+      queryClient.invalidateQueries({ queryKey: legacyQueryKey([USER_POINTS_QUERY_KEY_PREFIX, subUserId], cacheToken) });
       if (domUserId) {
-        queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
+        queryClient.invalidateQueries({ queryKey: legacyQueryKey([USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId], cacheToken) });
       }
-      
+
       toastManager.success("Punishment Applied", "Punishment has been successfully applied.");
     },
     onError: (error: Error, variables, context) => {
+      if (!isCurrentCacheToken(context?.cacheToken ?? null)) return;
       if (context?.previousHistoryData) {
         queryClient.setQueryData<PunishmentHistoryItem[]>(historyQueryKey, context.previousHistoryData);
       }
-      
+
       logger.error('[useApplyPunishment] Mutation error:', error);
       toastManager.error("Failed to Apply Punishment", error.message);
     },
-    onSettled: async () => {
+    onSettled: async (_data, _error, _variables, context) => {
       await new Promise(resolve => setTimeout(resolve, 100));
+      if (!isCurrentCacheToken(context?.cacheToken ?? null)) return;
       queryClient.invalidateQueries({ queryKey: historyQueryKey });
     },
   });

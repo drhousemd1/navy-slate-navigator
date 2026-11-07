@@ -1,9 +1,10 @@
+import { isCurrentCacheToken, legacyQueryKey, captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Rule } from '@/data/interfaces/Rule';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
-import { loadRulesFromDB, saveRulesToDB, setLastSyncTimeForRules } from '@/data/indexedDB/useIndexedDB';
+import { loadRulesFromDB, saveRulesToDB } from '@/data/indexedDB/useIndexedDB';
 import { RULES_QUERY_KEY } from '../queries';
 import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
@@ -17,13 +18,15 @@ export type CreateRuleVariables = Partial<Omit<Rule, 'id' | 'created_at' | 'upda
 };
 
 export const useCreateRule = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { subUserId, domUserId } = useUserIds();
 
   return useCreateOptimisticMutation<Rule, Error, CreateRuleVariables>({
+    cacheToken,
     queryClient,
-    queryKey: [...RULES_QUERY_KEY, subUserId, domUserId],
+    queryKey: legacyQueryKey(RULES_QUERY_KEY, cacheToken),
     mutationFn: async (variables: CreateRuleVariables) => {
       // Ensure user is authenticated
       if (!user?.id) {
@@ -38,15 +41,14 @@ export const useCreateRule = () => {
         ...variables,
         user_id: user.id, // Always use current authenticated user
         background_image_url: processedUrl,
-        image_meta: variables.image_meta || metadata,
-      };
+        image_meta: variables.image_meta || metadata };
 
       const { data, error } = await supabase
         .from('rules')
         .insert(ruleData)
         .select()
         .single();
-      
+
       if (error) throw error;
       if (!data) throw new Error('Rule creation failed, no data returned.');
       return data as Rule;
@@ -72,18 +74,18 @@ export const useCreateRule = () => {
         frequency: 'daily',
         priority: 'medium',
         user_id: user?.id || '',
-        ...variables,
-      } as Rule;
+        ...variables } as Rule;
     },
-    onSuccessCallback: async (newRuleData) => {
+    onSuccessCallback: async (newRuleData, _variables, cacheToken) => {
       logger.debug('[useCreateRule onSuccessCallback] New rule created on server, updating IndexedDB only.', newRuleData);
       try {
-        const localRules = await loadRulesFromDB() || [];
-        const updatedLocalRules = [newRuleData, ...localRules.filter(r => r.id !== newRuleData.id && r.id !== (newRuleData as any).optimisticId)];
-        await saveRulesToDB(updatedLocalRules);
-        await setLastSyncTimeForRules(new Date().toISOString());
+        const localRules = await loadRulesFromDB(cacheToken) || [];
+        const updatedLocalRules = [newRuleData, ...localRules.filter(r => r.id !== newRuleData.id && r.id !== (newRuleData as Rule & { optimisticId?: string }).optimisticId)];
+        await saveRulesToDB(updatedLocalRules, cacheToken);
+
         logger.debug('[useCreateRule onSuccessCallback] IndexedDB updated with new rule.');
       } catch (error) {
+        if (!isCurrentCacheToken(cacheToken)) return;
         logger.error('[useCreateRule onSuccessCallback] Error updating IndexedDB:', error);
         toastManager.error("Local Save Error", "Rule created on server, but failed to save locally.");
       }

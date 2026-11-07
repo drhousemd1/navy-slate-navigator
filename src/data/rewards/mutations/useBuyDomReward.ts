@@ -1,3 +1,4 @@
+import { type CacheToken, isCurrentCacheToken, requireCurrentCacheToken, captureCacheToken, legacyQueryKey } from '@/data/indexedDB/useIndexedDB';
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,23 +10,25 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { USER_DOM_POINTS_QUERY_KEY_PREFIX } from '@/data/points/useUserDomPointsQuery';
 import { REWARDS_QUERY_KEY } from '@/data/rewards/queries';
 
-interface BuyDomRewardVars { 
-  rewardId: string; 
-  cost: number; 
-  currentSupply: number; 
-  currentDomPoints: number 
+interface BuyDomRewardVars {
+  rewardId: string;
+  cost: number;
+  currentSupply: number;
+  currentDomPoints: number
 }
 
 interface BuyDomRewardOptimisticContext {
+  cacheToken: CacheToken | null;
   previousRewards?: Reward[];
   previousDomPoints?: number;
 }
 
 export const useBuyDomReward = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
 
-  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
+  const rewardsQueryKey = legacyQueryKey(REWARDS_QUERY_KEY, cacheToken);
 
   return useMutation<Reward, Error, BuyDomRewardVars, BuyDomRewardOptimisticContext>({
     mutationFn: async ({ rewardId, cost, currentSupply, currentDomPoints }) => {
@@ -58,7 +61,7 @@ export const useBuyDomReward = () => {
           await supabase.from('rewards').update({ supply: currentSupply }).eq('id', rewardId).eq('user_id', domUserId);
           throw profileError;
         }
-        
+
         const { data: updatedReward, error: fetchError } = await supabase
           .from('rewards')
           .select('*')
@@ -77,10 +80,12 @@ export const useBuyDomReward = () => {
       }
     },
     onMutate: async (variables) => {
+      requireCurrentCacheToken(cacheToken);
       await queryClient.cancelQueries({ queryKey: rewardsQueryKey });
-      const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId];
+      const userDomPointsQueryKey = legacyQueryKey([USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId], cacheToken);
       await queryClient.cancelQueries({ queryKey: userDomPointsQueryKey });
 
+      requireCurrentCacheToken(cacheToken);
       const previousRewards = queryClient.getQueryData<Reward[]>(rewardsQueryKey);
       const previousDomPoints = queryClient.getQueryData<number>(userDomPointsQueryKey);
 
@@ -95,27 +100,33 @@ export const useBuyDomReward = () => {
       queryClient.setQueryData<number>(userDomPointsQueryKey, (oldUserDomPoints = 0) =>
         (oldUserDomPoints || 0) - variables.cost
       );
-      
-      return { previousRewards, previousDomPoints };
+
+      return { previousRewards, previousDomPoints , cacheToken };
     },
-    onSuccess: async (data, variables) => {
-      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) => 
+    onSuccess: async (data, variables, context) => {
+      const cacheToken = context?.cacheToken ?? null;
+      if (!isCurrentCacheToken(cacheToken)) return;
+      queryClient.setQueryData<Reward[]>(rewardsQueryKey, (oldRewards = []) =>
         oldRewards.map(r => r.id === data.id ? data : r)
       );
 
-      await queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
+      await queryClient.invalidateQueries({ queryKey: legacyQueryKey([USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId], cacheToken) });
     },
     onError: (error: Error, variables, context) => {
+      const cacheToken = context?.cacheToken ?? null;
+      if (!isCurrentCacheToken(cacheToken)) return;
       if (context?.previousRewards) {
         queryClient.setQueryData<Reward[]>(rewardsQueryKey, context.previousRewards);
       }
       if (context?.previousDomPoints !== undefined) {
-        const userDomPointsQueryKey = [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId];
+        const userDomPointsQueryKey = legacyQueryKey([USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId], cacheToken);
         queryClient.setQueryData<number>(userDomPointsQueryKey, context.previousDomPoints);
       }
     },
-    onSettled: async (data, error, variables) => {
-      await queryClient.invalidateQueries({ queryKey: [USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId] });
+    onSettled: async (_data, _error, _variables, context) => {
+      const cacheToken = context?.cacheToken ?? null;
+      if (!isCurrentCacheToken(cacheToken)) return;
+      await queryClient.invalidateQueries({ queryKey: legacyQueryKey([USER_DOM_POINTS_QUERY_KEY_PREFIX, domUserId], cacheToken) });
       // REMOVED: queryClient.invalidateQueries({ queryKey: rewardsQueryKey }) - this was causing supply reset
     }
   });

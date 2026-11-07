@@ -1,3 +1,4 @@
+import { captureCacheToken, legacyQueryKey } from '@/data/indexedDB/useIndexedDB';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,36 +10,38 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { REWARDS_QUERY_KEY } from '../queries';
 
 export const useUpdateReward = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
 
-  const rewardsQueryKey = [...REWARDS_QUERY_KEY, subUserId, domUserId];
+  const rewardsQueryKey = legacyQueryKey(REWARDS_QUERY_KEY, cacheToken);
 
   return useUpdateOptimisticMutation<Reward, Error, UpdateRewardVariables>({
+    cacheToken,
     queryClient,
     queryKey: rewardsQueryKey,
     mutationFn: async (variables: UpdateRewardVariables) => {
       const { id, ...updates } = variables;
-      
+
       const { processedUrl, metadata } = await processImageForSave(updates.background_image_url || null);
-      
+
       const updatesWithImage = {
         ...updates,
         background_image_url: processedUrl,
         image_meta: updates.image_meta || metadata,
         updated_at: new Date().toISOString()
       };
-      
+
       const { data, error } = await supabase
         .from('rewards')
         .update(updatesWithImage)
         .eq('id', id)
         .select()
         .single();
-        
+
       if (error) throw error;
       if (!data) throw new Error('Reward update failed, no data returned.');
-      
+
       logger.debug('[Update Reward] Reward updated successfully with image compression');
       return data as Reward;
     },

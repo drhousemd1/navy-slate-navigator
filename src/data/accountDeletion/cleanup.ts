@@ -1,3 +1,4 @@
+import { READ_CACHE_DATABASE, READ_CACHE_STORE, ownsLegacyQuery, invalidateAccountCacheScope } from '@/data/indexedDB/useIndexedDB';
 import type { QueryClient } from '@tanstack/react-query';
 import { forgetAccountRecovery } from '@/lib/offline/recovery';
 import { markDeletedAccount } from './tombstone';
@@ -12,6 +13,7 @@ function owned(value: unknown, scope: Owner): boolean {
 const scopedQueries = new Set(['task-action-state', 'reward-action-state', 'action-accounting-status', 'recording-action-state',
   'wellbeing-v2', 'wellbeing-date-v2', 'wellbeing-series-v2', 'wellness-reminder']);
 export function ownsDeletionQuery(key: readonly unknown[], scope: Owner): boolean {
+  if (ownsLegacyQuery(key, scope)) return true;
   const offset = key[0] === 'activity-metrics' ? 2 : scopedQueries.has(String(key[0])) ? 1 : -1;
   return offset >= 0 && key[offset] === scope.backendId && key[offset + 1] === scope.accountId;
 }
@@ -64,6 +66,7 @@ export async function cleanupDeletedAccount(scope: Owner, client: QueryClient, f
   // The Auth boundary has unmounted this account's domain providers. A durable
   // tombstone also rejects already queued writes, including across other tabs.
   markDeletedAccount(scope.backendId, scope.accountId);
+  invalidateAccountCacheScope(scope.backendId, scope.accountId);
   const predicate = (query: { queryKey: readonly unknown[] }) => ownsDeletionQuery(query.queryKey, scope);
   await client.cancelQueries({ predicate });
   const unknownQueries = client.getQueryCache().getAll().some(query => query.state.data !== undefined && !predicate(query) && !ownsKnownOtherQuery(query.queryKey, scope));
@@ -73,6 +76,7 @@ export async function cleanupDeletedAccount(scope: Owner, client: QueryClient, f
     purgeOwnedDatabase(factory, 'obedience-action-commands-v1', 'commands', scope),
     purgeOwnedDatabase(factory, 'obedience-role-transitions-v1', 'requests', scope, true),
     purgeOwnedDatabase(factory, 'obedience-message-drafts', 'drafts', scope),
+    purgeOwnedDatabase(factory, READ_CACHE_DATABASE, READ_CACHE_STORE, scope),
   ]);
   const unknownLocal = purgeOwnedLocalStorage(storage, scope);
   forgetAccountRecovery(scope.backendId, scope.accountId);
@@ -85,6 +89,7 @@ export async function cleanupDeletedAccount(scope: Owner, client: QueryClient, f
   return { legacyPreserved: unknownQueries || unknownLocal || unknownRows.some(Boolean) || legacyDatabase };
 }
 function ownsKnownOtherQuery(key: readonly unknown[], scope: Owner) {
+  if (key[1] === 'owned-v1' && typeof key[2] === 'string' && typeof key[3] === 'string') return key[2] !== scope.backendId || key[3] !== scope.accountId;
   const offset = key[0] === 'activity-metrics' ? 2 : scopedQueries.has(String(key[0])) ? 1 : -1;
   return offset >= 0 && typeof key[offset] === 'string' && typeof key[offset + 1] === 'string' && (key[offset] !== scope.backendId || key[offset + 1] !== scope.accountId);
 }

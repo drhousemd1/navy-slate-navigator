@@ -1,10 +1,11 @@
+import { isCurrentCacheToken, legacyQueryKey, captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateOptimisticMutation } from '@/lib/optimistic-mutations';
 import { TaskWithId, CreateTaskVariables, Json } from '@/data/tasks/types';
 import { TASKS_QUERY_KEY } from '../queries';
-import { loadTasksFromDB, saveTasksToDB, setLastSyncTimeForTasks } from '@/data/indexedDB/useIndexedDB';
+import { loadTasksFromDB, saveTasksToDB } from '@/data/indexedDB/useIndexedDB';
 import { toastManager } from '@/lib/toastManager';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
@@ -12,12 +13,14 @@ import { useAuth } from '@/contexts/auth';
 import { processImageForSave } from '@/utils/image/taskIntegration';
 
 export const useCreateTask = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   return useCreateOptimisticMutation<TaskWithId, Error, CreateTaskVariables>({
+    cacheToken,
     queryClient,
-    queryKey: TASKS_QUERY_KEY,
+    queryKey: legacyQueryKey(TASKS_QUERY_KEY, cacheToken),
     mutationFn: async (variables: CreateTaskVariables) => {
       // Ensure user is authenticated
       if (!user?.id) {
@@ -44,7 +47,7 @@ export const useCreateTask = () => {
         highlight_effect: variables.highlight_effect || false,
         focal_point_x: variables.focal_point_x || 50,
         focal_point_y: variables.focal_point_y || 50,
-        week_identifier: variables.week_identifier, 
+        week_identifier: variables.week_identifier,
         background_images: variables.background_images as Json,
         icon_url: variables.icon_url,
         image_meta: variables.image_meta || metadata,
@@ -94,28 +97,27 @@ export const useCreateTask = () => {
         background_images: variables.background_images as Json || null,
         image_meta: variables.image_meta || null,
         user_id: user?.id || '',
-        ...variables, 
-      } as TaskWithId;
+        ...variables } as TaskWithId;
     },
-    onSuccessCallback: async (newTaskData) => {
+    onSuccessCallback: async (newTaskData, _variables, cacheToken) => {
       logger.debug('[useCreateTask onSuccessCallback] New task created on server, updating IndexedDB.', newTaskData);
       try {
-        const localTasks = await loadTasksFromDB() || [];
+        const localTasks = await loadTasksFromDB(cacheToken) || [];
         const updatedLocalTasks = [
-            newTaskData, 
-            ...localTasks.filter(t => 
-                t.id !== newTaskData.id && 
+            newTaskData,
+            ...localTasks.filter(t =>
+                t.id !== newTaskData.id &&
                 (!newTaskData.optimisticId || t.id !== newTaskData.optimisticId)
             )
         ];
-        await saveTasksToDB(updatedLocalTasks);
-        await setLastSyncTimeForTasks(new Date().toISOString());
+        await saveTasksToDB(updatedLocalTasks, cacheToken);
+
         logger.debug('[useCreateTask onSuccessCallback] IndexedDB updated with new task.');
       } catch (e: unknown) {
+        if (!isCurrentCacheToken(cacheToken)) return;
         const descriptiveMessage = getErrorMessage(e);
         logger.error('[useCreateTask onSuccessCallback] Error updating IndexedDB:', descriptiveMessage, e);
         toastManager.error("Local Save Error", `Task created on server, but failed to save locally: ${descriptiveMessage}`);
       }
-    },
-  });
+    } });
 };

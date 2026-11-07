@@ -1,3 +1,5 @@
+import { signOutOwnedSession, notifyOwnedSignOut, sessionOwner } from '@/lib/ownedSignOut';
+import type { Session } from '@supabase/supabase-js';
 
 import { deletionAwareAuthStorage, removeDeletedAccountSession } from '@/data/accountDeletion/authStorage';
 import { createClient } from '@supabase/supabase-js';
@@ -50,24 +52,26 @@ export const checkSession = async () => {
   return data?.session;
 };
 
-// Debug helper to clear any corrupted auth state
+/** Explicit-token Realtime setAuth has no awaited storage read in the installed
+ * SDK. Read and choose synchronously so old cleanup cannot downgrade a newer login. */
+export const synchronizeRealtimeSession = () => {
+  const storage = deletionAwareAuthStorage(supabaseBackendId, supabaseAuthStorageKey, localStorage);
+  const raw = storage.getItem(supabaseAuthStorageKey);
+  let session: Session | null = null; try { session = raw ? JSON.parse(raw) : null; } catch { /* Unknown bytes are never adopted. */ }
+  const token = sessionOwner(supabaseBackendId, session) ? session!.access_token : supabasePublicKey;
+  void supabase.realtime.setAuth(token).catch(error => logger.error('Realtime session synchronization failed:', error));
+};
+
+/** Ordinary logout affects only the captured session, never a later login. */
+export const signOutCurrentSession = (session: Session) => signOutOwnedSession(session, {
+  backendId: supabaseBackendId, storageKey: supabaseAuthStorageKey, storage: localStorage, locks: globalThis.navigator?.locks,
+  revoke: (jwt, scope) => supabase.auth.admin.signOut(jwt, scope), notify: notifyOwnedSignOut,
+});
+
+// The existing debug reset obeys the same ownership boundary. Unknown corrupt
+// bytes cannot be assigned to an account and are left for explicit recovery.
 export const clearAuthState = async () => {
-  if (typeof window !== 'undefined') {
-    // Clear any local storage items that might be causing issues
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.includes('supabase') || key?.includes('auth')) {
-        logger.debug("Clearing potentially problematic storage item:", key);
-        localStorage.removeItem(key);
-      }
-    }
-  }
-  
-  // Sign out completely to reset auth state
-  const { error } = await supabase.auth.signOut({ scope: 'global' });
-  if (error) {
-    logger.error("Error clearing auth state:", error);
-  } else {
-    logger.debug("Auth state successfully cleared");
-  }
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  if (data.session) await signOutCurrentSession(data.session);
 };

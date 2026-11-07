@@ -1,3 +1,4 @@
+import { useActionCommands } from '@/contexts/ActionCommandsContext';
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { PunishmentsContextType, PunishmentData, PunishmentHistoryItem, ApplyPunishmentArgs } from './types';
@@ -15,15 +16,15 @@ const PunishmentsContext = createContext<PunishmentsContextType>({
   // savePunishment and deletePunishment are removed
   isLoading: false,
   error: null,
-  applyPunishment: defaultApplyPunishmentPlaceholder, 
-  recentlyAppliedPunishments: [], 
+  applyPunishment: defaultApplyPunishmentPlaceholder,
+  recentlyAppliedPunishments: [],
   fetchRandomPunishment: () => null,
   refetchPunishments: async () => (({} as unknown) as QueryObserverResult<PunishmentData[], Error>),
   getPunishmentHistory: () => [],
   historyLoading: false,
 });
 
-export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+const LegacyPunishmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const punishmentOperationsHook = usePunishmentOperations();
 
   const contextValue: PunishmentsContextType = {
@@ -42,7 +43,7 @@ export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ childre
     getPunishmentHistory: punishmentOperationsHook.getPunishmentHistory,
     historyLoading: punishmentOperationsHook.loading, // Or use dedicated isLoadingHistory from hook if available
   };
-  
+
   return (
     <PunishmentsContext.Provider value={contextValue}>
       {children}
@@ -56,4 +57,9 @@ export const usePunishments = () => {
     throw new Error('usePunishments must be used within a PunishmentsProvider');
   }
   return context;
+};
+
+export const PunishmentsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const actions = useActionCommands();
+  return actions.mode === 'legacy' ? <LegacyPunishmentsProvider>{children}</LegacyPunishmentsProvider> : <>{children}</>;
 };

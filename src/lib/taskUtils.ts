@@ -1,3 +1,4 @@
+import { captureCacheToken, requireCurrentCacheToken, readResetMarker, writeResetMarker, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 import { Task as TaskType, RawSupabaseTask, Json } from '@/data/tasks/types';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logger';
@@ -40,16 +41,20 @@ export const getCurrentDayOfWeek = (): number => {
 /**
  * Enhanced reset function that clears ALL tasks of a frequency, regardless of completion status
  */
-export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
+export const resetTaskCompletions = async (frequency: 'daily' | 'weekly', cacheToken: CacheToken | null = captureCacheToken()) => {
   try {
+    requireCurrentCacheToken(cacheToken);
     logger.debug(`[resetTaskCompletions] Starting ${frequency} task reset for ALL tasks`);
-    
+
     // Get current user session to ensure proper filtering
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
       logger.debug('[resetTaskCompletions] No authenticated user, skipping reset');
       return;
     }
+
+    requireCurrentCacheToken(cacheToken);
+    if (session.user.id !== cacheToken.scope.accountId) throw new Error('Account changed before reset.');
 
     // Get ALL tasks of the specified frequency, not just completed ones
     const { data: tasks, error } = await supabase
@@ -71,9 +76,10 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
     logger.debug(`[resetTaskCompletions] Found ${tasks.length} ${frequency} tasks to reset`);
 
     // Reset ALL tasks of this frequency - clear completion status, usage_data, and last_completed_date
+    requireCurrentCacheToken(cacheToken);
     const { data: updatedTasks, error: updateError } = await supabase
       .from('tasks')
-      .update({ 
+      .update({
         completed: false,
         last_completed_date: null,
         usage_data: [0, 0, 0, 0, 0, 0, 0] // Reset to 7 zeros (Mon-Sun) instead of clearing
@@ -92,21 +98,21 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
     // CRITICAL: Immediately sync the updated data to IndexedDB
     if (updatedTasks) {
       logger.debug(`[resetTaskCompletions] Syncing ${updatedTasks.length} updated tasks to IndexedDB`);
-      
+
       // Load current tasks from IndexedDB
-      const currentLocalTasks = await loadTasksFromDB() || [];
-      
+      const currentLocalTasks = await loadTasksFromDB(cacheToken) || [];
+
       // Update the local tasks with the reset tasks
       const updatedLocalTasks = currentLocalTasks.map(localTask => {
         const resetTask = updatedTasks.find(ut => ut.id === localTask.id);
         return resetTask ? resetTask : localTask;
       });
-      
+
       // Save back to IndexedDB
-      await saveTasksToDB(updatedLocalTasks as TaskType[]);
+      await saveTasksToDB(updatedLocalTasks as TaskType[], cacheToken);
       logger.debug(`[resetTaskCompletions] Successfully synced reset data to IndexedDB`);
     }
-    
+
   } catch (error) {
     logger.error(`[resetTaskCompletions] Exception during ${frequency} reset:`, error);
     throw error;
@@ -116,40 +122,41 @@ export const resetTaskCompletions = async (frequency: 'daily' | 'weekly') => {
 /**
  * Check and perform task resets if needed
  */
-export const checkAndPerformTaskResets = async (): Promise<boolean> => {
+export const checkAndPerformTaskResets = async (cacheToken: CacheToken | null = captureCacheToken()): Promise<boolean> => {
   let resetPerformed = false;
-  
+
   try {
+    requireCurrentCacheToken(cacheToken);
     // Check daily reset
-    const lastDaily = localStorage.getItem("lastDaily");
+    const lastDaily = await readResetMarker('taskDaily', cacheToken);
     const currentDaily = todayKey();
-    
+
     // Only reset if we have a previous day recorded AND it's different from today
     if (lastDaily && lastDaily !== currentDaily) {
       logger.debug(`[checkAndPerformTaskResets] Performing daily reset: ${lastDaily} -> ${currentDaily}`);
-      await resetTaskCompletions("daily");
-      localStorage.setItem("lastDaily", currentDaily);
+      await resetTaskCompletions("daily", cacheToken);
+      await writeResetMarker('taskDaily', currentDaily, cacheToken);
       resetPerformed = true;
     } else if (!lastDaily) {
       // First time - just set the current day without resetting
-      localStorage.setItem("lastDaily", currentDaily);
+      await writeResetMarker('taskDaily', currentDaily, cacheToken);
     }
-    
+
     // Check weekly reset
-    const lastWeekly = localStorage.getItem("lastWeek");
+    const lastWeekly = await readResetMarker('taskWeekly', cacheToken);
     const currentWeekly = currentWeekKey();
-    
+
     // Only reset if we have a previous week recorded AND it's different from current week
     if (lastWeekly && lastWeekly !== currentWeekly) {
       logger.debug(`[checkAndPerformTaskResets] Performing weekly reset: ${lastWeekly} -> ${currentWeekly}`);
-      await resetTaskCompletions("weekly");
-      localStorage.setItem("lastWeek", currentWeekly);
+      await resetTaskCompletions("weekly", cacheToken);
+      await writeResetMarker('taskWeekly', currentWeekly, cacheToken);
       resetPerformed = true;
     } else if (!lastWeekly) {
       // First time - just set the current week without resetting
-      localStorage.setItem("lastWeek", currentWeekly);
+      await writeResetMarker('taskWeekly', currentWeekly, cacheToken);
     }
-    
+
     return resetPerformed;
   } catch (error) {
     logger.error(`[checkAndPerformTaskResets] Error during reset check:`, error);
@@ -159,25 +166,25 @@ export const checkAndPerformTaskResets = async (): Promise<boolean> => {
 
 export const isTaskDueToday = (task: TaskType): boolean => {
   if (task.frequency === 'daily') return true;
-  
+
   if (task.frequency === 'weekly') {
     const today = getCurrentDayOfWeek(); // 0 = Monday, 6 = Sunday
     const frequencyCount = task.frequency_count || 1;
-    
+
     // Simple logic: task is due if today's day number is divisible by (7/frequencyCount)
     const interval = Math.floor(7 / frequencyCount);
     return today % interval === 0;
   }
-  
+
   return false;
 };
 
 export const calculateTaskProgress = (task: TaskType): number => {
   if (!Array.isArray(task.usage_data)) return 0;
-  
+
   const completedDays = task.usage_data.filter((day: Json) => typeof day === 'number' && day > 0).length;
   const totalDays = task.frequency === 'daily' ? 7 : task.frequency_count || 1;
-  
+
   return Math.min(100, (completedDays / totalDays) * 100);
 };
 
@@ -197,8 +204,8 @@ export const getTaskPriorityColor = (priority: 'low' | 'medium' | 'high'): strin
 export const transformSupabaseTask = (rawTask: RawSupabaseTask): TaskType => {
   return {
     ...rawTask,
-    priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high') 
-      ? rawTask.priority 
+    priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high')
+      ? rawTask.priority
       : 'medium' as const
   };
 };

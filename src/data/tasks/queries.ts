@@ -1,3 +1,4 @@
+import { legacyQueryKey, requireCurrentCacheToken, readCacheSnapshot, captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
@@ -11,9 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   loadTasksFromDB,
   saveTasksToDB,
-  getLastSyncTimeForTasks,
-  setLastSyncTimeForTasks
-} from "../indexedDB/useIndexedDB";
+  getLastSyncTimeForTasks } from "../indexedDB/useIndexedDB";
 import { logger } from '@/lib/logger';
 import { useUserIds } from '@/contexts/UserIdsContext';
 
@@ -26,20 +25,20 @@ export type TasksQueryResult = UseQueryResult<Task[], Error> & {
 const transformSupabaseTask = (rawTask: RawSupabaseTask): Task => {
   return {
     ...rawTask,
-    priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high') 
-      ? rawTask.priority 
+    priority: (rawTask.priority === 'low' || rawTask.priority === 'medium' || rawTask.priority === 'high')
+      ? rawTask.priority
       : 'medium' as const
   };
 };
 
-export const fetchTasks = async (subUserId: string | null, domUserId: string | null): Promise<Task[]> => {
+export const fetchTasks = async (subUserId: string | null, domUserId: string | null, cacheToken: CacheToken | null = captureCacheToken()): Promise<Task[]> => {
   if (!subUserId && !domUserId) {
     logger.debug("[fetchTasks] No user IDs provided, returning empty array");
     return [];
   }
 
   logger.debug('[fetchTasks] Fetching tasks with user filtering', { subUserId, domUserId });
-  
+
   try {
     // Get current authenticated user to debug session
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -47,12 +46,12 @@ export const fetchTasks = async (subUserId: string | null, domUserId: string | n
       logger.error('[fetchTasks] Auth error:', authError);
       throw authError;
     }
-    
+
     logger.debug('[fetchTasks] Current authenticated user:', user?.id);
-    
+
     // Build user filter - include both sub and dom user IDs for partner sharing
     const userIds = [subUserId, domUserId].filter(Boolean);
-    
+
     if (userIds.length === 0) {
       logger.warn('[fetchTasks] No valid user IDs for filtering');
       return [];
@@ -76,6 +75,8 @@ export const fetchTasks = async (subUserId: string | null, domUserId: string | n
       logger.debug('[fetchTasks] Sample task user_ids:', data.slice(0, 3).map(t => t.user_id));
     }
 
+    requireCurrentCacheToken(cacheToken);
+
     return (data || []).map(transformSupabaseTask);
   } catch (error) {
     logger.error('[fetchTasks] Error fetching tasks:', error);
@@ -84,22 +85,24 @@ export const fetchTasks = async (subUserId: string | null, domUserId: string | n
 };
 
 export function useTasksQuery(): TasksQueryResult {
+  const cacheToken = captureCacheToken();
   const { subUserId, domUserId, isLoadingUserIds } = useUserIds();
-  
+
   logger.debug('[useTasksQuery] Hook called with:', { subUserId, domUserId, isLoadingUserIds });
-  
-  const queryResult = useQuery<Task[], Error>({ 
-    queryKey: [...TASKS_QUERY_KEY, subUserId, domUserId],
-    queryFn: async (): Promise<Task[]> => { 
+
+  const queryResult = useQuery<Task[], Error>({
+    queryKey: legacyQueryKey(TASKS_QUERY_KEY, cacheToken),
+    queryFn: async (): Promise<Task[]> => {
       logger.debug('[useTasksQuery queryFn] Starting with user IDs:', { subUserId, domUserId });
-      
+
       if (!subUserId && !domUserId) {
         logger.debug('[useTasksQuery queryFn] No user IDs provided, returning empty array');
         return [];
       }
 
-      const localData = await loadTasksFromDB();
-      const lastSync = await getLastSyncTimeForTasks();
+      const snapshot = await readCacheSnapshot<Task[]>('tasks', cacheToken);
+      const localData = snapshot?.data ?? null;
+      const lastSync = snapshot?.savedAt ?? null;
       let shouldFetch = true;
 
       logger.debug('[useTasksQuery queryFn] Local data:', localData?.length || 0, 'tasks');
@@ -116,20 +119,23 @@ export function useTasksQuery(): TasksQueryResult {
 
       if (!shouldFetch && localData) {
         logger.debug('[useTasksQuery queryFn] Using local data for tasks.');
+        requireCurrentCacheToken(cacheToken);
         return localData.map(task => transformSupabaseTask(task as RawSupabaseTask));
       }
 
       logger.debug('[useTasksQuery queryFn] Fetching tasks from server.');
-      const serverData: Task[] = await fetchTasks(subUserId, domUserId);
+      const serverData: Task[] = await fetchTasks(subUserId, domUserId, cacheToken);
 
       if (serverData) {
-        await saveTasksToDB(serverData);
-        await setLastSyncTimeForTasks(new Date().toISOString());
+        try { await saveTasksToDB(serverData, cacheToken); } catch (error) { requireCurrentCacheToken(cacheToken); logger.warn('Server data loaded, but the device snapshot could not be saved.', error); }
+
         logger.debug('[useTasksQuery queryFn] Saved server tasks to DB and updated sync time.');
+        requireCurrentCacheToken(cacheToken);
         return serverData;
       }
-      
+
       logger.debug('[useTasksQuery queryFn] No server data, returning local data or empty array for tasks.');
+      requireCurrentCacheToken(cacheToken);
       return localData ? localData.map(task => transformSupabaseTask(task as RawSupabaseTask)) : [];
     },
     staleTime: Infinity,

@@ -1,3 +1,4 @@
+import { legacyQueryKey, captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,27 +15,29 @@ type PunishmentWithId = PunishmentData & { id: string };
 export type UpdatePunishmentVariables = { id: string } & Partial<Omit<PunishmentData, 'id'>>;
 
 export const useUpdatePunishment = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
 
-  const punishmentsQueryKey = [...PUNISHMENTS_QUERY_KEY, subUserId, domUserId];
+  const punishmentsQueryKey = legacyQueryKey(PUNISHMENTS_QUERY_KEY, cacheToken);
 
   return useUpdateOptimisticMutation<PunishmentWithId, Error, UpdatePunishmentVariables>({
+    cacheToken,
     queryClient,
     queryKey: punishmentsQueryKey,
     mutationFn: async (variables: UpdatePunishmentVariables) => {
       const { id, ...updates } = variables;
-      
+
       // Process image if present
       const { processedUrl, metadata } = await processImageForSave(updates.background_image_url || null);
-      
+
       const updatesWithImage = {
         ...updates,
         background_image_url: processedUrl,
         image_meta: updates.image_meta || metadata,
         updated_at: new Date().toISOString()
       };
-      
+
       const { data, error } = await supabase
         .from('punishments')
         .update(updatesWithImage as never)
@@ -43,15 +46,14 @@ export const useUpdatePunishment = () => {
         .single();
       if (error) throw error;
       if (!data) throw new Error('Punishment update failed.');
-      
+
       logger.debug('[Update Punishment] Punishment updated successfully with image compression');
       return data as PunishmentWithId;
     },
     entityName: 'Punishment',
     idField: 'id',
-    onSuccessCallback: async (_data: PunishmentWithId, _variables: UpdatePunishmentVariables) => {
+    onSuccessCallback: async (_data: PunishmentWithId, _variables: UpdatePunishmentVariables, cacheToken) => {
       const currentPunishments = queryClient.getQueryData<PunishmentWithId[]>(punishmentsQueryKey) || [];
-      await savePunishmentsToDB(currentPunishments);
-    },
-  });
+      await savePunishmentsToDB(currentPunishments, cacheToken);
+    } });
 };

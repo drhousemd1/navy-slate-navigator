@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -39,6 +40,8 @@ const navItems: NavItem[] = [
 ];
 
 const MobileNavbar: React.FC = () => {
+  const { currentScheme } = useColorScheme();
+  const isLightScheme = currentScheme === 'light-turquoise';
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -54,15 +57,16 @@ const MobileNavbar: React.FC = () => {
             <Link
               key={item.name}
               to={item.path}
+              aria-current={isActive ? 'page' : undefined}
               className={`flex flex-col items-center justify-center h-full transition-colors duration-200 ${
-                isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
+                isActive ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7]') : (isLightScheme ? 'text-foreground' : 'text-nav-inactive')
               }`}
             >
-              <div className={`flex items-center justify-center h-5 ${isActive ? 'neon-icon' : ''}`}>
+              <div className={`flex items-center justify-center h-5 ${isActive && !isLightScheme ? 'neon-icon' : ''}`}>
                 {item.icon}
               </div>
               <div className="h-5 mt-1 overflow-hidden">
-                <span className={`text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block ${isActive ? 'neon-text' : ''}`}>
+                <span className={`text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block ${isActive ? (isLightScheme ? 'font-semibold underline underline-offset-2' : 'neon-text') : ''}`}>
                   {item.name}
                 </span>
               </div>

@@ -1,17 +1,16 @@
+import { captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 /**
  * CENTRALIZED DATA LOGIC – DO NOT DUPLICATE OR MODIFY OUTSIDE THIS FOLDER.
  * No query, mutation, or sync logic is allowed in components or page files.
  * All logic must use these shared, optimized hooks and utilities only.
  */
 
-import { useQuery } from "@tanstack/react-query"; 
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from '@/integrations/supabase/client';
 import {
   loadPunishmentsFromDB,
   savePunishmentsToDB,
-  getLastSyncTimeForPunishments,
-  setLastSyncTimeForPunishments
-} from "../indexedDB/useIndexedDB";
+  getLastSyncTimeForPunishments } from "../indexedDB/useIndexedDB";
 import { PunishmentData } from "@/contexts/punishments/types"; // Import PunishmentData type
 
 // Interface for the raw item structure from Supabase before mapping
@@ -41,11 +40,12 @@ interface SupabasePunishmentItem {
 
 
 export function usePunishments() {
+  const cacheToken = captureCacheToken();
   return useQuery<PunishmentData[], Error>({ // Use PunishmentData type
     queryKey: ["punishments"],
     queryFn: async () => {
-      const localData = await loadPunishmentsFromDB() as PunishmentData[] | null;
-      const lastSync = await getLastSyncTimeForPunishments();
+      const localData = await loadPunishmentsFromDB(cacheToken) as PunishmentData[] | null;
+      const lastSync = await getLastSyncTimeForPunishments(cacheToken);
       let shouldFetch = true;
 
       if (lastSync) {
@@ -69,32 +69,32 @@ export function usePunishments() {
           return {
             id: typedItem.id,
             title: typedItem.title,
-            description: typedItem.description ?? '', 
+            description: typedItem.description ?? '',
             points: typedItem.points,
-            dom_points: typedItem.dom_points ?? 0, 
-            dom_supply: typedItem.dom_supply ?? 0, 
+            dom_points: typedItem.dom_points ?? 0,
+            dom_supply: typedItem.dom_supply ?? 0,
             background_image_url: typedItem.background_image_url,
-            background_opacity: typedItem.background_opacity ?? 50, 
+            background_opacity: typedItem.background_opacity ?? 50,
             icon_name: typedItem.icon_name,
-            title_color: typedItem.title_color ?? '#FFFFFF', 
-            subtext_color: typedItem.subtext_color ?? '#8E9196', 
-            calendar_color: typedItem.calendar_color ?? '#ea384c', 
-            icon_color: typedItem.icon_color ?? '#ea384c', 
-            highlight_effect: typedItem.highlight_effect ?? false, 
-            focal_point_x: typedItem.focal_point_x ?? 50, 
-            focal_point_y: typedItem.focal_point_y ?? 50, 
+            title_color: typedItem.title_color ?? '#FFFFFF',
+            subtext_color: typedItem.subtext_color ?? '#8E9196',
+            calendar_color: typedItem.calendar_color ?? '#ea384c',
+            icon_color: typedItem.icon_color ?? '#ea384c',
+            highlight_effect: typedItem.highlight_effect ?? false,
+            focal_point_x: typedItem.focal_point_x ?? 50,
+            focal_point_y: typedItem.focal_point_y ?? 50,
             created_at: typedItem.created_at,
             updated_at: typedItem.updated_at,
-            icon_url: typedItem.icon_url || null, 
+            icon_url: typedItem.icon_url || null,
             // usage_data and frequency_count are typically derived or added later, not directly from this base query.
             // If they are part of the core PunishmentData type and expected here, ensure they have defaults.
             // usage_data: typedItem.usage_data || Array(7).fill(0), // Example if needed
             // frequency_count: typedItem.frequency_count || 0, // Example if needed
           } as PunishmentData; // Cast to PunishmentData
         });
-        
-        await savePunishmentsToDB(punishmentsData);
-        await setLastSyncTimeForPunishments(new Date().toISOString());
+
+        await savePunishmentsToDB(punishmentsData, cacheToken);
+
         return punishmentsData;
       }
 

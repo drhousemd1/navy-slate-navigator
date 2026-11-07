@@ -1,3 +1,4 @@
+import { captureCacheToken, legacyQueryKey } from '@/data/indexedDB/useIndexedDB';
 
 import { useQuery } from '@tanstack/react-query';
 import { PunishmentData } from '@/contexts/punishments/types';
@@ -13,16 +14,17 @@ export type PunishmentsQueryResult = {
 };
 
 export const usePunishmentsQuery = (): PunishmentsQueryResult => {
+  const cacheToken = captureCacheToken();
   const { subUserId, domUserId } = useUserIds();
-  
-  const { 
-    data = [], 
-    isLoading, 
+
+  const {
+    data = [],
+    isLoading,
     error,
     refetch
   } = useQuery<PunishmentData[], Error>({
-    queryKey: [...PUNISHMENTS_QUERY_KEY, subUserId, domUserId],
-    queryFn: () => fetchPunishments(subUserId, domUserId),
+    queryKey: legacyQueryKey(PUNISHMENTS_QUERY_KEY, cacheToken),
+    queryFn: () => fetchPunishments(subUserId, domUserId, cacheToken),
     enabled: !!(subUserId || domUserId),
   });
 

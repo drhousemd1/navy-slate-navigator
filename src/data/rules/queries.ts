@@ -1,3 +1,4 @@
+import { legacyQueryKey, readCacheSnapshot, requireCurrentCacheToken, captureCacheToken, type CacheToken } from '@/data/indexedDB/useIndexedDB';
 
 /**
  * CENTRALIZED DATA LOGIC – DO NOT COPY OR MODIFY OUTSIDE THIS FOLDER.
@@ -6,32 +7,32 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { Rule } from "@/data/interfaces/Rule"; 
+import { Rule } from "@/data/interfaces/Rule";
 import { fetchRules as fetchRulesFromServer } from "@/data/rules/fetchRules";
 import {
   loadRulesFromDB,
   saveRulesToDB,
-  getLastSyncTimeForRules,
-  setLastSyncTimeForRules
-} from "../indexedDB/useIndexedDB";
+  getLastSyncTimeForRules } from "../indexedDB/useIndexedDB";
 import { logger } from '@/lib/logger';
 import { useUserIds } from '@/contexts/UserIdsContext';
 
 export const RULES_QUERY_KEY = ['rules'];
 
 export function useRules() {
+  const cacheToken = captureCacheToken();
   const { subUserId, domUserId } = useUserIds();
-  
-  return useQuery<Rule[], Error, Rule[]>({ 
-    queryKey: [...RULES_QUERY_KEY, subUserId, domUserId],
-    queryFn: async (): Promise<Rule[]> => { 
+
+  return useQuery<Rule[], Error, Rule[]>({
+    queryKey: legacyQueryKey(RULES_QUERY_KEY, cacheToken),
+    queryFn: async (): Promise<Rule[]> => {
       if (!subUserId && !domUserId) {
         logger.debug('[useRules queryFn] No user IDs provided, returning empty array');
         return [];
       }
 
-      const localData: Rule[] | null = await loadRulesFromDB();
-      const lastSync = await getLastSyncTimeForRules();
+      const snapshot = await readCacheSnapshot<Rule[]>('rules', cacheToken);
+      const localData = snapshot?.data ?? null;
+      const lastSync = snapshot?.savedAt ?? null;
       let shouldFetch = true;
 
       if (lastSync) {
@@ -43,20 +44,23 @@ export function useRules() {
 
       if (!shouldFetch && localData) {
         logger.debug('[useRules queryFn] Using local data for rules.');
+        requireCurrentCacheToken(cacheToken);
         return localData;
       }
 
       logger.debug('[useRules queryFn] Fetching rules from server.');
-      const serverData: Rule[] = await fetchRulesFromServer(subUserId, domUserId);
+      const serverData: Rule[] = await fetchRulesFromServer(subUserId, domUserId, cacheToken);
 
       if (serverData) {
-        await saveRulesToDB(serverData);
-        await setLastSyncTimeForRules(new Date().toISOString());
+        try { await saveRulesToDB(serverData, cacheToken); } catch (error) { requireCurrentCacheToken(cacheToken); logger.warn('Server data loaded, but the device snapshot could not be saved.', error); }
+
         logger.debug('[useRules queryFn] Saved server rules to DB and updated sync time.');
+        requireCurrentCacheToken(cacheToken);
         return serverData;
       }
-      
+
       logger.debug('[useRules queryFn] No server data, returning local data or empty array for rules.');
+      requireCurrentCacheToken(cacheToken);
       return localData || [];
     },
     staleTime: Infinity,

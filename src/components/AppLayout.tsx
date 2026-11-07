@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React, { ReactNode } from 'react';
 import MobileNavbar from './MobileNavbar';
@@ -20,6 +21,8 @@ interface AppLayoutProps {
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
+  const { currentScheme } = useColorScheme();
+  const isLightScheme = currentScheme === 'light-turquoise';
   const location = useLocation();
   const navigate = useNavigate();
   const { getNickname, getProfileImage, getUserRoleSync } = useAuth();
@@ -90,7 +93,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
                     }}
                   />
                 ) : null}
-                <AvatarFallback className="bg-light-navy text-nav-active text-xs">
+                <AvatarFallback className={`bg-light-navy text-xs ${isLightScheme ? 'text-foreground' : 'text-nav-active'}`}>
                   {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
                 </AvatarFallback>
               </Avatar>
@@ -98,8 +101,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             
             {/* Username and role display */}
             <div className="ml-2 min-w-0 flex-shrink">
-              <p className="text-white text-sm font-medium leading-tight break-words truncate">{nickname}</p>
-              <p className="text-gray-400 text-xs leading-tight break-words truncate">{userRole}</p>
+              <p className="text-foreground text-sm font-medium leading-tight break-words truncate">{nickname}</p>
+              <p className={`text-xs leading-tight break-words truncate ${isLightScheme ? 'text-foreground' : 'text-muted-foreground'}`}>{userRole}</p>
             </div>
 
             {/* Partner display - shows when user has a linked partner - now inline */}
@@ -113,7 +116,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             {/* Throne Room icon */}
             <Crown 
               className={`w-5 h-5 cursor-pointer transition-colors ${
-                isThroneRoomPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
+                isThroneRoomPage ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7] neon-icon') : 'text-muted-foreground hover:text-foreground'
               }`}
               onClick={() => navigate('/throne-room')}
             />
@@ -122,11 +125,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             <div className="relative">
               <MessageSquare 
                 className={`w-5 h-5 cursor-pointer transition-colors ${
-                  isMessagesPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
+                  isMessagesPage ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7] neon-icon') : 'text-muted-foreground hover:text-foreground'
                 }`}
                 onClick={handleMessagingClick}
               />
-              {unreadCount === null ? (unreadError && <span aria-label="Unread message count unavailable" title="Unread messages could not be checked" className="absolute -top-1 -right-1 text-xs text-amber-200">?</span>) : <span title={unreadError ? 'Last confirmed unread count; refresh unavailable' : undefined}><NotificationBadge count={unreadCount} />{unreadError && <span aria-label="Unread count may be outdated" className="absolute -bottom-2 right-0 text-xs text-amber-200">!</span>}</span>}
+              {unreadCount === null ? (unreadError && <span aria-label="Unread message count unavailable" title="Unread messages could not be checked" className={`absolute -top-1 -right-1 text-xs ${isLightScheme ? 'text-foreground' : 'text-amber-200'}`}>?</span>) : <span title={unreadError ? 'Last confirmed unread count; refresh unavailable' : undefined}><NotificationBadge count={unreadCount} />{unreadError && <span aria-label="Unread count may be outdated" className={`absolute -bottom-2 right-0 text-xs ${isLightScheme ? 'text-foreground' : 'text-amber-200'}`}>!</span>}</span>}
             </div>
           </div>
         </div>

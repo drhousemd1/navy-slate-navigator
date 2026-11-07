@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const f = vi.hoisted(() => ({ rows: new Map(), session: null as null | { user: { id: string } }, listener: null as null | ((event: string, session: unknown) => Promise<void>),
   clearSession: vi.fn(), start: vi.fn(), status: vi.fn(), resume: vi.fn(), purge: vi.fn(), clear: vi.fn(), signOut: vi.fn(), removeItem: vi.fn(), writers: new Set<string>() }));
-vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'https://deletion.invalid', supabasePublicKey: 'public', clearDeletedAccountSession: f.clearSession, supabase: { auth: {
+vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'https://deletion.invalid', supabaseAuthStorageKey: 'sb-deletion-auth-token', supabasePublicKey: 'public', clearDeletedAccountSession: f.clearSession, supabase: { auth: {
   getSession: async () => ({ data: { session: f.session }, error: null }), onAuthStateChange: (callback: typeof f.listener) => { f.listener = callback; return { data: { subscription: { unsubscribe: vi.fn() } } }; }, signOut: f.signOut,
 } } }));
 vi.mock('@/data/accountDeletion/store', () => ({ deletionStore: {
@@ -37,6 +37,7 @@ function Writer({ account }: { account: string }) { useEffect(() => { f.writers.
 function Consumer() { auth = useAuth(); return auth.user ? <><Writer account={auth.user.id} /><button onClick={() => void auth.accountDeletion.start()}>Confirm deletion</button></> : <Auth />; }
 const renderApp = () => render(<AuthProvider><MemoryRouter><Consumer /></MemoryRouter></AuthProvider>);
 beforeEach(() => {
+  vi.stubGlobal('BroadcastChannel', undefined);
   localStorage.clear(); localStorage.setItem('sb-deletion-auth-token', JSON.stringify({ user: { id: scope.accountId } }));
   f.rows.clear(); f.writers.clear(); f.clear.mockReset(); f.removeItem.mockReset(); f.session = { user: { id: scope.accountId } };
   f.start.mockReset().mockImplementation(async row => pending(row.jobId)); f.status.mockReset().mockImplementation(async row => pending(row.jobId)); f.resume.mockReset().mockImplementationOnce(async row => ({ ...pending(row.jobId), state: 'retry_required' })).mockImplementation(async row => complete(row.jobId));

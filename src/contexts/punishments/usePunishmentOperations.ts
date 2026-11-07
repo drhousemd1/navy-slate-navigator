@@ -1,3 +1,4 @@
+import { captureCacheToken, legacyQueryKey } from '@/data/indexedDB/useIndexedDB';
 
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,28 +12,29 @@ import { logger } from '@/lib/logger';
 
 // This hook will now focus on providing derived data or specific operations not covered by generic mutations/queries
 export const usePunishmentOperations = () => {
+  const cacheToken = captureCacheToken();
   const queryClient = useQueryClient();
   const { subUserId, domUserId } = useUserIds();
-  
+
   // Fetching punishments and history remains relevant for providing data through context if needed
-  const { 
-    data: punishments = [], 
-    isLoading: isLoadingPunishments, 
+  const {
+    data: punishments = [],
+    isLoading: isLoadingPunishments,
     error: errorPunishments,
     refetch: refetchPunishments
   } = useQuery<PunishmentData[], Error>({
-    queryKey: [...PUNISHMENTS_QUERY_KEY, subUserId, domUserId],
-    queryFn: () => fetchPunishmentsData(subUserId, domUserId),
+    queryKey: legacyQueryKey(PUNISHMENTS_QUERY_KEY, cacheToken),
+    queryFn: () => fetchPunishmentsData(subUserId, domUserId, cacheToken),
     enabled: !!(subUserId || domUserId),
   });
 
-  const { 
-    data: punishmentHistory = [], 
-    isLoading: isLoadingHistory, 
+  const {
+    data: punishmentHistory = [],
+    isLoading: isLoadingHistory,
     error: errorHistory,
     refetch: refetchHistory
   } = useQuery<PunishmentHistoryItem[], Error>({
-    queryKey: [...PUNISHMENT_HISTORY_QUERY_KEY, subUserId, domUserId],
+    queryKey: legacyQueryKey(PUNISHMENT_HISTORY_QUERY_KEY, cacheToken),
     queryFn: () => fetchAllPunishmentHistory(subUserId, domUserId),
     enabled: !!(subUserId || domUserId),
   });
@@ -59,7 +61,7 @@ export const usePunishmentOperations = () => {
     loading: isLoadingPunishments || isLoadingHistory,
     error: errorPunishments || errorHistory,
     totalPointsDeducted,
-    refetchPunishmentsData: async () => { 
+    refetchPunishmentsData: async () => {
         await refetchPunishments();
         await refetchHistory();
     },
