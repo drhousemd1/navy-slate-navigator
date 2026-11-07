@@ -1,4 +1,5 @@
 import React from 'react';
+import { checkinTime } from '@/data/wellbeing/calendar';
 import { WellbeingSnapshot } from '@/data/wellbeing/types';
 import { transformMetricsForDisplay, getSliderColors } from '@/lib/wellbeingUtils';
 import { format, parseISO } from 'date-fns';
@@ -70,32 +71,32 @@ const WellbeingMetricsDisplay: React.FC<WellbeingMetricsDisplayProps> = ({
             {format(parseISO(selectedDate), 'EEEE, MMM d')}
           </h3>
           <p className="text-sm text-nav-inactive">
-            Overall Score: <span className="text-white font-medium">{wellbeingData.overall_score}/100</span>
+            Overall Score: <span className="text-white font-medium">{wellbeingData.overallScore}/100</span>
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={onClear}>
           <X className="h-4 w-4" />
         </Button>
       </div>
-      
+
       <div className="space-y-3">
         {metricsDisplay.map((metric) => {
-          const colors = getSliderColors(metric.value, metric.key);
+          const colors = getSliderColors(metric.value ?? 0, metric.key);
           return (
             <div key={metric.key} className="space-y-1">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-white font-medium">{metric.label}</span>
-                <span className="text-sm text-nav-inactive">{metric.value}%</span>
+                <span className="text-sm text-nav-inactive">{metric.value === null ? 'Not recorded' : `${metric.value}%`}</span>
               </div>
               <div className="relative">
-                <div 
+                <div
                   className="w-full h-2 rounded-full overflow-hidden transition-all duration-300"
                   style={{ backgroundColor: colors.backgroundColor }}
                 >
-                  <div 
+                  <div
                     className="h-full transition-all duration-500 ease-out rounded-full"
-                    style={{ 
-                      width: `${metric.value}%`,
+                    style={{
+                      width: `${metric.value ?? 0}%`,
                       backgroundColor: colors.fillColor
                     }}
                   />
@@ -105,10 +106,10 @@ const WellbeingMetricsDisplay: React.FC<WellbeingMetricsDisplayProps> = ({
           );
         })}
       </div>
-      
+
       <div className="mt-4 pt-3 border-t border-light-navy">
         <p className="text-xs text-nav-inactive text-center">
-          Last updated: {new Date(wellbeingData.updated_at).toLocaleString()}
+          {checkinTime(wellbeingData)}
         </p>
       </div>
     </div>

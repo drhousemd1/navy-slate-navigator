@@ -17,7 +17,8 @@ export const computeWellbeingScore = (metrics: Partial<WellbeingMetrics>): numbe
   const totalWeight = Object.values(METRIC_DEFINITIONS).reduce((acc, def) => acc + def.weight, 0);
   
   const subtotal = Object.entries(METRIC_DEFINITIONS).reduce((sum, [key, def]) => {
-    const rawValue = metrics[key as keyof WellbeingMetrics] ?? 50; // Default to neutral 50
+    const rawValue = metrics[key as keyof WellbeingMetrics];
+    if (typeof rawValue !== 'number' || !Number.isFinite(rawValue) || rawValue < 0 || rawValue > 100) throw new Error('INVALID_WELLBEING_METRICS');
     const normalizedValue = def.higherIsGood ? rawValue : 100 - rawValue;
     return sum + (normalizedValue * def.weight);
   }, 0);
@@ -33,7 +34,6 @@ export const getWellbeingColor = (score: number): string => {
   else if (score >= 40) color = 'hsl(var(--wellbeing-fair))';
   else color = 'hsl(var(--wellbeing-attention))';
   
-  console.log(`[getWellbeingColor] Score: ${score}, Color: ${color}`);
   return color;
 };
 
@@ -76,8 +76,8 @@ export const transformMetricsForDisplay = (metrics: Partial<WellbeingMetrics>) =
   return Object.entries(METRIC_DEFINITIONS).map(([key, def]) => ({
     key: key as keyof WellbeingMetrics,
     label: def.label,
-    value: metrics[key as keyof WellbeingMetrics] ?? 50,
-    description: getMetricDescription(key as keyof WellbeingMetrics, metrics[key as keyof WellbeingMetrics] ?? 50),
+    value: metrics[key as keyof WellbeingMetrics] ?? null,
+    description: metrics[key as keyof WellbeingMetrics] == null ? 'Not recorded' : getMetricDescription(key as keyof WellbeingMetrics, metrics[key as keyof WellbeingMetrics]!),
     isPositive: def.higherIsGood
   }));
 };

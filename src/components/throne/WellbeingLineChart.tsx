@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Dot
 } from 'recharts';
@@ -13,8 +13,8 @@ import { useWellbeingSnapshotForDate } from '@/data/wellbeing/queries/useWellbei
 
 import { useUserIds } from '@/contexts/UserIdsContext';
 import CompactWellbeingMetrics from '@/components/wellbeing/CompactWellbeingMetrics';
-import { getWellbeingColor } from '@/lib/wellbeingUtils';
-import { logger } from '@/lib/logger';
+import { useWellbeingScope, wellbeingScopeKey } from '@/data/wellbeing/scope';
+import { Button } from '@/components/ui/button';
 
 interface WellbeingLineChartProps {
   isMonthlyView?: boolean;
@@ -33,20 +33,20 @@ interface CustomDotProps {
 
 const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, isSelected, userType, onClick }) => {
   if (!payload || cx === undefined || cy === undefined) return null;
-  
+
   // Check if this user type has data
   const hasData = userType === 'sub' ? payload.subHasData : payload.domHasData;
   if (!hasData) return null;
-  
+
   // Use role-based colors instead of score-based colors
   const color = userType === 'sub' ? '#3B82F6' : '#EF4444'; // Blue for sub, red for dom
-  
+
   const handleClick = () => {
     if (onClick && userType) {
       onClick(payload.date, userType);
     }
   };
-  
+
   return (
     <Dot
       cx={cx}
@@ -61,56 +61,60 @@ const CustomDot: React.FC<CustomDotProps> = ({ cx, cy, payload, isSelected, user
   );
 };
 
-const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({ 
-  isMonthlyView = false, 
+const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
+  isMonthlyView = false,
   onToggleView,
-  showToggle = true 
+  showToggle = true
 }) => {
   const { subUserId, domUserId } = useUserIds();
+  const scope = useWellbeingScope();
+  const scopeKey = JSON.stringify(wellbeingScopeKey(scope));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedUserType, setSelectedUserType] = useState<'sub' | 'dom' | null>(null);
   const [localIsMonthlyView, setLocalIsMonthlyView] = useState(isMonthlyView);
-  
+
+  useEffect(() => { setSelectedDate(null); setSelectedUserType(null); }, [scopeKey]);
   const currentView = onToggleView ? isMonthlyView : localIsMonthlyView;
-  
-  const { data: weeklyData = [], isLoading: weeklyLoading } = useWeeklyWellbeingQuery({ 
-    enabled: !currentView 
+
+  const { data: weeklyData = [], isLoading: weeklyLoading, error: weeklyError, refetch: retryWeekly } = useWeeklyWellbeingQuery({
+    enabled: !currentView
   });
-  const { data: monthlyData = [], isLoading: monthlyLoading } = useMonthlyWellbeingQuery({ 
-    enabled: currentView 
+  const { data: monthlyData = [], isLoading: monthlyLoading, error: monthlyError, refetch: retryMonthly } = useMonthlyWellbeingQuery({
+    enabled: currentView
   });
-  
+
   const data = currentView ? monthlyData : weeklyData;
-  
+
   // Fetch detailed wellbeing data for the selected date and user
   const selectedUserId = selectedUserType === 'sub' ? subUserId : selectedUserType === 'dom' ? domUserId : null;
-  const { data: selectedWellbeingData, isLoading: wellbeingLoading } = useWellbeingSnapshotForDate(
+  const { data: selectedWellbeingData, isLoading: wellbeingLoading, error: detailError } = useWellbeingSnapshotForDate(
     selectedUserId,
     selectedDate
   );
-  
+
   const handleToggle = (value: boolean) => {
     setLocalIsMonthlyView(value);
     onToggleView?.(value);
   };
-  
+
   const handleDotClick = (date: string, userType: 'sub' | 'dom') => {
-    logger.debug('Dot clicked for date:', date, 'userType:', userType);
     setSelectedDate(date);
     setSelectedUserType(userType);
   };
-  
+
   const handleClearSelection = () => {
     setSelectedDate(null);
     setSelectedUserType(null);
   };
   const isLoading = currentView ? monthlyLoading : weeklyLoading;
-  
+
   // Prepare chart data with separate user scores
   const chartData = data;
-  
+
   const hasData = data.some(item => item.subHasData || item.domHasData);
-  
+
+  if (currentView ? monthlyError : weeklyError) return <Card className="bg-navy border-light-navy p-4 text-white"><p role="alert">Wellbeing chart could not be loaded.</p><Button onClick={() => void (currentView ? retryMonthly() : retryWeekly())}>Retry wellness chart</Button></Card>;
+
   if (isLoading) {
     return (
       <Card className="bg-navy border border-light-navy rounded-lg">
@@ -130,7 +134,7 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
       </Card>
     );
   }
-  
+
   return (
     <Card className="bg-navy border border-light-navy rounded-lg">
       <div className="p-4">
@@ -154,6 +158,7 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
             </div>
           )}
         </div>
+        <p className="text-xs text-gray-400 mb-2">Latest confirmed check-in per saved local date. Gaps mean no check-in; each person uses their saved timezone.</p>
         <div className="h-60">
           {!hasData ? (
             <div className="flex items-center justify-center h-full text-white">
@@ -161,18 +166,18 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart 
-                data={chartData} 
+              <LineChart
+                data={chartData}
                 margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#1A1F2C" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fill: '#D1D5DB' }} 
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: '#D1D5DB' }}
                   stroke="#8E9196"
                   tickFormatter={(date) => {
                     try {
-                      return currentView 
+                      return currentView
                         ? format(parseISO(date), 'd')
                         : format(parseISO(date), 'EEE');
                     } catch {
@@ -180,21 +185,21 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
                     }
                   }}
                 />
-                <YAxis 
+                <YAxis
                   domain={[0, 100]}
-                  tick={{ fill: '#D1D5DB' }} 
+                  tick={{ fill: '#D1D5DB' }}
                   stroke="#8E9196"
                 />
-                 <Line 
-                  type="monotone" 
-                  dataKey="subScore" 
+                 <Line
+                  type="monotone"
+                  dataKey="subScore"
                   stroke="#3B82F6"
                   strokeWidth={2}
                   connectNulls={false}
                   name="Submissive"
                    dot={(props) => (
-                     <CustomDot 
-                       {...props} 
+                     <CustomDot
+                       {...props}
                        userType="sub"
                        isSelected={props.payload?.date === selectedDate && selectedUserType === 'sub'}
                        onClick={handleDotClick}
@@ -202,16 +207,16 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
                    )}
                   activeDot={{ r: 6, stroke: '#FFFFFF', strokeWidth: 2, fill: '#3B82F6' }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="domScore" 
+                <Line
+                  type="monotone"
+                  dataKey="domScore"
                   stroke="#EF4444"
                   strokeWidth={2}
                   connectNulls={false}
                   name="Dominant"
                    dot={(props) => (
-                     <CustomDot 
-                       {...props} 
+                     <CustomDot
+                       {...props}
                        userType="dom"
                        isSelected={props.payload?.date === selectedDate && selectedUserType === 'dom'}
                        onClick={handleDotClick}
@@ -224,8 +229,9 @@ const WellbeingLineChart: React.FC<WellbeingLineChartProps> = ({
           )}
         </div>
       </div>
-      
+
       <div className="mt-4">
+        {detailError && <p role="alert" className="text-red-300 p-4">The selected check-in could not be loaded.</p>}
         <CompactWellbeingMetrics
           metrics={selectedWellbeingData?.metrics || null}
           selectedDate={selectedDate}

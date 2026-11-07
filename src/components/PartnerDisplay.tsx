@@ -19,7 +19,7 @@ const PartnerDisplay: React.FC = () => {
 
   // Use the actual nickname from the partner's profile, fallback to "Partner" if not set
   const partnerNickname = partnerProfile.nickname || "Partner";
-  const partnerWellbeingScore = partnerWellbeingQuery.data?.overall_score || 50; // Default to neutral if no data
+  const partnerWellbeingScore = partnerWellbeingQuery.data?.overallScore ?? null;
 
   return (
     <div className="flex items-center">
@@ -31,9 +31,12 @@ const PartnerDisplay: React.FC = () => {
         wellbeingData={partnerWellbeingQuery.data}
         partnerNickname={partnerNickname}
         isLoading={partnerWellbeingQuery.isLoading}
+        error={partnerWellbeingQuery.error}
+        onRetry={() => void partnerWellbeingQuery.refetch()}
       >
         <MoodHealthBar 
-          score={partnerWellbeingScore}
+          score={partnerWellbeingQuery.error ? null : partnerWellbeingScore}
+          unavailableLabel={partnerWellbeingQuery.error ? "Wellbeing could not be loaded" : partnerWellbeingQuery.isLoading ? "Checking wellbeing" : undefined}
           className="mr-2"
         />
       </WellbeingPopover>

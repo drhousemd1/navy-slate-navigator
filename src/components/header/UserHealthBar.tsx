@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth';
 
 const UserHealthBar: React.FC = () => {
   const { user, getNickname } = useAuth();
-  const { wellbeingSnapshot, getCurrentScore } = useWellbeingData();
+  const { wellbeingSnapshot, getCurrentScore, isLoading, error, refetch } = useWellbeingData();
   
   if (!user) {
     return null;
@@ -19,10 +19,13 @@ const UserHealthBar: React.FC = () => {
     <WellbeingPopover
       wellbeingData={wellbeingSnapshot}
       partnerNickname={nickname}
-      isLoading={false}
+      isLoading={isLoading}
+      error={error}
+      onRetry={() => void refetch()}
     >
       <MoodHealthBar 
-        score={currentScore}
+        score={error ? null : currentScore}
+        unavailableLabel={error ? "Wellbeing could not be loaded" : isLoading ? "Checking wellbeing" : undefined}
         className="mr-2"
       />
     </WellbeingPopover>

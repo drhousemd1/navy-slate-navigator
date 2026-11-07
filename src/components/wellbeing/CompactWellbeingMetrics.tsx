@@ -1,8 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { METRIC_DEFINITIONS, getSliderColors } from '@/lib/wellbeingUtils';
-import { WellbeingMetrics, DEFAULT_METRICS } from '@/data/wellbeing/types';
+import { WellbeingMetrics } from '@/data/wellbeing/types';
 
 interface CompactWellbeingMetricsProps {
   metrics: Partial<WellbeingMetrics> | null;
@@ -21,21 +20,9 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
   const allMetrics = Object.entries(METRIC_DEFINITIONS)
     .map(([key, def]) => ({ key: key as keyof WellbeingMetrics, ...def }));
 
-  // Use provided metrics or defaults, with grayed-out styling when no date selected
-  const displayMetrics = metrics || DEFAULT_METRICS;
+  // Missing readings remain unknown; no midpoint is invented for display.
+  const displayMetrics = metrics || {};
   const isGrayedOut = !selectedDate || !metrics;
-
-  // Debug logging for metrics display
-  console.log('[CompactWellbeingMetrics] Debug info:', {
-    selectedDate,
-    hasMetrics: !!metrics,
-    metricsKeys: metrics ? Object.keys(metrics) : null,
-    firstFewMetrics: metrics ? Object.fromEntries(Object.entries(metrics).slice(0, 3)) : null,
-    displayMetricsKeys: Object.keys(displayMetrics),
-    firstFewDisplayMetrics: Object.fromEntries(Object.entries(displayMetrics).slice(0, 3)),
-    isGrayedOut,
-    isLoading
-  });
 
   // Get user type display name and color
   const getUserTypeDisplay = () => {
@@ -53,8 +40,8 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
       <CardContent className="pt-4 space-y-4">
         {selectedDate && userDisplay && (
           <div className="flex items-center gap-2 mb-2">
-            <div 
-              className="w-3 h-3 rounded-full" 
+            <div
+              className="w-3 h-3 rounded-full"
               style={{ backgroundColor: userDisplay.color }}
             />
             <span className="text-sm text-gray-300">
@@ -62,7 +49,7 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
             </span>
           </div>
         )}
-        
+
         {isLoading ? (
           <div className="grid grid-cols-2 gap-4">
             {allMetrics.map((metric) => (
@@ -78,29 +65,29 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {allMetrics.map((metric) => {
-              const value = displayMetrics[metric.key] ?? 50;
-              const colors = getSliderColors(value, metric.key);
-              
+              const value = displayMetrics[metric.key] ?? null;
+              const colors = getSliderColors(value ?? 0, metric.key);
+
               return (
                 <div key={metric.key} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span 
+                    <span
                       className={`text-xs font-medium ${isGrayedOut ? 'text-nav-inactive' : 'text-gray-300'}`}
                     >
                       {metric.label}
                     </span>
                     <span className={`text-xs ${isGrayedOut ? 'text-nav-inactive' : 'text-gray-400'}`}>
-                      {value}%
+                      {value === null ? 'Not recorded' : `${value}%`}
                     </span>
                   </div>
-                  <div 
+                  <div
                     className="w-full h-2 rounded-full overflow-hidden"
                     style={{ backgroundColor: isGrayedOut ? 'hsl(var(--light-navy))' : colors.backgroundColor }}
                   >
-                    <div 
+                    <div
                       className="h-full transition-all duration-300"
-                      style={{ 
-                        width: `${value}%`,
+                      style={{
+                        width: `${value ?? 0}%`,
                         backgroundColor: isGrayedOut ? 'hsl(var(--nav-inactive))' : colors.fillColor
                       }}
                     />

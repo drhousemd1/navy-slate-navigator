@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { METRIC_DEFINITIONS, getSliderColors } from '@/lib/wellbeingUtils';
-import { WellbeingMetrics, DEFAULT_METRICS } from '@/data/wellbeing/types';
+import { WellbeingMetrics } from '@/data/wellbeing/types';
 
 interface WellbeingMetricsSlidersProps {
   metrics: Partial<WellbeingMetrics> | null;
@@ -20,8 +20,8 @@ const WellbeingMetricsSliders: React.FC<WellbeingMetricsSlidersProps> = ({
   const allMetrics = Object.entries(METRIC_DEFINITIONS)
     .map(([key, def]) => ({ key: key as keyof WellbeingMetrics, ...def }));
 
-  // Use provided metrics or defaults, with grayed-out styling when no date selected
-  const displayMetrics = metrics || DEFAULT_METRICS;
+  // Missing readings remain unknown; no midpoint is invented for display.
+  const displayMetrics = metrics || {};
   const isGrayedOut = !selectedDate || !metrics;
 
   return (
@@ -29,13 +29,13 @@ const WellbeingMetricsSliders: React.FC<WellbeingMetricsSlidersProps> = ({
       <CardContent className="pt-6 space-y-4">
         <div className="text-center mb-4">
           <h3 className="text-white font-medium">
-            {selectedDate ? `Wellness Details - ${new Date(selectedDate).toLocaleDateString()}` : 'Wellness Details'}
+            {selectedDate ? `Wellness Details - ${new Date(`${selectedDate}T12:00:00`).toLocaleDateString()}` : 'Wellness Details'}
           </h3>
           <p className="text-sm text-nav-inactive mt-1">
             {selectedDate ? 'Showing metrics for selected date' : 'Click on a chart point to view detailed wellness breakdown'}
           </p>
         </div>
-        
+
         {isLoading ? (
           <div className="space-y-4">
             {allMetrics.map((metric) => (
@@ -51,29 +51,29 @@ const WellbeingMetricsSliders: React.FC<WellbeingMetricsSlidersProps> = ({
         ) : (
           <div className="space-y-4">
             {allMetrics.map((metric) => {
-              const value = displayMetrics[metric.key] ?? 50;
-              const colors = getSliderColors(value, metric.key);
-              
+              const value = displayMetrics[metric.key] ?? null;
+              const colors = getSliderColors(value ?? 0, metric.key);
+
               return (
                 <div key={metric.key} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span 
+                    <span
                       className={`text-sm font-medium ${isGrayedOut ? 'text-nav-inactive' : 'text-white'}`}
                     >
                       {metric.label}
                     </span>
-                    <Badge 
-                      variant="outline" 
+                    <Badge
+                      variant="outline"
                       className={`${isGrayedOut ? 'text-nav-inactive border-nav-inactive' : 'text-white border-gray-400'}`}
                     >
-                      {value}%
+                      {value === null ? 'Not recorded' : `${value}%`}
                     </Badge>
                   </div>
                   <Slider
                     min={0}
                     max={100}
                     step={5}
-                    value={[value]}
+                    value={[value ?? 0]}
                     onValueChange={() => {}} // Read-only
                     className="w-full"
                     disabled={true}

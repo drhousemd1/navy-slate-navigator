@@ -1,36 +1,39 @@
 import React from 'react';
-import { getWellbeingColor, getWellbeingColorClass } from '@/lib/wellbeingUtils';
+import { getWellbeingColor } from '@/lib/wellbeingUtils';
 
 interface MoodHealthBarProps {
-  score: number;
+  score: number | null;
+  unavailableLabel?: string;
   onClick?: () => void;
   className?: string;
 }
 
-const MoodHealthBar = React.forwardRef<HTMLDivElement, MoodHealthBarProps>(({ 
-  score, 
-  onClick, 
-  className = "" 
+const MoodHealthBar = React.forwardRef<HTMLButtonElement, MoodHealthBarProps>(({
+  score,
+  unavailableLabel,
+  onClick,
+  className = ""
 }, ref) => {
-  const color = getWellbeingColor(score);
-  const fillPercentage = Math.max(0, Math.min(100, score));
+  const color = score === null ? 'hsl(var(--nav-inactive))' : getWellbeingColor(score);
+  const fillPercentage = score === null ? 0 : Math.max(0, Math.min(100, score));
 
   return (
-    <div 
+    <button type="button"
       ref={ref}
       className={`w-2 h-7 bg-white rounded-full cursor-pointer transition-all duration-200 hover:opacity-90 overflow-hidden relative ${className}`}
-      title={`Wellbeing: ${score}/100`}
+      aria-label={unavailableLabel ?? (score === null ? 'No saved wellbeing check-in' : `Wellbeing: ${score}/100`)}
+      title={unavailableLabel ?? (score === null ? 'No saved wellbeing check-in' : `Wellbeing: ${score}/100`)}
       onClick={onClick}
     >
       {/* Fill level indicator */}
-      <div 
+      <div
         className="w-full rounded-full transition-all duration-300 ease-out absolute bottom-0"
-        style={{ 
+        style={{
           backgroundColor: color,
           height: `${fillPercentage}%`
         }}
       />
-    </div>
+    </button>
   );
 });
 

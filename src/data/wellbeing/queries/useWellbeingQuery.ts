@@ -1,27 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchWellbeingSnapshot } from './fetchWellbeingSnapshot';
-import { WellbeingSnapshot } from '../types';
-import { logger } from '@/lib/logger';
+import { fetchWellbeingPeople } from '../api';
+import { useWellbeingScope, wellbeingScopeKey } from '../scope';
 
-export const WELLBEING_QUERY_KEY = ['wellbeing'];
-
-export const useWellbeingQuery = (userId: string | null) => {
-  return useQuery<WellbeingSnapshot | null, Error>({
-    queryKey: [...WELLBEING_QUERY_KEY, userId],
-    queryFn: () => {
-      if (!userId) {
-        logger.debug('[useWellbeingQuery] No userId provided, returning null');
-        return Promise.resolve(null);
-      }
-      return fetchWellbeingSnapshot(userId);
-    },
-    enabled: !!userId,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    gcTime: 1000 * 60 * 60, // 1 hour
-    retry: false,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  });
-};
+export const WELLBEING_QUERY_KEY = ['wellbeing-v2'];
+export function useWellbeingPeople() {
+  const scope = useWellbeingScope();
+  return useQuery({ queryKey: [...WELLBEING_QUERY_KEY, ...wellbeingScopeKey(scope)], enabled: !!scope,
+    queryFn: ({ signal }) => fetchWellbeingPeople(scope!, signal), retry: false, staleTime: 30_000 });
+}
+export function useWellbeingQuery(userId: string | null) {
+  const query = useWellbeingPeople();
+  return { ...query, data: userId ? query.data?.find(person => person.userId === userId)?.latest ?? null : null };
+}
