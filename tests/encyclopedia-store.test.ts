@@ -13,6 +13,29 @@ describe('scoped durable editorial intent', () => {
     expect(Object.keys(localStorage).some(key => key.startsWith('obedience-editor-draft:v3:'))).toBe(true);
     removeEncyclopediaDraft(own); expect(localStorage.getItem('encyclopedia-entries')).toBe('unowned');
   });
+  it('reopens incomplete drafts beyond publication limits without truncating them', () => {
+    const own = draft({ patch: { title: '', titleColor: '#', opacity: 0, popupOpacity: null,
+      contentDocument: { version: 1, blocks: [{ type: 'paragraph', children: [{ type: 'text', text: 'x'.repeat(256 * 1024 + 1) }] },
+        ...Array.from({ length: 4096 }, () => ({ type: 'paragraph' as const, children: [] }))] } } });
+    saveEncyclopediaDraft(own, draftId);
+    const reopened = readEncyclopediaDraft(scope)!;
+    expect(reopened).toEqual(own);
+    saveEncyclopediaDraft(reopened, draftId);
+    expect(readEncyclopediaDraft(scope)).toEqual(own);
+  });
+  it('keeps a pending intent whose image and duplicated patch exceed the article byte limit', () => {
+    const request = intent({ patch: { opacity: 0, popupOpacity: null, image: { op: 'replace', dataUrl: `data:image/png;base64,${'A'.repeat(512 * 1024)}` },
+      contentDocument: { version: 1, blocks: [{ type: 'paragraph', children: [{ type: 'text', text: 'Saved content' }] }] } } });
+    const pending = draft({ patch: request.patch!, intent: request }); saveEncyclopediaDraft(pending, draftId);
+    const key = Object.keys(localStorage)[0], original = localStorage.getItem(key)!;
+    expect(original.length).toBeGreaterThan(1024 * 1024);
+    const reopened = readEncyclopediaDraft(scope)!;
+    expect(reopened).toEqual(pending);
+    saveEncyclopediaDraft(reopened, draftId);
+    expect(() => removeEncyclopediaDraft(reopened)).toThrow('DEVICE_STORAGE_CHANGED');
+    expect(() => saveEncyclopediaDraft({ ...reopened, intent: null }, draftId)).toThrow('DEVICE_STORAGE_CHANGED');
+    expect(localStorage.getItem(key)).toBe(original);
+  });
   it('preserves pending command exactly through reload and blocks replacement/discard until resolved', () => {
     const request = intent(); const pending = draft({ patch: request.patch!, intent: request }); saveEncyclopediaDraft(pending, draftId);
     expect(readEncyclopediaDraft(scope)).toEqual(pending);

@@ -4,10 +4,17 @@ import { scopeSchema, scopeKey, type ActionQueueScope, type QueueEntry } from '@
 import type { RewardActionData } from '@/data/rewards/actionReadModel';
 
 const money = z.number().int().safe();
+// Zod 3's .max() reports excess length but still parses every item.
+const currencyPair = <T extends z.ZodTypeAny>(item: T) => z.preprocess((value, ctx) => {
+  if (Array.isArray(value) && value.length > 2) ctx.addIssue({
+    code: 'too_big', maximum: 2, type: 'array', inclusive: true, exact: false, fatal: true,
+  });
+  return value;
+}, z.array(item).max(2));
 const snapshotSchema = z.object({
   version: z.literal(1), scope: scopeSchema, savedAt: z.number().finite().positive(),
-  wallets: z.array(z.object({ currency: z.enum(['sub', 'dom']), balance: money }).strict()).max(2),
-  availableRewards: z.array(z.object({ currency: z.enum(['sub', 'dom']), quantity: money.nonnegative() }).strict()).max(2),
+  wallets: currencyPair(z.object({ currency: z.enum(['sub', 'dom']), balance: money }).strict()),
+  availableRewards: currencyPair(z.object({ currency: z.enum(['sub', 'dom']), quantity: money.nonnegative() }).strict()),
 }).strict();
 export type RecoverySnapshot = z.infer<typeof snapshotSchema> & { scope: ActionQueueScope };
 export type RecoveryAccess = 'checking' | 'verified' | 'unreachable' | 'denied';

@@ -32,6 +32,39 @@ describe('minimal confirmed recovery projection', () => {
     expect(readRecoverySnapshot(scope.backendId, uuid(9))).toBeNull();
     expect(readRecoverySnapshot('http://other.invalid', scope.accountId)).toBeNull();
   });
+  it.each(['wallets', 'availableRewards'] as const)('rejects oversized %s before inspecting its items and retains stored bytes', field => {
+    verifyRecoveryScope(scope);
+    const snapshot = projectRecoverySnapshot(scope, data(), 12345);
+    expect(saveRecoverySnapshot(snapshot)).toBe(true);
+    const key = `obedience-recovery-v1:${encodeURIComponent(scope.backendId)}`;
+    const original = localStorage.getItem(key);
+    const oversized = new Array(3);
+    const readItem = vi.fn(() => { throw new Error('Should not inspect an oversized collection'); });
+    Object.defineProperty(oversized, 0, { get: readItem });
+    expect(saveRecoverySnapshot({ ...snapshot, [field]: oversized })).toBe(false);
+    expect(readItem).not.toHaveBeenCalled();
+    expect(localStorage.getItem(key)).toBe(original);
+    const invalid = JSON.stringify({ ...snapshot, [field]: [null, null, null] });
+    localStorage.setItem(key, invalid);
+    expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toBeNull();
+    forgetAccountRecovery(scope.backendId, scope.accountId);
+    expect(localStorage.getItem(key)).toBe(invalid);
+  });
+  it('keeps the exact two-item boundary and zero balances, while rejecting malformed items', () => {
+    verifyRecoveryScope(scope);
+    const snapshot = projectRecoverySnapshot(scope, data(), 12345);
+    snapshot.wallets = [{ currency: 'sub', balance: 0 }, { currency: 'dom', balance: 0 }];
+    snapshot.availableRewards = [{ currency: 'sub', quantity: 0 }, { currency: 'dom', quantity: 0 }];
+    expect(saveRecoverySnapshot(snapshot)).toBe(true);
+    expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toEqual(snapshot);
+    const key = `obedience-recovery-v1:${encodeURIComponent(scope.backendId)}`;
+    for (const wallets of [null, {}, [null], [{ currency: 'sub', balance: '0' }]]) {
+      const raw = JSON.stringify({ ...snapshot, wallets }); localStorage.setItem(key, raw);
+      expect(readRecoverySnapshot(scope.backendId, scope.accountId)).toBeNull();
+      forgetAccountRecovery(scope.backendId, scope.accountId);
+      expect(localStorage.getItem(key)).toBe(raw);
+    }
+  });
   it('invalidates provenance on account change without erasing another account’s bytes; exact logout clears its owner', () => {
     const snapshot = projectRecoverySnapshot(scope, data(), 12345);
     verifyRecoveryScope(scope); saveRecoverySnapshot(snapshot);

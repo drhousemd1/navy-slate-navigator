@@ -19,6 +19,13 @@ describe('account-bound Encyclopedia transport', () => {
     expect(options.headers).toEqual({ Authorization: 'Bearer captured-token', apikey: 'public-key', 'Content-Type': 'application/json' });
     expect(JSON.parse(options.body)).toEqual({ commandId: request.commandId, entryId: request.entryId, expectedRevision: 4, patch: request.patch });
   });
+  it('rejects an oversized published document before auth or transmission', () => {
+    const children = new Array(4096);
+    const readItem = vi.fn(() => { throw new Error('Oversized input was traversed'); });
+    Object.defineProperty(children, 0, { get: readItem });
+    expect(() => make().write(scope, intent({ patch: { contentDocument: { version: 1, blocks: [{ type: 'paragraph', children }] } } }))).toThrow('This article is too large.');
+    expect(readItem).not.toHaveBeenCalled(); expect(session).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
+  });
   it('deletes using the same revision contract and no patch', async () => {
     const request = intent({ kind: 'delete', patch: undefined }); fetcher.mockResolvedValue(Response.json(receipt(request)));
     expect(await make().write(scope, request)).toEqual(receipt(request));

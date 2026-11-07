@@ -1,8 +1,8 @@
 import React from 'react';
 import { cleanup, render } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { entryDocument, documentText, importLegacyHtml, safeLegacyImage } from '@/data/encyclopedia/content';
-import { decodeDocument, decodeLibrary, decodeReceipt, patchSchema } from '@/data/encyclopedia/schema';
+import { decodeDocument, decodeLibrary, decodeReceipt, documentSchema, patchSchema } from '@/data/encyclopedia/schema';
 import { imageMime, readEncyclopediaImage } from '@/data/encyclopedia/images';
 import ArticleContent from '@/components/encyclopedia/ArticleContent';
 import { entry, intent, receipt, image } from './encyclopedia.helpers';
@@ -63,6 +63,53 @@ describe('shared article compatibility and safe content', () => {
     expect(() => decodeReceipt({ ...receipt(), deleted: true }, intent())).toThrow();
     expect(decodeReceipt(receipt(intent(), true), intent()).replayed).toBe(true);
     expect(() => decodeLibrary({ canEdit: true, entries: [entry(), entry()] })).toThrow();
+  });
+  it.each(['blocks', 'children'] as const)('rejects excessive %s before reading any item', field => {
+    const excessive = new Array(field === 'blocks' ? 4097 : 4096);
+    const readItem = vi.fn(() => { throw new Error('Collection item was visited'); });
+    Object.defineProperty(excessive, 0, { get: readItem });
+    const doc = { version: 1, blocks: field === 'blocks' ? excessive : [{ type: 'paragraph', children: excessive }] };
+    expect(() => decodeDocument(doc)).toThrow('This article is too large.');
+    expect(readItem).not.toHaveBeenCalled();
+  });
+  it('rejects excessive aggregate nodes and UTF-8 text before validating marks', () => {
+    const readMarks = vi.fn(() => { throw new Error('Marks were validated'); });
+    const text = { type: 'text', text: 'é'.repeat(128 * 1024 + 1), get marks() { return readMarks(); } };
+    expect(() => decodeDocument({ version: 1, blocks: [{ type: 'paragraph', children: [text] }] })).toThrow('This article is too large.');
+    expect(readMarks).not.toHaveBeenCalled();
+    const blocks = Array.from({ length: 2049 }, () => ({ type: 'paragraph', children: [{ type: 'hardBreak' }] }));
+    expect(() => decodeDocument({ version: 1, blocks })).toThrow('This article is too large.');
+  });
+  it('preserves exact node, UTF-8 text and serialized-byte boundaries', () => {
+    const nodes = { version: 1, blocks: Array.from({ length: 4096 }, () => ({ type: 'paragraph', children: [] })) };
+    expect(decodeDocument(nodes)).toEqual(nodes);
+    const text = { version: 1, blocks: [{ type: 'paragraph', children: [{ type: 'text', text: 'é'.repeat(128 * 1024) }] }] };
+    expect(decodeDocument(text)).toEqual(text);
+    // JSON escaping can reach the byte cap while decoded text stays below its cap.
+    const sized = { version: 1, blocks: [{ type: 'paragraph', children: [{ type: 'text', text: '' }] }] };
+    const remaining = 512 * 1024 - new TextEncoder().encode(JSON.stringify(sized)).length;
+    sized.blocks[0].children[0].text = '\u0001'.repeat(Math.floor(remaining / 6)) + 'x'.repeat(remaining % 6);
+    expect(new TextEncoder().encode(JSON.stringify(sized)).length).toBe(512 * 1024);
+    expect(decodeDocument(sized)).toEqual(sized);
+    sized.blocks[0].children[0].text += 'x';
+    expect(() => decodeDocument(sized)).toThrow('This article is too large.');
+  });
+  it('returns one size issue before invalid-element issue amplification and keeps ordinary shape errors', () => {
+    const doc = { version: 1, blocks: [{ type: 'paragraph', children: Array.from({ length: 4095 }, () => ({
+      type: 'text', text: '', marks: { bold: 'invalid'.repeat(20) },
+    })) }] };
+    expect(new TextEncoder().encode(JSON.stringify(doc)).length).toBeGreaterThan(512 * 1024);
+    const result = documentSchema.safeParse(doc);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.length).toBe(1);
+      expect(result.error.issues[0]).toMatchObject({ code: 'custom', message: 'This article is too large.' });
+    }
+    for (const invalid of [null, { version: 2, blocks: [] }, { version: 1, blocks: 'invalid' }, { version: 1, blocks: [{ type: 'script', children: [] }] }]) {
+      const parsed = documentSchema.safeParse(invalid);
+      expect(parsed.success).toBe(false);
+      if (!parsed.success) expect(parsed.error.issues.some(issue => issue.code !== 'custom')).toBe(true);
+    }
   });
   it('allows existing raster/http images but blocks active schemes and SVG', () => {
     expect(safeLegacyImage(image)).toBe(image); expect(safeLegacyImage('https://example.com/image.png')).toBe('https://example.com/image.png');
