@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ interface MessageInputProps {
   handleSendMessage: () => void; isUploading: boolean; disabled?: boolean;
 }
 export default function MessageInput({ message, setMessage, imageFile, setImageFile, handleSendMessage, isUploading, disabled = false }: MessageInputProps) {
+  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -34,12 +36,12 @@ export default function MessageInput({ message, setMessage, imageFile, setImageF
       </div>
     </div>}
     <div className="fixed bottom-16 left-0 right-0 bg-dark-navy px-4 py-2 border-t border-light-navy z-50 shadow-lg">
-      {imageError && <p role="alert" className="text-sm text-red-300 mb-2">{imageError}</p>}
+      {imageError && <p role="alert" className={`text-sm ${isLightScheme ? 'text-red-700' : 'text-red-300'} mb-2`}>{imageError}</p>}
       <div className="flex items-center gap-2">
         <Button type="button" aria-label="Choose image" size="icon" variant="ghost" className="h-12 w-12 shrink-0 rounded-full bg-white border-0 hover:bg-gray-200 text-gray-600" onClick={() => fileInputRef.current?.click()} disabled={locked}><Camera className="h-6 w-6" /></Button>
         <input type="file" aria-label="Message image" ref={fileInputRef} onChange={selectImage} accept="image/jpeg,image/png,image/gif,image/webp" disabled={locked} className="hidden" />
-        <Input aria-label="Message" maxLength={10000} placeholder="Type a message..." value={message} onChange={event => setMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && !locked && (message.trim() || imageFile)) { event.preventDefault(); handleSendMessage(); } }} className="flex-1 h-12 rounded-full bg-navy border-light-navy text-white placeholder:text-gray-500" disabled={locked} />
-        <Button type="button" aria-label="Send message" size="icon" className="h-12 w-12 rounded-full bg-cyan-700 shrink-0 hover:bg-cyan-600" onClick={handleSendMessage} disabled={locked || (!message.trim() && !imageFile)}><Send className="h-6 w-6" /></Button>
+        <Input aria-label="Message" maxLength={10000} placeholder="Type a message..." value={message} onChange={event => setMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && !locked && (message.trim() || imageFile)) { event.preventDefault(); handleSendMessage(); } }} className={`flex-1 h-12 rounded-full bg-navy border-light-navy ${isLightScheme ? 'text-foreground' : 'text-white'} ${isLightScheme ? 'placeholder:text-foreground' : 'placeholder:text-gray-500'}`} disabled={locked} />
+        <Button type="button" aria-label="Send message" size="icon" className={`h-12 w-12 rounded-full bg-cyan-700 shrink-0 hover:bg-cyan-600 ${isLightScheme ? 'text-white' : ''}`} onClick={handleSendMessage} disabled={locked || (!message.trim() && !imageFile)}><Send className="h-6 w-6" /></Button>
       </div>
     </div>
   </div>;

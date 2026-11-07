@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import { Card } from '@/components/ui/card';
@@ -19,6 +20,7 @@ interface RuleCardProps {
 }
 
 const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken, disabled = false, editDisabled = false, currentDayIndex }) => {
+  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   return (
     <Card 
       className={`bg-dark-navy border-2 ${
@@ -87,7 +89,7 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken, dis
 
           <Button 
             size="sm" 
-            className="bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0"
+            className={`bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 p-0 ${isLightScheme ? 'text-white' : ''}`}
             onClick={() => onEditRule(rule)}
             disabled={editDisabled}
             aria-label={`Edit ${rule.title}`}

@@ -1,67 +1,42 @@
-
 import React from 'react';
-import AppLayout from '../components/AppLayout';
-import EncyclopediaTile from '../components/encyclopedia/EncyclopediaTile';
+import AppLayout from '@/components/AppLayout';
+import EncyclopediaTile from '@/components/encyclopedia/EncyclopediaTile';
+import EditEncyclopediaModal from '@/components/encyclopedia/EditEncyclopediaModal';
+import { Button } from '@/components/ui/button';
 import { useEncyclopedia } from '@/hooks/useEncyclopedia';
 
-const Encyclopedia: React.FC = () => {
-  const {
-    entries,
-    isLoading,
-    error
-  } = useEncyclopedia();
-
-  return (
-    <AppLayout>
-      <div className="p-4 pt-6 overflow-x-hidden w-full max-w-full">
-        <div className="max-w-screen-lg mx-auto w-full overflow-x-hidden">
-          <div className="flex justify-between items-center mb-6 w-full">
-            <h1 className="text-2xl font-semibold text-white break-words">Encyclopedia</h1>
-          </div>
-          
-          <div className="bg-navy border border-light-navy rounded-lg p-6 mb-6 w-full max-w-full overflow-x-hidden">
-            <p className="text-gray-300 break-words">Welcome to the encyclopedia. This is where you'll find information about the system and how it works.</p>
-          </div>
-          
-          {isLoading ? (
-            <div className="text-center py-8 w-full">
-              <p className="text-white">Loading encyclopedia entries...</p>
-            </div>
-          ) : error ? (
-            <div className="bg-red-900/50 border border-red-700 rounded-lg p-6 mb-6 w-full max-w-full overflow-x-hidden">
-              <p className="text-white break-words">Error loading encyclopedia entries. Please try again later.</p>
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="text-center py-8 w-full">
-              <p className="text-white mb-4">No encyclopedia entries found.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-full overflow-x-hidden">
-              {entries.map(entry => (
-                <div key={entry.id} className="w-full max-w-full overflow-x-hidden">
-                  <EncyclopediaTile 
-                    title={entry.title} 
-                    subtext={entry.subtext}
-                    popupText={entry.popup_text}
-                    imageUrl={entry.image_url}
-                    focalPointX={entry.focal_point_x}
-                    focalPointY={entry.focal_point_y}
-                    opacity={entry.opacity}
-                    popupOpacity={entry.popup_opacity}
-                    titleColor={entry.title_color}
-                    subtextColor={entry.subtext_color}
-                    highlightEffect={entry.highlight_effect}
-                    popupTextFormatting={entry.popup_text_formatting}
-                    formattedSections={entry.formatted_sections}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+export default function Encyclopedia() {
+  const library = useEncyclopedia();
+  const { entries, canEdit, editor } = library;
+  const entry = entries.find(item => item.id === editor.draft?.entryId);
+  return <AppLayout>
+    <div className="p-4 pt-6 overflow-x-hidden w-full max-w-full"><div className="max-w-screen-lg mx-auto w-full overflow-x-hidden">
+      <div className="flex justify-between items-center mb-6 w-full">
+        <h1 className="text-2xl font-semibold text-foreground break-words">Encyclopedia</h1>
+        {canEdit && <Button onClick={() => library.begin()} disabled={Boolean(editor.draft)}>Add Entry</Button>}
       </div>
-    </AppLayout>
-  );
-};
-
-export default Encyclopedia;
+      <div className="bg-navy border border-light-navy rounded-lg p-6 mb-6 w-full max-w-full overflow-x-hidden">
+        <p className="text-foreground break-words">Explore educational reference articles about kinks, BDSM and femdom. This shared library is curated by the app's editors.</p>
+      </div>
+      {editor.notice && <p role="status" className="text-foreground mb-4">{editor.notice}</p>}
+      {editor.storageError && !editor.open && <p role="alert" className="text-foreground mb-4">{editor.storageError}</p>}
+      {editor.draft && !editor.open && <div className="bg-navy rounded border border-light-navy p-4 mb-4 text-foreground space-y-2">
+        <p>{editor.draft.intent && !editor.draft.rejected ? 'An editorial request is saved on this device and still needs confirmation.' : 'An editorial draft is saved on this device.'}</p>
+        {canEdit || editor.draft.receipt ? <Button onClick={library.resume}>Resume saved draft</Button> : <p>Editorial permission is required to resume it. Your draft is kept.</p>}
+      </div>}
+      {library.isLoading ? <p role="status" className="text-center py-8 text-foreground">Loading encyclopedia entries...</p>
+        : library.error ? <div role="alert" className="bg-red-900/50 border border-red-700 rounded-lg p-6 mb-6 text-white">
+          <p>Error loading encyclopedia entries.</p><Button onClick={() => void library.refetch()}>Retry loading</Button>
+        </div> : entries.length === 0 ? <p className="text-center py-8 text-foreground">No encyclopedia entries found.</p>
+          : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-full overflow-x-hidden">
+            {entries.map(item => <div key={item.id} className="w-full max-w-full overflow-x-hidden space-y-2">
+              <EncyclopediaTile entry={item} />
+              {canEdit && <Button variant="outline" className="text-foreground" aria-label={`Edit ${item.title}`} disabled={Boolean(editor.draft)} onClick={() => library.begin(item)}>Edit</Button>}
+            </div>)}
+          </div>}
+      {editor.open && editor.draft && <EditEncyclopediaModal key={`${editor.generation}:${editor.draft.draftId}:${editor.draft.expectedRevision}`} isOpen entry={entry}
+        draft={editor.draft} canEdit={canEdit} busy={editor.busy} error={editor.error} errorCode={editor.errorCode} storageError={editor.storageError} notice={editor.notice}
+        onChange={library.change} onClose={library.close} onDiscard={library.discard} onSubmit={library.submit} onReviewLatest={library.reviewLatest} />}
+    </div></div>
+  </AppLayout>;
+}

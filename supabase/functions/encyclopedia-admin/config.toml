@@ -1,0 +1,3 @@
+# The handler verifies live Auth, then SQL rechecks current editorial capability.
+[functions.encyclopedia-admin]
+verify_jwt = false

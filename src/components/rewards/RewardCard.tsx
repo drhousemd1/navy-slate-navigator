@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import { Card } from '@/components/ui/card';
@@ -15,6 +16,7 @@ interface RewardCardProps {
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
+  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const { handleBuyReward, handleUseReward, totalPoints, domPoints } = useRewards();
   const [buying, setBuying] = React.useState(false);
   const [using, setUsing] = React.useState(false);
@@ -71,7 +73,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
   // Define styles based on if it's a dom reward
   const costBadgeColor = isDomReward ? "bg-red-600" : "bg-nav-active";
   const buyButtonColor = isDomReward 
-    ? "bg-red-600 hover:bg-red-700" 
+    ? `bg-red-600 hover:bg-red-700 ${isLightScheme ? 'text-white' : ''}`
     : "bg-nav-active hover:bg-nav-active/80";
 
   // Define border color based on if it's a dom reward and if there's supply

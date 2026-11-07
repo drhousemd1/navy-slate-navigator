@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import {
@@ -25,15 +26,16 @@ export function DeleteAccountDialog({
   type,
 }: DeleteAccountDialogProps) {
   const isDelete = type === 'delete';
+  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="bg-navy border-light-navy">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-white">
+          <AlertDialogTitle className={isLightScheme ? 'text-foreground' : 'text-white'}>
             {isDelete ? 'Delete Account' : 'Unlink Account'}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-gray-300">
+          <AlertDialogDescription className={isLightScheme ? 'text-foreground' : 'text-gray-300'}>
             {isDelete 
               ? 'Delete your account and private account data permanently? This cannot be undone. Shared messages, photos and recorded history may remain with the other person, with your profile shown as “Deleted account”. Text you wrote is not automatically anonymized. Keep this browser’s site data until deletion and device cleanup are confirmed.'
               : 'Are you sure you want to unlink from your partner? Your account data will be preserved, but changes will no longer sync with your partner.'}
@@ -41,7 +43,7 @@ export function DeleteAccountDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel 
-            className="bg-transparent text-white border-gray-600 hover:bg-gray-800"
+            className={`bg-transparent ${isLightScheme ? 'text-foreground hover:text-white' : 'text-white'} border-gray-600 hover:bg-gray-800`}
           >
             Cancel
           </AlertDialogCancel>

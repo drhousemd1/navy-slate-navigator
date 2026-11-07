@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import MessageItem from './MessageItem';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ export default function MessageList({ messages, scope, conversation, loadingOlde
   messages: Message[]; scope: MessageScope; conversation: ConversationSummary; loadingOlder: boolean; hasOlder: boolean;
   loadOlder: () => Promise<void>; onDisplayed: (ids: string[]) => void; readError: string | null;
 }) {
+  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const viewport = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
   const previous = useRef<{ first: string | null; height: number; top: number }>({ first: null, height: 0, top: 0 });
@@ -45,11 +47,11 @@ export default function MessageList({ messages, scope, conversation, loadingOlde
   };
   const imageLoaded = () => { const node = viewport.current; if (node && nearBottom.current) node.scrollTop = node.scrollHeight; if (node) previous.current = { ...previous.current, height: node.scrollHeight, top: node.scrollTop }; };
   return <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-    {readError && <div role="alert" className="px-4 py-2 text-sm text-amber-200"><p>{readError}</p><Button size="sm" variant="outline" onClick={acknowledgeVisible}>Retry read status</Button></div>}
+    {readError && <div role="alert" className={`px-4 py-2 text-sm ${isLightScheme ? 'text-amber-900' : 'text-amber-200'}`}><p>{readError}</p><Button size="sm" variant="outline" onClick={acknowledgeVisible}>Retry read status</Button></div>}
     <div ref={viewport} role="log" aria-label="Conversation messages" aria-live="off" className="flex-1 min-h-0 px-4 overflow-y-auto pb-4" onScroll={onScroll}>
-      {hasOlder && <div className="py-2 flex justify-center"><Button variant="outline" size="sm" onClick={() => void loadOlder()} disabled={loadingOlder} className="bg-navy hover:bg-light-navy text-white border-light-navy">{loadingOlder ? 'Loading…' : 'Load older messages'}</Button></div>}
+      {hasOlder && <div className="py-2 flex justify-center"><Button variant="outline" size="sm" onClick={() => void loadOlder()} disabled={loadingOlder} className={`bg-navy hover:bg-light-navy ${isLightScheme ? 'text-foreground' : 'text-white'} border-light-navy`}>{loadingOlder ? 'Loading…' : 'Load older messages'}</Button></div>}
       <div className="space-y-4">
-        {!messages.length ? <div className="flex items-center justify-center h-40"><p className="text-gray-400">{conversation.canSend ? 'No messages yet. Send the first one!' : 'No messages in this retained conversation.'}</p></div> : messages.map(message => <MessageItem key={message.id} message={message} scope={scope} conversation={conversation} onImageLoad={imageLoaded} />)}
+        {!messages.length ? <div className="flex items-center justify-center h-40"><p className={`${isLightScheme ? 'text-foreground' : 'text-gray-400'}`}>{conversation.canSend ? 'No messages yet. Send the first one!' : 'No messages in this retained conversation.'}</p></div> : messages.map(message => <MessageItem key={message.id} message={message} scope={scope} conversation={conversation} onImageLoad={imageLoaded} />)}
       </div>
     </div>
   </div>;

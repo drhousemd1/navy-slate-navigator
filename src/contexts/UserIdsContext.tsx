@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,6 +22,7 @@ const UserIdsContext = createContext<UserIdsContextType | undefined>(undefined);
 const publicAccountPaths = new Set(['/auth', '/forgot-password', '/reset-password']);
 
 export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const { user, loading: authLoading, relationshipIdentity, refreshIdentity, signOut, updateUserRole, unlinkFromPartner } = useAuth();
   const { pathname } = useLocation();
   const queryClient = useQueryClient();
@@ -123,7 +125,7 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
             </p>
             {actionError && <p role="alert" className="text-sm text-red-300">{actionError}</p>}
             {canSetRole && <div className="flex gap-3">
-              {(['dom', 'sub'] as ProfileRole[]).map(role => <Button key={role} disabled={isRepairing} onClick={() => void repair(() => updateUserRole(role))} className="bg-cyan-600 hover:bg-cyan-700">{role === 'dom' ? 'Choose Dom' : 'Choose Sub'}</Button>)}
+              {(['dom', 'sub'] as ProfileRole[]).map(role => <Button key={role} disabled={isRepairing} onClick={() => void repair(() => updateUserRole(role))} className={`bg-cyan-600 hover:bg-cyan-700 ${isLightScheme ? 'text-white' : ''}`}>{role === 'dom' ? 'Choose Dom' : 'Choose Sub'}</Button>)}
             </div>}
             {identity.status === 'invalid' && identity.partnerUserId && <div className="space-y-2">
               <p className="text-sm text-gray-300">{identity.lifecycleReady ? 'Disconnect the invalid connection before repairing your role or connecting again. Existing history is archived by the account service.' : 'This connection needs repair. Partner changes are temporarily unavailable until the relationship history and privacy upgrade is ready. You can retry loading your account, or still use password recovery.'}</p>

@@ -111,6 +111,8 @@ describe('real shared application chrome', () => {
   it('uses palette foreground tokens with sufficient light-surface text contrast', () => {
     const v = getColorScheme('light-turquoise')!.variables;
     expect(contrast(v['--foreground'], v['--navy'])).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(v['--primary-foreground'], v['--primary'])).toBeGreaterThanOrEqual(4.5);
+    expect(getColorScheme('default')!.variables['--primary-foreground']).toBe('222.2 47.4% 11.2%');
     // Muted is only used for non-text icons on the light header. Small labels
     // and both navigation labels use foreground; selected adds an underline.
     expect(contrast(v['--muted-foreground'], v['--navy'])).toBeGreaterThanOrEqual(3);

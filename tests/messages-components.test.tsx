@@ -1,8 +1,9 @@
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: mocks.theme }) }));
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'https://backend.invalid', supabase: { auth: { getSession: vi.fn() } } }));
-const mocks = vi.hoisted(() => ({ api: null as any, repo: null as any }));
+const mocks = vi.hoisted(() => ({ theme: 'default', api: null as any, repo: null as any }));
 vi.mock('@/data/messages/transport', async original => ({ ...await original<typeof import('@/data/messages/transport')>(), messageTransport: new Proxy({}, { get: (_target, name) => mocks.api[name] }) }));
 vi.mock('@/data/messages/drafts', async original => ({ ...await original<typeof import('@/data/messages/drafts')>(), messageDraftRepository: () => mocks.repo }));
 import MessageInput from '@/components/messages/MessageInput';
@@ -14,12 +15,32 @@ import { MessageRequestError } from '@/data/messages/transport';
 import { apiFixture, conversation, deferred, flush, message, receipt, repositoryFixture, scope, uuid } from './messages.helpers';
 
 beforeEach(() => {
-  mocks.api = apiFixture(); mocks.repo = repositoryFixture().repo;
+  mocks.theme = 'default'; mocks.api = apiFixture(); mocks.repo = repositoryFixture().repo;
   Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:synthetic-private') });
   Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
 });
 afterEach(cleanup);
 describe('actual message composer and image controls', () => {
+  it('uses light text on fixed outgoing bubbles and dark text on themed incoming/input surfaces, preserving navy on switch-back', () => {
+    mocks.theme = 'light-turquoise';
+    const tree = () => <><MessageInput message="Draft" setMessage={vi.fn()} imageFile={null} setImageFile={vi.fn()} handleSendMessage={vi.fn()} isUploading={false} />
+      <MessageItem message={message(10, { content: 'Incoming text' })} scope={scope} conversation={conversation} onImageLoad={vi.fn()} />
+      <MessageItem message={message(11, { author: 'you', content: 'Outgoing text' })} scope={scope} conversation={conversation} onImageLoad={vi.fn()} /></>;
+    const view = render(tree());
+    expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('text-foreground');
+    expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('placeholder:text-foreground');
+    expect(screen.getByRole('button', { name: 'Send message' }).className).toContain('text-white');
+    expect(screen.getByRole('button', { name: 'Send message' }).className).toContain('bg-cyan-700');
+    expect(screen.getByText('Incoming text').parentElement!.className).toContain('text-foreground');
+    expect(screen.getByText('Outgoing text').parentElement!.className).toContain('bg-cyan-800 text-white');
+    expect(document.querySelector('time')!.parentElement!.className).not.toContain('opacity-40');
+    mocks.theme = 'default'; view.rerender(tree());
+    expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('text-white');
+    expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('placeholder:text-gray-500');
+    expect(screen.getByText('Incoming text').parentElement!.className).toContain('text-white');
+    expect(document.querySelector('time')!.parentElement!.className).toContain('text-white opacity-40');
+    expect(screen.getByRole('button', { name: 'Send message' }).className).toContain('text-primary-foreground');
+  });
   it('keeps text after upload failure and exposes a useful file error without throwing', async () => {
     render(<MessageComposer scope={scope} conversationId={conversation.id} canSend confirmed={vi.fn()} />);
     const input = screen.getByRole('textbox', { name: 'Message' }); await waitFor(() => expect((input as HTMLInputElement).disabled).toBe(false));

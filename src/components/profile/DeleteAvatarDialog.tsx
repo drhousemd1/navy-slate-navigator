@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import {
@@ -23,19 +24,20 @@ export const DeleteAvatarDialog: React.FC<DeleteAvatarDialogProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent className="bg-navy border-light-navy">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-white">Delete Profile Image?</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle className={isLightScheme ? 'text-foreground' : 'text-white'}>Delete Profile Image?</AlertDialogTitle>
+          <AlertDialogDescription className={isLightScheme ? 'text-foreground' : undefined}>
             This will remove your profile image. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex flex-row justify-center gap-4 w-full">
           <AlertDialogCancel 
             onClick={onClose}
-            className="bg-light-navy text-white hover:bg-gray-700"
+            className={`bg-light-navy ${isLightScheme ? 'text-foreground hover:text-white' : 'text-white'} hover:bg-gray-700`}
           >
             Cancel
           </AlertDialogCancel>

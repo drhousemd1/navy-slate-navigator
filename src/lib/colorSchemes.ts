@@ -96,7 +96,7 @@ export const COLOR_SCHEMES: ColorScheme[] = [
       '--sidebar-border': '220 13% 91%',
       '--sidebar-ring': '172 66% 50%',
       '--primary': '172 66% 50%',
-      '--primary-foreground': '0 0% 100%',
+      '--primary-foreground': '210 40% 21%',
       '--secondary': '210 40% 96.1%',
       '--secondary-foreground': '210 40% 21%',
       '--muted': '210 40% 98%',
