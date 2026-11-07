@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { Lock } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, supabaseBackendId, supabaseAuthStorageKey, signOutCurrentSession } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
+import { sameSessionOwner, sessionOwner, storedSessionOwner } from '@/lib/ownedSignOut';
+import { updateRecoveryPassword } from './recoveryPassword';
 
 const ResetPasswordPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -15,15 +18,30 @@ const ResetPasswordPage: React.FC = () => {
   const [checking, setChecking] = useState(true);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const recoverySession = useRef<Session | null>(null);
+  const cleanupSession = useRef<Session | null>(null);
+  const mounted = useRef(false);
+  const operation = useRef(false);
   const navigate = useNavigate();
+  const stillOwnsSession = (session: Session) => sameSessionOwner(
+    sessionOwner(supabaseBackendId, session), storedSessionOwner(supabaseBackendId, supabaseAuthStorageKey, localStorage));
+  const invalidateForm = () => {
+    setReady(false); setNewPassword(''); setConfirmPassword('');
+    setError('Your sign-in changed. This recovery form can no longer be used.');
+  };
 
   useEffect(() => {
     let cancelled = false;
+    mounted.current = true;
 
     const establishSession = async () => {
       try {
         const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
         const queryParams = new URLSearchParams(window.location.search);
+        // Undefined means this page did not establish a session from a link.
+        // An explicit link result must never be replaced by a later sign-in.
+        let establishedSession: Session | null | undefined;
 
         const errorDescription =
           hashParams.get('error_description') || queryParams.get('error_description');
@@ -35,28 +53,31 @@ const ResetPasswordPage: React.FC = () => {
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
         if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
+          const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
           if (error) throw error;
+          establishedSession = data.session;
         } else {
           // 2) PKCE flow: ?code=...
           const code = queryParams.get('code');
           if (code) {
-            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
             if (error) throw error;
+            establishedSession = data.session;
           } else {
             // 3) Token hash flow: ?token_hash=...&type=recovery
             const tokenHash = queryParams.get('token_hash') || hashParams.get('token_hash');
             const token = queryParams.get('token');
             if (tokenHash || token) {
-              const { error } = await supabase.auth.verifyOtp(
+              const { data, error } = await supabase.auth.verifyOtp(
                 tokenHash
                   ? { token_hash: tokenHash, type: 'recovery' }
                   : { token: token as string, type: 'recovery', email: queryParams.get('email') || '' }
               );
               if (error) throw error;
+              establishedSession = data.session;
             }
           }
         }
@@ -64,10 +85,14 @@ const ResetPasswordPage: React.FC = () => {
         // Clean sensitive params out of the URL
         window.history.replaceState({}, document.title, '/reset-password');
 
-        const { data } = await supabase.auth.getSession();
+        const { data, error: sessionError } = await supabase.auth.getSession();
         if (cancelled) return;
+        if (sessionError) throw sessionError;
 
-        if (data?.session) {
+        const matchesLink = establishedSession === undefined || sameSessionOwner(
+          sessionOwner(supabaseBackendId, establishedSession), sessionOwner(supabaseBackendId, data.session));
+        if (data?.session && matchesLink && stillOwnsSession(data.session)) {
+          recoverySession.current = data.session;
           setReady(true);
         } else {
           setError('Your reset link is invalid or has expired. Please request a new one.');
@@ -85,11 +110,39 @@ const ResetPasswordPage: React.FC = () => {
     establishSession();
     return () => {
       cancelled = true;
+      mounted.current = false;
     };
   }, []);
 
+  const finishSignOut = async (session: Session) => {
+    try {
+      const result = await signOutCurrentSession(session);
+      if (!mounted.current) return;
+      // A replacement (including a new session for the same account) owns its
+      // own navigation. Also check synchronously after the awaited cleanup.
+      if (result === 'replacement' || localStorage.getItem(supabaseAuthStorageKey) !== null) {
+        invalidateForm(); return;
+      }
+      cleanupSession.current = null;
+      toast({ title: 'Password updated', description: 'Your password has been reset. Please log in with your new password.' });
+      navigate('/auth', { replace: true });
+    } catch {
+      if (!mounted.current) return;
+      if (!stillOwnsSession(session)) { invalidateForm(); return; }
+      setError('Your password was updated, but signing out could not be completed. Retry signing out below; your password will not be changed again.');
+    }
+  };
+
+  const retrySignOut = async () => {
+    if (operation.current || !cleanupSession.current) return;
+    operation.current = true; setLoading(true); setError(null);
+    try { await finishSignOut(cleanupSession.current); }
+    finally { operation.current = false; if (mounted.current) setLoading(false); }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (operation.current) return;
     setError(null);
 
     if (!newPassword || !confirmPassword) {
@@ -105,26 +158,28 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    operation.current = true; setLoading(true);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-
-      if (updateError) {
-        logger.error('Error updating password:', updateError);
-        setError(updateError.message || 'Failed to update password. Please try again.');
-      } else {
-        toast({
-          title: 'Password updated',
-          description: 'Your password has been reset. Please log in with your new password.',
-        });
-        await supabase.auth.signOut();
-        navigate('/auth', { replace: true });
+      const captured = recoverySession.current;
+      if (!captured || !stillOwnsSession(captured)) { invalidateForm(); return; }
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (!mounted.current) return;
+      const current = data.session;
+      if (sessionError) throw sessionError;
+      if (!current || !sameSessionOwner(sessionOwner(supabaseBackendId, captured), sessionOwner(supabaseBackendId, current)) || !stillOwnsSession(current)) {
+        invalidateForm(); return;
       }
+      await updateRecoveryPassword(current, newPassword);
+      cleanupSession.current = current;
+      if (mounted.current) { setPasswordUpdated(true); setNewPassword(''); setConfirmPassword(''); }
+      await finishSignOut(current);
     } catch (err: unknown) {
-      logger.error('Exception during password update:', err);
-      setError(getErrorMessage(err) || 'An unexpected error occurred. Please try again.');
+      if (!mounted.current) return;
+      if (recoverySession.current && !stillOwnsSession(recoverySession.current)) invalidateForm();
+      else setError(getErrorMessage(err) || 'An unexpected error occurred. Please try again.');
     } finally {
-      setLoading(false);
+      operation.current = false;
+      if (mounted.current) setLoading(false);
     }
   };
 
@@ -142,6 +197,13 @@ const ResetPasswordPage: React.FC = () => {
         {checking ? (
           <div className="flex justify-center py-4">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white" />
+          </div>
+        ) : ready && passwordUpdated ? (
+          <div className="space-y-4">
+            <p className="text-white">Your password has been updated.</p>
+            <Button onClick={() => void retrySignOut()} disabled={loading} className="w-full bg-primary hover:bg-primary/90">
+              {loading ? 'Signing out…' : 'Finish signing out'}
+            </Button>
           </div>
         ) : ready ? (
           <form onSubmit={handleSubmit} className="space-y-4">
