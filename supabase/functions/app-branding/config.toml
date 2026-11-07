@@ -1,0 +1,3 @@
+# Live Auth and explicit branding ownership are checked before reading image bytes.
+[functions.app-branding]
+verify_jwt = false

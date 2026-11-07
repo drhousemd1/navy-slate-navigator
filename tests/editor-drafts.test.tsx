@@ -7,6 +7,7 @@ import { EditorDraftNotice } from '@/components/common/EditorDraftNotice';
 import { editorDraftKey, type EditorDraftScope } from '@/lib/editorDrafts';
 
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 const scope: EditorDraftScope = { backendId: 'local', accountId: 'alice', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
 const defaults = { title: 'Server title', cost: 10, background_image_url: 'server.jpg' as string | null, icon_name: null as string | null, focal_point_x: 50, image_meta: null as unknown };
 function Editor({ scope: owner = scope, id = 'reward-new' }: { scope?: EditorDraftScope; id?: string }) {

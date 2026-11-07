@@ -11,6 +11,7 @@ vi.mock('@/components/AppLayout', () => ({ default: ({ children }: React.PropsWi
 vi.mock('@/components/profile/PartnerLinkingSection', () => ({ default: () => null }));
 vi.mock('@/components/profile/TimezoneSection', () => ({ default: () => null }));
 vi.mock('@/components/profile/RoleSelectionSection', () => ({ RoleSelectionSection: () => null }));
+vi.mock('@/data/branding/queries', () => ({ useBrandingAccess: () => 'denied' }));
 vi.mock('@/lib/logger', () => ({ logger: { debug: f.debug, error: vi.fn() } }));
 import AccountSheet from '@/components/AccountSheet';
 import Profile from '@/pages/Profile';

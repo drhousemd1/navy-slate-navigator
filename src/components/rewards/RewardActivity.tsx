@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import { blocksNewAction } from '@/data/actions/contracts';
 import { SavedActions } from '@/components/activity/SavedActions';
 import { ActivityHistory } from '@/components/activity/ActivityHistory';
@@ -9,6 +10,7 @@ import { rewardUndoReason } from '@/data/rewards/actionReadModel';
 const labels: Record<string, string> = { reward_buy: 'Buy', reward_redeem: 'Use', reward_gift: 'Gift', reward_delete: 'Delete', undo: 'Undo',
   reward_purchased: 'Purchased', reward_redeemed: 'Used', reward_gifted: 'Gifted', reward_deleted: 'Deleted', action_undone: 'Undone', opening_inventory: 'Starting inventory' };
 export function RewardActivity() {
+  const text = useCoreTextClasses();
   const actions = useActionCommands();
   const identity = useUserIds();
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +18,7 @@ export function RewardActivity() {
   const pending = actions.entries.filter(entry => entry.state.status !== 'confirmed');
   const busy = pending.some(entry => blocksNewAction(entry, actions.scope));
   if (actions.mode === 'legacy') return null;
-  return <section className="mb-6 space-y-3 text-white" aria-label="Reward actions">
+  return <section className={`mb-6 space-y-3 ${text.primary}`} aria-label="Reward actions">
     {(actions.error || error) && <div role="alert" className="rounded border border-amber-500 bg-navy p-3"><p>{error || actions.error}</p><button className="underline" onClick={() => void perform(actions.refresh)}>Refresh confirmed data</button></div>}
     <SavedActions />
     {actions.mode === 'atomic' && <ActivityHistory domain="reward" title="Reward History">
@@ -33,12 +35,12 @@ export function RewardActivity() {
             {points.map(point => <p key={point.id}>{point.currency === 'dom' ? 'Dom' : 'Sub'} balance: {point.amount > 0 ? '+' : ''}{point.amount} points</p>)}
             {event.provenance === 'legacy_import' && <p>Imported starting inventory; original purchase prices were not recorded.</p>}
             {event.reverses_event_id && <p>Correction of an earlier event; the original record is preserved.</p>}
-            {reversible && <><button className="mt-2 underline disabled:opacity-50" disabled={!!reason || busy} onClick={() => void perform(() => actions.enqueue({ kind: 'undo', eventId: event.id }))}>Undo {event.kind === 'reward_purchased' ? 'purchase' : 'Use'}</button>{reason && <p className="text-gray-300">{reason}</p>}</>}
+            {reversible && <><button className="mt-2 underline disabled:opacity-50" disabled={!!reason || busy} onClick={() => void perform(() => actions.enqueue({ kind: 'undo', eventId: event.id }))}>Undo {event.kind === 'reward_purchased' ? 'purchase' : 'Use'}</button>{reason && <p className={`${text.secondary}`}>{reason}</p>}</>}
           </article>;
         })}
         {actions.data.importedUsage.length > 0 && <section aria-label="Imported reward-use history" className="border-t border-light-navy pt-3 space-y-3">
           <h3 className="font-semibold">Imported reward-use history</h3>
-          <p className="text-xs text-gray-300">These older records describe saved Use status, not purchases. Original price, reward role, actor, point effects and timezone were not reliably recorded. Current titles are references, not historical snapshots. These entries are read-only and cannot be undone.</p>
+          <p className={`text-xs ${text.secondary}`}>These older records describe saved Use status, not purchases. Original price, reward role, actor, point effects and timezone were not reliably recorded. Current titles are references, not historical snapshots. These entries are read-only and cannot be undone.</p>
           {[...actions.data.importedUsage].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '') || b.id.localeCompare(a.id)).map(row => <article key={row.id} className="border-t border-light-navy pt-3 text-sm">
             <p className="font-semibold">Imported reward-use record</p>
             <p>{row.currentTitle ? `Current title: ${row.currentTitle}` : 'Original reward title is unavailable.'}</p>

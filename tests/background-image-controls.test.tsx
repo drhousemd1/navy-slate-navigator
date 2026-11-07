@@ -7,6 +7,7 @@ import BackgroundImageSelector from '@/components/task-editor/BackgroundImageSel
 import { Form } from '@/components/ui/form';
 
 vi.mock('@/lib/logger', () => ({ logger: { debug: vi.fn(), error: vi.fn() } }));
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 afterEach(cleanup);
 
 type Values = { focal_point_x: number; focal_point_y: number; background_opacity: number };

@@ -130,6 +130,7 @@ test('atomic task completion and Undo on isolated local fixtures', {
   await rows('relationship_periods','select=relationship_session_id&limit=0');
   const original = new Map();
   for(const table of protectedTables) original.set(table,await rows(table));
+  const originalPeriods=new Set((await rows('relationship_periods','select=id')).map(x=>x.id));
   let daily,weekly,zero,spend,permissionTask,race,deleted,shop,dailyReceipt,dailyPayload;
   const subTZ='Etc/GMT+12',domTZ='Pacific/Kiritimati';
   const dateIn = (date,tz) => {
@@ -297,6 +298,49 @@ test('atomic task completion and Undo on isolated local fixtures', {
       assert.equal(hash(await rows('tasks',`relationship_id=eq.${period}&select=*`)),before,'Reading progress mutated task rows');
     });
 
+    await t.test('one-time late mandatory completion awards normal points, retries once and Undo preserves its original snapshot',async()=>{
+      const single=await task(7,1,'once');
+      ok(await req('PATCH',`/rest/v1/tasks?id=eq.${single.id}`,dom.token,{mandatory:true,deadline_date:'2000-01-01',deadline_time:'09:00'}));
+      const before=await balance('sub'),reviewed=await progress(dom,single.id);
+      assert.equal(reviewed.mandatory,true);assert.equal(reviewed.overdue,true);assert.equal(reviewed.timeZone,subTZ);
+      assert.equal(dateIn(new Date(reviewed.dueAt),subTZ),'2000-01-01');assert.equal(reviewed.expectedContext.version,2);
+      const p=await taskBody(single.id),r=ok(await command(dom,p));
+      assert.equal(r.pointDeltas[0].amount,7);assert.equal(await balance('sub'),before+7);
+      assert.equal(r.taskProgress.completed,true);assert.equal(r.taskProgress.lastCompletionLate,true);
+      assert.deepEqual(ok(await command(dom,p)),r);
+      denied(await command(sub,await taskBody(single.id)),'TASK_TARGET_REACHED');
+      const original=(await rows('action_events',`id=eq.${r.eventIds[0]}&select=*`))[0];
+      assert.equal(original.definition_values.frequency,'once');assert.equal(original.definition_values.mandatory,true);
+      assert.equal(original.definition_values.late,true);assert.equal(original.definition_values.dueAt,reviewed.dueAt);
+      ok(await req('PATCH',`/rest/v1/tasks?id=eq.${single.id}`,dom.token,{mandatory:false,points:99,deadline_date:'2099-01-01'}));
+      assert.deepEqual(ok(await command(dom,p)),r);
+      const reversed=ok(await undo(sub,undoBody(r.eventIds[0])));
+      assert.equal(reversed.pointDeltas[0].amount,-7);assert.equal(reversed.taskProgress.completed,false);assert.equal(await balance('sub'),before);
+      assert.deepEqual((await rows('action_events',`id=eq.${original.id}&select=*`))[0],original);
+      assert.deepEqual((await rows('action_events',`id=eq.${reversed.eventIds[0]}&select=definition_values`))[0].definition_values,original.definition_values);
+    });
+
+    await t.test('recurring deadlines use the beneficiary day/week and changed schedules reject stale review',async()=>{
+      const due=await task(0,2,'daily');
+      const old=await taskBody(due.id);
+      ok(await req('PATCH',`/rest/v1/tasks?id=eq.${due.id}`,dom.token,{deadline_time:'18:00'}));
+      denied(await command(sub,old),'ACTION_DEFINITION_CHANGED');
+      let p=await progress(dom,due.id);
+      assert.equal(dateIn(new Date(p.dueAt),subTZ),p.localDate);
+      assert.equal(new Intl.DateTimeFormat('en-GB',{timeZone:subTZ,hour:'2-digit',minute:'2-digit'}).format(new Date(p.dueAt)),'18:00');
+      ok(await req('PATCH',`/rest/v1/tasks?id=eq.${due.id}`,dom.token,{frequency:'weekly',deadline_weekday:7}));
+      p=await progress(sub,due.id);const sunday=new Date(`${p.weekStartDate}T00:00Z`);sunday.setUTCDate(sunday.getUTCDate()+6);
+      assert.equal(dateIn(new Date(p.dueAt),subTZ),sunday.toISOString().slice(0,10));
+      const bad=await req('PATCH',`/rest/v1/tasks?id=eq.${due.id}`,dom.token,{deadline_weekday:null});assert.ok(bad.status>=400);
+      const neutral=await task(0,2,'daily'),payload=await taskBody(neutral.id);
+      const {mandatory,deadline,dueAt,...oldFacts}=payload.p_expected_context;payload.p_expected_context={...oldFacts,version:1};
+      const accepted=ok(await command(sub,payload));
+      ok(await req('PATCH',`/rest/v1/tasks?id=eq.${neutral.id}`,dom.token,{mandatory:true}));
+      assert.deepEqual(ok(await command(sub,payload)),accepted,'Accepted historical v1 intent reconciles unchanged');
+      denied(await command(sub,{...payload,p_command_id:randomUUID()}),'ACTION_DEFINITION_CHANGED');
+      ok(await undo(dom,undoBody(accepted.eventIds[0])));
+    });
+
     await t.test('a fresh relationship starts without old counts and rejects old Undo intents',async()=>{
       const previous=period;
       await setReady(dom,true);await setReady(sub,true);
@@ -313,17 +357,37 @@ test('atomic task completion and Undo on isolated local fixtures', {
     });
   } finally {
     const fixtureIds=accounts.map(a=>a.id);
+    assert.ok(fixtureIds.every(id=>!original.get('profiles').some(p=>p.id===id)),'Fixture overlaps an original profile');
     if(fixtureIds.length) for(const m of await rows('relationship_period_members',`user_id=in.(${fixtureIds.join(',')})&select=relationship_id`)) fixturePeriods.add(m.relationship_id);
     for(const id of fixturePeriods) {
-      for(const table of ['action_feedback_acknowledgments','action_feedback_outbox','action_command_receipts','reward_usage','task_completion_history','action_inventory_movements','action_point_entries',
+      assert.ok(!originalPeriods.has(id),'Fixture overlaps an original period');
+      assert.ok((await rows('relationship_period_members',`relationship_id=eq.${id}&select=user_id`)).every(m=>m.user_id===null||fixtureIds.includes(m.user_id)));
+      assert.ok((await rows('identity_contexts',`relationship_id=eq.${id}&select=user_id`)).every(c=>fixtureIds.includes(c.user_id)));
+      assert.ok((await rows('notification_jobs',`relationship_id=eq.${id}&select=recipient_user_id`)).every(j=>fixtureIds.includes(j.recipient_user_id)));
+      for(const table of ['notification_jobs','action_feedback_acknowledgments','action_feedback_outbox','action_command_receipts','reward_usage','task_completion_history','action_inventory_movements','action_point_entries',
         'reward_inventory_lots','action_events','action_task_openings','action_wallets','action_accounting_periods','rewards','tasks']) {
         ok(await req('DELETE',`/rest/v1/${table}?relationship_id=eq.${id}`,service));
       }
     }
-    for(const a of accounts) ok(await req('PATCH',`/rest/v1/profiles?id=eq.${a.id}`,service,{linked_partner_id:null}));
-    for(const a of accounts) ok(await req('DELETE',`/auth/v1/admin/users/${a.id}`,service));
+    for(const a of accounts) {
+      assert.ok((await rows('profiles',`linked_partner_id=eq.${a.id}&select=id`)).every(p=>fixtureIds.includes(p.id)));
+      ok(await req('PATCH',`/rest/v1/profiles?id=eq.${a.id}`,service,{linked_partner_id:null}));
+      ok(await req('DELETE',`/rest/v1/solo_role_change_receipts?actor_user_id=eq.${a.id}`,service));
+      ok(await req('DELETE',`/rest/v1/identity_contexts?user_id=eq.${a.id}`,service));
+    }
+    // Keep the production Auth guard: remove only the proven synthetic graph first.
+    for(const id of fixturePeriods) ok(await req('DELETE',`/rest/v1/relationship_period_members?relationship_id=eq.${id}`,service));
+    for(const a of accounts) {
+      ok(await req('DELETE',`/rest/v1/profiles?id=eq.${a.id}`,service));
+      for(const [table,key] of [['profiles','id'],['identity_contexts','user_id'],['relationship_period_members','user_id'],['account_deletion_jobs','actor_user_id']]) {
+        assert.equal((await rows(table,`${key}=eq.${a.id}&select=*`)).length,0,`Fixture still referenced by ${table}`);
+      }
+      ok(await req('DELETE',`/auth/v1/admin/users/${a.id}`,service));
+      assert.equal((await rows('user_notification_preferences',`user_id=eq.${a.id}&select=user_id`)).length,0);
+      assert.equal((await rows('notification_jobs',`recipient_user_id=eq.${a.id}&select=id`)).length,0);
+    }
     for(const id of fixturePeriods) {
-      ok(await req('DELETE',`/rest/v1/relationship_period_members?relationship_id=eq.${id}`,service));
+      assert.equal((await rows('identity_contexts',`relationship_id=eq.${id}&select=user_id`)).length,0);
       ok(await req('DELETE',`/rest/v1/relationship_periods?id=eq.${id}`,service));
     }
     for(const table of protectedTables) assert.equal(hash(await rows(table)),hash(original.get(table)),`Original ${table} changed`);

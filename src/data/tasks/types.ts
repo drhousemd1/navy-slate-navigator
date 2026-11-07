@@ -9,6 +9,10 @@ export interface Task {
   description?: string;
   frequency: string;
   frequency_count: number;
+  mandatory?: boolean;
+  deadline_date?: string | null;
+  deadline_time?: string | null;
+  deadline_weekday?: number | null;
   points: number;
   priority: 'low' | 'medium' | 'high';
   icon_name?: string;
@@ -46,8 +50,12 @@ export interface RawSupabaseTask extends Omit<Task, 'priority'> {
 export interface TaskFormValues {
   title: string;
   description: string;
-  frequency: 'daily' | 'weekly';
+  frequency: 'once' | 'daily' | 'weekly';
   frequency_count: number;
+  mandatory?: boolean;
+  deadline_date?: string | null;
+  deadline_time?: string | null;
+  deadline_weekday?: number | null;
   points: number;
   priority: 'low' | 'medium' | 'high';
   icon_name?: string;

@@ -8,11 +8,12 @@ import {
   SheetTitle,
   SheetTrigger
 } from '@/components/ui/sheet';
-import { UserCircle2, User, LogOut, BookOpen, ShieldCheck, Activity, Palette, Bell, Home } from 'lucide-react';
+import { UserCircle2, User, LogOut, BookOpen, ShieldCheck, Activity, Palette, Bell, Home, ImageIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { logger } from '@/lib/logger';
+import { useBrandingAccess } from '@/data/branding/queries';
 import { useAdminDocumentAccess } from '@/features/admin-documents/useAdminDocumentAccess';
 
 const AccountSheet = () => {
@@ -23,6 +24,7 @@ const AccountSheet = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const documentAccess = useAdminDocumentAccess(sheetOpen);
+  const brandingAccess = useBrandingAccess(sheetOpen);
   
   const handleProfileClick = () => {
     navigate('/profile');
@@ -194,6 +196,15 @@ const AccountSheet = () => {
               <Bell className="w-5 h-5 mr-3" />
               Notifications
             </Button>
+
+            {brandingAccess === 'allowed' && user && (
+              <Button variant="ghost"
+                className={`w-full justify-start text-foreground hover:bg-light-navy border ${isLightScheme ? 'hover:text-foreground border-border' : 'hover:text-cyan-300 border-white/50'}`}
+                onClick={() => { navigate('/logo-upload'); setSheetOpen(false); }}>
+                <ImageIcon className="w-5 h-5 mr-3" aria-hidden="true" />
+                App Logo
+              </Button>
+            )}
 
             {documentAccess === 'allowed' && user && (
               <Button 

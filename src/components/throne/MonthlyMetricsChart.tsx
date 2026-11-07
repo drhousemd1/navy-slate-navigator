@@ -1,3 +1,5 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { useRef, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -24,6 +26,10 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
   onToggleView, 
   currentView = true 
 }) => {
+  const text = useCoreTextClasses();
+  const light = useColorScheme().currentScheme === 'light-turquoise';
+  const tick = light ? { fill: 'hsl(var(--foreground))', style: { fill: 'hsl(var(--foreground))' } } : { fill: '#D1D5DB' };
+  const axisStroke = light ? 'hsl(var(--foreground))' : '#8E9196';
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
@@ -127,8 +133,8 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
                   type="category"
                   scale="band"
                   padding={{ left: CHART_PADDING, right: CHART_PADDING }}
-                  stroke="#8E9196"
-                  tick={{ fill: '#D1D5DB' }}
+                  stroke={axisStroke}
+                  tick={tick}
                   tickFormatter={(date) => {
                     try {
                       const d = parseISO(date);
@@ -139,8 +145,8 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
                   }}
                 />
                 <YAxis
-                  stroke="#8E9196"
-                  tick={{ fill: '#D1D5DB' }}
+                  stroke={axisStroke}
+                  tick={tick}
                   domain={getYAxisDomain}
                   allowDataOverflow={false}
                 />
@@ -192,12 +198,12 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
       <Card className="bg-navy border border-light-navy rounded-lg">
         <div className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className={`text-lg font-semibold ${text.primary}`}>
               {currentView ? 'Monthly' : 'Weekly'} Activity
             </h2>
             {showToggle && (
               <div className="flex items-center space-x-2">
-                <Label htmlFor="view-toggle" className="text-sm text-nav-inactive">
+                <Label htmlFor="view-toggle" className={`text-sm ${light ? 'text-foreground' : 'text-nav-inactive'}`}>
                   Weekly
                 </Label>
                 <Switch
@@ -205,7 +211,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
                   checked={currentView}
                   onCheckedChange={onToggleView}
                 />
-                <Label htmlFor="view-toggle" className="text-sm text-nav-inactive">
+                <Label htmlFor="view-toggle" className={`text-sm ${light ? 'text-foreground' : 'text-nav-inactive'}`}>
                   Monthly
                 </Label>
               </div>
@@ -216,7 +222,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
             <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-navy to-transparent pointer-events-none z-10" />
             <div className="h-full">
               {error ? <ActivityMetricsError error={error} retry={refetch} /> : !hasContent ? (
-                <div className="flex items-center justify-center h-full text-white text-sm">
+                <div className={`flex items-center justify-center h-full text-sm ${text.primary}`}>
                   No activity data to display for this month.
                 </div>
               ) : (

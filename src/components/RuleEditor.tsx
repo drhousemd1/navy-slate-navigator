@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
@@ -22,6 +23,7 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
   onSave, 
   onDelete 
 }) => {
+  const text = useCoreTextClasses();
   const isMobile = useIsMobile();
   
   const handleSave = async (formData: Partial<Rule>) => {
@@ -40,10 +42,10 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
         <SheetContent side="bottom" className="h-[100vh] bg-navy border-light-navy pt-10 px-0 overflow-y-auto">
           <div className="px-4">
             <SheetHeader className="text-center mb-6">
-              <SheetTitle className="text-2xl font-bold text-white">
+              <SheetTitle className={`text-2xl font-bold ${text.primary}`}>
                 {ruleData?.id ? 'Edit Rule' : 'Create New Rule'}
               </SheetTitle>
-              <SheetDescription className="text-light-navy">
+              <SheetDescription className={text.subtle}>
                 {ruleData?.id ? 'Modify the existing rule' : 'Create a new rule to track'}
               </SheetDescription>
             </SheetHeader>
@@ -63,12 +65,12 @@ const RuleEditor: React.FC<RuleEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[90vw] max-h-[90vh] bg-navy border-light-navy text-white overflow-y-auto">
+      <DialogContent className={`max-w-[90vw] max-h-[90vh] bg-navy border-light-navy ${text.primary} overflow-y-auto`}>
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white">
+          <DialogTitle className={`text-2xl font-bold ${text.primary}`}>
             {ruleData?.id ? 'Edit Rule' : 'Create New Rule'}
           </DialogTitle>
-          <DialogDescription className="text-light-navy">
+          <DialogDescription className={text.subtle}>
             {ruleData?.id ? 'Modify the existing rule' : 'Create a new rule to track'}
           </DialogDescription>
         </DialogHeader>

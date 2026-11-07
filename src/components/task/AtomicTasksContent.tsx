@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
@@ -12,6 +13,7 @@ import type { TaskFormValues, TaskWithId } from '@/data/tasks/types';
 import { scopeKey, blocksNewAction } from '@/data/actions/contracts';
 
 export function AtomicTasksContent() {
+  const text = useCoreTextClasses();
   const actions = useActionCommands();
   const identity = useUserIds();
   const key = actions.scope ? scopeKey(actions.scope) : null;
@@ -57,12 +59,12 @@ export function AtomicTasksContent() {
       <TasksHeader onCreateTask={() => {}} />
       {[...new Set(Object.values(query.data?.progress ?? {}).filter(value => value.expectedContext).map(value =>
         `${value.currency === 'dom' ? 'Dom' : 'Sub'} actions: ${value.localDate} · ${value.timeZone}`))].map(calendar =>
-        <p key={calendar} className="mb-2 text-xs text-gray-300">{calendar}</p>)}
-      {(actions.error || query.error || error) && <div role="alert" className="mb-3 rounded border border-amber-500 bg-navy p-3 text-white">
+        <p key={calendar} className={`mb-2 text-xs ${text.secondary}`}>{calendar}</p>)}
+      {(actions.error || query.error || error) && <div role="alert" className={`mb-3 rounded border border-amber-500 bg-navy p-3 ${text.primary}`}>
         <p>{error || query.error?.message || actions.error}</p>
         <button className="underline" onClick={() => { setError(null); void actions.refresh(); }}>Refresh confirmed data</button>
       </div>}
-      {!canComplete && <p className="mb-3 text-sm text-amber-300">Your relationship permission does not allow task completion. History remains available.</p>}
+      {!canComplete && <p className={`mb-3 text-sm ${text.warning}`}>Your relationship permission does not allow task completion. History remains available.</p>}
       <TaskActivity data={query.data} />
       <TasksList tasks={query.data?.tasks.filter(task => !task.deleted_at) ?? []} isLoading={!query.data && !query.isError}
         error={query.error} atomic progress={query.data?.progress} progressErrors={query.data?.progressErrors}

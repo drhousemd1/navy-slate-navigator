@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import React from 'react';
 import { Control, Controller, FieldValues, Path } from 'react-hook-form'; // Import FieldValues and Path
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -13,23 +14,24 @@ interface PrioritySelectorProps<T extends FieldValues> { // Make component gener
 }
 
 const PrioritySelector = <T extends FieldValues>({ control, name = 'priority' as Path<T> }: PrioritySelectorProps<T>) => {
+  const text = useCoreTextClasses();
   return (
     <FormField
       control={control}
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel className="text-white">Priority</FormLabel>
+          <FormLabel className={text.primary}>Priority</FormLabel>
           <Select 
             onValueChange={(value) => field.onChange(value as PriorityValue)} 
             value={field.value as string}
           >
             <FormControl>
-              <SelectTrigger className="bg-dark-navy border-light-navy text-white">
+              <SelectTrigger className={`bg-dark-navy border-light-navy ${text.primary}`}>
                 <SelectValue placeholder="Select priority" />
               </SelectTrigger>
             </FormControl>
-            <SelectContent className="bg-dark-navy border-light-navy text-white">
+            <SelectContent className={`bg-dark-navy border-light-navy ${text.primary}`}>
               <SelectItem value="low" className="hover:bg-light-navy">Low</SelectItem>
               <SelectItem value="medium" className="hover:bg-light-navy">Medium</SelectItem>
               <SelectItem value="high" className="hover:bg-light-navy">High</SelectItem>

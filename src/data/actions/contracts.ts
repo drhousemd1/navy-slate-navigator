@@ -66,9 +66,25 @@ function validWeek(value: { localDate: string; weekStartDate: string }) {
   return start.getUTCDay() === 1 && Number.isInteger(day) && day >= 0 && day < 7;
 }
 const calendarSchema = z.object({ participantId: id, ...calendarFields }).strict().refine(validWeek, 'Invalid affected calendar');
-export const taskExpectedContextSchema = z.object({ version: z.literal(1), kind: z.literal('task_complete'), subjectId: id,
-  beneficiaryParticipantId: id, currency, points: amount.max(2147483647), frequency: z.enum(['daily', 'weekly']),
-  target: integer.positive().max(2147483647), ...calendarFields }).strict().refine(validWeek, 'Invalid affected calendar');
+export const taskDeadlineSchema = z.object({ date: localDate.refine(value => value >= '0001-01-01', 'Invalid deadline date').nullable(), time: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/).nullable(), weekday: integer.min(1).max(7).nullable() }).strict();
+const taskContextBase = { kind: z.literal('task_complete'), subjectId: id,
+  beneficiaryParticipantId: id, currency, points: amount.max(2147483647), target: integer.positive().max(2147483647), ...calendarFields };
+export function validTaskSchedule(value: { frequency?: string; target?: number; deadline?: { date?: string | null; time?: string | null; weekday?: number | null } }): boolean {
+  const d = value.deadline;
+  if (!d) return false;
+  return (value.frequency !== 'once' || value.target === 1) && (d.time === null ? d.date === null && d.weekday === null :
+    value.frequency === 'once' ? !!d.date && d.weekday === null : value.frequency === 'daily' ? d.date === null && d.weekday === null :
+      value.frequency === 'weekly' && d.date === null && Number.isInteger(d.weekday) && d.weekday >= 1 && d.weekday <= 7);
+}
+export const taskExpectedContextSchema = z.union([
+  z.object({ version: z.literal(1), kind: z.literal('task_complete'), subjectId: id, beneficiaryParticipantId: id, currency, points: amount.max(2147483647), frequency: z.enum(['daily', 'weekly']), target: integer.positive().max(2147483647), ...calendarFields }).strict().refine(validWeek, 'Invalid affected calendar'),
+  z.object({ ...taskContextBase, version: z.literal(2), frequency: z.enum(['once', 'daily', 'weekly']), mandatory: z.boolean(),
+    deadline: taskDeadlineSchema, dueAt: z.string().datetime({ offset: true }).nullable() }).strict()
+    .refine(validWeek, 'Invalid affected calendar').refine(validTaskSchedule, 'Invalid task deadline')
+    .refine(value => (value.deadline.time === null) === (value.dueAt === null), 'Missing resolved deadline'),
+]);
+export const taskScheduleProgressFields = { mandatory: z.boolean().optional(), deadline: taskDeadlineSchema.optional(),
+  dueAt: z.string().datetime({ offset: true }).nullable().optional(), overdue: z.boolean().optional(), lastCompletionLate: z.boolean().nullable().optional() };
 export const ruleExpectedContextSchema = z.object({ version: z.literal(1), kind: z.literal('rule_violation'), subjectId: id, sub: calendarSchema }).strict();
 export const punishmentExpectedContextSchema = z.object({ version: z.literal(1), kind: z.literal('punishment_apply'), subjectId: id,
   subDeduction: amount.max(2147483647), domAward: amount.max(2147483647), sub: calendarSchema, dom: calendarSchema.nullable(),
@@ -103,9 +119,9 @@ const progressBase = {
   weekStartDate: localDate, weekIdentifier: z.string().regex(/^\d{4}-W(?:0[1-9]|[1-4]\d|5[0-3])$/),
   usageData: z.array(amount).length(7), currentCount: amount, deleted: z.boolean(),
 };
-const taskProgressSchema = z.object({ ...progressBase, taskId: id, currency,
+const taskProgressSchema = z.object({ ...progressBase, ...taskScheduleProgressFields, taskId: id, currency,
   expectedContext: taskExpectedContextSchema.optional(),
-  frequency: z.enum(['daily', 'weekly']), target: integer.positive(), completed: z.boolean(), lastCompletedDate: localDate.nullable(),
+  frequency: z.enum(['once', 'daily', 'weekly']), target: integer.positive(), completed: z.boolean(), lastCompletedDate: localDate.nullable(),
 });
 const recordingProgressSchema = z.object({ ...progressBase, subjectType: z.enum(['rule', 'punishment']), subjectId: id, expectedContext: z.union([ruleExpectedContextSchema, punishmentExpectedContextSchema]).optional() });
 const receiptSchema = z.object({
@@ -176,7 +192,8 @@ export function decodeActionReceipt(value: unknown, command: QueuedActionCommand
       if (context.kind === 'task_complete') {
         if (progress !== receipt.taskProgress || context.subjectId !== receipt.taskProgress.taskId || context.currency !== receipt.taskProgress.currency ||
           context.frequency !== receipt.taskProgress.frequency || context.target !== receipt.taskProgress.target || context.beneficiaryParticipantId !== progress.beneficiaryParticipantId ||
-          context.timeZone !== progress.timeZone || context.localDate !== progress.localDate || context.weekStartDate !== progress.weekStartDate) throw new Error('Inconsistent reviewed task progress');
+          context.timeZone !== progress.timeZone || context.localDate !== progress.localDate || context.weekStartDate !== progress.weekStartDate || (context.version === 2 && (context.mandatory !== receipt.taskProgress.mandatory ||
+          JSON.stringify(context.deadline) !== JSON.stringify(receipt.taskProgress.deadline) || context.dueAt !== receipt.taskProgress.dueAt))) throw new Error('Inconsistent reviewed task progress');
       } else if (progress !== receipt.recordingProgress || context.kind !== (receipt.recordingProgress.subjectType === 'rule' ? 'rule_violation' : 'punishment_apply') ||
         context.subjectId !== receipt.recordingProgress.subjectId || context.sub.participantId !== progress.beneficiaryParticipantId || context.sub.timeZone !== progress.timeZone ||
         context.sub.localDate !== progress.localDate || context.sub.weekStartDate !== progress.weekStartDate) throw new Error('Inconsistent reviewed recording progress');
@@ -191,9 +208,11 @@ export function decodeActionReceipt(value: unknown, command: QueuedActionCommand
     const firstMonday = jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86400000;
     const week = 1 + Math.round((start.getTime() - firstMonday) / (7 * 86400000));
     if (progress.weekIdentifier !== `${String(isoYear).padStart(4, '0')}-W${String(week).padStart(2, '0')}`) throw new Error('Inconsistent ISO week identifier');
-    const count = progress === receipt.taskProgress && receipt.taskProgress.frequency === 'daily'
+    const count = progress === receipt.taskProgress && receipt.taskProgress.frequency === 'once' ? progress.currentCount
+      : progress === receipt.taskProgress && receipt.taskProgress.frequency === 'daily'
       ? progress.usageData[day] : progress.usageData.reduce((sum, count) => sum + count, 0);
     if (!Number.isSafeInteger(count) || progress.currentCount !== count) throw new Error('Inconsistent progress count');
+    if (progress === receipt.taskProgress && receipt.taskProgress.frequency === 'once' && receipt.taskProgress.target !== 1) throw new Error('Invalid one-time target');
     if (progress === receipt.taskProgress && receipt.taskProgress.completed !== (count >= receipt.taskProgress.target)) throw new Error('Inconsistent task completion');
   }
   const feedbackKeys = receipt.feedback.map(f => JSON.stringify([f.eventId, f.recipientParticipantId]));

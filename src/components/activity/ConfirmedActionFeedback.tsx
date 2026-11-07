@@ -13,6 +13,8 @@ export interface ConfirmedActionFeedbackProps {
    * Do not also emit a generic success toast for the same refund.
    */
   enabled: boolean;
+  /** Presentation only; standalone receipt fixtures keep their original dark style. */
+  lightSurface?: boolean;
   ledger?: ActionFeedbackLedger;
   onDismiss?: (feedback: { eventId: string; recipientParticipantId: string }) => void;
 }
@@ -32,7 +34,7 @@ export function ConfirmedActionFeedback(props: ConfirmedActionFeedbackProps) {
   return <ScopedRefundFeedback key={feedbackScopeKey(props.activeScope)} {...props} />;
 }
 
-function ScopedRefundFeedback({ activeScope, result, enabled, ledger = actionFeedbackLedger, onDismiss }: ConfirmedActionFeedbackProps) {
+function ScopedRefundFeedback({ activeScope, result, enabled, lightSurface = false, ledger = actionFeedbackLedger, onDismiss }: ConfirmedActionFeedbackProps) {
   const candidates = useMemo(() => enabled ? getRefundPresentations(result, activeScope) : [], [enabled, result, activeScope]);
   const [visible, setVisible] = useState<RefundPresentation[]>([]);
   useEffect(() => {
@@ -49,14 +51,14 @@ function ScopedRefundFeedback({ activeScope, result, enabled, ledger = actionFee
 
   if (current.length === 0) return null;
   return <section className="action-feedback-stack" aria-label="Confirmed refunds">
-    {current.map(item => <RefundCard key={item.key} presentation={item} onDismiss={() => {
+    {current.map(item => <RefundCard key={item.key} presentation={item} lightSurface={lightSurface} onDismiss={() => {
       setVisible(previous => previous.filter(value => value.key !== item.key));
       onDismiss?.({ eventId: item.feedback.eventId, recipientParticipantId: item.feedback.recipientParticipantId });
     }} />)}
   </section>;
 }
 
-function RefundCard({ presentation, onDismiss }: { presentation: RefundPresentation; onDismiss: () => void }) {
+function RefundCard({ presentation, lightSurface, onDismiss }: { presentation: RefundPresentation; lightSurface: boolean; onDismiss: () => void }) {
   const id = useId();
   const ref = useRef<HTMLElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
@@ -70,7 +72,7 @@ function RefundCard({ presentation, onDismiss }: { presentation: RefundPresentat
     if (shouldReturnFocus && previousFocus.current?.isConnected) previousFocus.current.focus();
   };
 
-  return <article ref={ref} className="action-feedback-card" aria-labelledby={`${id}-title`}
+  return <article ref={ref} className={`action-feedback-card${lightSurface ? ' action-feedback-light' : ''}`} aria-labelledby={`${id}-title`}
     data-motion={reduceMotion ? 'reduced' : 'full'}
     onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); dismiss(); }

@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import {
@@ -28,6 +29,7 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
   onDelete,
   ruleName,
 }) => {
+  const text = useCoreTextClasses();
   return (
     <>
       <Button 
@@ -50,15 +52,15 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Rule</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className={text.primary}>Delete Rule</AlertDialogTitle>
+            <AlertDialogDescription className={text.muted}>
               Are you sure you want to delete {ruleName ? `the rule "${ruleName}"` : 'this rule'}? {preserveHistory ? 'Past activity and Undo records will remain in History.' : 'This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel 
               disabled={isDeleting}
-              className="bg-dark-navy text-white border-light-navy hover:bg-light-navy"
+              className={`bg-dark-navy ${text.primary} border-light-navy hover:bg-light-navy`}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

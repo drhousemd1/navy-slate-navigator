@@ -13,6 +13,7 @@ import { useUserIds } from '@/contexts/UserIdsContext';
 import { useRewards } from '@/contexts/RewardsContext';
 import { rewardInventory } from '@/data/rewards/actionReadModel';
 import { Button } from './ui/button';
+import { useCoreTextClasses } from './common/useCoreTextClasses';
 
 interface RewardCardProps {
   reward: Reward;
@@ -27,6 +28,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
   handleBuyReward,
   handleUseReward
 }) => {
+  const text = useCoreTextClasses();
   const { toast } = useToast();
   const actions = useActionCommands();
   const identity = useUserIds();
@@ -130,11 +132,11 @@ const RewardCard: React.FC<RewardCardProps> = ({
             const allowed = item.currency === 'dom' ? identity.currentRole === 'dom' : ['both', identity.currentRole].includes(identity.permissions?.sub_reward_redeem);
             return <div key={item.currency} className="flex flex-wrap items-center gap-2">
               <span>{item.currency === 'dom' ? 'Dom' : 'Sub'} owns {item.quantity}</span>
-              <Button size="sm" variant="outline" disabled={busy || !allowed} onClick={() => void perform(() => rewardsContext.handleUseReward(reward.id, item.currency))}>Use {item.currency === 'dom' ? 'Dom' : 'Sub'} reward</Button>
+              <Button size="sm" variant="outline" className={text.primary} disabled={busy || !allowed} onClick={() => void perform(() => rewardsContext.handleUseReward(reward.id, item.currency))}>Use {item.currency === 'dom' ? 'Dom' : 'Sub'} reward</Button>
               {!allowed && <span className="text-gray-300">Use is restricted by your relationship permissions.</span>}
             </div>;
           })}
-          {identity.currentRole === 'dom' && !is_dom_reward && actions.data?.wallets.some(wallet => wallet.currency === 'sub') && <Button size="sm" variant="outline" disabled={busy} onClick={() => void perform(() => rewardsContext.handleGiftReward(reward.id))}>Gift to Sub · no points charged</Button>}
+          {identity.currentRole === 'dom' && !is_dom_reward && actions.data?.wallets.some(wallet => wallet.currency === 'sub') && <Button size="sm" variant="outline" className={text.primary} disabled={busy} onClick={() => void perform(() => rewardsContext.handleGiftReward(reward.id))}>Gift to Sub · no points charged</Button>}
           {busy && <p role="status">Waiting for the saved action’s confirmation.</p>}
           {actionError && <p role="alert" className="text-amber-300">{actionError}</p>}
         </div>}

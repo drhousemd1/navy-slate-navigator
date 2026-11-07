@@ -2,11 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
 import { actionScopeToken, assertCurrentActionScope, type RewardEventRow, type RewardPointRow } from '@/data/rewards/actionReadModel';
-import { taskExpectedContextSchema, type ActionQueueScope } from '@/data/actions/contracts';
+import { taskExpectedContextSchema, taskScheduleProgressFields, taskDeadlineSchema, validTaskSchedule, type ActionQueueScope } from '@/data/actions/contracts';
 import type { TaskProgress, Currency, TaskExpectedContext } from '@/domain/actions/types';
 import type { TaskFormValues, TaskWithId } from './types';
 
-export interface TaskEventRow extends Omit<RewardEventRow, 'reward_id'> { task_id: string }
+export interface TaskEventRow extends Omit<RewardEventRow, 'reward_id'> { task_id: string; definition_values?: { type?: string; frequency?: string; mandatory?: boolean; late?: boolean; dueAt?: string | null } | null }
 export interface TaskDefinition extends TaskWithId { relationship_id: string; deleted_at: string | null }
 export interface ImportedTaskCompletion { id: string; relationship_id: string; task_id: string; completed_at: string; action_event_id: string | null }
 export interface TaskActionData {
@@ -16,26 +16,31 @@ export interface TaskActionData {
 }
 const integer = z.number().int().nonnegative();
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const progressSchema = z.object({ expectedContext: taskExpectedContextSchema.optional(), taskId: z.string().uuid(), beneficiaryParticipantId: z.string().uuid(), currency: z.enum(['dom', 'sub']),
+const progressSchema = z.object({ ...taskScheduleProgressFields, expectedContext: taskExpectedContextSchema.optional(), taskId: z.string().uuid(), beneficiaryParticipantId: z.string().uuid(), currency: z.enum(['dom', 'sub']),
   timeZone: z.string().min(1), localDate: date, weekStartDate: date, weekIdentifier: z.string(),
-  frequency: z.enum(['daily', 'weekly']), target: integer.positive(), currentCount: integer,
+  frequency: z.enum(['once', 'daily', 'weekly']), target: integer.positive(), currentCount: integer,
   usageData: z.array(integer).length(7), completed: z.boolean(), lastCompletedDate: date.nullable(), deleted: z.boolean() });
 export function decodeTaskProgress(value: unknown): TaskProgress {
   const progress = progressSchema.parse(value) as TaskProgress;
   const day = taskDayIndex(progress);
   if (!Number.isInteger(day) || day < 0 || day > 6 || new Date(`${progress.weekStartDate}T00:00:00Z`).getUTCDay() !== 1) throw new Error('Invalid task calendar.');
-  const count = progress.frequency === 'daily' ? progress.usageData[day] : progress.usageData.reduce((a, b) => a + b, 0);
+  const count = progress.frequency === 'once' ? progress.currentCount : progress.frequency === 'daily' ? progress.usageData[day] : progress.usageData.reduce((a, b) => a + b, 0);
+  if (progress.frequency === 'once' && progress.target !== 1) throw new Error('Invalid one-time target.');
   if (count !== progress.currentCount || progress.completed !== (count >= progress.target)) throw new Error('Invalid task counters.');
   return progress;
 }
 /** A separately fetched row must match the server facts whose calendar the card shows. */
-export function reviewedTaskContext(task: Pick<TaskDefinition, 'id' | 'points' | 'is_dom_task' | 'frequency' | 'frequency_count'>, progress?: TaskProgress): TaskExpectedContext {
+export function reviewedTaskContext(task: Pick<TaskDefinition, 'id' | 'points' | 'is_dom_task' | 'frequency' | 'frequency_count' | 'mandatory' | 'deadline_date' | 'deadline_time' | 'deadline_weekday'>, progress?: TaskProgress): TaskExpectedContext {
   const context = taskExpectedContextSchema.parse(progress?.expectedContext) as TaskExpectedContext;
   if (!progress || context.subjectId !== task.id || progress.taskId !== task.id || context.points !== task.points ||
       context.currency !== (task.is_dom_task ? 'dom' : 'sub') || context.frequency !== task.frequency || context.target !== task.frequency_count ||
       context.beneficiaryParticipantId !== progress.beneficiaryParticipantId || context.currency !== progress.currency ||
       context.frequency !== progress.frequency || context.target !== progress.target || context.timeZone !== progress.timeZone ||
       context.localDate !== progress.localDate || context.weekStartDate !== progress.weekStartDate) throw new Error('Task details changed while loading. Refresh and review them before completing it.');
+  const deadline = { date: task.deadline_date ?? null, time: task.deadline_time?.slice(0, 5) ?? null, weekday: task.deadline_weekday ?? null };
+  if (context.version === 2 ? context.mandatory !== (task.mandatory ?? false) || JSON.stringify(context.deadline) !== JSON.stringify(deadline) ||
+      context.mandatory !== progress.mandatory || JSON.stringify(context.deadline) !== JSON.stringify(progress.deadline) || context.dueAt !== progress.dueAt :
+      task.mandatory || deadline.time !== null || deadline.date !== null || deadline.weekday !== null) throw new Error('Task schedule changed while loading. Refresh and review it.');
   return context;
 }
 /** Date-only arithmetic: the browser timezone must never shift the affected person's date. */
@@ -45,7 +50,7 @@ export const taskActionKey = (scope: ActionQueueScope | null) => ['task-action-s
 // Forward-migration RPCs are not yet present in the generated Supabase types.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const database = supabase as any;
-const fields = 'id,relationship_id,title,description,frequency,frequency_count,points,priority,icon_name,icon_color,icon_url,title_color,subtext_color,calendar_color,background_image_url,background_images,background_opacity,focal_point_x,focal_point_y,highlight_effect,image_meta,is_dom_task,created_at,updated_at,deleted_at';
+const fields = 'id,relationship_id,title,description,frequency,frequency_count,mandatory,deadline_date,deadline_time,deadline_weekday,points,priority,icon_name,icon_color,icon_url,title_color,subtext_color,calendar_color,background_image_url,background_images,background_opacity,focal_point_x,focal_point_y,highlight_effect,image_meta,is_dom_task,created_at,updated_at,deleted_at';
 async function rows<T>(table: string, selected: string, scope: ActionQueueScope, token: string, signal?: AbortSignal): Promise<T[]> {
   const result: T[] = [];
   for (let start = 0; ; start += 500) {
@@ -61,7 +66,7 @@ const configurationError = (message: string) => /TASK_OWNER_MISSING|TIMEZONE_REQ
 function progressProblem(message: string) {
   if (message.includes('TASK_OWNER_MISSING')) return 'This task needs a participant in its selected role.';
   if (message.includes('TIMEZONE_REQUIRED')) return 'The person assigned this task needs a saved timezone in Profile.';
-  return 'This task needs a valid frequency, target, and nonnegative points. Edit it to continue.';
+  return 'This task needs a valid frequency, target, deadline, and nonnegative points. Edit it to continue.';
 }
 export async function readTaskActionData(scope: ActionQueueScope, signal?: AbortSignal): Promise<TaskActionData> {
   const token = await actionScopeToken(scope, signal);
@@ -69,7 +74,7 @@ export async function readTaskActionData(scope: ActionQueueScope, signal?: Abort
     .setHeader('Authorization', `Bearer ${token}`).abortSignal(signal);
   const [tasks, allEvents, points, imported, summary] = await Promise.all([
     rows<TaskDefinition>('tasks', fields, scope, token, signal),
-    rows<TaskEventRow>('action_events', 'id,relationship_id,kind,task_id,actor_participant_id,beneficiary_participant_id,subject,recorded_at,calendar,reverses_event_id,provenance', scope, token, signal),
+    rows<TaskEventRow>('action_events', 'id,relationship_id,kind,task_id,actor_participant_id,beneficiary_participant_id,subject,recorded_at,calendar,definition_values,reverses_event_id,provenance', scope, token, signal),
     rows<RewardPointRow>('action_point_entries', 'id,relationship_id,event_id,participant_id,currency,amount', scope, token, signal),
     rows<ImportedTaskCompletion>('task_completion_history', 'id,relationship_id,task_id,completed_at,action_event_id', scope, token, signal),
     requestProgress(null),
@@ -112,12 +117,16 @@ export function useTaskActionData(scope: ActionQueueScope | null, enabled: boole
   return useQuery({ queryKey: taskActionKey(scope), enabled: enabled && !!scope,
     queryFn: ({ signal }) => readTaskActionData(scope!, signal), retry: false, staleTime: 0, refetchOnMount: 'always', refetchInterval: 10_000 });
 }
-const definitionFields = ['title', 'description', 'frequency', 'frequency_count', 'points', 'priority', 'icon_name', 'icon_color', 'icon_url', 'title_color', 'subtext_color', 'calendar_color', 'background_image_url', 'background_images', 'background_opacity', 'focal_point_x', 'focal_point_y', 'highlight_effect', 'image_meta', 'is_dom_task'] as const;
+const definitionFields = ['title', 'description', 'frequency', 'frequency_count', 'mandatory', 'deadline_date', 'deadline_time', 'deadline_weekday', 'points', 'priority', 'icon_name', 'icon_color', 'icon_url', 'title_color', 'subtext_color', 'calendar_color', 'background_image_url', 'background_images', 'background_opacity', 'focal_point_x', 'focal_point_y', 'highlight_effect', 'image_meta', 'is_dom_task'] as const;
 export function taskDefinitionPayload(input: TaskFormValues): Record<string, unknown> {
   const output: Record<string, unknown> = {};
   for (const field of definitionFields) if (field in input) output[field] = input[field] ?? null;
-  if (typeof output.title !== 'string' || !output.title.trim() || !['daily', 'weekly'].includes(String(output.frequency)) ||
+  if (typeof output.title !== 'string' || !output.title.trim() || !['once', 'daily', 'weekly'].includes(String(output.frequency)) ||
     !Number.isSafeInteger(output.frequency_count) || Number(output.frequency_count) < 1 || !Number.isSafeInteger(output.points) || Number(output.points) < 0) throw new Error('Enter a title, whole-number target of at least one, and nonnegative whole-number points.');
+  const deadline = taskDeadlineSchema.parse({ date: input.deadline_date || null, time: input.deadline_time || null, weekday: input.deadline_weekday ?? null });
+  if (!validTaskSchedule({ frequency: input.frequency, target: input.frequency_count, deadline })) throw new Error('Choose a valid deadline and one completion for a one-time task.');
+  for (const [field, value] of [['deadline_date', deadline.date], ['deadline_time', deadline.time], ['deadline_weekday', deadline.weekday]] as const) if (field in input) output[field] = value;
+  if (input.mandatory !== undefined && typeof input.mandatory !== 'boolean') throw new Error('Choose whether the task is mandatory.');
   return output;
 }
 export async function saveTaskDefinition(scope: ActionQueueScope, input: TaskFormValues, taskId?: string): Promise<void> {

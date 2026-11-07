@@ -1,3 +1,4 @@
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 import { decodeQueueEntry } from '@/data/actions/contracts';
 import { taskContext, uuid, scope as queueScope } from './action-queue.helpers';
 import React from 'react';

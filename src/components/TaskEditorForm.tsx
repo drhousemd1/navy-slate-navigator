@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React, { useState } from 'react';
 import { Task } from '@/lib/taskUtils';
@@ -7,7 +8,7 @@ import TaskBasicDetails from './task-editor/TaskBasicDetails';
 import NumberField from './task-editor/NumberField';
 import ColorPickerField from './task-editor/ColorPickerField';
 import PrioritySelector from './task-editor/PrioritySelector';
-import FrequencySelector from './task-editor/FrequencySelector';
+import { TaskScheduleFields } from './task-editor/TaskScheduleFields';
 import TaskImageSection from './task-editor/TaskImageSection';
 import IconSelector from './task-editor/IconSelector';
 import PredefinedIconsGrid from './task-editor/PredefinedIconsGrid';
@@ -35,6 +36,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   onDelete,
   onCancel
 }) => {
+  const text = useCoreTextClasses();
   const [loading, setLoading] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -51,6 +53,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
           setOperationError(null);
           setLoading(true);
           try {
+            if (!atomicAccounting && (formData.frequency === 'once' || formData.mandatory || formData.deadline_time)) throw new Error('This task type requires the rebuilt accounting system.');
             await onSave(formData);
             await clearPersistedState(); 
             onCancel();
@@ -134,7 +137,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
 
         return (
           <form onSubmit={form.handleSubmit(handleSaveWithClear)} className="space-y-6">
-            {operationError && <p role="alert" className="text-amber-300">{operationError}</p>}
+            {operationError && <p role="alert" className={text.warning}>{operationError}</p>}
             <TaskBasicDetails control={form.control} isSaving={loading} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -156,29 +159,10 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FrequencySelector control={form.control} />
-              
-              <NumberField
-                control={form.control}
-                name="frequency_count"
-                label="Times per period"
-                onIncrement={() => {
-                  const currentCount = form.getValues('frequency_count');
-                  form.setValue('frequency_count', currentCount + 1);
-                }}
-                onDecrement={() => {
-                  const currentCount = form.getValues('frequency_count');
-                  if (currentCount > 1) {
-                    form.setValue('frequency_count', currentCount - 1);
-                  }
-                }}
-                minValue={1}
-              />
-            </div>
+            <TaskScheduleFields form={form} atomic={atomicAccounting} disabled={loading} />
             
             <div className="space-y-4">
-              <FormLabel className="text-white text-lg">Background Image</FormLabel>
+              <FormLabel className={`${text.primary} text-lg`}>Background Image</FormLabel>
               <TaskImageSection
                 control={form.control}
                 imagePreview={imagePreview} 
@@ -196,7 +180,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             </div>
             
             <div className="space-y-4">
-              <FormLabel className="text-white text-lg">Task Icon</FormLabel>
+              <FormLabel className={`${text.primary} text-lg`}>Task Icon</FormLabel>
               <div className="grid grid-cols-2 gap-4">
                 <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
                   <IconSelector
@@ -252,8 +236,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-white">Highlight Effect</FormLabel>
-                    <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
+                    <FormLabel className={text.primary}>Highlight Effect</FormLabel>
+                    <p className={`text-sm ${text.primary}`}>Apply a yellow highlight behind title and description</p>
                   </div>
                   <FormControl>
                     <Switch

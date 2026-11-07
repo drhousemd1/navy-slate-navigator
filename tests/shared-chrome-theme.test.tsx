@@ -18,6 +18,7 @@ vi.mock('@/components/wellbeing/MoodHealthBar', () => ({ default: () => null }))
 vi.mock('@/components/wellbeing/WellbeingPopover', () => ({ default: ({ children }: React.PropsWithChildren) => children }));
 vi.mock('@/components/AvatarPreviewPopover', () => ({ default: ({ children }: React.PropsWithChildren) => children }));
 vi.mock('@/features/admin-documents/useAdminDocumentAccess', () => ({ useAdminDocumentAccess: () => 'allowed' }));
+vi.mock('@/data/branding/queries', () => ({ useBrandingAccess: () => 'denied' }));
 vi.mock('@/lib/logger', () => ({ logger: { debug: vi.fn(), error: vi.fn() } }));
 
 import AppLayout from '@/components/AppLayout';

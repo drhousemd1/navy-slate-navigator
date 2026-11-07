@@ -1,7 +1,7 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React, { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
-import { useAuth } from '@/contexts/auth';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import AdminSettingsCard from '@/components/throne/AdminSettingsCard';
@@ -10,9 +10,10 @@ import UnifiedMetricsTiles from '@/components/throne/UnifiedMetricsTiles';
 import WellbeingLineChart from '@/components/throne/WellbeingLineChart';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { logger } from '@/lib/logger';
+import PersonalThroneCards from '@/components/throne/PersonalThroneCards';
 
 const ThroneRoom: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const text = useCoreTextClasses();
   const location = useLocation();
   const queryClient = useQueryClient();
   const { isLoadingUserIds } = useUserIds();
@@ -32,7 +33,7 @@ const ThroneRoom: React.FC = () => {
     return (
       <AppLayout>
         <div className="p-6 space-y-6 animate-fade-in overflow-x-hidden w-full max-w-full">
-          <div className="flex items-center justify-center h-60 text-white">
+          <div className={`flex items-center justify-center h-60 ${text.primary}`}>
             Loading your command center...
           </div>
         </div>
@@ -66,6 +67,8 @@ const ThroneRoom: React.FC = () => {
             <UnifiedMetricsTiles isMonthlyView={isMonthlyView} />
           </div>
           
+          <PersonalThroneCards isMonthlyView={isMonthlyView} />
+
           <div className="w-full max-w-full overflow-x-hidden">
             <AdminSettingsCard />
           </div>

@@ -12,6 +12,7 @@ import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { AtomicPunishmentsContent } from '@/components/punishments/AtomicPunishmentsContent';
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -125,6 +126,7 @@ const PunishmentsContent: React.FC<{
 };
 
 const Punishments: React.FC = () => {
+  const text = useCoreTextClasses();
   const actions = useActionCommands();
   const contentRef = useRef<{ handleAddNewPunishment?: () => void }>({});
   
@@ -139,7 +141,7 @@ const Punishments: React.FC = () => {
       <ErrorBoundary fallbackMessage="Could not load punishments. Please try reloading.">
         {actions.mode === 'legacy' ? <PunishmentsContent contentRef={contentRef} /> : actions.mode === 'atomic' ?
           <AtomicPunishmentsContent key={`${actions.scope?.accountId}:${actions.scope?.relationshipId}`} contentRef={contentRef} /> :
-          <div className="p-6 text-white" role={actions.mode === 'error' ? 'alert' : 'status'}>
+          <div className={`p-6 ${text.primary}`} role={actions.mode === 'error' ? 'alert' : 'status'}>
             <p>{actions.error || 'Checking your current punishment account…'}</p>
             {actions.mode === 'error' && <button className="underline" onClick={() => void actions.refresh()}>Retry</button>}
           </div>}

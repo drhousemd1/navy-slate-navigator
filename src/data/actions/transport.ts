@@ -51,7 +51,7 @@ const messages: Record<string, string> = {
   TASK_DELETED: 'This task has been removed. Its existing history remains available.',
   TASK_TARGET_REACHED: 'This task has already reached its target for the current period. Refresh its progress before recording another completion.',
   TASK_OWNER_MISSING: 'This task needs a participant with its assigned role before it can be completed.',
-  INVALID_TASK_DEFINITION: 'Review this task’s points, frequency, and target before recording a completion.',
+  INVALID_TASK_DEFINITION: 'Review this task’s points, frequency, target, and deadline before recording a completion.',
   SUB_PARTICIPANT_REQUIRED: 'A Sub participant is required to record this rule violation or punishment.',
   RECORDING_NOT_INITIALIZED: 'This relationship’s rule and punishment history has not been prepared yet.',
   RECORDING_SUBJECT_NOT_FOUND: 'This rule or punishment is unavailable in the current relationship.',

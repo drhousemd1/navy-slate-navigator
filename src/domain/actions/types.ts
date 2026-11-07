@@ -66,19 +66,23 @@ export interface ActionCalendar {
 }
 
 /** Reviewed server facts are consent preconditions, never instructions to backdate or set points. */
-export interface TaskExpectedContext {
-  readonly version: 1;
+interface TaskExpectedContextBase {
   readonly kind: 'task_complete';
   readonly subjectId: string;
   readonly beneficiaryParticipantId: string;
   readonly currency: Currency;
   readonly points: number;
-  readonly frequency: 'daily' | 'weekly';
   readonly target: number;
   readonly timeZone: string;
   readonly localDate: string;
   readonly weekStartDate: string;
 }
+export type TaskFrequency = 'once' | 'daily' | 'weekly';
+export interface TaskDeadline { readonly date: string | null; readonly time: string | null; readonly weekday: number | null }
+export type TaskExpectedContext = TaskExpectedContextBase & (
+  | { readonly version: 1; readonly frequency: 'daily' | 'weekly' }
+  | { readonly version: 2; readonly frequency: TaskFrequency; readonly mandatory: boolean; readonly deadline: TaskDeadline; readonly dueAt: string | null }
+);
 export interface RuleExpectedContext {
   readonly version: 1;
   readonly kind: 'rule_violation';
@@ -152,7 +156,7 @@ export interface ActionEvent {
     readonly role: Role | null;
   };
   readonly definitionValues:
-    | { readonly type: 'task'; readonly points: number; readonly frequency: 'daily' | 'weekly'; readonly target: number }
+    | { readonly type: 'task'; readonly points: number; readonly frequency: TaskFrequency; readonly target: number; readonly mandatory?: boolean; readonly deadline?: TaskDeadline; readonly dueAt?: string | null; readonly late?: boolean }
     | { readonly type: 'reward'; readonly cost: number }
     | {
         readonly type: 'punishment'; readonly subDeduction: number; readonly domAward: number;
@@ -183,13 +187,19 @@ export interface TaskProgress {
   readonly localDate: string;
   readonly weekStartDate: string;
   readonly weekIdentifier: string;
-  readonly frequency: 'daily' | 'weekly';
+  readonly frequency: TaskFrequency;
   readonly target: number;
   readonly currentCount: number;
   readonly usageData: readonly number[];
   readonly completed: boolean;
   readonly lastCompletedDate: string | null;
   readonly deleted: boolean;
+  /** Absent on pre-task-types receipts; never inferred for historical events. */
+  readonly mandatory?: boolean;
+  readonly deadline?: TaskDeadline;
+  readonly dueAt?: string | null;
+  readonly overdue?: boolean;
+  readonly lastCompletionLate?: boolean | null;
 }
 
 /** Weekly event counts; rule/punishment cards render a filled mark for counts above zero. */

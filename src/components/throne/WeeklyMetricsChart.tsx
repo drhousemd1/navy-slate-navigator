@@ -1,3 +1,5 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import {
@@ -22,6 +24,10 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   onToggleView, 
   currentView = false 
 }) => {
+  const text = useCoreTextClasses();
+  const light = useColorScheme().currentScheme === 'light-turquoise';
+  const tick = light ? { fill: 'hsl(var(--foreground))', style: { fill: 'hsl(var(--foreground))' } } : { fill: '#D1D5DB' };
+  const axisStroke = light ? 'hsl(var(--foreground))' : '#8E9196';
   const chartConfig = {
     subTasksCompleted: { color: '#0EA5E9', label: 'Sub Tasks Completed' },
     domTasksCompleted: { color: '#DC2626', label: 'Dom Tasks Completed' },
@@ -44,12 +50,12 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
     <Card className="bg-navy border border-light-navy rounded-lg">
       <div className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className={`text-lg font-semibold ${text.primary}`}>
             {currentView ? 'Monthly' : 'Weekly'} Activity
           </h2>
           {showToggle && (
             <div className="flex items-center space-x-2">
-              <Label htmlFor="view-toggle" className="text-sm text-nav-inactive">
+              <Label htmlFor="view-toggle" className={`text-sm ${light ? 'text-foreground' : 'text-nav-inactive'}`}>
                 Weekly
               </Label>
               <Switch
@@ -57,7 +63,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                 checked={currentView}
                 onCheckedChange={onToggleView}
               />
-              <Label htmlFor="view-toggle" className="text-sm text-nav-inactive">
+              <Label htmlFor="view-toggle" className={`text-sm ${light ? 'text-foreground' : 'text-nav-inactive'}`}>
                 Monthly
               </Label>
             </div>
@@ -65,7 +71,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
         </div>
         <div className="h-60">
           {error ? <ActivityMetricsError error={error} retry={refetch} /> : !hasData && !isLoading ? (
-            <div className="flex items-center justify-center h-full text-white">
+            <div className={`flex items-center justify-center h-full ${text.primary}`}>
               No activity data to display for this week
             </div>
           ) : (
@@ -77,8 +83,8 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                 <CartesianGrid strokeDasharray="0" stroke="#1A1F2C" />
                 <XAxis 
                   dataKey="date" 
-                  tick={{ fill: '#D1D5DB' }} 
-                  stroke="#8E9196"
+                  tick={tick}
+                  stroke={axisStroke}
                   tickFormatter={(date) => {
                     try {
                       return format(parseISO(date), 'EEE');
@@ -88,8 +94,8 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                   }}
                 />
                 <YAxis 
-                  tick={{ fill: '#D1D5DB' }} 
-                  stroke="#8E9196"
+                  tick={tick}
+                  stroke={axisStroke}
                 />
                 <Tooltip 
                   cursor={{ fill: 'rgba(30, 41, 59, 0.4)' }}

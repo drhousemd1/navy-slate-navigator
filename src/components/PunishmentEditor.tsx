@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import React, { useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -22,6 +23,7 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
   onSave,
   onDelete
 }) => {
+  const text = useCoreTextClasses();
   const isMobile = useIsMobile();
 
   const handleClose = () => {
@@ -41,10 +43,10 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
         <SheetContent className="bg-navy border-light-navy pt-10 px-0 overflow-y-auto" side="bottom" style={{ height: "100vh" }}>
           <div className="px-4">
             <SheetHeader className="text-center mb-6">
-              <SheetTitle className="text-2xl font-bold text-white">
+              <SheetTitle className={`text-2xl font-bold ${text.primary}`}>
                 {punishmentData?.id ? 'Edit Punishment' : 'Create New Punishment'}
               </SheetTitle>
-              <SheetDescription className="text-light-navy">
+              <SheetDescription className={text.subtle}>
                 {punishmentData?.id ? 'Modify the existing punishment' : 'Create a new punishment to apply'}
               </SheetDescription>
             </SheetHeader>
@@ -63,12 +65,12 @@ const PunishmentEditor: React.FC<PunishmentEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="bg-navy border-light-navy text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`bg-navy border-light-navy ${text.primary} max-w-2xl max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white">
+          <DialogTitle className={`text-2xl font-bold ${text.primary}`}>
             {punishmentData?.id ? 'Edit Punishment' : 'Create New Punishment'}
           </DialogTitle>
-          <DialogDescription className="text-light-navy">
+          <DialogDescription className={text.subtle}>
             {punishmentData?.id ? 'Modify the existing punishment' : 'Create a new punishment to apply'}
           </DialogDescription>
         </DialogHeader>

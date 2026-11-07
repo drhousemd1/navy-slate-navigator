@@ -1,110 +1,19 @@
-import { logoManager } from '@/services/logoManager';
-import { logger } from '@/lib/logger';
-
-export interface LogoUploadOptions {
-  onProgress?: (progress: number) => void;
-  onSuccess?: (logoUrl: string) => void;
-  onError?: (error: string) => void;
-}
-
-/**
- * Upload a logo file with progress tracking and error handling
- */
-export const uploadLogo = async (
-  file: File,
-  options: LogoUploadOptions = {}
-): Promise<{ success: boolean; message: string; logoUrl?: string }> => {
-  const { onProgress, onSuccess, onError } = options;
-
-  try {
-    // Start progress
-    onProgress?.(0);
-    
-    // Upload logo using the logo manager
-    onProgress?.(50);
-    
-    const result = await logoManager.uploadLogo(file);
-    
-    onProgress?.(100);
-    
-    if (result.success && result.logoUrl) {
-      onSuccess?.(result.logoUrl);
-      logger.info('Logo upload completed successfully');
-    } else {
-      onError?.(result.message);
-      logger.error('Logo upload failed', { message: result.message });
-    }
-    
-    return result;
-    
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    onError?.(errorMessage);
-    logger.error('Logo upload error', { error });
-    
-    return {
-      success: false,
-      message: errorMessage
-    };
-  }
-};
-
-/**
- * Validate logo file before upload
- */
-export const validateLogoFile = (file: File): { valid: boolean; error?: string } => {
-  // Check if file exists
-  if (!file) {
-    return { valid: false, error: 'No file selected' };
-  }
-
-  // Check file type
-  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'];
-  if (!allowedTypes.includes(file.type)) {
-    return { valid: false, error: 'Only PNG, JPEG, WebP, and SVG files are supported' };
-  }
-
-  // Check file size (10MB limit)
-  const maxSize = 10 * 1024 * 1024;
-  if (file.size > maxSize) {
-    return { valid: false, error: 'File size must be less than 10MB' };
-  }
-
-  // Check file extension
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  const allowedExtensions = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
-  if (!extension || !allowedExtensions.includes(extension)) {
-    return { valid: false, error: 'File must have .png, .jpg, .jpeg, .webp, or .svg extension' };
-  }
-
+import { LOGO_CONFIG } from '@/config/logoConfig';
+import { compressImage } from '@/utils/image/compression';
+export function validateLogoFile(file: File): { valid: boolean; error?: string } {
+  const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+  if (!file.size || file.size > LOGO_CONFIG.maxFileSize) return { valid: false, error: 'Choose an image between 1 byte and 10 MB.' };
+  if (!(LOGO_CONFIG.allowedExtensions as readonly string[]).includes(extension) ||
+    !(LOGO_CONFIG.allowedFormats as readonly string[]).includes(file.type)) return { valid: false, error: 'Choose a PNG, JPEG, WebP or SVG image.' };
   return { valid: true };
-};
-
-/**
- * Create a file input element for logo upload
- */
-export const createLogoFileInput = (
-  onFileSelect: (file: File) => void
-): HTMLInputElement => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml';
-  input.style.display = 'none';
-  
-  input.addEventListener('change', (event) => {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    
-    if (file) {
-      const validation = validateLogoFile(file);
-      if (validation.valid) {
-        onFileSelect(file);
-      } else {
-        logger.error('Invalid file selected', { error: validation.error });
-        alert(validation.error || 'Invalid file selected');
-      }
-    }
-  });
-  
-  return input;
-};
+}
+export async function prepareLogo(file: File): Promise<Blob> {
+  const valid = validateLogoFile(file);
+  if (!valid.valid) throw new Error(valid.error);
+  // Decode in an image element, never embed SVG markup in the document. Canvas
+  // exports raster pixels only; external/cross-origin content fails closed when
+  // the browser cannot export it. The shared compressor releases its object URL.
+  const { blob } = await compressImage(file);
+  if (!['image/png', 'image/jpeg'].includes(blob.type) || !blob.size || blob.size > LOGO_CONFIG.maxFileSize) throw new Error('The prepared logo must be a PNG or JPEG within 10 MB. Try a smaller image.');
+  return blob;
+}

@@ -228,9 +228,9 @@ export function selectRewardLot(
   return matches[0];
 }
 
-/** Applies to the selected calendar period: daily target per day, weekly target total per week. */
-export function assertTaskCapacity(frequency: 'daily' | 'weekly', target: number, currentCount: number): void {
-  if (frequency !== 'daily' && frequency !== 'weekly') fail('invalid_task_definition', 'Choose a daily or weekly task.');
+/** Daily/weekly targets use the selected period; one-time capacity uses retained lifetime completions. */
+export function assertTaskCapacity(frequency: 'once' | 'daily' | 'weekly', target: number, currentCount: number): void {
+  if (!['once', 'daily', 'weekly'].includes(frequency) || (frequency === 'once' && target !== 1)) fail('invalid_task_definition', 'Choose one completion for a one-time task, or a daily or weekly target.');
   integer(target, true);
   integer(currentCount, true);
   if (target < 1) fail('invalid_task_definition', 'Tasks must allow at least one completion per period.');

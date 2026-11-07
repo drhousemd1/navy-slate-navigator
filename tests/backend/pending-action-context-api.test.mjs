@@ -108,8 +108,8 @@ test('pending task and recording assumptions remain explicit and immutable',{
     const funds=await insert(sub,'tasks',{title:'Synthetic opening earnings',points:60,frequency:'daily',frequency_count:1,is_dom_task:false});await complete(sub,funds.id);
 
     await t.test('progress contexts are strict role-based values and private helpers cannot bypass them',async()=>{
-      const c=await context(sub,'task',task.id);assert.deepEqual(Object.keys(c).sort(),['beneficiaryParticipantId','currency','frequency','kind','localDate','points','subjectId','target','timeZone','version','weekStartDate'].sort());
-      assert.equal(c.version,1);assert.equal(c.beneficiaryParticipantId,s.participant_id);assert.equal(c.currency,'sub');assert.equal(c.points,5);assert.equal(c.target,100);
+      const c=await context(sub,'task',task.id);assert.deepEqual(Object.keys(c).sort(),['beneficiaryParticipantId','currency','deadline','dueAt','frequency','kind','localDate','mandatory','points','subjectId','target','timeZone','version','weekStartDate'].sort());
+      assert.equal(c.version,2);assert.equal(c.mandatory,false);assert.deepEqual(c.deadline,{date:null,time:null,weekday:null});assert.equal(c.dueAt,null);assert.equal(c.beneficiaryParticipantId,s.participant_id);assert.equal(c.currency,'sub');assert.equal(c.points,5);assert.equal(c.target,100);
       const r=await context(dom,'rule',rule.id),p=await context(sub,'punishment',punishment.id);
       assert.deepEqual(Object.keys(r).sort(),['kind','sub','subjectId','version']);assert.equal(r.sub.participantId,s.participant_id);
       assert.equal(p.sub.participantId,s.participant_id);assert.equal(p.dom.participantId,d.participant_id);assert.equal(p.subDeduction,30);assert.equal(p.domAward,4);
@@ -240,16 +240,34 @@ test('pending task and recording assumptions remain explicit and immutable',{
     });
   }finally{
     const ids=accounts.map(a=>a.id);
+    assert.ok(ids.every(id=>!originalAuth.includes(id)),'Fixture overlaps an original Auth account');
     if(ids.length)for(const m of await rows('relationship_period_members',`user_id=in.(${ids.join(',')})&select=relationship_id`))periods.add(m.relationship_id);
     for(const period of periods){
       assert.ok(!originalPeriods.has(period));assert.ok((await rows('relationship_period_members',`relationship_id=eq.${period}&select=user_id`)).every(m=>m.user_id===null||ids.includes(m.user_id)));
-      for(const table of['action_feedback_acknowledgments','action_feedback_outbox','action_command_receipts','reward_usage','task_completion_history',
+      assert.ok((await rows('identity_contexts',`relationship_id=eq.${period}&select=user_id`)).every(c=>ids.includes(c.user_id)));
+      assert.ok((await rows('notification_jobs',`relationship_id=eq.${period}&select=recipient_user_id`)).every(j=>ids.includes(j.recipient_user_id)));
+      for(const table of['notification_jobs','action_feedback_acknowledgments','action_feedback_outbox','action_command_receipts','reward_usage','task_completion_history',
         'rule_violations','punishment_history','action_inventory_movements','action_point_entries','reward_inventory_lots','action_events','action_task_openings',
         'action_wallets','action_accounting_periods','rewards','tasks','rules','punishments'])ok(await req('DELETE',`/rest/v1/${table}?relationship_id=eq.${period}`,service));
     }
-    for(const a of accounts)ok(await req('PATCH',`/rest/v1/profiles?id=eq.${a.id}`,service,{linked_partner_id:null}));
-    for(const a of accounts)ok(await req('DELETE',`/auth/v1/admin/users/${a.id}`,service));
-    for(const period of periods){ok(await req('DELETE',`/rest/v1/relationship_period_members?relationship_id=eq.${period}`,service));ok(await req('DELETE',`/rest/v1/relationship_periods?id=eq.${period}`,service));}
+    for(const a of accounts){
+      assert.ok((await rows('profiles',`linked_partner_id=eq.${a.id}&select=id`)).every(p=>ids.includes(p.id)));
+      ok(await req('PATCH',`/rest/v1/profiles?id=eq.${a.id}`,service,{linked_partner_id:null}));
+      ok(await req('DELETE',`/rest/v1/solo_role_change_receipts?actor_user_id=eq.${a.id}`,service));
+      ok(await req('DELETE',`/rest/v1/identity_contexts?user_id=eq.${a.id}`,service));
+    }
+    // Keep the production Auth guard: remove only the proven synthetic graph first.
+    for(const period of periods)ok(await req('DELETE',`/rest/v1/relationship_period_members?relationship_id=eq.${period}`,service));
+    for(const a of accounts){
+      ok(await req('DELETE',`/rest/v1/profiles?id=eq.${a.id}`,service));
+      for(const [table,key]of[['profiles','id'],['identity_contexts','user_id'],['relationship_period_members','user_id'],['account_deletion_jobs','actor_user_id']]){
+        assert.equal((await rows(table,`${key}=eq.${a.id}&select=*`)).length,0,`Fixture still referenced by ${table}`);
+      }
+      ok(await req('DELETE',`/auth/v1/admin/users/${a.id}`,service));
+      assert.equal((await rows('user_notification_preferences',`user_id=eq.${a.id}&select=user_id`)).length,0);
+      assert.equal((await rows('notification_jobs',`recipient_user_id=eq.${a.id}&select=id`)).length,0);
+    }
+    for(const period of periods){assert.equal((await rows('identity_contexts',`relationship_id=eq.${period}&select=user_id`)).length,0);ok(await req('DELETE',`/rest/v1/relationship_periods?id=eq.${period}`,service));}
     for(const table of tables)assert.equal(hash(await allRows(table)),originals.get(table),`Original${table} changed`);
     assert.deepEqual(await authIds(),originalAuth,'Original Auth accounts changed');
   }

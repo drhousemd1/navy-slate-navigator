@@ -1,3 +1,4 @@
+import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { METRIC_DEFINITIONS, getSliderColors } from '@/lib/wellbeingUtils';
@@ -16,6 +17,7 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
   selectedUserType,
   isLoading = false
 }) => {
+  const light = useColorScheme().currentScheme === 'light-turquoise';
   // Get all metrics as a unified list
   const allMetrics = Object.entries(METRIC_DEFINITIONS)
     .map(([key, def]) => ({ key: key as keyof WellbeingMetrics, ...def }));
@@ -44,7 +46,7 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: userDisplay.color }}
             />
-            <span className="text-sm text-gray-300">
+            <span className={`text-sm ${light ? 'text-foreground' : 'text-gray-300'}`}>
               {userDisplay.name} - {selectedDate}
             </span>
           </div>
@@ -72,11 +74,11 @@ const CompactWellbeingMetrics: React.FC<CompactWellbeingMetricsProps> = ({
                 <div key={metric.key} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span
-                      className={`text-xs font-medium ${isGrayedOut ? 'text-nav-inactive' : 'text-gray-300'}`}
+                      className={`text-xs font-medium ${light ? 'text-foreground' : isGrayedOut ? 'text-nav-inactive' : 'text-gray-300'}`}
                     >
                       {metric.label}
                     </span>
-                    <span className={`text-xs ${isGrayedOut ? 'text-nav-inactive' : 'text-gray-400'}`}>
+                    <span className={`text-xs ${light ? 'text-foreground' : isGrayedOut ? 'text-nav-inactive' : 'text-gray-400'}`}>
                       {value === null ? 'Not recorded' : `${value}%`}
                     </span>
                   </div>

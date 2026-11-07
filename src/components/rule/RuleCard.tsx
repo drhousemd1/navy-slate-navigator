@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Edit, Check } from 'lucide-react';
 import RuleViolationTracker from './RuleViolationTracker';
 import PriorityBadge from '../task/PriorityBadge';
-import HighlightedText from '../task/HighlightedText';
+import CardText from '../common/CardText';
 import { Rule } from '@/data/interfaces/Rule';
 import TaskIcon from '../task/TaskIcon';
 
@@ -21,6 +21,7 @@ interface RuleCardProps {
 
 const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken, disabled = false, editDisabled = false, currentDayIndex }) => {
   const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
+  const hasVisibleImage = !!rule.background_image_url && rule.background_opacity !== 0;
   return (
     <Card 
       className={`bg-dark-navy border-2 ${
@@ -60,7 +61,8 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken, dis
             </div>
             <div className="flex-1 flex flex-col">
               <div className="text-xl font-semibold">
-                <HighlightedText
+                <CardText
+                  surface="--dark-navy" hasImage={hasVisibleImage}
                   text={rule.title}
                   highlight={rule.highlight_effect}
                   color={rule.title_color}
@@ -69,7 +71,8 @@ const RuleCard: React.FC<RuleCardProps> = ({ rule, onEditRule, onRuleBroken, dis
 
               {rule.description && (
                 <div className="text-sm mt-1">
-                  <HighlightedText
+                  <CardText
+                    surface="--dark-navy" hasImage={hasVisibleImage}
                     text={rule.description}
                     highlight={rule.highlight_effect}
                     color={rule.subtext_color}

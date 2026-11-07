@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ export const IconDisplay: React.FC<IconDisplayProps> = ({
   onUploadIcon,
   onRemoveIcon
 }) => {
+  const text = useCoreTextClasses();
   return (
     <div className="space-y-4">
       <div className={`w-16 h-16 mx-auto bg-dark-navy rounded-lg ${iconPreview ? 'overflow-hidden' : 'flex items-center justify-center'}`}>
@@ -32,7 +34,7 @@ export const IconDisplay: React.FC<IconDisplayProps> = ({
           type="button"
           variant="secondary" 
           onClick={onUploadIcon}
-          className="bg-light-navy text-white hover:bg-navy flex items-center justify-center gap-2"
+          className={`bg-light-navy ${text.primary} hover:bg-navy flex items-center justify-center gap-2`}
         >
           <Upload className="h-4 w-4" />
           Upload Icon
@@ -41,7 +43,7 @@ export const IconDisplay: React.FC<IconDisplayProps> = ({
           type="button"
           variant="secondary" 
           onClick={onRemoveIcon}
-          className="bg-dark-navy text-white hover:bg-light-navy"
+          className={`bg-dark-navy ${text.primary} hover:bg-light-navy`}
         >
           Remove Icon
         </Button>

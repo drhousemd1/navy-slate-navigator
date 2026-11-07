@@ -84,6 +84,8 @@ const PunishmentCard: React.FC<PunishmentCardProps> = (props) => {
             title_color={title_color}
             subtext_color={subtext_color}
             highlight_effect={highlight_effect}
+            background_image_url={background_image_url}
+            background_opacity={background_opacity}
           />
           
           <PunishmentCardFooter 

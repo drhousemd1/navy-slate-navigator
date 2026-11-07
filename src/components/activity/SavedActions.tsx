@@ -1,9 +1,11 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import { useEffect, useRef, useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { actionLabels, savedActionStatus } from '@/lib/offline/action-status';
 import { scopeKey, needsContextReview, hasExpectedContext } from '@/data/actions/contracts';
 /** Shared durable queue: domain pages never implement a second retry path. */
 export function SavedActions() {
+  const text = useCoreTextClasses();
   const actions = useActionCommands();
   const key = actions.scope ? scopeKey(actions.scope) : '';
   const currentView = useRef({ key });
@@ -32,9 +34,9 @@ export function SavedActions() {
   };
   if (actions.mode === 'legacy') return null;
   return <>
-    {error?.view === view && <p role="alert" className="text-amber-300">{error.message}</p>}
-    {notice?.view === view && <p role="status" className="text-sm text-gray-300">{notice.message}</p>}
-    {pending.length > 0 && <div className="rounded border border-light-navy bg-navy p-3 space-y-3 text-white">
+    {error?.view === view && <p role="alert" className={text.warning}>{error.message}</p>}
+    {notice?.view === view && <p role="status" className={`text-sm ${text.secondary}`}>{notice.message}</p>}
+    {pending.length > 0 && <div className={`rounded border border-light-navy bg-navy p-3 space-y-3 ${text.primary}`}>
       <h2 className="font-semibold">Saved actions</h2>
       {pending.map(entry => <div key={entry.command.commandId} className="border-t border-light-navy pt-2 text-sm">
         <p><strong>{actionLabels[entry.command.kind] ?? 'Action'}</strong> — {savedActionStatus(entry.state.status, !entry.canReplay)}</p>
@@ -48,8 +50,8 @@ export function SavedActions() {
         {entry.canReplay && entry.state.status !== 'sending' && <button className="mr-4 underline" onClick={() => void perform(() => actions.retry(entry.command.commandId))}>Retry same action</button>}
         {entry.canCancel && <button className="underline" onClick={() => void perform(() => actions.cancelUnsent(entry.command.commandId))}>Cancel unsent action</button>}
       </div>)}
-      <p className="text-xs text-gray-300">Balances and progress change only after server confirmation. Retrying checks the original action without creating another one.</p>
-      <p className="text-xs text-gray-300">Automatic retries are limited. Use Retry same action where available after your connection returns.</p>
+      <p className={`text-xs ${text.secondary}`}>Balances and progress change only after server confirmation. Retrying checks the original action without creating another one.</p>
+      <p className={`text-xs ${text.secondary}`}>Automatic retries are limited. Use Retry same action where available after your connection returns.</p>
     </div>}
   </>;
 }

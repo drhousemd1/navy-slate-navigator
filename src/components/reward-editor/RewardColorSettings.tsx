@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { Control } from 'react-hook-form';
@@ -12,9 +13,10 @@ interface RewardColorSettingsProps {
 }
 
 const RewardColorSettings: React.FC<RewardColorSettingsProps> = ({ control }) => {
+  const text = useCoreTextClasses();
   return (
     <div className="space-y-4">
-      <FormLabel className="text-white text-lg">Color Settings</FormLabel>
+      <FormLabel className={`${text.primary} text-lg`}>Color Settings</FormLabel>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <ColorPickerField control={control} name="title_color" label="Title Color" />
         <ColorPickerField control={control} name="subtext_color" label="Subtext Color" />
@@ -28,8 +30,8 @@ const RewardColorSettings: React.FC<RewardColorSettingsProps> = ({ control }) =>
         render={({ field }) => (
           <FormItem className="flex flex-row items-center justify-between">
             <div className="space-y-0.5">
-              <FormLabel className="text-white">Highlight Effect</FormLabel>
-              <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
+              <FormLabel className={text.primary}>Highlight Effect</FormLabel>
+              <p className={`text-sm ${text.primary}`}>Apply a yellow highlight behind title and description</p>
             </div>
             <FormControl>
               <Switch checked={field.value} onCheckedChange={field.onChange} />

@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -60,6 +61,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
   onDelete,
   onCancel,
 }) => {
+  const text = useCoreTextClasses();
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -192,11 +194,11 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Rule Title</FormLabel>
+              <FormLabel className={text.primary}>Rule Title</FormLabel>
               <FormControl>
                 <Input
                   placeholder="Rule title (e.g., No swearing)"
-                  className="bg-dark-navy border-light-navy text-white"
+                  className={`bg-dark-navy border-light-navy ${text.field}`}
                   {...field}
                 />
               </FormControl>
@@ -209,11 +211,11 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Description</FormLabel>
+              <FormLabel className={text.primary}>Description</FormLabel>
               <FormControl>
                 <Textarea 
                   placeholder="Detailed description of the rule" 
-                  className="bg-dark-navy border-light-navy text-white min-h-[100px]" 
+                  className={`bg-dark-navy border-light-navy ${text.field} min-h-[100px]`}
                   {...field} 
                 />
               </FormControl>
@@ -224,7 +226,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
         <PrioritySelector control={control} name="priority" />
         
         <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Background Image</FormLabel>
+          <FormLabel className={`${text.primary} text-lg`}>Background Image</FormLabel>
           <BackgroundImageSelector
             control={control}
             imagePreview={imagePreview}
@@ -242,7 +244,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
         </div>
 
         <div className="space-y-4">
-          <FormLabel className="text-white text-lg">Rule Icon</FormLabel>
+          <FormLabel className={`${text.primary} text-lg`}>Rule Icon</FormLabel>
           <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
               <IconSelector
@@ -275,8 +277,8 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between">
               <div className="space-y-0.5">
-                <FormLabel className="text-white">Highlight Effect</FormLabel>
-                <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
+                <FormLabel className={text.primary}>Highlight Effect</FormLabel>
+                <p className={`text-sm ${text.primary}`}>Apply a yellow highlight behind title and description</p>
               </div>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -306,7 +308,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
           </Button>
           <Button
             type="submit"
-            className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
+            className={`bg-nav-active ${text.primary} hover:bg-nav-active/90 flex items-center gap-2`}
             disabled={loading}
           >
             {loading ? 'Saving...' : (

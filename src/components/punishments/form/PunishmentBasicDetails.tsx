@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import React, { useCallback } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
   setValue, 
   isSaving = false 
 }) => {
+  const text = useCoreTextClasses();
   // Using useCallback to prevent recreating these functions on every render
   const handleDecrementPoints = useCallback((e: React.MouseEvent) => {
     // Prevent any form submission
@@ -139,10 +141,10 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
         name="title"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-white">Title</FormLabel>
+            <FormLabel className={text.primary}>Title</FormLabel>
             <FormControl>
               <Input 
-                className="bg-dark-navy border-light-navy text-white" 
+                className={`bg-dark-navy border-light-navy ${text.field}`}
                 autoFocus={false}
                 {...field} 
                 disabled={isSaving}
@@ -157,10 +159,10 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
         name="description"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-white">Description</FormLabel>
+            <FormLabel className={text.primary}>Description</FormLabel>
             <FormControl>
               <Textarea 
-                className="bg-dark-navy border-light-navy text-white" 
+                className={`bg-dark-navy border-light-navy ${text.field}`}
                 {...field} 
                 disabled={isSaving}
               />
@@ -175,7 +177,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
         name="points"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-white">Submissive Points Lost</FormLabel>
+            <FormLabel className={text.primary}>Submissive Points Lost</FormLabel>
             <div className="flex items-center space-x-2">
               <Button 
                 type="button"
@@ -186,7 +188,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
                 className="bg-light-navy hover:bg-navy border-light-navy"
                 disabled={isSaving}
               >
-                <Minus aria-hidden="true" className="h-4 w-4 text-white" />
+                <Minus aria-hidden="true" className={`h-4 w-4 ${text.primary}`} />
               </Button>
               <FormControl>
                 <Input
@@ -194,7 +196,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
                   inputMode="numeric"
                   step={1}
                   min={0}
-                  className="bg-dark-navy border-light-navy text-white text-center w-20"
+                  className={`bg-dark-navy border-light-navy ${text.field} text-center w-20`}
                   {...field}
                   disabled={isSaving}
                   value={field.value || 0}
@@ -217,7 +219,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
                 className="bg-light-navy hover:bg-navy border-light-navy"
                 disabled={isSaving}
               >
-                <Plus aria-hidden="true" className="h-4 w-4 text-white" />
+                <Plus aria-hidden="true" className={`h-4 w-4 ${text.primary}`} />
               </Button>
             </div>
           </FormItem>
@@ -230,7 +232,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
         name="dom_points"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-white">Dom Points Earned</FormLabel>
+            <FormLabel className={text.primary}>Dom Points Earned</FormLabel>
             <div className="flex items-center space-x-2">
               <Button 
                 type="button"
@@ -241,7 +243,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
                 className="bg-light-navy hover:bg-navy border-light-navy"
                 disabled={isSaving}
               >
-                <Minus aria-hidden="true" className="h-4 w-4 text-white" />
+                <Minus aria-hidden="true" className={`h-4 w-4 ${text.primary}`} />
               </Button>
               <FormControl>
                 <Input
@@ -249,7 +251,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
                   inputMode="numeric"
                   step={1}
                   min={0}
-                  className="bg-dark-navy border-light-navy text-white text-center w-20"
+                  className={`bg-dark-navy border-light-navy ${text.field} text-center w-20`}
                   {...field}
                   disabled={isSaving}
                   value={field.value || 0}
@@ -272,7 +274,7 @@ const PunishmentBasicDetails: React.FC<PunishmentBasicDetailsProps> = ({
                 className="bg-light-navy hover:bg-navy border-light-navy"
                 disabled={isSaving}
               >
-                <Plus aria-hidden="true" className="h-4 w-4 text-white" />
+                <Plus aria-hidden="true" className={`h-4 w-4 ${text.primary}`} />
               </Button>
             </div>
           </FormItem>

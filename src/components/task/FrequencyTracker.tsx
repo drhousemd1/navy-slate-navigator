@@ -5,7 +5,7 @@ import { getMondayBasedDay } from '@/lib/utils';
 
 interface FrequencyTrackerProps {
   currentDay?: number;
-  frequency: 'daily' | 'weekly';
+  frequency: 'once' | 'daily' | 'weekly';
   frequency_count: number;
   calendar_color: string;
   usage_data?: number[]; // Array to track specific day usage

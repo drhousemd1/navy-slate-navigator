@@ -106,8 +106,8 @@ function webp(b: Uint8Array, view: DataView) {
 /** Validates encoded structure and parsed/header dimensions, NOT full pixel decode.
  * Preserve accepted bytes (including animation). No URL fetching or native library.
  */
-export async function validateImage(bytes: Uint8Array, declaredType: string) {
-  if (bytes.length === 0 || bytes.length > MAX_IMAGE_BYTES) throw new MediaError('IMAGE_SIZE_INVALID');
+export async function validateImage(bytes: Uint8Array, declaredType: string, maxBytes = MAX_IMAGE_BYTES) {
+  if (bytes.length === 0 || bytes.length > maxBytes) throw new MediaError('IMAGE_SIZE_INVALID');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let mimeType: string;
   if (bytes.length >= 8 && ascii(bytes, 0, 8) === '\x89PNG\r\n\x1a\n') { mimeType = 'image/png'; png(bytes, view); }

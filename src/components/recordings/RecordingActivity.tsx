@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import { blocksNewAction } from '@/data/actions/contracts';
 import { useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
@@ -7,6 +8,7 @@ import { ActivityHistory } from '@/components/activity/ActivityHistory';
 import { recordingUndoReason, type RecordingData, type RecordingType } from '@/data/recordings/readModel';
 
 export function RecordingActivity({ type, data, error, refresh }: { type: RecordingType; data?: RecordingData; error?: string; refresh: () => Promise<void> }) {
+  const text = useCoreTextClasses();
   const actions = useActionCommands();
   const identity = useUserIds();
   const [operationError, setOperationError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export function RecordingActivity({ type, data, error, refresh }: { type: Record
       (type === 'punishment' && (original?.kind === 'punishment_applied' || subjectType === 'punishment'));
   });
   const title = type === 'rule' ? 'Rule' : 'Punishment';
-  return <section className="mb-6 space-y-3 text-white" aria-label={`${title} activity`}>
+  return <section className={`mb-6 space-y-3 ${text.primary}`} aria-label={`${title} activity`}>
     <SavedActions />
     {(error || operationError) && <div role="alert" className="rounded border border-amber-500 bg-navy p-3"><p>{operationError || error}</p><button className="underline" onClick={() => void perform(refresh)}>Refresh confirmed data</button></div>}
     {latest?.state.status === 'confirmed' && <div role="status" className="rounded border border-cyan-500 bg-navy p-3">
@@ -36,7 +38,7 @@ export function RecordingActivity({ type, data, error, refresh }: { type: Record
     <ActivityHistory domain={type} title={`${title} History`}>
       {!data ? <p className="mt-3">Loading confirmed history…</p> : <div className="mt-3 space-y-3">
         {data.events.length === 0 && <p>No new {type === 'rule' ? 'rule violations' : 'punishments'} recorded yet.</p>}
-        <p className="text-xs text-gray-300">Undo is available for new activity with verified point and history details. Imported records are shown below as read-only history.</p>
+        <p className={`text-xs ${text.secondary}`}>Undo is available for new activity with verified point and history details. Imported records are shown below as read-only history.</p>
         {[...data.events].sort((a, b) => b.recorded_at.localeCompare(a.recorded_at) || b.id.localeCompare(a.id)).map(event => {
           const reason = recordingUndoReason(event, data.events, identity.currentRole!, identity.permissions ?? {});
           const reversible = ['rule_violated', 'punishment_applied'].includes(event.kind);
@@ -48,12 +50,12 @@ export function RecordingActivity({ type, data, error, refresh }: { type: Record
             {data.points.filter(point => point.event_id === event.id).map(point => <div key={point.id}><p>{point.currency === 'dom' ? 'Dom' : 'Sub'} balance: {point.amount > 0 ? '+' : ''}{point.amount} points</p>
               {point.calendar && (point.calendar.timeZone !== event.calendar?.timeZone || point.calendar.localDate !== event.calendar?.localDate) && <p>{point.currency === 'dom' ? 'Dom' : 'Sub'} calendar: {point.calendar.localDate} in {point.calendar.timeZone}</p>}</div>)}
             {event.reverses_event_id && <p>Correction of an earlier event; the original remains in History.</p>}
-            {reversible && <><button className="mt-2 underline disabled:opacity-50" disabled={!!reason || busy} onClick={() => void perform(() => actions.enqueue({ kind: 'undo', eventId: event.id }))}>Undo {type === 'rule' ? 'violation' : 'punishment'}</button>{reason && <p className="text-gray-300">{reason}</p>}</>}
+            {reversible && <><button className="mt-2 underline disabled:opacity-50" disabled={!!reason || busy} onClick={() => void perform(() => actions.enqueue({ kind: 'undo', eventId: event.id }))}>Undo {type === 'rule' ? 'violation' : 'punishment'}</button>{reason && <p className={`${text.secondary}`}>{reason}</p>}</>}
           </article>;
         })}
         {data.imported.length > 0 && <section aria-label="Imported history" className="border-t border-light-navy pt-3 space-y-3">
           <h3 className="font-semibold">Imported history</h3>
-          <p className="text-xs text-gray-300">These are the original saved records. The original actor, point effects and timezone were not reliably recorded, so these entries cannot be undone. Current titles are references, not historical snapshots.</p>
+          <p className={`text-xs ${text.secondary}`}>These are the original saved records. The original actor, point effects and timezone were not reliably recorded, so these entries cannot be undone. Current titles are references, not historical snapshots.</p>
           {[...data.imported].sort((a, b) => (b.violation_date ?? b.applied_date ?? '').localeCompare(a.violation_date ?? a.applied_date ?? '') || b.id.localeCompare(a.id)).map(row => {
             const timestamp = row.violation_date ?? row.applied_date;
             return <article key={row.id} className="border-t border-light-navy pt-3 text-sm">

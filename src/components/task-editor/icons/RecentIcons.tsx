@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { predefinedIcons } from './predefinedIcons';
@@ -8,6 +9,7 @@ interface RecentIconsProps {
 }
 
 const RecentIcons: React.FC<RecentIconsProps> = ({ onSelectIcon }) => {
+  const text = useCoreTextClasses();
   const [recentIcons, setRecentIcons] = React.useState<RecentIcon[]>([]);
   
   // Fixed default color for the recently used icons section
@@ -48,7 +50,7 @@ const RecentIcons: React.FC<RecentIconsProps> = ({ onSelectIcon }) => {
 
   return (
     <div className="mt-2">
-      <p className="text-white text-sm font-medium mb-2">Recently Used Icons</p>
+      <p className={`${text.primary} text-sm font-medium mb-2`}>Recently Used Icons</p>
       <div className="grid grid-cols-5 gap-2">
         {recentIcons.length > 0 ? (
           recentIcons.map((iconData, index) => (

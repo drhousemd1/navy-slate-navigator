@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import React, { useRef, useState, useEffect } from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
   onImageUpload,
   setValue
 }: BackgroundImageSelectorProps<TFormValues>) => {
+  const text = useCoreTextClasses();
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({
@@ -158,7 +160,7 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
               {([['x', 'Horizontal focal point'], ['y', 'Vertical focal point']] as const).map(([axis, label]) => (
-                <label key={axis} className="block text-sm text-white">
+                <label key={axis} className={`block text-sm ${text.primary}`}>
                   {label} ({position[axis]}%)
                   <Slider aria-label={label} min={0} max={100} step={1} value={[position[axis]]}
                     onValueChange={([value]) => setFocalPosition({ ...position, [axis]: value })} />
@@ -169,15 +171,15 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
               type="button"
               variant="secondary" 
               onClick={onRemoveImage}
-              className="bg-dark-navy text-white hover:bg-light-navy"
+              className={`bg-dark-navy ${text.primary} hover:bg-light-navy`}
             >
               Remove Image
             </Button>
           </div>
         ) : (
           <div className="relative h-32 flex flex-col items-center justify-center">
-            <Upload className="h-10 w-10 text-white mb-2" />
-            <p className="text-white">Click to upload or drag and drop</p>
+            <Upload className={`h-10 w-10 ${text.primary} mb-2`} />
+            <p className={text.primary}>Click to upload or drag and drop</p>
             <input
               type="file"
               accept="image/*"
@@ -193,7 +195,7 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
           name={'background_opacity' as Path<TFormValues>}
           render={({ field }) => ( // field here includes value, onChange, onBlur, ref, etc.
             <FormItem className="space-y-2">
-              <FormLabel className="text-white">Image Opacity ({Math.round(opacity)}%)</FormLabel>
+              <FormLabel className={text.primary}>Image Opacity ({Math.round(opacity)}%)</FormLabel>
               <FormControl>
                 <Slider
                   // Use the local 'opacity' state for the slider's value for immediate UI feedback.

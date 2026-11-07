@@ -3,6 +3,7 @@ import React from 'react';
 import { Skull } from 'lucide-react';
 import TaskIcon from '../task/TaskIcon';
 import HighlightedText from '../task/HighlightedText';
+import CardText from '../common/CardText';
 
 interface PunishmentCardContentProps {
   icon_name?: string;
@@ -12,6 +13,8 @@ interface PunishmentCardContentProps {
   title_color: string;
   subtext_color: string;
   highlight_effect: boolean;
+  background_image_url?: string;
+  background_opacity?: number;
   showIcon?: boolean;
 }
 
@@ -23,8 +26,11 @@ const PunishmentCardContent: React.FC<PunishmentCardContentProps> = ({
   title_color,
   subtext_color,
   highlight_effect,
+  background_image_url,
+  background_opacity,
   showIcon = true
 }) => {
+  const hasVisibleImage = !!background_image_url && background_opacity !== 0;
   // Use the provided icon color for the background
   const iconBgColor = '#ea384c'; // Keep red background for the circle
 
@@ -73,11 +79,11 @@ const PunishmentCardContent: React.FC<PunishmentCardContentProps> = ({
           </div>
         ) : (
           <>
-            <div className="text-xl font-semibold" style={{ color: title_color }}>
-              {title}
+            <div className="text-xl font-semibold">
+              <CardText text={title} color={title_color} highlight={false} hasImage={hasVisibleImage} surface="--navy" />
             </div>
-            <div className="text-sm mt-1" style={{ color: subtext_color }}>
-              {description}
+            <div className="text-sm mt-1">
+              <CardText text={description} color={subtext_color} highlight={false} hasImage={hasVisibleImage} surface="--navy" />
             </div>
           </>
         )}

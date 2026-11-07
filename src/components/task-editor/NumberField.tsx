@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import React from 'react';
 import { Control, Controller, FieldValues, Path, UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -28,13 +29,14 @@ const NumberField = <T extends FieldValues>({
   step = 1,
   disabled = false,
 }: NumberFieldProps<T>) => {
+  const text = useCoreTextClasses();
   return (
     <FormField
       control={control}
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel className="text-white">{label}</FormLabel>
+          <FormLabel className={text.primary}>{label}</FormLabel>
           <div className="flex items-center space-x-2">
             <Button
               type="button"
@@ -45,12 +47,12 @@ const NumberField = <T extends FieldValues>({
               className="bg-light-navy hover:bg-navy border-light-navy"
               disabled={disabled || (minValue !== undefined && Number(field.value) <= minValue)}
             >
-              <Minus aria-hidden="true" className="h-4 w-4 text-white" />
+              <Minus aria-hidden="true" className={`h-4 w-4 ${text.primary}`} />
             </Button>
             <FormControl>
               <Input
                 type="number"
-                className="bg-dark-navy border-light-navy text-white text-center w-20"
+                className={`bg-dark-navy border-light-navy ${text.field} text-center w-20`}
                 {...field}
                 value={field.value || 0}
                 onChange={(e) => {
@@ -75,7 +77,7 @@ const NumberField = <T extends FieldValues>({
               className="bg-light-navy hover:bg-navy border-light-navy"
               disabled={disabled || (maxValue !== undefined && Number(field.value) >= maxValue)}
             >
-              <Plus aria-hidden="true" className="h-4 w-4 text-white" />
+              <Plus aria-hidden="true" className={`h-4 w-4 ${text.primary}`} />
             </Button>
           </div>
         </FormItem>

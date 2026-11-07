@@ -4,12 +4,15 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TaskFeedback } from '@/components/task/TaskFeedback';
 import { RewardFeedback } from '@/components/rewards/RewardFeedback';
-const mocks = vi.hoisted(() => ({ actions: null as any, settings: null as any, data: null as any, ack: vi.fn() }));
+import { COLOR_SCHEMES } from '@/lib/colorSchemes';
+const mocks = vi.hoisted(() => ({ actions: null as any, settings: null as any, data: null as any, ack: vi.fn(), theme: 'default' }));
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: mocks.theme }) }));
 vi.mock('@/contexts/ActionCommandsContext', () => ({ useActionCommands: () => mocks.actions }));
 vi.mock('@/hooks/useNotificationSettings', () => ({ useNotificationSettings: () => mocks.settings }));
 vi.mock('@/data/tasks/actionReadModel', () => ({ useTaskActionData: () => ({ data: mocks.data }) }));
 vi.mock('@/data/rewards/actionReadModel', () => ({ acknowledgeRewardFeedback: (...args: any[]) => mocks.ack(...args) }));
 beforeEach(() => {
+  mocks.theme = 'default';
   const scope = { accountId: 'sub', participantId: 'sub-member', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' };
   mocks.actions = { scope, mode: 'atomic', confirmed: [], refresh: vi.fn().mockResolvedValue(undefined), data: { events: [], acknowledged: [], deliveries: [{ event_id: 'event', kind: 'action_confirmed', recipient_participant_id: 'sub-member' }] } };
   mocks.data = { events: [{ id: 'event', kind: 'task_completed', subject: { title: 'Morning task' } }], points: [{ event_id: 'event', currency: 'sub', amount: 5 }] };
@@ -26,11 +29,41 @@ describe('confirmed task feedback', () => {
     mocks.settings.accountId = 'dom'; view.rerender(<TaskFeedback />); expect(screen.queryByRole('status')).toBeNull();
   });
   it('durably acknowledges own explicit dismissal, with visible retry after uncertainty', async () => {
+    mocks.theme = 'light-turquoise';
     mocks.ack.mockRejectedValueOnce(new Error('Dismissal was not confirmed.'));
     render(<TaskFeedback />); const user = userEvent.setup(); await user.click(screen.getByRole('button', { name: 'Dismiss task confirmation' }));
     expect((await screen.findByRole('alert')).textContent).toContain('not confirmed'); expect(screen.getByText('Task completion confirmed')).toBeTruthy();
+    expect(screen.getByRole('status').classList.contains('text-foreground')).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Retry dismissal' }));
     expect(mocks.ack).toHaveBeenLastCalledWith(mocks.actions.scope, 'event', 'action_confirmed'); expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it.each(COLOR_SCHEMES.map(s => s.name))('keeps task completion and Undo confirmations readable in %s without acknowledgement on repaint', theme => {
+    mocks.theme = theme;
+    const view = render(<TaskFeedback />);
+    const expected = theme === 'light-turquoise' ? 'text-foreground' : 'text-white';
+    expect(screen.getByRole('status').classList.contains(expected)).toBe(true);
+    expect(screen.getByText('Task completion confirmed')).toBeTruthy();
+    mocks.data.events[0].kind = 'action_undone'; mocks.data.points[0].amount = -5;
+    view.rerender(<TaskFeedback />);
+    expect(screen.getByText('Task Undo confirmed')).toBeTruthy(); expect(screen.getByText('Sub balance: -5 points')).toBeTruthy();
+    expect(screen.getByRole('status').classList.contains(expected)).toBe(true); expect(mocks.ack).not.toHaveBeenCalled();
+  });
+
+  it.each(COLOR_SCHEMES.map(s => s.name))('keeps purchase, gift, use and reward Undo confirmations readable in %s', theme => {
+    mocks.theme = theme; mocks.settings.preferences.types.rewardPurchased = true;
+    mocks.actions.data.events = [{ id: 'original-reward-event' }];
+    const view = render(<RewardFeedback />);
+    for (const [kind, label] of [['reward_buy', 'Purchase confirmed'], ['reward_gift', 'Gift confirmed for your Sub'], ['reward_redeem', 'Use confirmed'], ['undo', 'Undo confirmed'], ['reward_delete', 'Reward deletion confirmed']]) {
+      mocks.actions.confirmed = [{ command: { kind, commandId: 'command', eventId: 'original-reward-event' }, state: { status: 'confirmed', receipt: { feedback: [{ subjectTitle: 'Saved reward title' }] } } }];
+      view.rerender(<RewardFeedback />);
+      expect(screen.getByText(label)).toBeTruthy();
+      expect(screen.getByRole('status').classList.contains(theme === 'light-turquoise' ? 'text-foreground' : 'text-white')).toBe(true);
+      expect(screen.getByText('Saved reward title')).toBeTruthy();
+    }
+    expect(mocks.ack).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss confirmation' }));
+    expect(screen.queryByRole('status')).toBeNull(); expect(mocks.ack).not.toHaveBeenCalled();
   });
   it('shows a truthful actor acknowledgment for partner points and never labels it reward activity', () => {
     mocks.actions.scope = { ...mocks.actions.scope, accountId: 'dom', participantId: 'dom-member' }; mocks.settings.accountId = 'dom'; mocks.actions.data.deliveries = [];

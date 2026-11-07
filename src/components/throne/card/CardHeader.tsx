@@ -1,23 +1,8 @@
-
-import React from 'react';
 import PriorityBadge from '@/components/task/PriorityBadge';
-import PointsBadge from '@/components/task/PointsBadge';
 
-interface CardHeaderProps {
-  priority: 'low' | 'medium' | 'high';
-  points: number;
+export default function CardHeader({ priority, total }: { priority: 'low' | 'medium' | 'high'; total: number | null }) {
+  return <div className="flex justify-between items-start mb-3 gap-3">
+    <PriorityBadge priority={priority} />
+    {total !== null && <span className="rounded-full bg-black text-[#00f0ff] border border-[#00f0ff] px-3 py-1 text-sm font-bold">{total} recorded</span>}
+  </div>;
 }
-
-const CardHeader: React.FC<CardHeaderProps> = ({ priority, points }) => {
-  return (
-    <div className="flex justify-between items-start mb-3">
-      <PriorityBadge priority={priority} />
-      
-      <div className="flex items-center gap-2">
-        <PointsBadge points={points} />
-      </div>
-    </div>
-  );
-};
-
-export default CardHeader;

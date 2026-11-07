@@ -47,7 +47,7 @@ const TasksList: React.FC<TasksListProps> = ({
   return (
     <div className="space-y-4 overflow-x-hidden w-full max-w-full">
       {sortedTasks.map((task) => {
-        const frequency = task.frequency as 'daily' | 'weekly';
+        const frequency = task.frequency as 'once' | 'daily' | 'weekly';
         const usageDataArray = Array.isArray(task.usage_data) ? task.usage_data : Array(7).fill(0);
         return (
           <div key={task.id} className="w-full max-w-full overflow-x-hidden">

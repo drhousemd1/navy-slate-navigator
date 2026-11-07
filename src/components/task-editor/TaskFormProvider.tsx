@@ -10,8 +10,12 @@ import { Form } from '@/components/ui/form';
 interface LocalTaskFormValues {
   title: string;
   description: string;
-  frequency: 'daily' | 'weekly';
+  frequency: 'once' | 'daily' | 'weekly';
   frequency_count: number;
+  mandatory?: boolean;
+  deadline_date?: string | null;
+  deadline_time?: string | null;
+  deadline_weekday?: number | null;
   points: number;
   priority: 'low' | 'medium' | 'high';
   icon_name?: string | null;
@@ -56,8 +60,12 @@ const TaskFormSession: React.FC<TaskFormProviderProps & { scope: EditorDraftScop
       title: taskData?.title || '',
       description: taskData?.description || '',
       points: taskData?.points ?? 5,
-      frequency: (taskData?.frequency as 'daily' | 'weekly') || 'daily',
+      frequency: (taskData?.frequency as 'once' | 'daily' | 'weekly') || 'daily',
       frequency_count: taskData?.frequency_count || 1,
+      mandatory: taskData?.mandatory ?? false,
+      deadline_date: taskData?.deadline_date ?? null,
+      deadline_time: taskData?.deadline_time?.slice(0, 5) ?? null,
+      deadline_weekday: taskData?.deadline_weekday ?? null,
       background_image_url: taskData?.background_image_url || undefined,
       background_opacity: taskData?.background_opacity ?? 100,
       icon_url: taskData?.icon_url || undefined,

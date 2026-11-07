@@ -47,6 +47,18 @@
 .action-feedback-dismiss { position: absolute; top: 0.5rem; right: 0.5rem; z-index: 2; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 0.5rem; background: transparent; color: #cbd5e1; cursor: pointer; }
 .action-feedback-dismiss:hover { background: hsl(var(--light-navy)); color: #fff; }
 .action-feedback-dismiss:focus-visible { outline: 2px solid hsl(var(--nav-active)); outline-offset: 2px; }
+/* Only the pale panel needs different text. Keep the established dark text
+   colors and decorative coin artwork unchanged. */
+.action-feedback-card.action-feedback-light,
+.action-feedback-light .action-feedback-eyebrow,
+.action-feedback-light .action-feedback-amount,
+.action-feedback-light .action-feedback-amount span,
+.action-feedback-light .action-feedback-recipient,
+.action-feedback-light .action-feedback-reason,
+.action-feedback-light .action-feedback-balance,
+.action-feedback-light .action-feedback-balance strong,
+.action-feedback-light .action-feedback-dismiss,
+.action-feedback-light .action-feedback-dismiss:hover { color: hsl(var(--foreground)); }
 .action-feedback-coins { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; z-index: 0; }
 .action-feedback-coin { position: absolute; top: -1.5rem; width: 0.85rem; height: 0.85rem; border-radius: 50%; border: 2px solid #fbbf24; background: linear-gradient(135deg, #fef3c7, #d97706); opacity: 0; }
 .action-feedback-coin-0 { left: 7%; animation-delay: 0ms; }

@@ -1,3 +1,4 @@
+import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import PunishmentsHeader from './PunishmentsHeader';
 import PunishmentEditor from '@/components/PunishmentEditor';
@@ -17,6 +18,7 @@ import RandomPunishmentSelections from './RandomPunishmentSelections';
 import { reviewRandomPunishments, type ReviewedPunishment } from './hooks/randomPunishmentReview';
 
 export function AtomicPunishmentsContent({ contentRef }: { contentRef: MutableRefObject<{ handleAddNewPunishment?: () => void }> }) {
+  const text = useCoreTextClasses();
   const state = useRecordingData('punishment');
   const [editor, setEditor] = useState<{ punishment?: PunishmentData } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +67,9 @@ export function AtomicPunishmentsContent({ contentRef }: { contentRef: MutableRe
     <RecordingActivity type="punishment" data={state.data} error={error || state.error?.message} refresh={state.refresh} />
     <Button className="mb-4 bg-red-600 hover:bg-red-700 text-white" disabled={!!state.actionReason || state.pending || savingAction}
       onClick={() => setRandomView(view)}><Shuffle className="mr-2 h-4 w-4" />Random Punishment</Button>
-    {state.actionReason && <p className="mb-3 text-sm text-gray-300">{state.actionReason}</p>}
-    {state.isLoading && <p role="status" className="text-white">Loading punishments…</p>}
-    {state.data && state.data.definitions.length === 0 && <p className="text-gray-300">No punishments yet. Use Add to create one.</p>}
+    {state.actionReason && <p className={`mb-3 text-sm ${text.secondary}`}>{state.actionReason}</p>}
+    {state.isLoading && <p role="status" className={text.primary}>Loading punishments…</p>}
+    {state.data && state.data.definitions.length === 0 && <p className={text.secondary}>No punishments yet. Use Add to create one.</p>}
     <div className="space-y-4">{[...(state.data?.definitions as PunishmentData[] ?? [])].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')).map(punishment => {
       const progress = state.data?.progress.find(item => item.subjectId === punishment.id);
       return <Card key={punishment.id} className="relative overflow-hidden border-2 border-red-500 bg-navy">
@@ -77,7 +79,7 @@ export function AtomicPunishmentsContent({ contentRef }: { contentRef: MutableRe
             onPunish={() => void record(punishment).catch(cause => { if (mounted.current && currentView.current === view) setError(cause instanceof Error ? cause.message : 'The punishment could not be saved.'); })}
             disabled={!!state.actionReason || state.pending || savingAction || !progress?.expectedContext} />
           <PunishmentCardContent {...punishment} />
-          {progress?.expectedContext?.kind === 'punishment_apply' && <div className="text-xs text-gray-300">
+          {progress?.expectedContext?.kind === 'punishment_apply' && <div className={`text-xs ${punishment.background_image_url && punishment.background_opacity !== 0 ? 'text-gray-300' : text.secondary}`}>
             <p>Sub actions: {progress.expectedContext.sub.localDate} · {progress.expectedContext.sub.timeZone}</p>
             {progress.expectedContext.dom && <p>Dom award: {progress.expectedContext.dom.localDate} · {progress.expectedContext.dom.timeZone}</p>}
           </div>}

@@ -3,12 +3,15 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RewardFeedback } from '@/components/rewards/RewardFeedback';
+import { COLOR_SCHEMES } from '@/lib/colorSchemes';
 
-const mocks = vi.hoisted(() => ({ actions: null as any, prefs: null as any, ack: vi.fn(), sequence: 0 }));
+const mocks = vi.hoisted(() => ({ actions: null as any, prefs: null as any, ack: vi.fn(), sequence: 0, theme: 'default' }));
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: mocks.theme }) }));
 vi.mock('@/contexts/ActionCommandsContext', () => ({ useActionCommands: () => mocks.actions }));
 vi.mock('@/hooks/useNotificationSettings', () => ({ useNotificationSettings: () => mocks.prefs }));
 vi.mock('@/data/rewards/actionReadModel', () => ({ acknowledgeRewardFeedback: (...args: any[]) => mocks.ack(...args) }));
 beforeEach(() => {
+  mocks.theme = 'default';
   const eventId = `delivery-${++mocks.sequence}`;
   const scope = { accountId: 'sub-account', participantId: 'sub-member', relationshipId: 'period' };
   const payload = { kind: 'points_refunded', eventId, recipientParticipantId: scope.participantId, subjectTitle: 'Quiet evening', reason: 'reward_deleted', currency: 'sub', points: 20, balanceAfter: 100 };
@@ -37,15 +40,25 @@ describe('mounted recipient refund delivery', () => {
     expect(mocks.actions.refresh).toHaveBeenCalledOnce();
   });
   it('makes a failed acknowledgment visibly retryable, without repeating the refund operation', async () => {
+    mocks.theme = 'light-turquoise';
     mocks.ack.mockRejectedValueOnce(new Error('Dismissal could not be confirmed.'));
     render(<RewardFeedback />);
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Dismiss refund for Quiet evening' }));
     expect((await screen.findByRole('alert')).textContent).toContain('Dismissal could not be confirmed');
+    expect(screen.getByRole('alert').classList.contains('text-foreground')).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Retry dismissal' }));
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
     expect(mocks.ack).toHaveBeenCalledTimes(2);
     expect(mocks.actions.refresh).toHaveBeenCalledOnce();
+  });
+  it.each(COLOR_SCHEMES.map(s => s.name))('passes the %s presentation to a real refund card without acknowledging on a theme change', theme => {
+    mocks.theme = theme;
+    const view = render(<RewardFeedback />);
+    expect(screen.getByRole('article').classList.contains('action-feedback-light')).toBe(theme === 'light-turquoise');
+    mocks.theme = theme === 'light-turquoise' ? 'default' : 'light-turquoise'; view.rerender(<RewardFeedback />);
+    expect(screen.getByRole('article').classList.contains('action-feedback-light')).toBe(mocks.theme === 'light-turquoise');
+    expect(screen.getByText('Returned to your balance')).toBeTruthy(); expect(mocks.ack).not.toHaveBeenCalled();
   });
   it('rejects stale preference ownership and describes the actor’s partner refund truthfully', () => {
     mocks.prefs.accountId = 'other-account';

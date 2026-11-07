@@ -1,3 +1,4 @@
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 /* eslint-disable @typescript-eslint/no-explicit-any -- Mutable provider fixtures exercise the real consumers. */
 import React, { StrictMode } from 'react';
 import { act, cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react';

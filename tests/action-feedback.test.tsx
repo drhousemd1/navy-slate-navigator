@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActionReceipt, PendingActionState } from '@/domain/actions/types';
 import { ConfirmedActionFeedback } from '@/components/activity/ConfirmedActionFeedback';
 import { createActionFeedbackLedger, type FeedbackScope, type ScopedActionFeedback } from '@/lib/action-feedback';
+import { readFileSync } from 'node:fs';
+import { COLOR_SCHEMES, getColorScheme } from '@/lib/colorSchemes';
+const feedbackCss = readFileSync('src/components/activity/action-feedback.css', 'utf8');
 
 const sub: FeedbackScope = { accountId: 'sub-account', participantId: 'sub-participant', relationshipId: 'period-1' };
 const dom: FeedbackScope = { accountId: 'dom-account', participantId: 'dom-participant', relationshipId: 'period-1' };
@@ -32,6 +35,30 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('confirmed refund feedback', () => {
+  it.each(COLOR_SCHEMES.map(s => s.name))('preserves the dark refund colors and applies readable text throughout the %s card', theme => {
+    // jsdom does not resolve custom properties. Substitute the real palette
+    // values into the real stylesheet, then check its rendered selector cascade.
+    const style = document.createElement('style'), palette = getColorScheme(theme)!.variables;
+    style.textContent = feedbackCss.replace(/var\((--[a-z-]+)\)/g, (match, key) => palette[key as keyof typeof palette] ?? match);
+    document.head.append(style);
+    try {
+      const light = theme === 'light-turquoise';
+      const view = render(<ConfirmedActionFeedback activeScope={sub} result={result()} enabled lightSurface={light} ledger={createActionFeedbackLedger()} />);
+      const card = screen.getByRole('article');
+      const probe = document.createElement('span'); probe.style.color = `hsl(${palette['--foreground']})`; document.body.append(probe);
+      const foreground = getComputedStyle(probe).color; probe.remove();
+      for (const [selector, dark] of [
+        ['.action-feedback-eyebrow', 'rgb(253, 230, 138)'], ['.action-feedback-amount', 'rgb(253, 230, 138)'],
+        ['.action-feedback-amount span', 'rgb(248, 250, 252)'], ['.action-feedback-recipient', 'rgb(165, 243, 252)'],
+        ['.action-feedback-reward', 'rgb(248, 250, 252)'], ['.action-feedback-reason', 'rgb(203, 213, 225)'],
+        ['.action-feedback-balance', 'rgb(203, 213, 225)'], ['.action-feedback-balance strong', 'rgb(248, 250, 252)'],
+        ['.action-feedback-dismiss', 'rgb(203, 213, 225)'],
+      ]) expect(getComputedStyle(card.querySelector(selector)!).color).toBe(light ? foreground : dark);
+      expect(view.container.querySelectorAll('.action-feedback-coin')).toHaveLength(8);
+      expect(getComputedStyle(view.container.querySelector('.action-feedback-coin')!).borderTopColor).toBe('rgb(251, 191, 36)');
+    } finally { style.remove(); }
+  });
+
   it.each(['pending', 'sending', 'confirmation_unknown', 'rejected'] as const)('does not announce or animate a %s command', status => {
     const state: PendingActionState = status === 'rejected' ? { status, command, reason: 'No permission' } : { status, command };
     const view = render(<ConfirmedActionFeedback activeScope={sub} result={{ scope: sub, state, audience: { kind: 'recipient' } }} enabled ledger={createActionFeedbackLedger()} />);
