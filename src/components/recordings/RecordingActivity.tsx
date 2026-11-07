@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { SavedActions } from '@/components/activity/SavedActions';
+import { ActivityHistory } from '@/components/activity/ActivityHistory';
 import { recordingUndoReason, type RecordingData, type RecordingType } from '@/data/recordings/readModel';
 
 export function RecordingActivity({ type, data, error, refresh }: { type: RecordingType; data?: RecordingData; error?: string; refresh: () => Promise<void> }) {
@@ -32,8 +33,7 @@ export function RecordingActivity({ type, data, error, refresh }: { type: Record
       <p>{latest.state.receipt.feedback[0]?.subjectTitle}</p>
       {latest.state.receipt.pointDeltas?.map(delta => <p key={delta.participantId}>{delta.currency === 'dom' ? 'Dom' : 'Sub'}: {delta.amount > 0 ? '+' : ''}{delta.amount} points</p>)}
     </div>}
-    <details className="rounded border border-light-navy bg-navy p-3">
-      <summary className="cursor-pointer font-semibold">{title} History</summary>
+    <ActivityHistory domain={type} title={`${title} History`}>
       {!data ? <p className="mt-3">Loading confirmed history…</p> : <div className="mt-3 space-y-3">
         {data.events.length === 0 && <p>No new {type === 'rule' ? 'rule violations' : 'punishments'} recorded yet.</p>}
         <p className="text-xs text-gray-300">Undo is available for new activity with verified point and history details. Imported records are shown below as read-only history.</p>
@@ -65,6 +65,6 @@ export function RecordingActivity({ type, data, error, refresh }: { type: Record
           })}
         </section>}
       </div>}
-    </details>
+    </ActivityHistory>
   </section>;
 }

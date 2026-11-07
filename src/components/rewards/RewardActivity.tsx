@@ -1,5 +1,6 @@
 import { blocksNewAction } from '@/data/actions/contracts';
 import { SavedActions } from '@/components/activity/SavedActions';
+import { ActivityHistory } from '@/components/activity/ActivityHistory';
 import { useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
@@ -18,8 +19,7 @@ export function RewardActivity() {
   return <section className="mb-6 space-y-3 text-white" aria-label="Reward actions">
     {(actions.error || error) && <div role="alert" className="rounded border border-amber-500 bg-navy p-3"><p>{error || actions.error}</p><button className="underline" onClick={() => void perform(actions.refresh)}>Refresh confirmed data</button></div>}
     <SavedActions />
-    {actions.mode === 'atomic' && <details className="rounded border border-light-navy bg-navy p-3">
-      <summary className="cursor-pointer font-semibold">Reward History</summary>
+    {actions.mode === 'atomic' && <ActivityHistory domain="reward" title="Reward History">
       {!actions.data ? <p className="mt-3">Loading confirmed history…</p> : <div className="mt-3 space-y-3">
         {actions.data.events.length === 0 && <p>No new reward events yet.</p>}
         {[...actions.data.events].sort((a, b) => b.recorded_at.localeCompare(a.recorded_at) || b.id.localeCompare(a.id)).map(event => {
@@ -47,6 +47,6 @@ export function RewardActivity() {
           </article>)}
         </section>}
       </div>}
-    </details>}
+    </ActivityHistory>}
   </section>;
 }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { SavedActions } from '@/components/activity/SavedActions';
+import { ActivityHistory } from '@/components/activity/ActivityHistory';
 import { taskUndoReason, type TaskActionData } from '@/data/tasks/actionReadModel';
 
 export function TaskActivity({ data }: { data: TaskActionData | undefined }) {
@@ -14,8 +15,7 @@ export function TaskActivity({ data }: { data: TaskActionData | undefined }) {
   return <section className="mb-6 space-y-3 text-white" aria-label="Task actions">
     <SavedActions />
     {error && <p role="alert" className="text-amber-300">{error}</p>}
-    <details className="rounded border border-light-navy bg-navy p-3">
-      <summary className="cursor-pointer font-semibold">Task History</summary>
+    <ActivityHistory domain="task" title="Task History">
       {!data ? <p className="mt-3">Loading confirmed history…</p> : <div className="mt-3 space-y-3">
         <p className="text-xs text-gray-300">Undo reverses the points recorded for that completion. Starting counts imported from the older app have no recorded award to reverse.</p>
         {data.events.length === 0 && <p>No recorded task events yet.</p>}
@@ -42,6 +42,6 @@ export function TaskActivity({ data }: { data: TaskActionData | undefined }) {
           </article>)}
         </div>}
       </div>}
-    </details>
+    </ActivityHistory>
   </section>;
 }
