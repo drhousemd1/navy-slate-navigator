@@ -15,7 +15,10 @@ vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'https://i
   from: mocks.from, rpc: mocks.rpc,
   auth: { getSession: async () => ({ data: { session: { user: { id: mocks.identity.currentUserId }, access_token: 'synthetic-token' } }, error: null }) },
 } }));
-vi.mock('@/data/indexedDB/useIndexedDB', () => ({ saveRewardsToDB: vi.fn(), savePunishmentsToDB: vi.fn() }));
+vi.mock('@/data/indexedDB/useIndexedDB', async importOriginal => ({
+  ...await importOriginal<typeof import('@/data/indexedDB/useIndexedDB')>(),
+  saveRewardsToDB: vi.fn(), savePunishmentsToDB: vi.fn(),
+}));
 vi.mock('@/data/rewards/queries', () => ({ getRewardsQueryKey: (sub: string, dom: string) => ['rewards', sub, dom] }));
 vi.mock('@/data/punishments/queries', () => ({ PUNISHMENTS_QUERY_KEY: ['punishments'] }));
 vi.mock('@/utils/image/rewardIntegration', () => ({ processImageForSave: async () => ({ processedUrl: null, metadata: null }) }));
