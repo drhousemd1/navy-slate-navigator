@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useContext, useRef, ReactNod
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
 import { forgetRecovery } from '@/lib/offline/recovery';
+import { revokeCurrentPushDeviceBeforeSignOut } from '@/lib/pushDevice';
 import { toast } from '@/hooks/use-toast';
 import { queryClient } from '@/data/queryClient';
 import localforage from 'localforage';
@@ -225,8 +226,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signOut = async () => {
+    const accountId = currentAccountId.current;
     forgetRecovery(supabaseBackendId);
     logger.info("AuthContext: signOut called");
+    const pushResult = await revokeCurrentPushDeviceBeforeSignOut(accountId);
+    // A different account may have signed in while device revocation waited.
+    // The original sign-out must not sign that new account out.
+    if (currentAccountId.current !== accountId) return;
     const { error } = await supabase.auth.signOut();
     
     if (error) {
@@ -234,6 +240,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast({ title: "Sign Out Error", description: error.message, variant: "destructive" });
     } else {
       logger.info("AuthContext: Sign out successful");
+      if (pushResult === 'unconfirmed') toast({ title: 'Device notifications not confirmed off', description: 'You are signed out. To stop all alerts on this browser, turn off this site’s notifications in browser settings.' });
     }
   };
 

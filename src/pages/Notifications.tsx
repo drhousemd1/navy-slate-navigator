@@ -2,17 +2,16 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
-import { X, Bell, Wifi } from 'lucide-react';
+import { X, Bell } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
-import { usePushSubscription } from '@/hooks/usePushSubscription';
+import { PushDeviceSettings } from '@/components/profile/PushDeviceSettings';
 import { toast } from '@/hooks/use-toast';
 import WellnessReminderSettings from '@/components/profile/WellnessReminderSettings';
 
 const Notifications: React.FC = () => {
   const navigate = useNavigate();
   const { preferences, isLoading, isSaving, isReady, loadError, loadPreferences, updateNotificationType, toggleNotifications } = useNotificationSettings();
-  const { isSubscribed, isSupported, isLoading: pushLoading, subscribe, unsubscribe, requestPermissionImmediately } = usePushSubscription();
 
   const handleTypeToggle = async (type: keyof typeof preferences.types, enabled: boolean) => {
     try {
@@ -27,62 +26,8 @@ const Notifications: React.FC = () => {
   };
 
   const handleMasterToggle = async (enabled: boolean) => {
-    try {
-      if (enabled) {
-        // First, request permission immediately (in user gesture context)
-        if (isSupported) {
-          const hasPermission = await requestPermissionImmediately();
-          if (!hasPermission) {
-            toast({
-              title: 'Permission Required',
-              description: 'Please allow notifications in your browser to enable push notifications.',
-              variant: 'destructive',
-            });
-            return;
-          }
-
-          // Update database preferences first
-          await toggleNotifications(enabled);
-          
-          // Then subscribe with permission already granted
-          const success = await subscribe(true);
-          if (!success) {
-            toast({
-              title: 'Warning',
-              description: 'Notifications enabled but push subscription failed. Please try again.',
-              variant: 'destructive',
-            });
-          } else {
-            toast({
-              title: 'Success',
-              description: 'Push notifications enabled successfully!',
-            });
-          }
-        } else {
-          toast({
-            title: 'Warning',
-            description: 'Push notifications not supported by this browser.',
-            variant: 'destructive',
-          });
-        }
-      } else {
-        // Disable notifications
-        await toggleNotifications(enabled);
-        if (isSubscribed) {
-          await unsubscribe();
-        }
-        toast({
-          title: 'Success',
-          description: 'Push notifications disabled.',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update notifications.',
-        variant: 'destructive',
-      });
-    }
+    try { await toggleNotifications(enabled); }
+    catch { toast({ title: 'Error', description: 'Your account preference could not be confirmed. Reload its saved state.', variant: 'destructive' }); }
   };
 
   const getNotificationTypeInfo = (type: keyof typeof preferences.types) => {
@@ -115,6 +60,10 @@ const Notifications: React.FC = () => {
         title: 'Wellness Updated',
         description: 'Get notified when your partner updates their wellness score'
       },
+      wellnessCheckin: {
+        title: 'Wellness Check-in',
+        description: 'Allow push delivery for your saved personal reminder schedule'
+      },
       messages: {
         title: 'Messages',
         description: 'Get notified when you receive a new message from your partner'
@@ -123,8 +72,7 @@ const Notifications: React.FC = () => {
     return typeInfo[type] || { title: type, description: '' };
   };
 
-  // Filter out wellnessCheckin since it has its own section
-  const notificationTypes = Object.entries(preferences.types).filter(([type]) => type !== 'wellnessCheckin');
+  const notificationTypes = Object.entries(preferences.types);
 
   return (
     <AppLayout>
@@ -151,24 +99,18 @@ const Notifications: React.FC = () => {
                 <Bell className={`w-5 h-5 ${preferences.enabled ? 'text-cyan-500' : 'text-gray-400'}`} />
                 <div>
                   <p className="text-white font-medium">Push Notifications</p>
-                  <p className="text-gray-400 text-sm">Enable push notifications</p>
+                  <p className="text-gray-400 text-sm">Account preference across your devices</p>
                 </div>
               </div>
               <Switch
                 checked={preferences.enabled}
                 aria-label="Push Notifications"
                 onCheckedChange={handleMasterToggle}
-                disabled={!isReady || isLoading || isSaving || pushLoading}
+                disabled={!isReady || isLoading || isSaving}
               />
             </div>
 
-            {/* Status */}
-            <div className="flex items-center space-x-2">
-              <Wifi className={`h-4 w-4 ${isSubscribed ? 'text-green-500' : 'text-gray-400'}`} />
-              <p className="text-sm text-gray-400">
-                Status: {isSupported ? (isSubscribed ? 'Subscribed' : 'Not subscribed') : 'Not supported'}
-              </p>
-            </div>
+            <PushDeviceSettings />
 
             {/* Notification Types */}
             <div className="space-y-4">

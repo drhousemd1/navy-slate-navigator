@@ -1,378 +1,143 @@
-
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { logger } from '@/lib/logger';
+import { getPushDevice, notificationError, registerPushDevice, revokePushDevice } from '@/data/notifications/api';
+import { clearPushDeviceBinding, getOrCreatePushDeviceId as deviceId, readPushDeviceBinding as readBinding, writePushDeviceBinding } from '@/lib/pushDevice';
 
-export const usePushSubscription = () => {
-  const { user } = useAuth();
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [vapidPublicKey, setVapidPublicKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user) {
-      fetchVapidPublicKey();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (vapidPublicKey && user) {
-      checkPushSupport();
-      checkSubscriptionStatus();
-    }
-  }, [vapidPublicKey, user]);
-
-  // Fetch VAPID public key from server
-  const fetchVapidPublicKey = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('get-vapid-public-key');
-      
-      if (error) {
-        console.error('Failed to fetch VAPID public key:', error);
-        setIsLoading(false);
-        return;
-      }
-
-      if (data?.publicKey) {
-        setVapidPublicKey(data.publicKey);
-      } else {
-        console.error('No public key received from server');
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error('Error fetching VAPID public key:', error);
-      setIsLoading(false);
-    }
-  };
-
-  const checkPushSupport = async () => {
-    logger.info('Checking push notification support...');
-    
-    // Basic API check
-    const hasApis = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-    logger.info('Basic APIs available:', hasApis);
-    
-    if (!hasApis) {
-      logger.warn('Missing required APIs for push notifications');
-      setIsSupported(false);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Try to get service worker registration
-      logger.info('Waiting for service worker registration...');
-      const registration = await navigator.serviceWorker.ready;
-      logger.info('Service worker ready:', registration);
-      
-      // Check if push manager is available
-      if (!registration.pushManager) {
-        logger.warn('Push manager not available');
-        setIsSupported(false);
-        setIsLoading(false);
-        return;
-      }
-      
-      logger.info('Push notifications fully supported');
-      setIsSupported(true);
-    } catch (error) {
-      logger.error('Service worker registration failed:', error);
-      setIsSupported(false);
-      setIsLoading(false);
-    }
-  };
-
-  const checkSubscriptionStatus = async () => {
-    if (!isSupported || !user) {
-      logger.info('[usePushSubscription] Skipping subscription check - not supported or no user');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      logger.info('[usePushSubscription] Checking subscription status for user:', user.id);
-      const registration = await navigator.serviceWorker.ready;
-      logger.info('[usePushSubscription] Got service worker registration for subscription check');
-      
-      const subscription = await registration.pushManager.getSubscription();
-      logger.info('[usePushSubscription] Current browser subscription:', subscription ? 'exists' : 'none');
-      
-      if (subscription) {
-        logger.info('[usePushSubscription] Checking database for subscriptions for user:', user.id);
-        
-        // CRITICAL FIX: Check for ANY valid subscription for this user, not just the current endpoint
-        // This fixes the multiple subscriptions issue where .maybeSingle() would fail
-        const { data: subscriptions, error } = await supabase
-          .from('user_push_subscriptions')
-          .select('id, endpoint')
-          .eq('user_id', user.id);
-
-        if (error) {
-          logger.error('[usePushSubscription] Database query error:', error);
-          setIsSubscribed(false);
-        } else {
-          const hasValidSubscriptions = subscriptions && subscriptions.length > 0;
-          const currentEndpointExists = subscriptions?.some(sub => sub.endpoint === subscription.endpoint);
-          
-          logger.info('[usePushSubscription] Database subscription check:', {
-            totalSubscriptions: subscriptions?.length || 0,
-            currentEndpointExists,
-            hasValidSubscriptions,
-            userSubscriptions: subscriptions?.map(s => ({ id: s.id, endpoint: s.endpoint.substring(0, 50) + '...' }))
-          });
-          
-          // User is considered subscribed if they have ANY valid subscription in the database
-          setIsSubscribed(hasValidSubscriptions);
-          
-          // If current browser subscription doesn't exist in DB but user has others, add it
-          if (hasValidSubscriptions && !currentEndpointExists) {
-            logger.info('[usePushSubscription] Current browser subscription not in DB, adding it');
-            await addCurrentSubscriptionToDB(subscription);
-          }
-        }
-      } else {
-        logger.info('[usePushSubscription] No browser subscription found');
-        // Still check if user has subscriptions in DB from other devices/browsers
-        const { data: subscriptions, error } = await supabase
-          .from('user_push_subscriptions')
-          .select('id')
-          .eq('user_id', user.id);
-          
-        if (!error && subscriptions && subscriptions.length > 0) {
-          logger.info('[usePushSubscription] User has subscriptions from other devices:', subscriptions.length);
-          setIsSubscribed(true);
-        } else {
-          setIsSubscribed(false);
-        }
-      }
-    } catch (error) {
-      logger.error('[usePushSubscription] Error checking subscription status:', error);
-      setIsSubscribed(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Helper function to add current browser subscription to database
-  const addCurrentSubscriptionToDB = async (subscription: PushSubscription) => {
-    try {
-      if (!user || !vapidPublicKey) return;
-      
-      const p256dh = arrayBufferToBase64(subscription.getKey('p256dh')!);
-      const auth = arrayBufferToBase64(subscription.getKey('auth')!);
-
-      // Delete existing subscriptions first to maintain only one subscription per user
-      await supabase
-        .from('user_push_subscriptions')
-        .delete()
-        .eq('user_id', user.id);
-
-      // Insert the current subscription
-      const { error } = await supabase
-        .from('user_push_subscriptions')
-        .insert({
-          user_id: user.id,
-          endpoint: subscription.endpoint,
-          p256dh,
-          auth,
-          user_agent: navigator.userAgent,
-        });
-
-      if (error) {
-        logger.error('[usePushSubscription] Error adding current subscription to DB:', error);
-      } else {
-        logger.info('[usePushSubscription] Successfully added current subscription to DB');
-      }
-    } catch (error) {
-      logger.error('[usePushSubscription] Exception adding current subscription to DB:', error);
-    }
-  };
-
-  const requestNotificationPermission = async (): Promise<boolean> => {
-    if (!('Notification' in window)) {
-      logger.warn('This browser does not support notifications');
-      return false;
-    }
-
-    // Log current permission state
-    const currentPermission = Notification.permission;
-    logger.info('Current notification permission:', currentPermission);
-
-    // If already granted, no need to request again
-    if (currentPermission === 'granted') {
-      logger.info('Permission already granted, proceeding with subscription');
-      return true;
-    }
-
-    // If denied, don't try to request again
-    if (currentPermission === 'denied') {
-      logger.warn('Permission previously denied - user needs to enable in browser settings');
-      return false;
-    }
-
-    // Request permission (only when 'default')
-    logger.info('Requesting notification permission...');
-    const permission = await Notification.requestPermission();
-    logger.info('Permission request result:', permission);
-    return permission === 'granted';
-  };
-
-  const subscribe = async (hasUserPermission: boolean = false): Promise<boolean> => {
-    if (!isSupported || !user) {
-      logger.error('Push notifications not supported or user not authenticated');
-      return false;
-    }
-
-    try {
-      setIsLoading(true);
-
-      // If permission wasn't already requested in user gesture context, request it now
-      let hasPermission = hasUserPermission;
-      if (!hasPermission) {
-        hasPermission = await requestNotificationPermission();
-        if (!hasPermission) {
-          logger.warn('Notification permission denied');
-          return false;
-        }
-      }
-
-      // Wait for service worker to be ready with timeout
-      logger.info('Waiting for service worker to be ready...');
-      const registration = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Service worker timeout')), 10000)
-        )
-      ]);
-      logger.info('Service worker ready for subscription');
-
-      if (!vapidPublicKey) {
-        logger.error('VAPID public key not available');
-        return false;
-      }
-
-      // Subscribe to push notifications with VAPID public key
-      logger.info('Attempting to subscribe to push manager...');
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
-      });
-      logger.info('Push subscription created successfully');
-
-      // Convert subscription to format for database
-      const p256dh = arrayBufferToBase64(subscription.getKey('p256dh')!);
-      const auth = arrayBufferToBase64(subscription.getKey('auth')!);
-
-      // Delete any existing subscriptions for this user to ensure only one active subscription
-      logger.info('Removing any existing subscriptions for user before adding new one');
-      await supabase
-        .from('user_push_subscriptions')
-        .delete()
-        .eq('user_id', user.id);
-
-      // Insert the new subscription
-      const { error } = await supabase
-        .from('user_push_subscriptions')
-        .insert({
-          user_id: user.id,
-          endpoint: subscription.endpoint,
-          p256dh,
-          auth,
-          user_agent: navigator.userAgent,
-        });
-
-      if (error) {
-        logger.error('Error saving push subscription:', error);
-        return false;
-      }
-
-      setIsSubscribed(true);
-      logger.info('Successfully subscribed to push notifications');
-      return true;
-
-    } catch (error) {
-      logger.error('Error subscribing to push notifications:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const unsubscribe = async (): Promise<boolean> => {
-    if (!isSupported || !user) {
-      return false;
-    }
-
-    try {
-      setIsLoading(true);
-
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-
-      if (subscription) {
-        // Unsubscribe from push manager
-        await subscription.unsubscribe();
-      }
-
-      // Remove ALL subscriptions for this user from database to ensure clean state
-      const { error } = await supabase
-        .from('user_push_subscriptions')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (error) {
-        logger.error('Error removing push subscriptions:', error);
-        return false;
-      }
-
-      setIsSubscribed(false);
-      logger.info('Successfully unsubscribed from push notifications and removed all subscriptions');
-      return true;
-
-    } catch (error) {
-      logger.error('Error unsubscribing from push notifications:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // New function to request permission immediately on user gesture
-  const requestPermissionImmediately = async (): Promise<boolean> => {
-    logger.info('Requesting permission immediately on user gesture');
-    return await requestNotificationPermission();
-  };
-
-  return {
-    isSubscribed,
-    isSupported,
-    isLoading,
-    subscribe,
-    unsubscribe,
-    checkSubscriptionStatus,
-    requestPermissionImmediately,
-  };
-};
-
-// Helper functions
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
+type DeviceStatus = 'checking' | 'enabled' | 'disabled' | 'needs_setup' | 'unavailable' | 'unsupported';
+interface PublicKey { publicKey: string; keyId: string }
+interface DeviceView { accountId: string | null; status: DeviceStatus; isLoading: boolean; supported: boolean; hasBrowserSubscription: boolean; error: string | null; key: PublicKey | null }
+const blank = (accountId: string | null): DeviceView => ({ accountId, status: 'checking', isLoading: !!accountId, supported: false, hasBrowserSubscription: false, error: null, key: null });
+function base64url(buffer: ArrayBuffer): string {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function keyBytes(value: string): Uint8Array {
+  const raw = atob(value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4));
+  return Uint8Array.from(raw, character => character.charCodeAt(0));
+}
+async function digest(value: string) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))].map(byte => byte.toString(16).padStart(2, '0')).join(''); }
+function subscriptionData(subscription: PushSubscription) {
+  const key = subscription.getKey('p256dh'); const auth = subscription.getKey('auth');
+  if (!key || !auth) throw new Error('INVALID_PUSH_SUBSCRIPTION');
+  return { endpoint: subscription.endpoint, p256dh: base64url(key), auth: base64url(auth) };
+}
+async function fingerprint(subscription: PushSubscription) { return digest(JSON.stringify(subscriptionData(subscription))); }
+async function bounded<T>(operation: (signal: AbortSignal) => Promise<T>, outer?: AbortSignal): Promise<T> {
+  const controller = new AbortController(); const abort = () => controller.abort();
+  outer?.addEventListener('abort', abort, { once: true }); if (outer?.aborted) abort();
+  let timer: ReturnType<typeof setTimeout>;
+  try { return await Promise.race([operation(controller.signal), new Promise<never>((_, reject) => {
+    controller.signal.addEventListener('abort', () => reject(new Error('PUSH_REQUEST_UNCONFIRMED')), { once: true });
+    if (controller.signal.aborted) reject(new Error('PUSH_REQUEST_UNCONFIRMED'));
+    timer = setTimeout(() => { controller.abort(); reject(new Error('PUSH_REQUEST_UNCONFIRMED')); }, 12000);
+  })]); } finally { clearTimeout(timer!); controller.abort(); outer?.removeEventListener('abort', abort); }
+}
+async function publicKey(): Promise<PublicKey> {
+  const { data, error } = await supabase.functions.invoke('get-vapid-public-key');
+  if (error || !/^[A-Za-z0-9_-]{87}$/.test(data?.publicKey ?? '') || !/^[a-f0-9]{64}$/.test(data?.keyId ?? '') || await digest(data.publicKey) !== data.keyId || keyBytes(data.publicKey)[0] !== 4) throw new Error('PUSH_UNAVAILABLE');
+  return { publicKey: data.publicKey, keyId: data.keyId };
+}
+function errorText(error: unknown): string {
+  const code = error instanceof Error ? error.message : '';
+  if (code === 'PUSH_UNAVAILABLE') return 'Push setup is currently unavailable. Your account preferences are unchanged.';
+  if (code.startsWith('DEVICE_STORAGE')) return 'This browser could not keep its device identity. Check browser storage and retry.';
+  if (code === 'PUSH_REQUEST_UNCONFIRMED') return 'This device setting could not be confirmed. Reload its status before trying again.';
+  if (code === 'PUSH_PERMISSION_DENIED') return 'Allow notifications for this site in browser settings before enabling this device.';
+  if (code === 'PUSH_WORKER_UNAVAILABLE') return 'This browser is not ready for push. Reload the app and try again.';
+  if (code === 'PUSH_BROWSER_CLEANUP_FAILED') return 'Delivery for this account is disabled, but the browser subscription could not be removed. Retry disabling this device.';
+  return notificationError(error);
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return window.btoa(binary);
+export function usePushSubscription() {
+  const { user } = useAuth(); const accountId = user?.id ?? null;
+  const current = useRef(accountId); const generation = useRef(0); const busy = useRef(false);
+  if (current.current !== accountId) { current.current = accountId; generation.current++; busy.current = false; }
+  const [state, setState] = useState<DeviceView>(() => blank(accountId));
+  const visible = state.accountId === accountId ? state : blank(accountId);
+  const checkSubscriptionStatus = useCallback(async (outer?: AbortSignal) => {
+    if (!accountId || busy.current) return;
+    const run = ++generation.current;
+    const active = () => current.current === accountId && generation.current === run && !outer?.aborted;
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    if (!supported) { if (active()) setState({ ...blank(accountId), status: 'unsupported', isLoading: false }); return; }
+    setState(previous => ({ ...(previous.accountId === accountId ? previous : blank(accountId)), accountId, isLoading: true, supported: true, error: null }));
+    try {
+      await bounded(async signal => {
+        const id = deviceId();
+        const [saved, registration, config] = await Promise.all([
+          getPushDevice(accountId, id, signal), navigator.serviceWorker.getRegistration(), publicKey().then(value => ({ value, error: null }), error => ({ value: null, error })),
+        ]);
+        const subscription = registration?.pushManager ? await registration.pushManager.getSubscription() : null;
+        const binding = readBinding();
+        const proof = subscription ? await fingerprint(subscription) : null;
+        if (!active() || signal.aborted) return;
+        const verified = !!subscription && Notification.permission === 'granted' && saved.enabled && config.value?.keyId === saved.vapidKeyId && binding?.accountId === accountId && binding?.subscriptionId === saved.subscriptionId && binding?.keyId === saved.vapidKeyId && binding?.fingerprint === proof;
+        setState({ accountId, supported: true, isLoading: false, hasBrowserSubscription: !!subscription, key: config.value,
+          status: verified ? 'enabled' : saved.enabled || subscription ? 'needs_setup' : 'disabled', error: config.error ? errorText(config.error) : null });
+      }, outer);
+    } catch (error) { if (active()) setState(previous => ({ ...previous, accountId, supported: true, status: 'unavailable', isLoading: false, error: errorText(error) })); }
+  }, [accountId]);
+  useEffect(() => {
+    const controller = new AbortController(); void checkSubscriptionStatus(controller.signal);
+    return () => { controller.abort(); generation.current++; };
+  }, [checkSubscriptionStatus]);
+
+  const subscribe = async (): Promise<boolean> => {
+    if (!accountId || busy.current || !visible.supported || !visible.key || visible.isLoading) return false;
+    const run = ++generation.current; const key = visible.key; busy.current = true;
+    const active = () => current.current === accountId && generation.current === run;
+    // Permission is requested only here, directly from the explicit device button.
+    setState(previous => ({ ...previous, isLoading: true, error: null }));
+    try {
+      const permission = Notification.permission === 'default' ? Notification.requestPermission() : Promise.resolve(Notification.permission);
+      await bounded(async signal => {
+        if (await permission !== 'granted') throw new Error('PUSH_PERMISSION_DENIED');
+        if (!active() || signal.aborted) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+        const id = deviceId(); const registration = await navigator.serviceWorker.ready;
+        if (!active() || signal.aborted) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+        if (!registration?.pushManager) throw new Error('PUSH_WORKER_UNAVAILABLE');
+        let subscription = await registration.pushManager.getSubscription();
+        if (!active() || signal.aborted) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+        if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key.publicKey) as BufferSource });
+        if (!active() || signal.aborted) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+        const browserKey = subscription.options?.applicationServerKey;
+        if (browserKey && base64url(browserKey as ArrayBuffer) !== key.publicKey) throw new Error('PUSH_DEVICE_REQUIRES_RESUBSCRIBE');
+        const saved = await registerPushDevice(accountId, { deviceId: id, ...subscriptionData(subscription), vapidKeyId: key.keyId }, signal);
+        const proof = await fingerprint(subscription);
+        if (!active() || signal.aborted) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+        writePushDeviceBinding({ accountId, subscriptionId: saved.subscriptionId!, keyId: saved.vapidKeyId!, fingerprint: proof });
+        setState({ accountId, supported: true, status: 'enabled', isLoading: false, hasBrowserSubscription: true, key, error: null });
+      });
+      return active();
+    } catch (error) { if (active()) setState(previous => ({ ...previous, status: 'unavailable', isLoading: false, error: errorText(error) })); return false; }
+    finally { if (active()) { busy.current = false; setState(previous => ({ ...previous, isLoading: false })); } }
+  };
+  const unsubscribe = async (): Promise<boolean> => {
+    if (!accountId || busy.current || visible.isLoading) return false;
+    const run = ++generation.current; busy.current = true;
+    const active = () => current.current === accountId && generation.current === run;
+    setState(previous => ({ ...previous, isLoading: true, error: null }));
+    try {
+      await bounded(async signal => {
+        const id = deviceId(); const binding = readBinding();
+        await revokePushDevice(accountId, id, signal);
+        if (!active() || signal.aborted) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+        // Revoke only this device on the server before touching this browser.
+        const registration = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+        const subscription = registration?.pushManager ? await registration.pushManager.getSubscription() : null;
+        if (!active() || signal.aborted) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+        if (subscription && !await subscription.unsubscribe()) throw new Error('PUSH_BROWSER_CLEANUP_FAILED');
+        if (!active() || signal.aborted) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+        clearPushDeviceBinding(accountId, id, binding);
+        setState(previous => ({ ...previous, accountId, status: 'disabled', hasBrowserSubscription: false, isLoading: false, error: null }));
+      });
+      return active();
+    } catch (error) { if (active()) setState(previous => ({ ...previous, status: 'unavailable', isLoading: false, error: errorText(error) })); return false; }
+    finally { if (active()) { busy.current = false; setState(previous => ({ ...previous, isLoading: false })); } }
+  };
+  return { accountId, isSubscribed: visible.status === 'enabled', isSupported: visible.supported, isLoading: visible.isLoading,
+    status: visible.status, error: visible.error, canEnable: !!visible.key && visible.supported && !visible.isLoading && ['disabled', 'needs_setup'].includes(visible.status),
+    hasBrowserSubscription: visible.hasBrowserSubscription, subscribe, unsubscribe,
+    checkSubscriptionStatus: () => checkSubscriptionStatus(),
+  };
 }

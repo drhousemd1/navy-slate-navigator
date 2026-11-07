@@ -1,36 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { WELLNESS_REMINDER_QUERY_KEY } from '../queries/useWellnessReminderQuery';
-import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors';
+import { getWellnessReminder, saveWellnessReminder } from '@/data/notifications/api';
+import { wellnessReminderKey } from '../queries/useWellnessReminderQuery';
 
-export const useDeleteWellnessReminder = (userId: string | null) => {
-  const queryClient = useQueryClient();
-
-  return useMutation<void, Error, string>({
-    mutationFn: async (reminderId: string) => {
-      logger.debug('[useDeleteWellnessReminder] Deleting reminder:', reminderId);
-
-      const { error } = await supabase
-        .from('wellness_reminders')
-        .delete()
-        .eq('id', reminderId);
-
-      if (error) {
-        logger.error('[useDeleteWellnessReminder] Error:', error);
-        throw error;
-      }
-
-      logger.debug('[useDeleteWellnessReminder] Deleted reminder successfully');
-    },
-    onSuccess: () => {
-      // Clear query cache
-      queryClient.setQueryData([...WELLNESS_REMINDER_QUERY_KEY, userId], null);
-      
-      logger.debug('[useDeleteWellnessReminder] Cache cleared');
-    },
-    onError: (error) => {
-      logger.error('[useDeleteWellnessReminder] Error deleting reminder:', error);
-    }
-  });
-};
+/** Legacy remove callers now disable the personal schedule. No direct row delete. */
+export function useDeleteWellnessReminder(accountId: string | null) {
+  const client = useQueryClient();
+  return useMutation({ retry: false, networkMode: 'always', mutationFn: async (reminderId: string) => {
+    if (!accountId) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+    const saved = await getWellnessReminder(accountId);
+    if (!saved || saved.id !== reminderId) throw new Error('INVALID_REMINDER_RESPONSE');
+    return saveWellnessReminder(accountId, false, saved.reminder_time.slice(0, 5));
+  }, onSuccess: saved => { client.setQueryData(wellnessReminderKey(accountId), saved); } });
+}

@@ -53,118 +53,41 @@ self.addEventListener('fetch', event => {
   })());
 });
 
-// FIXED: Push event handler
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push event received');
-
-  let notificationData = {
-    title: 'Navy Slate Navigator',
-    body: 'New notification',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
-    data: {},
-    tag: 'default'
-  };
-
-  // Handle push data - could be encrypted or plain text
-  if (event.data) {
-    try {
-      // First, try to get as text (this works for both encrypted and unencrypted)
-      const dataText = event.data.text();
-      console.log('[SW] Push data as text:', dataText);
-
-      if (dataText) {
-        try {
-          // Try to parse as JSON
-          const jsonData = JSON.parse(dataText);
-          console.log('[SW] Parsed push data:', jsonData);
-          
-          notificationData = {
-            title: jsonData.title || notificationData.title,
-            body: jsonData.body || notificationData.body,
-            icon: jsonData.icon || notificationData.icon,
-            badge: jsonData.badge || notificationData.badge,
-            data: jsonData.data || notificationData.data,
-            tag: jsonData.data?.type || 'default'
-          };
-        } catch (parseError) {
-          console.log('[SW] Failed to parse as JSON, using text as body');
-          notificationData.body = dataText;
-        }
-      }
-    } catch (textError) {
-      console.log('[SW] Failed to get data as text:', textError);
-      // For encrypted data that can't be decrypted here, use defaults
-      console.log('[SW] Using default notification data for encrypted push');
-    }
-  } else {
-    console.log('[SW] No push data, using defaults');
-  }
-
-  const notificationOptions = {
-    body: notificationData.body,
-    icon: notificationData.icon,
-    badge: notificationData.badge,
-    tag: notificationData.tag,
-    data: notificationData.data,
-    requireInteraction: false, // Changed from true to false
-    silent: false,
-    actions: [
-      {
-        action: 'open',
-        title: 'Open App'
-      },
-      {
-        action: 'close',
-        title: 'Dismiss'
-      }
-    ]
-  };
-
-  console.log('[SW] Showing notification:', notificationData.title, notificationOptions);
-
-  event.waitUntil(
-    self.registration.showNotification(notificationData.title, notificationOptions)
-      .then(() => {
-        console.log('[SW] Notification shown successfully');
-      })
-      .catch((error) => {
-        console.error('[SW] Failed to show notification:', error);
-      })
-  );
+// Private previews only. Payload encryption is handled by the browser before
+// the push event; source content and caller-provided links are never displayed.
+const notificationRoutes = new Set(['/', '/messages', '/wellbeing', '/tasks', '/rules', '/punishments', '/rewards', '/notifications']);
+const notificationBodies = new Set(['You have a new message.', 'It is time for your wellbeing check-in.', 'Your activity has an update.', 'This is your requested device notification test.']);
+const notificationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+self.addEventListener('push', event => {
+  let payload;
+  try { payload = event.data?.json(); } catch { /* Generic visible fallback. */ }
+  const valid = payload?.version === 1 && notificationId.test(payload.notificationId || '') &&
+    notificationBodies.has(payload.body) && notificationRoutes.has(payload.url);
+  event.waitUntil(self.registration.showNotification('Navy Slate Navigator', {
+    body: valid ? payload.body : 'Your activity has an update.',
+    icon: '/icons/icon-192.png', badge: '/icons/icon-192.png',
+    tag: valid ? `notification:${payload.notificationId}` : 'notification:generic',
+    data: { url: valid ? payload.url : '/' },
+    requireInteraction: false, silent: false,
+    actions: [{ action: 'open', title: 'Open App' }, { action: 'close', title: 'Dismiss' }],
+  }));
 });
-
-// Notification click event
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked:', event.notification.data);
-
+self.addEventListener('notificationclick', event => {
   event.notification.close();
-
-  if (event.action === 'close') {
-    return;
-  }
-
-  // Open or focus the app
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        // Try to focus existing window
-        for (const client of clientList) {
-          if (client.url.includes(self.location.origin) && 'focus' in client) {
-            console.log('[SW] Focusing existing window');
-            return client.focus();
-          }
-        }
-
-        // If no window exists, open a new one
-        if (self.clients.openWindow) {
-          const targetUrl = event.notification.data?.url || '/';
-          console.log('[SW] Opening new window:', targetUrl);
-          return self.clients.openWindow(targetUrl);
-        }
-      })
-      .catch((error) => {
-        console.error('[SW] Error handling notification click:', error);
-      })
-  );
+  if (event.action === 'close') return;
+  const route = notificationRoutes.has(event.notification.data?.url) ? event.notification.data.url : '/';
+  const target = new URL(route, self.location.origin).href;
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clients) {
+      const current = new URL(client.url);
+      if (current.origin !== self.location.origin || privatePath(current.pathname)) continue;
+      if (current.href === target) return client.focus();
+      if (typeof client.navigate === 'function') {
+        try { const navigated = await client.navigate(target); if (navigated) return navigated.focus(); }
+        catch { /* A closed window does not prevent opening the requested route. */ }
+      }
+    }
+    return self.clients.openWindow?.(target);
+  })());
 });

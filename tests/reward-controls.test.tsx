@@ -24,7 +24,7 @@ const data = (): RewardActionData => ({ rewards: [{ ...reward }], wallets: [
   { participant_id: 'dom-participant', relationship_id: 'period', currency: 'dom', balance: 50 },
 ], lots: [lot()], events: [event()], points: [], deliveries: [], acknowledged: [], importedUsage: [] });
 beforeEach(() => {
-  mocks.actions = { scope: { backendId: 'http://127.0.0.1:28622', accountId: 'sub', participantId: 'sub-participant', relationshipId: 'period' }, mode: 'atomic', data: data(), entries: [], confirmed: [], error: null, enqueue: vi.fn().mockResolvedValue(undefined), refresh: vi.fn().mockResolvedValue(undefined), retry: vi.fn(), cancelUnsent: vi.fn() };
+  mocks.actions = { scope: { backendId: 'http://127.0.0.1:28622', accountId: 'sub', participantId: 'sub-participant', relationshipId: 'period', relationshipSessionId: 'session' }, mode: 'atomic', data: data(), entries: [], confirmed: [], error: null, enqueue: vi.fn().mockResolvedValue(undefined), refresh: vi.fn().mockResolvedValue(undefined), retry: vi.fn(), cancelUnsent: vi.fn() };
   mocks.identity = { currentRole: 'sub', participantId: 'sub-participant', permissions: { definition_manage: 'both', sub_reward_redeem: 'both', sub_reward_redeem_undo: 'both' } };
   mocks.legacy.mockReset(); mocks.usage.mockReset().mockReturnValue({ data: Array(7).fill(false) });
 });
@@ -70,7 +70,10 @@ describe('actual reward controls use the recorded command path', () => {
     expect(screen.getByRole('status').textContent).toContain('"domPoints":50');
   });
   it('keeps unresolved commands visible and prevents another card action', () => {
-    mocks.actions.entries = [{ command: { commandId: 'pending', kind: 'reward_buy' }, state: { status: 'confirmation_unknown' }, canReplay: true, canCancel: false, problem: { message: 'Server may have committed. Retry the same action.' } }];
+    const command = { commandId: 'pending', kind: 'reward_buy', rewardId: 'reward', expectedCost: 7, expectedRelationshipId: 'period' };
+    mocks.actions.entries = [{ version: 1, sequence: 1, scope: { ...mocks.actions.scope }, command,
+      createdAt: 1, updatedAt: 2, state: { status: 'confirmation_unknown', command }, attempts: 1, everSent: true, nextAttemptAt: 0, lease: null,
+      canReplay: true, canCancel: false, canReconcile: true, problem: { code: 'UNKNOWN', retryable: true, message: 'Server may have committed. Retry the same action.' } }];
     render(<RewardsProvider><MountedCard /><RewardActivity /></RewardsProvider>);
     expect((screen.getByRole('button', { name: 'Buy' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText(/Confirmation unknown/)).toBeTruthy();

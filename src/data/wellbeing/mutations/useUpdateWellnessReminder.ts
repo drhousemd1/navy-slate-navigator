@@ -1,40 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { WellnessReminder, UpdateWellnessReminderData } from '../types';
-import { WELLNESS_REMINDER_QUERY_KEY } from '../queries/useWellnessReminderQuery';
-import { logger } from '@/lib/logger';
-import { getErrorMessage } from '@/lib/errors';
+import { getWellnessReminder, saveWellnessReminder } from '@/data/notifications/api';
+import { wellnessReminderKey } from '../queries/useWellnessReminderQuery';
+import type { UpdateWellnessReminderData } from '../types';
 
-export const useUpdateWellnessReminder = (userId: string | null) => {
-  const queryClient = useQueryClient();
-
-  return useMutation<WellnessReminder, Error, { id: string } & UpdateWellnessReminderData>({
-    mutationFn: async ({ id, ...variables }) => {
-      logger.debug('[useUpdateWellnessReminder] Updating reminder:', { id, variables });
-
-      const { data, error } = await supabase
-        .from('wellness_reminders')
-        .update(variables)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        logger.error('[useUpdateWellnessReminder] Error:', error);
-        throw error;
-      }
-
-      logger.debug('[useUpdateWellnessReminder] Updated reminder:', data);
-      return data;
-    },
-    onSuccess: (reminder) => {
-      // Update query cache optimistically
-      queryClient.setQueryData([...WELLNESS_REMINDER_QUERY_KEY, userId], reminder);
-      
-      logger.debug('[useUpdateWellnessReminder] Cache updated with updated reminder');
-    },
-    onError: (error) => {
-      logger.error('[useUpdateWellnessReminder] Error updating reminder:', error);
-    }
-  });
-};
+export function useUpdateWellnessReminder(accountId: string | null) {
+  const client = useQueryClient();
+  return useMutation({ retry: false, networkMode: 'always', mutationFn: async (value: { id: string } & UpdateWellnessReminderData) => {
+    if (!accountId) throw new Error('NOTIFICATION_ACCOUNT_CHANGED');
+    const saved = await getWellnessReminder(accountId);
+    if (!saved || saved.id !== value.id) throw new Error('INVALID_REMINDER_RESPONSE');
+    return saveWellnessReminder(accountId, value.enabled ?? saved.enabled, (value.reminder_time ?? saved.reminder_time).slice(0, 5));
+  }, onSuccess: saved => { client.setQueryData(wellnessReminderKey(accountId), saved); } });
+}

@@ -1,14 +1,13 @@
 import React from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Bell, Wifi } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
-import { usePushSubscription } from '@/hooks/usePushSubscription';
+import { PushDeviceSettings } from './PushDeviceSettings';
 import { toast } from '@/hooks/use-toast';
 
 export const NotificationSettings: React.FC = () => {
   const { preferences, isLoading, isSaving, isReady, loadError, loadPreferences, updateNotificationType, toggleNotifications } = useNotificationSettings();
-  const { isSubscribed, isSupported } = usePushSubscription();
 
   const handleTypeToggle = async (type: keyof typeof preferences.types, enabled: boolean) => {
     try {
@@ -58,7 +57,7 @@ export const NotificationSettings: React.FC = () => {
       return { title: 'Wellness Updated', description: 'Get notified when your partner updates their wellness score' };
     }
     if (type === 'wellnessCheckin') {
-      return { title: 'Wellness Check-in', description: 'Get notified for wellness check-in reminders' };
+      return { title: 'Wellness Check-in', description: 'Allow push delivery for your saved personal reminder schedule' };
     }
     if (type === 'messages') {
       return { title: 'Messages', description: 'Get notified when you receive a new message from your partner' };
@@ -67,8 +66,7 @@ export const NotificationSettings: React.FC = () => {
     return { title: type, description: '' };
   };
 
-  // Filter out wellnessCheckin since it has its own section
-  const notificationTypes = Object.entries(preferences.types).filter(([type]) => type !== 'wellnessCheckin');
+  const notificationTypes = Object.entries(preferences.types);
 
   return (
     <div className="space-y-6 border-t border-light-navy pt-8 mt-8">
@@ -91,7 +89,7 @@ export const NotificationSettings: React.FC = () => {
             <Bell className={`w-5 h-5 ${preferences.enabled ? 'text-cyan-500' : 'text-gray-400'}`} />
             <div>
               <p className="text-white font-medium">Push Notifications</p>
-              <p className="text-gray-400 text-sm">Enable push notifications</p>
+              <p className="text-gray-400 text-sm">Account preference across your devices</p>
             </div>
           </div>
           <Switch
@@ -102,11 +100,7 @@ export const NotificationSettings: React.FC = () => {
           />
         </div>
 
-        {/* Status */}
-        <div className="flex items-center space-x-2">
-          <Wifi className="h-4 w-4 text-gray-400" />
-          <p className="text-sm text-gray-400">Status: Push supported</p>
-        </div>
+        <PushDeviceSettings />
 
         {/* Notification Types */}
         <div className="pt-4 border-t border-light-navy space-y-4">

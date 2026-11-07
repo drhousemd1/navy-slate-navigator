@@ -13,6 +13,7 @@ vi.mock('@tanstack/react-query-devtools', () => ({ ReactQueryDevtools: () => nul
 vi.mock('@/data/queryClient', () => ({ queryClient: {} }));
 vi.mock('@/contexts/AuthContext', () => ({ AuthProvider: ({ children }: PropsWithChildren) => children }));
 vi.mock('@/contexts/UserIdsContext', () => ({ UserIdsProvider: ({ children }: PropsWithChildren) => children }));
+vi.mock('@/contexts/ActionCommandsContext', () => ({ ActionCommandsProvider: ({ children }: PropsWithChildren) => children }));
 vi.mock('@/contexts/NetworkStatusContext', () => ({ NetworkStatusProvider: ({ children }: PropsWithChildren) => children }));
 vi.mock('@/contexts/RewardsContext', () => ({ RewardsProvider: ({ children }: PropsWithChildren) => children }));
 vi.mock('@/contexts/punishments/PunishmentsProvider', () => ({ PunishmentsProvider: ({ children }: PropsWithChildren) => children }));
