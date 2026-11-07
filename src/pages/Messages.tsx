@@ -1,187 +1,38 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { useAuth } from '@/contexts/auth';
 import { useMessages } from '@/hooks/useMessages';
-import { toast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 import MessageList from '@/components/messages/MessageList';
-import MessageInput from '@/components/messages/MessageInput';
-import { logger } from '@/lib/logger';
-import { useUnreadMessages } from '@/hooks/useUnreadMessages';
+import MessageComposer from '@/components/messages/MessageComposer';
+import EarlierMessageDrafts from '@/components/messages/EarlierMessageDrafts';
+import { messageScopeKey } from '@/data/messages/types';
 
-const Messages: React.FC = () => {
-  const { user, getNickname } = useAuth();
-  const [message, setMessage] = useState('');
-  const messagesSentRef = useRef(0);
-  const messageListRef = useRef<{ scrollToBottom: (behavior: ScrollBehavior) => void }>(null);
-  
-  const {
-    messages,
-    isLoading,
-    error,
-    sendMessage,
-    loadOlderMessages,
-    imageFile,
-    setImageFile,
-    isUploading,
-    loadingOlder,
-    refetch,
-    uploadImage,
-    partnerId
-  } = useMessages();
-  
-  const { markAllMessagesAsRead } = useUnreadMessages();
-  
-  useEffect(() => {
-    if (!isLoading && partnerId) {
-      logger.debug('[Messages] Component mounted with partnerId:', partnerId, ', forcing refetch');
-      refetch();
-      
-      const intervalId = setInterval(() => {
-        logger.debug('[Messages] Scheduled refetch running');
-        refetch();
-      }, 5000);
-      
-      return () => clearInterval(intervalId);
-    }
-  }, [partnerId, isLoading, refetch]);
-
-  // Mark all messages as read when the Messages page is opened
-  useEffect(() => {
-    if (!isLoading && user) {
-      logger.debug('[Messages] Marking all messages as read');
-      markAllMessagesAsRead();
-    }
-  }, [isLoading, user, markAllMessagesAsRead]);
-
-  const userNickname = getNickname();
-
-  const handleSendMessage = useCallback(async () => {
-    if (!user || (!message.trim() && !imageFile)) return;
-    
-    try {
-      const receiverId = partnerId || user.id;
-      const currentMessage = message;
-      const currentMessageCount = messagesSentRef.current + 1;
-      messagesSentRef.current = currentMessageCount;
-      
-      setMessage('');
-      
-      logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Starting message send process`);
-      let uploadedImageUrl = null;
-      const hadImage = !!imageFile;
-      
-      if (imageFile) {
-        logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Uploading image`);
-        uploadedImageUrl = await uploadImage(imageFile);
-        setImageFile(null);
-        logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Image uploaded:`, uploadedImageUrl);
-      }
-      
-      logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Sending message with content:`, currentMessage);
-      await sendMessage(currentMessage, receiverId, uploadedImageUrl);
-      logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Message sent successfully`);
-      
-      // Initial refetch to ensure new messages appear
-      logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Initial refetch`);
-      await refetch();
-      
-      // If message included an image, add a short delay then call scrollToBottom
-      if (hadImage) {
-        setTimeout(() => {
-          if (messageListRef.current) {
-            logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Forced scroll after image message`);
-            messageListRef.current.scrollToBottom('auto');
-          }
-        }, 300);
-      }
-      
-      // Multiple delayed refetches to ensure message appears
-      const delayedRefetches = [50, 150, 300, 500, 1000, 2000];
-      for (const delay of delayedRefetches) {
-        setTimeout(async () => {
-          logger.debug(`[Messages] handleSendMessage (${currentMessageCount}): Delayed refetch (${delay}ms)`);
-          await refetch();
-        }, delay);
-      }
-      
-    } catch (err) {
-      logger.error('[Messages] Error sending message:', err);
-      toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive"
-      });
-    }
-  }, [user, message, imageFile, partnerId, uploadImage, sendMessage, refetch, setImageFile]);
-
-  const handleLoadOlderMessages = async () => {
-    if (messages.length === 0 || loadingOlder) return;
-    
-    try {
-      const oldestMessage = messages[0];
-      const olderMessages = await loadOlderMessages(oldestMessage.created_at);
-      
-      if (olderMessages.length === 0) {
-        toast({
-          title: "No more messages",
-          description: "You've reached the beginning of your conversation.",
-        });
-      }
-    } catch (err) {
-      logger.error('[Messages] Error loading older messages:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      logger.debug(`[Messages] Currently have ${messages.length} messages`);
-      logger.debug(`[Messages] Last message ID: ${messages[messages.length-1].id}`);
-      logger.debug(`[Messages] Last message content: ${messages[messages.length-1].content}`);
-    }
-  }, [messages]);
-
-  return (
-    <AppLayout>
-      <div className="h-[calc(100vh-4rem)] flex flex-col">
-        <div className="bg-navy border-b border-light-navy py-4 px-4">
-          <h1 className="text-xl font-semibold text-white">Messages</h1>
-          <p className="text-gray-400 text-sm">Chat with your partner</p>
-        </div>
-        
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-400">Loading messages...</p>
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-red-400">Error loading messages: {(error as Error).message}</p>
-            </div>
-          ) : (
-            <MessageList
-              ref={messageListRef}
-              messages={messages}
-              loadingOlder={loadingOlder}
-              handleLoadOlderMessages={handleLoadOlderMessages}
-              userNickname={userNickname}
-              userId={user?.id}
-            />
-          )}
-        </div>
-        
-        <div className="pb-0">
-          <MessageInput
-            message={message}
-            setMessage={setMessage}
-            imageFile={imageFile}
-            setImageFile={setImageFile}
-            handleSendMessage={handleSendMessage}
-            isUploading={isUploading}
-          />
-        </div>
+export default function Messages() {
+  const { scope, state, conversation, conversationId, selectConversation, acknowledge, loadOlder, refresh, page } = useMessages();
+  const confirmed = useCallback(() => { void refresh?.(); }, [refresh]);
+  const scopeKey = scope ? messageScopeKey(scope) : 'unavailable';
+  return <AppLayout>
+    <div key={scopeKey} className="h-[calc(100dvh-8rem)] min-h-0 flex flex-col">
+      <div className="bg-navy border-b border-light-navy py-4 px-4">
+        <h1 className="text-xl font-semibold text-white">Messages</h1>
+        <p className="text-gray-400 text-sm">Chat with your partner</p>
+        {!!state.list?.conversations.length && <div className="mt-2"><label htmlFor="conversation-select" className="text-sm text-gray-300">Conversation</label>
+          <select id="conversation-select" className="block w-full mt-1 rounded border border-light-navy bg-dark-navy p-2 text-white" value={conversationId ?? ''} onChange={event => selectConversation(event.target.value)}>
+            <option value="" disabled>Choose a retained conversation</option>
+            {state.list.conversations.map(row => <option key={row.id} value={row.id}>{row.label}{row.state === 'archived' ? ` · retained ${new Date(row.startedAt).toLocaleDateString()}` : ' · current'}{row.unreadCount ? ` · ${row.unreadCount} unread` : ''}</option>)}
+          </select>
+        </div>}
       </div>
-    </AppLayout>
-  );
-};
-
-export default Messages;
+      {scope && <EarlierMessageDrafts key={scopeKey} scope={scope} />}
+      {!scope && <p role="status" className="p-4 text-gray-300">Checking your account connection…</p>}
+      {state.loading && <p role="status" className="p-4 text-gray-300">Loading conversations…</p>}
+      {(state.error || page?.error) && <div role="alert" className="p-4 text-red-300"><p>{state.error || page?.error}</p><Button variant="outline" onClick={() => void refresh?.()}>Retry messages</Button></div>}
+      {conversation && scope ? <>
+        {!conversation.canSend && <div className="px-4 py-2 text-sm text-gray-300 bg-navy"><p>This retained conversation is read-only.</p>{conversation.kind !== 'legacy_self' && <p>Names and avatars are hidden. Message text and images may still identify people.</p>}</div>}
+        {!page?.loaded && !page?.error && <p role="status" className="p-4 text-gray-300">Loading messages…</p>}
+        <MessageList key={`${scopeKey}:${conversation.id}`} messages={page?.messages ?? []} scope={scope} conversation={conversation} loadingOlder={page?.loadingOlder ?? false} hasOlder={!!page?.cursor} loadOlder={loadOlder} onDisplayed={acknowledge} readError={page?.readError ?? null} />
+        <MessageComposer key={`draft:${scopeKey}:${conversation.id}`} scope={scope} conversationId={conversation.id} canSend={conversation.canSend && !state.error && !page?.error} confirmed={confirmed} />
+      </> : !state.loading && !state.error && scope && <p className="p-4 text-gray-300">{state.list?.conversations.length ? 'Choose a retained conversation to read it.' : 'Connect with your partner in Profile to start a conversation.'}</p>}
+    </div>
+  </AppLayout>;
+}

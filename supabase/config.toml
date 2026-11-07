@@ -24,3 +24,8 @@ verify_jwt = false
 
 [functions.generate-vapid-keys]
 verify_jwt = false
+
+# The endpoint verifies the bearer USER token with Auth before any service operation.
+# Legacy gateway JWT checking alone accepts anon/service tokens and is insufficient.
+[functions.message-media]
+verify_jwt = false

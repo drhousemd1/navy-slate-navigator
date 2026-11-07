@@ -23,7 +23,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { getNickname, getProfileImage, getUserRoleSync } = useAuth();
-  const { unreadCount } = useUnreadMessages();
+  const { unreadCount, error: unreadError } = useUnreadMessages();
 
   // Only show "Add" button for specific routes
   const shouldShowAddButton = 
@@ -126,7 +126,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
                 }`}
                 onClick={handleMessagingClick}
               />
-              <NotificationBadge count={unreadCount} />
+              {unreadCount === null ? (unreadError && <span aria-label="Unread message count unavailable" title="Unread messages could not be checked" className="absolute -top-1 -right-1 text-xs text-amber-200">?</span>) : <span title={unreadError ? 'Last confirmed unread count; refresh unavailable' : undefined}><NotificationBadge count={unreadCount} />{unreadError && <span aria-label="Unread count may be outdated" className="absolute -bottom-2 right-0 text-xs text-amber-200">!</span>}</span>}
             </div>
           </div>
         </div>
