@@ -1,80 +1,57 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReviewedPunishment } from './randomPunishmentReview';
 
-import { useState, useRef, useEffect } from 'react';
-import { PunishmentData } from '@/contexts/punishments/types';
+const motionQuery = '(prefers-reduced-motion: reduce)';
+const reducedMotion = () => typeof window === 'undefined' || !window.matchMedia || window.matchMedia(motionQuery).matches;
 
-export const useRandomPunishmentSelection = (punishments: PunishmentData[], isOpen: boolean) => {
-  const [selectedPunishment, setSelectedPunishment] = useState<PunishmentData | null>(null);
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const animationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedPunishment(null);
-      setIsSelecting(false);
+export function useRandomPunishmentSelection(punishments: ReviewedPunishment[], isOpen: boolean) {
+  const key = JSON.stringify([isOpen, punishments.map(item => item.reviewKey)]);
+  const currentView = useRef({ key });
+  if (currentView.current.key !== key) currentView.current = { key };
+  const view = currentView.current;
+  const latest = useRef(punishments); latest.current = punishments;
+  const animation = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialized = useRef<typeof view | null>(null);
+  const [selection, setSelection] = useState<{ view: typeof view; item: ReviewedPunishment; selecting: boolean } | null>(null);
+  const [invalidated, setInvalidated] = useState(false);
+  const stop = useCallback(() => { if (animation.current !== null) clearTimeout(animation.current); animation.current = null; }, []);
+
+  const handleReroll = useCallback(() => {
+    stop();
+    if (!isOpen || currentView.current !== view || latest.current.length === 0) return;
+    initialized.current = view; setInvalidated(false);
+    const options = latest.current;
+    if (reducedMotion()) {
+      setSelection({ view, item: options[Math.floor(Math.random() * options.length)], selecting: false });
+      return;
     }
-  }, [isOpen]);
-  
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) {
-        clearTimeout(animationRef.current);
-      }
-    };
-  }, []);
-  
-  const startRandomSelection = () => {
-    if (punishments.length === 0) return;
-    
-    setIsSelecting(true);
-    setSelectedPunishment(null);
-    
+    setSelection({ view, item: options[0], selecting: true });
     let counter = 0;
-    const totalIterations = 15;
-    const cycleSpeed = 80;
-    
-    const animateCycle = () => {
-      const randomIndex = Math.floor(Math.random() * punishments.length);
-      setCurrentIndex(randomIndex);
+    const cycle = () => {
+      if (currentView.current !== view) return;
+      const item = options[Math.floor(Math.random() * options.length)];
       counter++;
-      
-      const nextSpeed = cycleSpeed + (counter * 10);
-      
-      if (counter < totalIterations) {
-        animationRef.current = setTimeout(animateCycle, nextSpeed);
-      } else {
-        setSelectedPunishment(punishments[randomIndex]);
-        setIsSelecting(false);
-      }
+      const selecting = counter < 15 && !reducedMotion();
+      setSelection({ view, item, selecting });
+      animation.current = selecting ? setTimeout(cycle, 80 + counter * 10) : null;
     };
-    
-    animationRef.current = setTimeout(animateCycle, cycleSpeed);
-  };
-  
-  const handleReroll = () => {
-    if (animationRef.current) {
-      clearTimeout(animationRef.current);
-    }
-    startRandomSelection();
-  };
-  
+    animation.current = setTimeout(cycle, 80);
+  }, [isOpen, view, stop]);
+
   useEffect(() => {
-    if (isOpen && punishments.length > 0 && !isSelecting && !selectedPunishment) {
-      startRandomSelection();
-    }
-  }, [isOpen, punishments.length, isSelecting, selectedPunishment]);
-  
-  const getCurrentPunishment = () => {
-    return selectedPunishment || 
-      (punishments.length > 0 ? punishments[currentIndex] : null);
-  };
-  
+    stop();
+    if (!isOpen) { initialized.current = null; setInvalidated(false); }
+    else if (!initialized.current || initialized.current === view) handleReroll();
+    else { initialized.current = view; setInvalidated(true); }
+    return stop;
+  }, [isOpen, view, handleReroll, stop]);
+
+  const visible = selection?.view === view ? selection : null;
   return {
-    selectedPunishment,
-    isSelecting,
-    currentIndex,
-    getCurrentPunishment,
+    selectedPunishment: visible && !visible.selecting ? visible.item : null,
+    currentPunishment: visible?.item ?? null,
+    isSelecting: visible?.selecting ?? false,
+    invalidated,
     handleReroll,
-    startRandomSelection
   };
-};
+}

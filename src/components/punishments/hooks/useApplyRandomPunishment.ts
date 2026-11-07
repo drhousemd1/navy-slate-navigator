@@ -1,52 +1,26 @@
+import { useEffect, useRef, useState } from 'react';
+import type { ReviewedPunishment } from './randomPunishmentReview';
 
-import { useState, useCallback } from 'react';
-import { useApplyPunishment } from '@/data/punishments/mutations/useApplyPunishment';
-import { PunishmentData } from '@/contexts/punishments/types';
-import { usePoints } from '@/data/points/useUserPointsQuery';
-import { useUserIds } from '@/contexts/UserIdsContext';
-import { toastManager } from '@/lib/toastManager';
-import { logger } from '@/lib/logger';
-
-export const useApplyRandomPunishment = (onClose?: () => void) => {
+/** Saving an intent is not a server confirmation. The shared queue owns delivery and retry. */
+export function useApplyRandomPunishment(save: (selection: ReviewedPunishment) => Promise<void>, onSaved: () => void) {
+  const alive = useRef(false);
+  const locked = useRef(false);
   const [isApplying, setIsApplying] = useState(false);
-  const applyPunishmentMutation = useApplyPunishment();
-  const { subUserId } = useUserIds();
-  const { data: currentPoints = 0 } = usePoints(subUserId);
-
-  const handlePunish = useCallback(async (punishment: PunishmentData) => {
-    if (!subUserId) {
-      toastManager.error("Error", "User not authenticated");
-      return;
-    }
-
-    if (!punishment.id) {
-      toastManager.error("Error", "Invalid punishment data");
-      return;
-    }
-
-    setIsApplying(true);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const handlePunish = async (selection: ReviewedPunishment) => {
+    if (locked.current) return;
+    locked.current = true; setIsApplying(true); setError(null);
     try {
-      await applyPunishmentMutation.mutateAsync({
-        punishmentId: punishment.id,
-        pointsDeducted: punishment.points,
-        dayOfWeek: new Date().getDay(),
-        currentPoints: currentPoints,
-        domPointsAwarded: punishment.dom_points
-      });
-
-      if (onClose) {
-        onClose();
+      await save(selection);
+      if (alive.current) onSaved();
+      // Keep the lock after a durable save, including while the closing render is pending.
+    } catch (cause) {
+      if (alive.current) {
+        locked.current = false; setIsApplying(false);
+        setError(cause instanceof Error ? cause.message : 'The action could not be saved. Nothing has been confirmed.');
       }
-    } catch (error) {
-      logger.error('Error applying random punishment:', error);
-      // Error toast is handled by the mutation
-    } finally {
-      setIsApplying(false);
     }
-  }, [applyPunishmentMutation, currentPoints, subUserId, onClose]);
-
-  return {
-    handlePunish,
-    isApplying,
   };
-};
+  return { handlePunish, isApplying, error };
+}

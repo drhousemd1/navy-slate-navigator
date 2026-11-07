@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({ state: null as any, actions: null as any, iden
 vi.mock('@/data/recordings/useRecordingData', () => ({ useRecordingData: () => mocks.state }));
 vi.mock('@/contexts/ActionCommandsContext', () => ({ useActionCommands: () => mocks.actions }));
 vi.mock('@/contexts/UserIdsContext', () => ({ useUserIds: () => mocks.identity }));
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {}, supabaseBackendId: 'fixture' }));
 vi.mock('react-router-dom', () => ({ useNavigate: () => mocks.navigate }));
 vi.mock('@/components/common/PointsBubbles', () => ({ default: () => <div>Confirmed balances</div> }));
@@ -25,7 +26,7 @@ beforeEach(() => {
   mocks.actions = { mode: 'atomic', scope: { accountId: 'a', relationshipId: 'period' }, entries: [], confirmed: [], enqueue: vi.fn().mockResolvedValue(undefined), retry: vi.fn(), cancelUnsent: vi.fn() };
   mocks.identity = { currentRole: 'sub', participantId: 'me', permissions: { punishment_undo: 'both', rule_violation_undo: 'both' } };
   mocks.state = { data: { definitions: [base], events: [], points: [], progress: [progress], imported: [] }, canManage: true, actionReason: null,
-    pending: false, isLoading: false, error: null, refresh: vi.fn(), save: vi.fn(), remove: vi.fn(), actions: mocks.actions };
+    pending: false, isLoading: false, error: null, refresh: vi.fn(), save: vi.fn(), remove: vi.fn(), actions: mocks.actions, identity: mocks.identity };
   mocks.navigate.mockReset();
 });
 afterEach(cleanup);

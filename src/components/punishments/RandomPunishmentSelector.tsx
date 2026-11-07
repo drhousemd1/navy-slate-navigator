@@ -1,61 +1,51 @@
-
-import React from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import { Shuffle } from 'lucide-react';
 import RandomPunishmentCard from './RandomPunishmentCard';
 import RandomPunishmentActions from './RandomPunishmentActions';
-import { PunishmentData } from '@/contexts/punishments/types';
+import type { ReviewedPunishment } from './hooks/randomPunishmentReview';
 
 interface RandomPunishmentSelectorProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedPunishment: PunishmentData | null;
-  currentPunishment: PunishmentData | null;
+  selectedPunishment: ReviewedPunishment | null;
+  currentPunishment: ReviewedPunishment | null;
   isSelecting: boolean;
+  isApplying: boolean;
+  canPick: boolean;
+  refreshing: boolean;
+  message: string | null;
+  error: string | null;
+  onRefresh: () => void;
   onPunish: () => void;
   onReroll: () => void;
 }
 
-const RandomPunishmentSelector: React.FC<RandomPunishmentSelectorProps> = ({ 
-  isOpen, 
-  onClose,
-  selectedPunishment,
-  currentPunishment,
-  isSelecting,
-  onPunish,
-  onReroll
-}) => {
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-navy border-light-navy text-white max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
-            <Shuffle className="h-5 w-5 text-red-500" />
-            Random Punishment
-          </DialogTitle>
-          <DialogDescription className="text-white">
-            {isSelecting 
-              ? "Selecting a random punishment..." 
-              : selectedPunishment 
-                ? "Your random punishment has been selected!" 
-                : "Let's find out what punishment you'll get..."}
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="py-4">
-          <RandomPunishmentCard punishment={currentPunishment} />
-          
-          <RandomPunishmentActions
-            isSelecting={isSelecting}
-            selectedPunishment={selectedPunishment}
-            onPunish={onPunish}
-            onReroll={onReroll}
-            onCancel={onClose}
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-export default RandomPunishmentSelector;
+export default function RandomPunishmentSelector({ isOpen, onClose, selectedPunishment, currentPunishment, isSelecting, isApplying,
+  canPick, refreshing, message, error, onRefresh, onPunish, onReroll }: RandomPunishmentSelectorProps) {
+  return <Dialog open={isOpen} onOpenChange={open => { if (!open && !isApplying) onClose(); }}>
+    <DialogContent className="bg-navy border-light-navy text-foreground max-w-md" hideCloseButton={isApplying}
+      onEscapeKeyDown={event => { if (isApplying) event.preventDefault(); }}
+      onInteractOutside={event => { if (isApplying) event.preventDefault(); }}>
+      <DialogHeader>
+        <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+          <Shuffle className="h-5 w-5 text-red-500" />Random Punishment
+        </DialogTitle>
+        <DialogDescription className="text-foreground">
+          {isSelecting ? 'Selecting a random punishment…' : selectedPunishment
+            ? 'Review the punishment, then apply it or re-roll. Nothing is recorded until you confirm.'
+            : 'Pick a punishment to preview before confirming.'}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="py-4">
+        <RandomPunishmentCard selection={currentPunishment} />
+        {message && message !== error && <p role="status" className="mb-3 text-sm">{message}</p>}
+        {error && <p role="alert" className="mb-3 text-sm">{error}</p>}
+        <RandomPunishmentActions isSelecting={isSelecting} selectedPunishment={selectedPunishment}
+          isApplying={isApplying} canPick={canPick} onPunish={onPunish} onReroll={onReroll} onCancel={onClose} />
+        {!canPick && !isApplying && <button disabled={refreshing} className="mt-3 underline disabled:opacity-50" onClick={onRefresh}>
+          {refreshing ? 'Refreshing…' : 'Refresh punishments'}
+        </button>}
+      </div>
+    </DialogContent>
+  </Dialog>;
+}
