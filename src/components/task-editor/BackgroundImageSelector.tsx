@@ -77,17 +77,20 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
     }
   }, [control, imagePreview, setValue, opacity]);
 
+  const setFocalPosition = React.useCallback((next: { x: number; y: number }) => {
+    const x = Math.round(Math.max(0, Math.min(100, next.x)));
+    const y = Math.round(Math.max(0, Math.min(100, next.y)));
+    setPosition({ x, y });
+    setValue('focal_point_x' as Path<TFormValues>, x as PathValue<TFormValues, Path<TFormValues>>, { shouldDirty: true });
+    setValue('focal_point_y' as Path<TFormValues>, y as PathValue<TFormValues, Path<TFormValues>>, { shouldDirty: true });
+  }, [setValue]);
+
   const updatePosition = React.useCallback((clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return;
     const rect = imageContainerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
-    
-    setPosition({ x, y });
-    
-    setValue('focal_point_x' as Path<TFormValues>, Math.round(x) as PathValue<TFormValues, Path<TFormValues>>);
-    setValue('focal_point_y' as Path<TFormValues>, Math.round(y) as PathValue<TFormValues, Path<TFormValues>>);
-  }, [setValue]); // Added setValue to dependency array for useCallback
+    if (!rect.width || !rect.height) return;
+    setFocalPosition({ x: ((clientX - rect.left) / rect.width) * 100, y: ((clientY - rect.top) / rect.height) * 100 });
+  }, [setFocalPosition]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -152,6 +155,15 @@ const BackgroundImageSelector = <TFormValues extends BackgroundImageFormFields>(
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
               />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+              {([['x', 'Horizontal focal point'], ['y', 'Vertical focal point']] as const).map(([axis, label]) => (
+                <label key={axis} className="block text-sm text-white">
+                  {label} ({position[axis]}%)
+                  <Slider aria-label={label} min={0} max={100} step={1} value={[position[axis]]}
+                    onValueChange={([value]) => setFocalPosition({ ...position, [axis]: value })} />
+                </label>
+              ))}
             </div>
             <Button 
               type="button"

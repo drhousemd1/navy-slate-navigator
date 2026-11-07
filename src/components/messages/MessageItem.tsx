@@ -37,7 +37,7 @@ export default function MessageItem({ message, scope, conversation, onImageLoad 
         </div>
       </div>
     </div>
-    {media.url && <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}><DialogContent className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-transparent border-none">
+    {media.url && <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}><DialogContent aria-describedby={undefined} className="max-w-[90vw] max-h-[90vh] w-auto p-0 bg-transparent border-none">
       <DialogTitle className="sr-only">Message image</DialogTitle>
       <div className="relative w-full h-full flex items-center justify-center"><img src={media.url} alt="Full size message image" className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg" />
         <Button aria-label="Close image" className="absolute top-2 right-2 rounded-full w-8 h-8 p-0 bg-black/50 hover:bg-black/70" variant="ghost" size="icon" onClick={() => setIsImageOpen(false)}><X className="h-5 w-5 text-white" /></Button>

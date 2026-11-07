@@ -30,7 +30,7 @@ const ImageFocalPointControl: React.FC<ImageFocalPointControlProps> = ({
         }}
       />
       <div 
-        className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200"
+        className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors duration-200 motion-reduce:transition-none"
         style={{ 
           cursor: 'crosshair',
           pointerEvents: 'auto', 
@@ -41,11 +41,10 @@ const ImageFocalPointControl: React.FC<ImageFocalPointControlProps> = ({
         onTouchStart={onTouchStart}
       >
         <div 
-          className="absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg"
+          className={`absolute w-8 h-8 bg-white rounded-full border-2 border-nav-active transform -translate-x-1/2 -translate-y-1/2 shadow-lg${isDragging ? '' : ' motion-safe:animate-pulse'}`}
           style={{ 
             left: `${position.x}%`, 
             top: `${position.y}%`,
-            animation: isDragging ? 'none' : 'pulse 2s infinite',
             boxShadow: isDragging ? '0 0 0 4px rgba(126, 105, 171, 0.5)' : '',
             zIndex: 20,
             pointerEvents: 'none' 
