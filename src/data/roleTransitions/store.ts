@@ -1,5 +1,6 @@
 import { RoleTransitionError } from './api';
 import { decodeRoleReceipt, recordSchema, type RoleRecord } from './types';
+import { requireUndeletedAccount } from '@/data/accountDeletion/tombstone';
 
 export interface RoleStore { read(backend: string, account: string): Promise<RoleRecord | null>; save(record: RoleRecord, expectedCommand: string | null): Promise<void>; remove(record: RoleRecord): Promise<void> }
 export function checkedRoleRecord(value: unknown, backend: string, account: string): RoleRecord | null {
@@ -34,6 +35,7 @@ export function createRoleStore(factory: IDBFactory = globalThis.indexedDB): Rol
     save: async (record, expectedCommand) => {
       checkedRoleRecord(record, record.intent.scope.backendId, record.intent.scope.accountId);
       await transact(record.intent.scope.backendId, record.intent.scope.accountId, (current, store, key) => {
+        requireUndeletedAccount(record.intent.scope.backendId, record.intent.scope.accountId);
         if ((current?.intent.commandId ?? null) !== expectedCommand) throw new RoleTransitionError('ROLE_STORAGE_CHANGED');
         if (current && (JSON.stringify(current.intent) !== JSON.stringify(record.intent) || current.status === 'completed' && record.status !== 'completed')) throw new RoleTransitionError('ROLE_STORAGE_CHANGED');
         store.put(record, key);

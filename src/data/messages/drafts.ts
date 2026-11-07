@@ -1,5 +1,6 @@
 import { messageScopeKey, type MessageReceipt, type MessageScope } from './types';
 import { MessageRequestError, type MessageTransport } from './transport';
+import { requireUndeletedAccount } from '@/data/accountDeletion/tombstone';
 
 export interface MessageDraft {
   version: 1; key: string; scope: MessageScope; conversationId: string;
@@ -50,7 +51,7 @@ export function createDraftRepository(factory: IDBFactory | undefined = globalTh
   }
   return {
     get: async key => { const row = await transaction('readonly', store => store.get(key)); if (row === undefined) return null; if (!validDraft(row)) throw new Error('The saved draft could not be read. It has not been overwritten.'); return row; },
-    put: async draft => { if (!validDraft(draft)) throw new Error('Invalid message draft.'); await transaction('readwrite', store => store.put(draft)); },
+    put: async draft => { if (!validDraft(draft)) throw new Error('Invalid message draft.'); await transaction('readwrite', store => { requireUndeletedAccount(draft.scope.backendId, draft.scope.accountId); return store.put(draft); }); },
     remove: async key => { await transaction('readwrite', store => store.delete(key)); },
     list: async (accountId, backendId) => {
       const rows = await transaction('readonly', store => store.getAll());

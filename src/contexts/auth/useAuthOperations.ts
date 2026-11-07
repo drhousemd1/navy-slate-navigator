@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError, CaughtError, PostgrestError, isPostgrestError, isAppError } from '@/lib/errors';
+import { isSupabaseAuthError, createAppError, getErrorMessage, SupabaseAuthError, AppError, isAppError } from '@/lib/errors';
 import type { User, Session, AuthResponse } from '@supabase/supabase-js';
 
 export function useAuthOperations() {
@@ -195,52 +195,10 @@ export function useAuthOperations() {
     }
   };
 
-  // Delete user account
-  const deleteAccount = async (): Promise<{ error?: CaughtError | null }> => {
-    try {
-      // The RPC call might return a PostgrestError which is compatible with CaughtError
-      const { error: rpcError } = await supabase.rpc('delete_user_account'); // Removed 'as any'
-      
-      if (rpcError) {
-        logger.error('Account deletion error from RPC:', rpcError);
-        // rpcError is PostgrestError | null. If not null, its properties are directly accessible.
-        const descriptiveError = createAppError(
-          rpcError.message || 'Could not delete account via RPC.',
-          rpcError.code || 'RPC_ERROR', // Use rpcError.code
-          { details: rpcError.details, hint: rpcError.hint } // Use rpcError.details and rpcError.hint
-        );
-        toast({
-          title: 'Error deleting account',
-          description: descriptiveError.message,
-          variant: 'destructive',
-        });
-        
-        // isPostgrestError check is redundant here as rpcError is already known to be PostgrestError if not null.
-        return { error: rpcError }; 
-      }
-
-      logger.debug('Account deletion initiated successfully');
-      toast({
-        title: 'Account deletion initiated',
-        description: 'Your account is scheduled for deletion. You will be logged out shortly.',
-      });
-      
-      return { error: null };
-    } catch (error: unknown) {
-      logger.error('Exception during account deletion:', error);
-      // Ensure the error thrown or returned conforms to CaughtError
-      if (isSupabaseAuthError(error) || isPostgrestError(error) || isAppError(error) || error instanceof Error) {
-        return { error: error as CaughtError };
-      }
-      return { error: createAppError(getErrorMessage(error), 'DELETE_ACCOUNT_EXCEPTION') };
-    }
-  };
-
   return {
     signIn,
     signUp,
     resetPassword,
-    updatePassword,
-    deleteAccount
+    updatePassword
   };
 }

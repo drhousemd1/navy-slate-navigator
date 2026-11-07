@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FieldValues, UseFormReturn } from 'react-hook-form';
 import { editorDraftKey, registerDraftForm, type EditorDraftScope } from '@/lib/editorDrafts';
 import { toast } from '@/hooks/use-toast';
+import { isDeletedAccount } from '@/data/accountDeletion/tombstone';
 
 // Legacy unscoped keys are never read or migrated into a known account.
 export const STORAGE_PREFIX = 'kingdom-app-form-';
@@ -28,6 +29,8 @@ export function useFormStatePersister<T extends FieldValues>(formId: string, for
     const cancelTimer = () => { if (session.timer) clearTimeout(session.timer); session.timer = null; };
     session.flush = (notify = false) => {
       cancelTimer();
+      try { if (isDeletedAccount(options.scope.backendId, options.scope.accountId)) return; }
+      catch { fail('Device storage could not be checked. The draft was not written.', notify); return; }
       if (!session.pending || session.cleared) return;
       if (session.unread) {
         if (notify) fail('Your earlier draft is still unreadable and has been kept untouched. New edits are only in this editor until you retry or discard that unread draft.', true);
@@ -97,7 +100,7 @@ export function useFormStatePersister<T extends FieldValues>(formId: string, for
       window.removeEventListener('pagehide', flushOnLeave);
       document.removeEventListener('visibilitychange', flushWhenHidden);
     };
-  }, [key, form, session, options.debounceMs]);
+  }, [key, form, session, options.debounceMs, options.scope.backendId, options.scope.accountId]);
   return { ready: state.key === key && state.ready, error: state.key === key ? state.error : null,
     hasDraft: state.key === key && state.hasDraft, unread: state.key === key && state.unread,
     clearPersistedState: async () => session.clear(), retryPersistence: () => session.retry(), discardUnreadDraft: () => session.discardUnread() };

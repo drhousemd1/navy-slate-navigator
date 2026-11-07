@@ -35,7 +35,7 @@ export function DeleteAccountDialog({
           </AlertDialogTitle>
           <AlertDialogDescription className="text-gray-300">
             {isDelete 
-              ? 'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.'
+              ? 'Delete your account and private account data permanently? This cannot be undone. Shared messages, photos and recorded history may remain with the other person, with your profile shown as “Deleted account”. Text you wrote is not automatically anonymized. Keep this browser’s site data until deletion and device cleanup are confirmed.'
               : 'Are you sure you want to unlink from your partner? Your account data will be preserved, but changes will no longer sync with your partner.'}
           </AlertDialogDescription>
         </AlertDialogHeader>

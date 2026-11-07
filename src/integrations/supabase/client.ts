@@ -1,4 +1,5 @@
 
+import { deletionAwareAuthStorage, removeDeletedAccountSession } from '@/data/accountDeletion/authStorage';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { logger } from '@/lib/logger';
@@ -24,13 +25,21 @@ const configuration = resolveSupabaseConfiguration(
 
 // Non-secret identity for durable work scoped to this already validated backend.
 export const supabaseBackendId = configuration.url;
+// Public gateway key for explicitly scoped Edge requests, including recovery
+// operations that intentionally work after the deleted Auth session is gone.
+export const supabasePublicKey = configuration.publishableKey;
+
+// Explicitly retain the installed SDK's existing default storage key.
+export const supabaseAuthStorageKey = `sb-${new URL(configuration.url).hostname.split('.')[0]}-auth-token`;
+export const clearDeletedAccountSession = (account: string) => removeDeletedAccountSession(supabaseBackendId, supabaseAuthStorageKey, account);
 
 export const supabase = createClient<Database>(configuration.url, configuration.publishableKey, {
   auth: {
+    storageKey: supabaseAuthStorageKey,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined
+    storage: typeof window !== 'undefined' ? deletionAwareAuthStorage(supabaseBackendId, supabaseAuthStorageKey, window.localStorage) : undefined
   }
 });
 

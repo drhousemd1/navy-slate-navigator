@@ -5,6 +5,8 @@ import { PunishmentData as ContextPunishmentData, PunishmentHistoryItem as Conte
 import { Rule } from '@/data/interfaces/Rule';
 import { Task } from '@/data/tasks/types';
 import { logger } from '@/lib/logger';
+import { requireUndeletedAccount } from '@/data/accountDeletion/tombstone';
+import { supabaseBackendId } from '@/integrations/supabase/client';
 
 // Wellbeing snapshot type
 export interface WellbeingSnapshot {
@@ -84,6 +86,8 @@ async function readCached<T>(store: CacheStore, key: string): Promise<T | null> 
 
 async function writeCached<T>(store: CacheStore, key: string, value: T): Promise<T> {
   if (!activeScope || !belongsToScope(value)) throw new Error('Cached data does not belong to the current account or partner.');
+  const account = JSON.parse(activeScope)[0];
+  if (typeof account === 'string') requireUndeletedAccount(supabaseBackendId, account);
   return store.setItem(key, value);
 }
 

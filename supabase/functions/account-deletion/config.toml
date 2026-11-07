@@ -1,0 +1,4 @@
+# Merge this section into the deployment's Supabase function configuration.
+# Status/retry use an exact-job random capability. Start validates live user Auth.
+[functions.account-deletion]
+verify_jwt = false

@@ -9,7 +9,7 @@ const headers = {
   'Referrer-Policy': 'no-referrer',
 };
 const safeCodes = new Set(['AUTHENTICATION_REQUIRED', 'STALE_RELATIONSHIP', 'STALE_RELATIONSHIP_SESSION', 'VALID_IDENTITY_REQUIRED',
-  'MESSAGE_PARTNER_REQUIRED', 'MESSAGE_MEDIA_INVALID', 'MESSAGE_UPLOAD_ID_REUSED', 'MESSAGE_ATTACHMENT_UNAVAILABLE']);
+  'MESSAGE_PARTNER_REQUIRED', 'MESSAGE_MEDIA_INVALID', 'MESSAGE_UPLOAD_ID_REUSED', 'MESSAGE_ATTACHMENT_UNAVAILABLE', 'MESSAGE_UPLOAD_BUSY', 'ACCOUNT_UNAVAILABLE']);
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
 async function boundedBytes(body: ReadableStream<Uint8Array> | null, limit: number) {
   if (!body) throw new MediaError('IMAGE_SIZE_INVALID');
@@ -22,10 +22,13 @@ async function boundedBytes(body: ReadableStream<Uint8Array> | null, limit: numb
 export function createMessageMediaHandler(config: Config, fetcher: typeof fetch = fetch) {
   const base = new URL(config.supabaseUrl);
   if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.search || base.hash || base.pathname !== '/') throw new Error('Invalid backend configuration');
+  return async (request: Request): Promise<Response> => {
+  const operationSignal = AbortSignal.timeout(45_000);
   const internal = async (path: string, init: RequestInit) => {
     const target = new URL(path, base);
     if (target.origin !== base.origin || !/^\/(auth|rest|storage)\/v1\//.test(target.pathname)) throw new Error('Invalid backend path');
-    return await fetcher(target, { ...init, signal: AbortSignal.timeout(15_000), redirect: 'error' });
+    operationSignal.throwIfAborted();
+    return await fetcher(target, { ...init, signal: AbortSignal.any([operationSignal, AbortSignal.timeout(15_000)]), redirect: 'error' });
   };
   const serviceHeaders = { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}`, 'Content-Type': 'application/json' };
   const rpc = async (name: string, body: unknown) => {
@@ -42,11 +45,10 @@ export function createMessageMediaHandler(config: Config, fetcher: typeof fetch 
     const r = await internal(storagePath(mapping).replace('/storage/v1/object/', '/storage/v1/object/authenticated/'), { headers: serviceHeaders });
     if (!r.ok) throw new MediaError('MEDIA_UNAVAILABLE', 503);
     const bytes = await boundedBytes(r.body, MAX_IMAGE_BYTES);
-    const sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), x => x.toString(16).padStart(2, '0')).join('');
+    const sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(bytes).buffer)), x => x.toString(16).padStart(2, '0')).join('');
     if (bytes.length !== mapping.byteSize || sha !== mapping.sha256) throw new MediaError('MEDIA_INTEGRITY_FAILED', 503);
     return bytes;
   };
-  return async (request: Request): Promise<Response> => {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     try {
       const url = new URL(request.url), match = url.pathname.match(/^(?:\/functions\/v1)?\/message-media(?:\/([0-9a-f-]+))?\/?$/i);
@@ -78,9 +80,14 @@ export function createMessageMediaHandler(config: Config, fetcher: typeof fetch 
       const bytes = new Uint8Array(await file.arrayBuffer()), verified = await validateImage(bytes, file.type);
       const mapping: Mapping = await rpc('message_media_begin', { p_actor: user.id, p_upload_id: ids[0], p_expected_relationship_id: ids[1],
         p_expected_relationship_session_id: ids[2], p_mime_type: verified.mimeType, p_byte_size: verified.byteSize, p_sha256: verified.sha256 });
+      let uploadLease: string | undefined;
       if (mapping.status !== 'ready') {
+        const claim = await rpc('message_media_claim_upload', { p_actor: user.id, p_attachment_id: mapping.attachmentId });
+        if (claim.upload) {
+        if (!uuid.test(claim.leaseToken)) throw new MediaError('UPLOAD_UNCONFIRMED', 503);
+        uploadLease = claim.leaseToken;
         const upload = await internal(storagePath(mapping), { method: 'POST', headers: { ...serviceHeaders, 'Content-Type': verified.mimeType,
-          'x-upsert': 'false', 'cache-control': '0' }, body: bytes });
+          'x-upsert': 'false', 'cache-control': '0', 'x-metadata': btoa(JSON.stringify({ uploadLeaseToken: uploadLease })) }, body: bytes });
         if (!upload.ok) {
           const error = await upload.json().catch(() => null);
           if (![409, 400].includes(upload.status) || !['Duplicate', '409'].includes(String(error?.error ?? error?.statusCode)))
@@ -88,7 +95,9 @@ export function createMessageMediaHandler(config: Config, fetcher: typeof fetch 
           // Same-ID retry after a lost Storage response: verify existing bytes, never overwrite.
         }
       }
+      }
       await readObject(mapping); // Includes retries and verifies persisted bytes before readiness.
+      if (uploadLease) await rpc('message_media_settle_upload', { p_actor: user.id, p_attachment_id: mapping.attachmentId, p_lease_token: uploadLease });
       const ready = await rpc('message_media_finalize', { p_actor: user.id, p_attachment_id: mapping.attachmentId, p_sha256: verified.sha256 });
       // Failure/uncertainty leaves private pending bytes; no destructive rollback or public fallback.
       return json({ attachmentId: ready.attachmentId, mimeType: ready.mimeType, byteSize: ready.byteSize, status: 'ready' });

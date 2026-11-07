@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isDeletedAccount } from '@/data/accountDeletion/tombstone';
 import { scopeSchema, scopeKey, type ActionQueueScope, type QueueEntry } from '@/data/actions/contracts';
 import type { RewardActionData } from '@/data/rewards/actionReadModel';
 
@@ -43,6 +44,15 @@ export function forgetRecovery(backend: string) {
   for (const [key, scope] of verified) if (scope.backendId === backend) verified.delete(key);
   changed();
 }
+/** Deletion cleanup is exact-account; ordinary logout keeps its existing behavior. */
+export function forgetAccountRecovery(backend: string, account: string) {
+  const raw = localStorage.getItem(storageKey(backend));
+  if (raw) { let value: unknown; try { value = JSON.parse(raw); } catch { value = null; }
+    const parsed = snapshotSchema.safeParse(value);
+    if (parsed.success && parsed.data.scope.backendId === backend && parsed.data.scope.accountId === account) localStorage.removeItem(storageKey(backend));
+  }
+  access.delete(accessKey(backend, account)); verified.delete(accessKey(backend, account)); changed();
+}
 export function readRecoverySnapshot(backend: string, account: string): RecoverySnapshot | null {
   try {
     const raw = localStorage.getItem(storageKey(backend));
@@ -80,6 +90,7 @@ export function projectRecoverySnapshot(scope: ActionQueueScope, data: RewardAct
   }) as RecoverySnapshot;
 }
 export function saveRecoverySnapshot(snapshot: RecoverySnapshot): boolean {
+  if (isDeletedAccount(snapshot.scope.backendId, snapshot.scope.accountId)) return false;
   const active = verified.get(accessKey(snapshot.scope.backendId, snapshot.scope.accountId));
   if (!active || scopeKey(active) !== scopeKey(snapshot.scope)) return false;
   try { localStorage.setItem(storageKey(snapshot.scope.backendId), JSON.stringify(snapshotSchema.parse(snapshot))); return true; }

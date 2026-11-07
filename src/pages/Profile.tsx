@@ -29,7 +29,7 @@ const Profile: React.FC = () => {
     uploadProfileImageAndUpdateState, 
     deleteUserProfileImage, 
     signOut,
-    deleteAccount 
+    accountDeletion
   } = useAuth();
   const [nickname, setNickname] = useState<string>('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -134,20 +134,11 @@ const Profile: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !deleteAccount) return;
+    if (!user || !accountDeletion) return;
     setError(null);
-    try {
-      const result = await deleteAccount();
-      // The account service returns failures rather than throwing them. It owns
-      // the popup; keep the same failure visible here instead of adding success.
-      if (result.error) setError(getErrorMessage(result.error));
-    } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error);
-      logger.error('Error deleting account:', errorMessage);
-      toastManager.error('Error', errorMessage);
-    } finally {
-      setIsDeleteAccountDialogOpen(false);
-    }
+    const result = await accountDeletion.start();
+    if (result.error) setError(result.error);
+    setIsDeleteAccountDialogOpen(false);
   };
 
 
@@ -247,7 +238,7 @@ const Profile: React.FC = () => {
             <Button onClick={handleLogout} className="w-full bg-gray-600 text-white hover:bg-gray-500 hover:text-white flex items-center">
               <LogOut className="w-4 h-4 mr-2" /> Log Out
             </Button>
-            <Button onClick={() => setIsDeleteAccountDialogOpen(true)} variant="destructive" className="w-full flex items-center" disabled={!deleteAccount}>
+            <Button onClick={() => setIsDeleteAccountDialogOpen(true)} variant="destructive" className="w-full flex items-center" disabled={!accountDeletion?.canStart}>
               <Trash2 className="w-4 h-4 mr-2" /> Delete Account
             </Button>
           </div>

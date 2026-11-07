@@ -1,6 +1,7 @@
 import { validateMetrics } from './api';
 import { wellbeingScopeKey } from './scope';
 import type { WellbeingDraft, WellbeingRequest, WellbeingScope } from './types';
+import { requireUndeletedAccount } from '@/data/accountDeletion/tombstone';
 
 export const draftKey = (scope: WellbeingScope) => `obedience:wellbeing:v1:${JSON.stringify(wellbeingScopeKey(scope))}`;
 export function readWellbeingDraft(scope: WellbeingScope): WellbeingDraft | null {
@@ -16,6 +17,7 @@ export function readWellbeingDraft(scope: WellbeingScope): WellbeingDraft | null
   return data;
 }
 export function storeWellbeingDraft(draft: WellbeingDraft, expectedCommandId: string | null = null): void {
+  requireUndeletedAccount(draft.scope.backendId, draft.scope.accountId);
   try {
     const current = readWellbeingDraft(draft.scope);
     if ((current?.pending?.commandId ?? null) !== expectedCommandId) throw new Error('DRAFT_CHANGED');

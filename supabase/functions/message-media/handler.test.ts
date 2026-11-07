@@ -19,6 +19,8 @@ Deno.test('verified caller is the only actor; success exposes no key/path/filena
     const path=new URL(String(input)).pathname;paths.push(path);
     if(path==='/auth/v1/user'){assert(new Headers(init?.headers).get('Authorization')==='Bearer test-user');return json({id});}
     assert(new Headers(init?.headers).get('Authorization')==='Bearer test-service');
+    if(path.endsWith('/message_media_claim_upload'))return json({upload:true,leaseToken:attachment});
+    if(path.endsWith('/message_media_settle_upload'))return json(null);
     if(path.endsWith('/message_media_begin')){const body=JSON.parse(String(init?.body));assert(body.p_actor===id);return json(mapping);}
     if(path.startsWith('/storage/'))return init?.method==='POST'?json({}):new Response(png);
     if(path.endsWith('/message_media_finalize'))return json({...verified,attachmentId:attachment,status:'ready'});
@@ -32,6 +34,8 @@ Deno.test('upload failure leaves pending private bytes, with no delete or false 
   const handler=createMessageMediaHandler(config,async(input,init)=>{
     const path=new URL(String(input)).pathname;assert(init?.method!=='DELETE');
     if(path==='/auth/v1/user')return json({id});
+    if(path.endsWith('/message_media_claim_upload'))return json({upload:true,leaseToken:attachment});
+    if(path.endsWith('/message_media_settle_upload'))return json(null);
     if(path.endsWith('/message_media_begin'))return json({attachmentId:attachment,bucket:'message-media',objectPath:attachment,...verified,status:'pending'});
     if(path.endsWith('/message_media_finalize')){finalized=true;return json({});}
     return json({error:'unavailable'},503);
@@ -43,6 +47,8 @@ Deno.test('lost upload response retry verifies exact object before finalizing; s
   const handler=createMessageMediaHandler(config,async(input,init)=>{
     const path=new URL(String(input)).pathname;assert(init?.method!=='DELETE');
     if(path==='/auth/v1/user')return json({id});
+    if(path.endsWith('/message_media_claim_upload'))return json({upload:true,leaseToken:attachment});
+    if(path.endsWith('/message_media_settle_upload'))return json(null);
     if(path.endsWith('/message_media_begin'))return json({attachmentId:attachment,bucket:'message-media',objectPath:attachment,...verified,status:'pending'});
     if(path.startsWith('/storage/')){if(init?.method==='POST')return json({error:'Duplicate'},400);read=true;return new Response(png);}
     if(path.endsWith('/message_media_finalize')){assert(read);return json({message:'STALE_RELATIONSHIP_SESSION'},403);}
@@ -80,4 +86,42 @@ Deno.test('truncated or changed stored bytes are not served as verified media',a
   });
   const r=await handler(new Request(`http://127.0.0.1:28622/functions/v1/message-media/${attachment}`,{headers:{Authorization:'Bearer test-user'}}));
   assert(r.status===503);assert((await r.json()).error.code==='MEDIA_INTEGRITY_FAILED');
+});
+
+Deno.test('freeze between begin and claim prevents an external upload',async()=>{
+  const verified=await validateImage(png,'image/png');let stored=false;
+  const handler=createMessageMediaHandler(config,async(input)=>{
+    const path=new URL(String(input)).pathname;
+    if(path==='/auth/v1/user')return json({id});
+    if(path.endsWith('/message_media_begin'))return json({attachmentId:attachment,bucket:'message-media',objectPath:attachment,...verified,status:'pending'});
+    if(path.endsWith('/message_media_claim_upload'))return json({message:'ACCOUNT_UNAVAILABLE'},403);
+    if(path.startsWith('/storage/'))stored=true;
+    throw new Error('Unexpected request');
+  });
+  const result=await handler(upload());assert(result.status===403&&!stored);
+});
+Deno.test('claimed attempt carries fencing token; rejected late upload stays unconfirmed',async()=>{
+  const verified=await validateImage(png,'image/png');let settled=false;
+  const handler=createMessageMediaHandler(config,async(input,init)=>{
+    const path=new URL(String(input)).pathname;
+    if(path==='/auth/v1/user')return json({id});
+    if(path.endsWith('/message_media_begin'))return json({attachmentId:attachment,bucket:'message-media',objectPath:attachment,...verified,status:'pending'});
+    if(path.endsWith('/message_media_claim_upload'))return json({upload:true,leaseToken:attachment});
+    if(path.startsWith('/storage/')){assert(JSON.parse(atob(new Headers(init?.headers).get('x-metadata')!)).uploadLeaseToken===attachment);return json({error:'MESSAGE_UPLOAD_FENCED'},403);}
+    if(path.endsWith('/message_media_settle_upload'))settled=true;
+    throw new Error('Unexpected request');
+  });
+  const result=await handler(upload());assert(result.status===503&&!settled);
+});
+Deno.test('existing ready upload retry never requests a new write lease',async()=>{
+  const verified=await validateImage(png,'image/png');
+  const handler=createMessageMediaHandler(config,async(input,init)=>{
+    const path=new URL(String(input)).pathname;
+    if(path==='/auth/v1/user')return json({id});
+    if(path.endsWith('/message_media_begin'))return json({attachmentId:attachment,bucket:'message-media',objectPath:attachment,...verified,status:'ready'});
+    if(path.startsWith('/storage/')){assert(!init?.method);return new Response(png);}
+    if(path.endsWith('/message_media_finalize'))return json({...verified,attachmentId:attachment,status:'ready'});
+    throw new Error('Ready retry must not claim or upload');
+  });
+  assert((await handler(upload())).status===200);
 });

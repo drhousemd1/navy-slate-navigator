@@ -19,6 +19,7 @@ vi.mock('@/contexts/auth/useAuthOperations', () => ({ useAuthOperations: () => (
 vi.mock('@/contexts/auth/useUserProfile', () => ({ useUserProfile: () => ({}) }));
 vi.mock('@/contexts/auth/usePartnerLinking', () => ({ usePartnerLinking: () => ({ relationshipIdentity: {} }) }));
 vi.mock('@/lib/logger', () => ({ logger: { debug: vi.fn(), info: vi.fn(), error: vi.fn() } }));
+vi.mock('@/contexts/auth/useAccountDeletion', () => ({ useAccountDeletion: () => ({ records: [], loading: false, loadError: null }) }));
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 function Consumer() {

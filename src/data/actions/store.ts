@@ -1,4 +1,5 @@
 import { decodeActionScope, decodeActionCommand, decodeQueueEntry, type NewQueueEntry, type QueueEntry } from './contracts';
+import { requireUndeletedAccount } from '@/data/accountDeletion/tombstone';
 
 export interface ActionQueueStore {
   insert(entry: NewQueueEntry): Promise<QueueEntry>;
@@ -36,11 +37,13 @@ export class IndexedDBActionQueueStore implements ActionQueueStore {
   }
 
   async insert(entry: NewQueueEntry): Promise<QueueEntry> {
+    requireUndeletedAccount(entry.scope.backendId, entry.scope.accountId);
     // Validate before writing; malformed intent must never become a durable job.
     decodeActionScope(entry.scope);
     decodeActionCommand(entry.command);
     decodeQueueEntry({ ...entry, sequence: 1 });
     const db = await this.open();
+    requireUndeletedAccount(entry.scope.backendId, entry.scope.accountId);
     return new Promise((resolve, reject) => {
       const transaction = db.transaction('commands', 'readwrite', { durability: 'strict' });
       const request = transaction.objectStore('commands').add(structuredClone(entry));
@@ -82,6 +85,7 @@ export class IndexedDBActionQueueStore implements ActionQueueStore {
         if (!request.result) return;
         try {
           const previous = decodeQueueEntry(request.result);
+          requireUndeletedAccount(previous.scope.backendId, previous.scope.accountId);
           result = change(previous);
           if (result) {
             if (result.sequence !== previous.sequence || JSON.stringify(result.scope) !== JSON.stringify(previous.scope) ||

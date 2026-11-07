@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { AccountDeletionProgress } from '@/components/account/AccountDeletionProgress';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { AuthView } from './types';
@@ -18,7 +19,7 @@ const getReturnPath = (state: unknown): string => {
 
 const Auth: React.FC = () => {
   const [authView, setAuthView] = React.useState<AuthView>("login");
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, accountDeletion } = useAuth();
   const location = useLocation();
 
   React.useEffect(() => {
@@ -49,7 +50,10 @@ const Auth: React.FC = () => {
     return <ForgotPasswordView onBackClick={() => setAuthView("login")} />;
   }
 
-  return <LoginSignupView currentView={authView} onViewChange={setAuthView} />;
+  return <>
+    {accountDeletion?.records.map(record => <AccountDeletionProgress key={record.jobId} deletion={accountDeletion} record={record} />)}
+    <LoginSignupView currentView={authView} onViewChange={setAuthView} />
+  </>;
 };
 
 export default Auth;

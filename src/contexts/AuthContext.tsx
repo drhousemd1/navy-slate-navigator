@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useEffect, useContext, useRef, ReactNode } from 'react';
 import { Session, User, AuthChangeEvent, Subscription } from '@supabase/supabase-js';
-import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
+import { supabase, supabaseBackendId, clearDeletedAccountSession } from '@/integrations/supabase/client';
 import { forgetRecovery } from '@/lib/offline/recovery';
 import { revokeCurrentPushDeviceBeforeSignOut } from '@/lib/pushDevice';
 import { toast } from '@/hooks/use-toast';
@@ -10,6 +10,9 @@ import localforage from 'localforage';
 import { STORAGE_PREFIX as FORM_STATE_PREFIX } from '@/hooks/useFormStatePersister';
 import { useAuthOperations } from './auth/useAuthOperations';
 import { useUserProfile } from './auth/useUserProfile';
+import { useAccountDeletion } from './auth/useAccountDeletion';
+import { isDeletedAccount } from '@/data/accountDeletion/tombstone';
+import { AccountDeletionProgress } from '@/components/account/AccountDeletionProgress';
 import { useRoleTransitions } from './auth/useRoleTransitions';
 import { usePartnerLinking } from './auth/usePartnerLinking';
 import { logger } from '@/lib/logger';
@@ -30,7 +33,7 @@ export interface AuthContextType extends AuthState {
   signUp: ReturnType<typeof useAuthOperations>['signUp'];
   resetPassword: ReturnType<typeof useAuthOperations>['resetPassword'];
   updatePassword: ReturnType<typeof useAuthOperations>['updatePassword'];
-  deleteAccount: ReturnType<typeof useAuthOperations>['deleteAccount']; 
+  accountDeletion: ReturnType<typeof useAccountDeletion>;
   getNickname: ReturnType<typeof useUserProfile>['getNickname'];
   getProfileImage: ReturnType<typeof useUserProfile>['getProfileImage'];
   getUserRole: ReturnType<typeof useUserProfile>['getUserRole'];
@@ -91,6 +94,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
   const roleTransitions = useRoleTransitions(authState.user?.id ?? null, partnerLinkingUtils.relationshipIdentity, partnerLinkingUtils.refreshIdentity);
 
+  const deletionAccounts = useRef(new Set<string>());
+  const endDeletedSession = async (account: string) => {
+    const result = await clearDeletedAccountSession(account);
+    if (result === 'other_account' || currentAccountId.current !== account) return;
+    currentAccountId.current = null;
+    setAuthState({ user: null, session: null, loading: false, isAuthenticated: false, isAdmin: false, userExists: false, sessionExists: false });
+  };
+  const accountDeletion = useAccountDeletion(authState.user?.id ?? null, partnerLinkingUtils.relationshipIdentity, endDeletedSession);
+  deletionAccounts.current = new Set(accountDeletion.records.filter(record => !record.startRejected).map(record => record.scope.accountId));
+
   // On-demand admin check function
   const checkAdminStatus = async (): Promise<boolean> => {
     if (!authState.user) return false;
@@ -128,7 +141,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           async (event: AuthChangeEvent, newSession: Session | null) => {
             logger.debug(`AuthContext: Auth state change: ${event}`);
             
+            if (newSession && isDeletedAccount(supabaseBackendId, newSession.user.id)) return;
             if (newSession) {
+              currentAccountId.current = newSession.user.id;
               // User is authenticated - set state immediately
               setAuthState({
                 user: newSession.user,
@@ -143,11 +158,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               logger.debug("AuthContext: User authenticated, app ready");
             } else {
               // User is not authenticated
-              if (event === 'SIGNED_OUT') {
+              if (event === 'SIGNED_OUT' && !deletionAccounts.current.has(currentAccountId.current ?? '')) {
                 logger.info(`AuthContext: ${event} - clearing caches`);
                 await clearAllCaches();
               }
               
+              currentAccountId.current = null;
               setAuthState({
                 user: null,
                 session: null,
@@ -174,7 +190,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return;
         }
 
-        if (existingSession) {
+        if (existingSession && !isDeletedAccount(supabaseBackendId, existingSession.user.id)) {
           // User has existing session - set immediately
           setAuthState({
             user: existingSession.user,
@@ -206,6 +222,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       subscriptionCleanup?.unsubscribe();
     };
   }, []);
+
+  const reloadDeletion = accountDeletion.reload;
+  useEffect(() => {
+    const handleDeletion = () => {
+      const account = currentAccountId.current;
+      if (!account || !isDeletedAccount(supabaseBackendId, account)) return;
+      currentAccountId.current = null;
+      setAuthState({ user: null, session: null, loading: false, isAuthenticated: false, isAdmin: false, userExists: false, sessionExists: false });
+      void reloadDeletion();
+    };
+    window.addEventListener('storage', handleDeletion);
+    return () => window.removeEventListener('storage', handleDeletion);
+  }, [reloadDeletion]);
 
   const clearAllCaches = async () => {
     forgetRecovery(supabaseBackendId);
@@ -254,7 +283,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     signUp: authOperations.signUp,
     resetPassword: authOperations.resetPassword,
     updatePassword: authOperations.updatePassword,
-    deleteAccount: authOperations.deleteAccount,
+    accountDeletion,
     getNickname: userProfileUtils.getNickname,
     getProfileImage: userProfileUtils.getProfileImage,
     getUserRole: userProfileUtils.getUserRole,
@@ -287,7 +316,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <AuthContext.Provider value={contextValue}>
-      {children}
+      {accountDeletion.loading ? <p className="p-6 text-gray-300" role="status">Checking saved account recovery…</p>
+        : accountDeletion.loadError ? <div className="p-6 text-white"><p role="alert">{accountDeletion.loadError}</p><button onClick={() => void accountDeletion.reload()}>Retry recovery check</button></div>
+          : accountDeletion.records.find(record => record.scope.accountId === authState.user?.id)
+            ? <AccountDeletionProgress deletion={accountDeletion} record={accountDeletion.records.find(record => record.scope.accountId === authState.user?.id)!} />
+            : children}
     </AuthContext.Provider>
   );
 };
