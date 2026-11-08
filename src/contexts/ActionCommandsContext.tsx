@@ -52,7 +52,7 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
   // No initial/unknown/error response ever selects the legacy writer path.
   const atomic = !!scope && status.data === true;
   const readModel = useQuery({ queryKey: rewardActionKey(scope), enabled: atomic,
-    queryFn: ({ signal }) => readRewardActionData(scope!, signal), retry: false,
+    queryFn: ({ signal }) => readRewardActionData(scope!, signal, () => queryClient.getQueryData<RewardActionData>(rewardActionKey(scope))?.definitionCatalog), retry: false,
     staleTime: 0, refetchOnMount: 'always', refetchInterval: 10_000 });
 
   useEffect(() => {
@@ -81,6 +81,7 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
         // Receipts describe a past instant. Always read current balances again.
         void queryClient.invalidateQueries({ queryKey: rewardActionKey(decodeActionScope(entry.scope)), exact: true });
         void queryClient.invalidateQueries({ queryKey: ['task-action-state'] });
+        void queryClient.invalidateQueries({ queryKey: ['task-feedback-state'] });
         void queryClient.invalidateQueries({ queryKey: ['recording-action-state'] });
         void queryClient.invalidateQueries({ queryKey: ['activity-metrics'] });
         void queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -128,6 +129,7 @@ export function ActionCommandsProvider({ children }: React.PropsWithChildren) {
     if (atomic) await Promise.all([
       queryClient.invalidateQueries({ queryKey: rewardActionKey(scope), exact: true }),
       queryClient.invalidateQueries({ queryKey: ['task-action-state'] }),
+      queryClient.invalidateQueries({ queryKey: ['task-feedback-state'] }),
       queryClient.invalidateQueries({ queryKey: ['recording-action-state'] }),
       queryClient.invalidateQueries({ queryKey: ['activity-metrics'] }),
     ]);

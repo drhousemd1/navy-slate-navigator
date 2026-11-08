@@ -15,7 +15,9 @@ function query(record: any) {
     single: () => { record.single = true; return q; }, setHeader: (name: string, value: string) => { record.headers[name] = value; return q; }, abortSignal: () => q,
     then: (resolve: (value: any) => void) => {
       if (record.rpc === 'get_my_identity') return Promise.resolve(resolve({ data: { status: 'ready_solo', relationship_status: 'active', user_id: mocks.account, relationship_id: scope.relationshipId, participant_id: scope.participantId, relationship_session_id: scope.relationshipSessionId }, error: null }));
-      mocks.requests.push(record); const rows = mocks.rows[record.table] ?? []; mocks.afterRead?.();
+      mocks.requests.push(record); let rows = mocks.rows[record.table] ?? [];
+      if (record.filters.id && !record.single) rows = rows.filter(row => row.id === record.filters.id);
+      mocks.afterRead?.();
       return Promise.resolve(resolve({ data: record.rpc ? mocks.progress : record.single ? rows[0] ?? { id: 'saved', relationship_id: 'period' } : rows.slice(record.start, record.end + 1), error: null }));
     },
   }; return q;

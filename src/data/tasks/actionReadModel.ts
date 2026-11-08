@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
 import { actionScopeToken, assertCurrentActionScope, type RewardEventRow, type RewardPointRow } from '@/data/rewards/actionReadModel';
 import { taskExpectedContextSchema, taskScheduleProgressFields, taskDeadlineSchema, validTaskSchedule, type ActionQueueScope } from '@/data/actions/contracts';
+import { actionReadError, readDefinitionCatalog, type DefinitionCatalog, type PreviousCatalog } from '@/data/actions/definitionCatalog';
 import type { TaskProgress, Currency, TaskExpectedContext } from '@/domain/actions/types';
 import type { TaskFormValues, TaskWithId } from './types';
 
@@ -10,6 +11,7 @@ export interface TaskEventRow extends Omit<RewardEventRow, 'reward_id'> { task_i
 export interface TaskDefinition extends TaskWithId { relationship_id: string; deleted_at: string | null }
 export interface ImportedTaskCompletion { id: string; relationship_id: string; task_id: string; completed_at: string; action_event_id: string | null }
 export interface TaskActionData {
+  definitionCatalog?: DefinitionCatalog<TaskDefinition>;
   imported: ImportedTaskCompletion[];
   tasks: TaskDefinition[]; events: TaskEventRow[]; points: RewardPointRow[];
   progress: Record<string, TaskProgress>; progressErrors: Record<string, string>;
@@ -54,9 +56,9 @@ const fields = 'id,relationship_id,title,description,frequency,frequency_count,m
 async function rows<T>(table: string, selected: string, scope: ActionQueueScope, token: string, signal?: AbortSignal): Promise<T[]> {
   const result: T[] = [];
   for (let start = 0; ; start += 500) {
-    const { data, error } = await database.from(table).select(selected).eq('relationship_id', scope.relationshipId).order('id')
+    const { data, error, status } = await database.from(table).select(selected).eq('relationship_id', scope.relationshipId).order('id')
       .range(start, start + 499).setHeader('Authorization', `Bearer ${token}`).abortSignal(signal);
-    if (error || !Array.isArray(data)) throw new Error('Confirmed task data could not be loaded. Retry to refresh it.');
+    if (error || !Array.isArray(data)) throw actionReadError('Confirmed task data could not be loaded. Retry to refresh it.', table, error, status);
     if (data.some(row => row.relationship_id !== scope.relationshipId)) throw new Error('Task data belongs to a different relationship.');
     result.push(...data);
     if (data.length < 500) return result;
@@ -68,25 +70,26 @@ function progressProblem(message: string) {
   if (message.includes('TIMEZONE_REQUIRED')) return 'The person assigned this task needs a saved timezone in Profile.';
   return 'This task needs a valid frequency, target, deadline, and nonnegative points. Edit it to continue.';
 }
-export async function readTaskActionData(scope: ActionQueueScope, signal?: AbortSignal): Promise<TaskActionData> {
+export async function readTaskActionData(scope: ActionQueueScope, signal?: AbortSignal, previous?: PreviousCatalog<TaskDefinition>): Promise<TaskActionData> {
   const token = await actionScopeToken(scope, signal);
   const requestProgress = (taskId: string | null) => database.rpc('get_task_progress', { p_expected_relationship_id: scope.relationshipId, p_task_id: taskId })
     .setHeader('Authorization', `Bearer ${token}`).setHeader('x-task-context-version', '2').abortSignal(signal);
-  const [tasks, allEvents, points, imported, summary] = await Promise.all([
-    rows<TaskDefinition>('tasks', fields, scope, token, signal),
+  const [definitionCatalog, allEvents, points, imported, summary] = await Promise.all([
+    readDefinitionCatalog<TaskDefinition>('tasks', fields, scope, token, signal, previous, 'Confirmed task data could not be loaded. Retry to refresh it.'),
     rows<TaskEventRow>('action_events', 'id,relationship_id,kind,task_id,actor_participant_id,beneficiary_participant_id,subject,recorded_at,calendar,definition_values,reverses_event_id,provenance', scope, token, signal),
     rows<RewardPointRow>('action_point_entries', 'id,relationship_id,event_id,participant_id,currency,amount', scope, token, signal),
     rows<ImportedTaskCompletion>('task_completion_history', 'id,relationship_id,task_id,completed_at,action_event_id', scope, token, signal),
     requestProgress(null),
   ]);
+  const tasks = definitionCatalog.rows;
   const progress: Record<string, TaskProgress> = {}, progressErrors: Record<string, string> = {};
   if (summary.error) {
-    if (!configurationError(summary.error.message)) throw new Error('Task progress could not be loaded. Retry to refresh it.');
+    if (!configurationError(summary.error.message)) throw actionReadError('Task progress could not be loaded. Retry to refresh it.', 'get_task_progress', summary.error, summary.status);
     // A repairable definition cannot hide other cards or immutable history.
     for (const task of tasks.filter(task => !task.deleted_at)) {
       const result = await requestProgress(task.id);
       if (result.error) {
-        if (!configurationError(result.error.message)) throw new Error('Task progress could not be loaded. Retry to refresh it.');
+        if (!configurationError(result.error.message)) throw actionReadError('Task progress could not be loaded. Retry to refresh it.', 'get_task_progress', result.error, result.status);
         progressErrors[task.id] = progressProblem(result.error.message);
       } else {
         const value = decodeTaskProgress(result.data);
@@ -111,11 +114,26 @@ export async function readTaskActionData(scope: ActionQueueScope, signal?: Abort
     }
   }
   await assertCurrentActionScope(scope, token, signal);
-  return { tasks, imported: imported.filter(row => !row.action_event_id), events: allEvents.filter(event => event.task_id), points, progress, progressErrors };
+  return { definitionCatalog, tasks, imported: imported.filter(row => !row.action_event_id), events: allEvents.filter(event => event.task_id), points, progress, progressErrors };
 }
 export function useTaskActionData(scope: ActionQueueScope | null, enabled: boolean) {
+  const client = useQueryClient();
   return useQuery({ queryKey: taskActionKey(scope), enabled: enabled && !!scope,
-    queryFn: ({ signal }) => readTaskActionData(scope!, signal), retry: false, staleTime: 0, refetchOnMount: 'always', refetchInterval: 10_000 });
+    queryFn: ({ signal }) => readTaskActionData(scope!, signal, () => client.getQueryData<TaskActionData>(taskActionKey(scope))?.definitionCatalog), retry: false, staleTime: 0, refetchOnMount: 'always', refetchInterval: 10_000 });
+}
+export const taskFeedbackKey = (scope: ActionQueueScope | null) => ['task-feedback-state', supabaseBackendId, scope?.accountId, scope?.relationshipId, scope?.relationshipSessionId] as const;
+export async function readTaskFeedbackData(scope: ActionQueueScope, signal?: AbortSignal): Promise<Pick<TaskActionData, 'events' | 'points'>> {
+  const token = await actionScopeToken(scope, signal);
+  const [events, points] = await Promise.all([
+    rows<TaskEventRow>('action_events', 'id,relationship_id,kind,task_id,actor_participant_id,beneficiary_participant_id,subject,recorded_at,calendar,definition_values,reverses_event_id,provenance', scope, token, signal),
+    rows<RewardPointRow>('action_point_entries', 'id,relationship_id,event_id,participant_id,currency,amount', scope, token, signal),
+  ]);
+  await assertCurrentActionScope(scope, token, signal);
+  return { events: events.filter(event => event.task_id), points };
+}
+export function useTaskFeedbackData(scope: ActionQueueScope | null, enabled: boolean) {
+  return useQuery({ queryKey: taskFeedbackKey(scope), enabled: enabled && !!scope,
+    queryFn: ({ signal }) => readTaskFeedbackData(scope!, signal), retry: false, staleTime: 0, refetchOnMount: 'always', refetchInterval: 10_000 });
 }
 const definitionFields = ['title', 'description', 'frequency', 'frequency_count', 'mandatory', 'deadline_date', 'deadline_time', 'deadline_weekday', 'points', 'priority', 'icon_name', 'icon_color', 'icon_url', 'title_color', 'subtext_color', 'calendar_color', 'background_image_url', 'background_images', 'background_opacity', 'focal_point_x', 'focal_point_y', 'highlight_effect', 'image_meta', 'is_dom_task'] as const;
 export function taskDefinitionPayload(input: TaskFormValues): Record<string, unknown> {

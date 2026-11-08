@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '@supabase/supabase-js';
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
 import { acknowledgeRewardFeedback, readAccountingEnabled, readRewardActionData, rewardActionKey, accountingStatusKey } from '@/data/rewards/actionReadModel';
-import { readTaskActionData, saveTaskDefinition, removeTaskDefinition, taskActionKey } from '@/data/tasks/actionReadModel';
+import { readTaskActionData, readTaskFeedbackData, taskFeedbackKey, saveTaskDefinition, removeTaskDefinition, taskActionKey } from '@/data/tasks/actionReadModel';
 import { readRecordingData, saveRecordingDefinition, removeRecordingDefinition, recordingKey } from '@/data/recordings/readModel';
 import { readMetricsSource, metricsScopeKey } from '@/data/metrics/readModel';
 import { useAtomicRewardsData } from '@/data/rewards/useAtomicRewardsData';
@@ -50,7 +50,7 @@ afterEach(cleanup);
 describe('real SDK relationship-session read/write boundary (network stubbed)', () => {
   const readers = [
     ['accounting', () => readAccountingEnabled(scope)], ['rewards', () => readRewardActionData(scope)],
-    ['tasks', () => readTaskActionData(scope)], ['recordings', () => readRecordingData(scope, 'rule', false)],
+    ['tasks', () => readTaskActionData(scope)], ['task feedback', () => readTaskFeedbackData(scope)], ['recordings', () => readRecordingData(scope, 'rule', false)],
     ['metrics', () => readMetricsSource(scope, 'atomic')],
   ] as const;
   it.each(readers)('rejects %s results if the same period is continued during the operation', async (_name, read) => {
@@ -60,7 +60,7 @@ describe('real SDK relationship-session read/write boundary (network stubbed)', 
     expect(writes()).toHaveLength(0);
   });
   it('separates all current query keys by session even when every other identity field is unchanged', () => {
-    for (const key of [rewardActionKey, accountingStatusKey, taskActionKey, metricsScopeKey, (s: typeof scope) => recordingKey(s, 'rule')]) {
+    for (const key of [rewardActionKey, accountingStatusKey, taskActionKey, taskFeedbackKey, metricsScopeKey, (s: typeof scope) => recordingKey(s, 'rule')]) {
       expect(key(scope)).not.toEqual(key(nextScope));
     }
   });

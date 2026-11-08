@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({ actions: null as any, settings: null as any, d
 vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: mocks.theme }) }));
 vi.mock('@/contexts/ActionCommandsContext', () => ({ useActionCommands: () => mocks.actions }));
 vi.mock('@/hooks/useNotificationSettings', () => ({ useNotificationSettings: () => mocks.settings }));
-vi.mock('@/data/tasks/actionReadModel', () => ({ useTaskActionData: () => ({ data: mocks.data }) }));
+vi.mock('@/data/tasks/actionReadModel', () => ({ useTaskFeedbackData: () => ({ data: mocks.data }) }));
 vi.mock('@/data/rewards/actionReadModel', () => ({ acknowledgeRewardFeedback: (...args: any[]) => mocks.ack(...args) }));
 beforeEach(() => {
   mocks.theme = 'default';

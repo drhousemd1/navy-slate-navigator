@@ -2,6 +2,7 @@ import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
 import type { ActionFeedback, Currency } from '@/domain/actions/types';
 import type { ActionQueueScope } from '@/data/actions/contracts';
 import type { Reward } from './types';
+import { actionReadError, readDefinitionCatalog, type DefinitionCatalog, type PreviousCatalog } from '@/data/actions/definitionCatalog';
 import { isRelationshipSessionId } from '@/lib/identity';
 
 export interface RewardEventRow {
@@ -28,6 +29,8 @@ export interface ImportedRewardUsage {
   currentTitle?: string;
 }
 export interface RewardActionData {
+  /** Includes removed definitions for history titles and revision reuse; never persisted. */
+  definitionCatalog?: DefinitionCatalog<Reward>;
   rewards: Reward[]; wallets: RewardWalletRow[]; lots: RewardLotRow[]; events: RewardEventRow[]; points: RewardPointRow[];
   deliveries: RefundDelivery[]; acknowledged: string[];
   importedUsage: ImportedRewardUsage[];
@@ -81,18 +84,18 @@ async function readRows<T>(table: string, fields: string, scope: ActionQueueScop
   for (let start = 0; ; start += 500) {
     const request = database.from(table).select(fields).eq('relationship_id', scope.relationshipId);
     if (importedOnly) request.is('action_event_id', null);
-    const { data, error } = await request.order(order).range(start, start + 499).setHeader('Authorization', `Bearer ${token}`).abortSignal(signal);
-    if (error || !Array.isArray(data)) throw new Error('Confirmed reward data could not be loaded. Retry to refresh it.');
+    const { data, error, status } = await request.order(order).range(start, start + 499).setHeader('Authorization', `Bearer ${token}`).abortSignal(signal);
+    if (error || !Array.isArray(data)) throw actionReadError('Confirmed reward data could not be loaded. Retry to refresh it.', table, error, status);
     if (data.some(row => row.relationship_id !== scope.relationshipId)) throw new Error('Reward data belongs to a different relationship.');
     if (importedOnly && data.some(row => row.action_event_id !== null)) throw new Error('Imported reward history could not be verified.');
     rows.push(...data);
     if (data.length < 500) return rows;
   }
 }
-export async function readRewardActionData(scope: ActionQueueScope, signal?: AbortSignal): Promise<RewardActionData> {
+export async function readRewardActionData(scope: ActionQueueScope, signal?: AbortSignal, previous?: PreviousCatalog<Reward>): Promise<RewardActionData> {
   const token = await actionScopeToken(scope, signal);
-  const [rewards, wallets, lots, events, points, deliveries, acks, importedUsage] = await Promise.all([
-    readRows<Reward>('rewards', 'id,relationship_id,title,description,cost,supply,is_dom_reward,background_image_url,background_opacity,icon_name,icon_color,title_color,subtext_color,calendar_color,highlight_effect,focal_point_x,focal_point_y,image_meta,created_at,updated_at,deleted_at', scope, token, signal),
+  const [definitionCatalog, wallets, lots, events, points, deliveries, acks, importedUsage] = await Promise.all([
+    readDefinitionCatalog<Reward>('rewards', 'id,relationship_id,title,description,cost,supply,is_dom_reward,background_image_url,background_opacity,icon_name,icon_color,title_color,subtext_color,calendar_color,highlight_effect,focal_point_x,focal_point_y,image_meta,created_at,updated_at,deleted_at', scope, token, signal, previous, 'Confirmed reward data could not be loaded. Retry to refresh it.'),
     readRows<RewardWalletRow>('action_wallets', 'participant_id,relationship_id,currency,balance', scope, token, signal, 'participant_id'),
     readRows<RewardLotRow>('reward_inventory_lots', 'id,relationship_id,reward_id,owner_participant_id,currency,status,acquisition_event_id,active_redemption_event_id', scope, token, signal),
     readRows<RewardEventRow>('action_events', 'id,relationship_id,kind,reward_id,actor_participant_id,beneficiary_participant_id,subject,recorded_at,calendar,reverses_event_id,provenance', scope, token, signal),
@@ -103,9 +106,10 @@ export async function readRewardActionData(scope: ActionQueueScope, signal?: Abo
   ]);
   await assertCurrentActionScope(scope, token, signal);
   if (deliveries.some(row => row.recipient_participant_id !== scope.participantId)) throw new Error('Invalid refund recipient.');
+  const rewards = definitionCatalog.rows;
   // Keep the original newest-first catalog within each role group. ID ordering
   // above is for stable pagination, not a replacement for presentation order.
-  return { rewards: rewards.filter(reward => !reward.deleted_at).sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')), wallets, lots, events: events.filter(event => event.reward_id), points, deliveries, acknowledged: acks.map(row => row.event_id),
+  return { definitionCatalog, rewards: rewards.filter(reward => !reward.deleted_at).sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')), wallets, lots, events: events.filter(event => event.reward_id), points, deliveries, acknowledged: acks.map(row => row.event_id),
     importedUsage: importedUsage.map(row => ({ ...row, currentTitle: rewards.find(reward => reward.id === row.reward_id)?.title })) };
 }
 export async function acknowledgeRewardFeedback(scope: ActionQueueScope, eventId: string, kind: 'points_refunded' | 'action_confirmed' = 'points_refunded'): Promise<void> {

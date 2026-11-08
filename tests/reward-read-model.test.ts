@@ -12,6 +12,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'http://12
       order: () => q, range: (start: number, end: number) => { record.start = start; record.end = end; return q; },
       maybeSingle: () => { record.single = true; return q; }, setHeader: (name: string, value: string) => { record.headers[name] = value; return q; }, abortSignal: () => q,
       then: (resolve: (value: any) => void) => { mocks.requests.push(record); let rows = mocks.rows[table] ?? [];
+        if (record.filters.id) rows = rows.filter(row => row.id === record.filters.id);
         if (record.filters.action_event_id === null) rows = rows.filter(row => row.action_event_id === null);
         mocks.afterRead?.(); return Promise.resolve(resolve({ data: record.single ? rows[0] ?? null : rows.slice(record.start, record.end + 1), error: null })); },
     }; return q;

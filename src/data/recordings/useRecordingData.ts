@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { scopeKey, blocksNewAction } from '@/data/actions/contracts';
-import { readRecordingData, recordingKey, removeRecordingDefinition, saveRecordingDefinition, type RecordingType } from './readModel';
+import { readRecordingData, recordingKey, removeRecordingDefinition, saveRecordingDefinition, type RecordingType, type RecordingData } from './readModel';
 import type { Rule } from '@/data/interfaces/Rule';
 import type { PunishmentData } from '@/contexts/punishments/types';
 
@@ -16,7 +16,7 @@ export function useRecordingData(type: RecordingType) {
   const current = useRef(scopeId); current.current = scopeId;
   useEffect(() => { current.current = scopeId; return () => { current.current = null; }; }, [scopeId]);
   const query = useQuery({ queryKey: recordingKey(scope, type), enabled: !!scope,
-    queryFn: ({ signal }) => readRecordingData(scope!, type, !!identity.subUserId, signal),
+    queryFn: ({ signal }) => readRecordingData(scope!, type, !!identity.subUserId, signal, () => client.getQueryData<RecordingData>(recordingKey(scope, type))?.definitionCatalog),
     staleTime: 0, retry: false, refetchOnMount: 'always', refetchOnWindowFocus: true, refetchInterval: 10_000 });
   const refresh = useCallback(async () => { if (scope) await client.invalidateQueries({ queryKey: recordingKey(scope, type), exact: true }); }, [client, scope, type]);
   const canManage = !!identity.currentRole && ['both', identity.currentRole].includes(identity.permissions?.definition_manage);

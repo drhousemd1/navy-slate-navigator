@@ -10,7 +10,7 @@ function owned(value: unknown, scope: Owner): boolean {
   const candidate = value as Partial<Owner>;
   return candidate.backendId === scope.backendId && candidate.accountId === scope.accountId;
 }
-const scopedQueries = new Set(['task-action-state', 'reward-action-state', 'action-accounting-status', 'recording-action-state',
+const scopedQueries = new Set(['task-action-state', 'task-feedback-state', 'reward-action-state', 'action-accounting-status', 'recording-action-state',
   'wellbeing-v2', 'wellbeing-date-v2', 'wellbeing-series-v2', 'wellness-reminder']);
 export function ownsDeletionQuery(key: readonly unknown[], scope: Owner): boolean {
   if (ownsLegacyQuery(key, scope)) return true;

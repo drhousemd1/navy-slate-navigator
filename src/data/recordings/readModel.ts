@@ -1,5 +1,6 @@
 import { supabase, supabaseBackendId } from '@/integrations/supabase/client';
 import { actionScopeToken, assertCurrentActionScope } from '@/data/rewards/actionReadModel';
+import { actionReadError, readDefinitionCatalog, type DefinitionCatalog, type PreviousCatalog } from '@/data/actions/definitionCatalog';
 import { decodeExpectedContext, type ActionQueueScope } from '@/data/actions/contracts';
 import type { ActionCalendar, Currency, RecordingProgress, RuleExpectedContext, PunishmentExpectedContext } from '@/domain/actions/types';
 import type { Rule } from '@/data/interfaces/Rule';
@@ -24,7 +25,7 @@ export interface ImportedRecording {
   day_of_week: number; week_number?: string; points_deducted?: number;
   currentTitle?: string;
 }
-export interface RecordingData { definitions: RecordingDefinition[]; progress: RecordingProgress[]; events: RecordingEvent[]; points: RecordingPoint[]; imported: ImportedRecording[] }
+export interface RecordingData { definitionCatalog?: DefinitionCatalog<RecordingDefinition>; definitions: RecordingDefinition[]; progress: RecordingProgress[]; events: RecordingEvent[]; points: RecordingPoint[]; imported: ImportedRecording[] }
 export const recordingKey = (scope: ActionQueueScope | null, type: RecordingType) =>
   ['recording-action-state', supabaseBackendId, scope?.accountId, scope?.relationshipId, scope?.relationshipSessionId, type] as const;
 const tableFor = (type: RecordingType) => type === 'rule' ? 'rules' : 'punishments';
@@ -37,9 +38,9 @@ async function rows<T>(table: string, fields: string, scope: ActionQueueScope, t
   for (let start = 0; ; start += 500) {
     const request = database.from(table).select(fields).eq('relationship_id', scope.relationshipId);
     if (importedOnly) request.is('action_event_id', null);
-    const { data, error } = await request.order('id')
+    const { data, error, status } = await request.order('id')
       .range(start, start + 499).setHeader('Authorization', `Bearer ${token}`).abortSignal(signal);
-    if (error || !Array.isArray(data)) throw new Error('Confirmed activity could not be loaded. Refresh to retry.');
+    if (error || !Array.isArray(data)) throw actionReadError('Confirmed activity could not be loaded. Refresh to retry.', table, error, status);
     if (data.some(row => row.relationship_id !== scope.relationshipId)) throw new Error('Activity belongs to a different relationship.');
     if (importedOnly && data.some(row => row.action_event_id !== null)) throw new Error('Imported history could not be verified.');
     result.push(...data);
@@ -58,12 +59,12 @@ export function reviewedRecordingContext(type: RecordingType, definition: Record
   }
   return context;
 }
-export async function readRecordingData(scope: ActionQueueScope, type: RecordingType, hasSub: boolean, signal?: AbortSignal): Promise<RecordingData> {
+export async function readRecordingData(scope: ActionQueueScope, type: RecordingType, hasSub: boolean, signal?: AbortSignal, previous?: PreviousCatalog<RecordingDefinition>): Promise<RecordingData> {
   const token = await actionScopeToken(scope, signal);
   const progressRequest = hasSub ? database.rpc('get_recording_progress', { p_expected_relationship_id: scope.relationshipId, p_subject_type: type })
     .setHeader('Authorization', `Bearer ${token}`).abortSignal(signal) : Promise.resolve({ data: [], error: null });
-  const [definitions, events, points, progress, imported] = await Promise.all([
-    rows<RecordingDefinition>(tableFor(type), `${commonFields},${type === 'rule' ? 'priority,icon_url' : 'points,dom_points,dom_supply'}`, scope, token, signal),
+  const [definitionCatalog, events, points, progress, imported] = await Promise.all([
+    readDefinitionCatalog<RecordingDefinition>(tableFor(type), `${commonFields},${type === 'rule' ? 'priority,icon_url' : 'points,dom_points,dom_supply'}`, scope, token, signal, previous, 'Confirmed activity could not be loaded. Refresh to retry.'),
     rows<RecordingEvent>('action_events', 'id,relationship_id,rule_id,punishment_id,kind,actor_participant_id,beneficiary_participant_id,subject,calendar,recorded_at,reverses_event_id,provenance', scope, token, signal),
     rows<RecordingPoint>('action_point_entries', 'id,relationship_id,event_id,participant_id,currency,amount,calendar', scope, token, signal),
     progressRequest,
@@ -72,7 +73,8 @@ export async function readRecordingData(scope: ActionQueueScope, type: Recording
       scope, token, signal, true),
   ]);
   await assertCurrentActionScope(scope, token, signal);
-  if (progress.error || !Array.isArray(progress.data)) throw new Error('The current weekly activity could not be verified. Refresh to retry.');
+  const definitions = definitionCatalog.rows;
+  if (progress.error || !Array.isArray(progress.data)) throw actionReadError('The current weekly activity could not be verified. Refresh to retry.', 'get_recording_progress', progress.error, 'status' in progress ? progress.status : undefined);
   if (progress.data.some((item: RecordingProgress) => item.subjectType !== type || !definitions.some(row => row.id === item.subjectId) ||
     !Array.isArray(item.usageData) || item.usageData.length !== 7 || item.usageData.some(n => !Number.isSafeInteger(n) || n < 0))) {
     throw new Error('Invalid weekly activity received.');
@@ -87,7 +89,7 @@ export async function readRecordingData(scope: ActionQueueScope, type: Recording
   if (hasSub && definitions.some(row => !row.deleted_at && !seen.has(row.id))) throw new Error('The current activity details are incomplete. Refresh to review them.');
   const selectedEvents = events.filter(event => type === 'rule' ? event.rule_id : event.punishment_id);
   const ids = new Set(selectedEvents.map(event => event.id));
-  return { definitions: definitions.filter(row => !row.deleted_at), progress: progress.data, events: selectedEvents, points: points.filter(row => ids.has(row.event_id)),
+  return { definitionCatalog, definitions: definitions.filter(row => !row.deleted_at), progress: progress.data, events: selectedEvents, points: points.filter(row => ids.has(row.event_id)),
     imported: imported.map(row => ({ ...row, currentTitle: definitions.find(definition => definition.id === (type === 'rule' ? row.rule_id : row.punishment_id))?.title })) };
 }
 const sharedEditable = ['title', 'description', 'background_image_url', 'background_opacity', 'icon_name', 'icon_color', 'title_color',

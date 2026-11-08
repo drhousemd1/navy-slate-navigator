@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { decodeTaskProgress, readTaskActionData, removeTaskDefinition, saveTaskDefinition, taskActionKey, taskDefinitionPayload } from '@/data/tasks/actionReadModel';
+import { decodeTaskProgress, readTaskActionData, readTaskFeedbackData, removeTaskDefinition, saveTaskDefinition, taskActionKey, taskDefinitionPayload } from '@/data/tasks/actionReadModel';
 const mocks = vi.hoisted(() => ({ account: 'account', rows: {} as Record<string, any[]>, requests: [] as any[], rpc: {} as Record<string, any>, after: null as (() => void) | null }));
 vi.mock('@/integrations/supabase/client', () => ({ supabaseBackendId: 'http://127.0.0.1:28622', supabase: {
   auth: { getSession: async () => ({ data: { session: { user: { id: mocks.account }, access_token: `token-${mocks.account}` } }, error: null }) },
@@ -15,7 +15,7 @@ function builder(initial: any) {
     then: (resolve: (value: any) => void) => {
       if (record.name === 'get_my_identity') return Promise.resolve(resolve({ data: { status: 'ready_solo', relationship_status: 'active', user_id: mocks.account, relationship_id: scope.relationshipId, participant_id: scope.participantId, relationship_session_id: scope.relationshipSessionId }, error: null }));
       mocks.requests.push(record); mocks.after?.();
-      const result = record.rpc ? mocks.rpc[record.args.p_task_id ?? 'all'] : { data: record.single ? { id: record.filters.id ?? id(1), relationship_id: 'period' } : (mocks.rows[record.table] ?? []).slice(record.start, record.end + 1), error: null };
+      const result = record.rpc ? mocks.rpc[record.args.p_task_id ?? 'all'] : { data: record.single ? { id: record.filters.id ?? id(1), relationship_id: 'period' } : (mocks.rows[record.table] ?? []).filter(row => !record.filters.id || row.id === record.filters.id).slice(record.start, record.end + 1), error: null };
       return Promise.resolve(resolve(result)); },
   }; return q;
 }
@@ -26,6 +26,16 @@ const expectedContext = { version: 1, kind: 'task_complete', subjectId: id(1), b
 const form = { title: 'Task', frequency: 'daily', frequency_count: 2, points: 0, icon_url: undefined, background_image_url: undefined } as any;
 beforeEach(() => { mocks.account = 'account'; mocks.requests = []; mocks.rows = { tasks: [{ id: id(1), relationship_id: 'period', deleted_at: null, points: 5, frequency: 'weekly', frequency_count: 2, is_dom_task: false }] }; mocks.rpc = { all: { data: [{ ...progress, expectedContext }], error: null } }; mocks.after = null; });
 describe('task reads and definition boundary', () => {
+  it('loads global task feedback from immutable events and points without definitions or progress', async () => {
+    mocks.rows.action_events = [{ id: id(10), relationship_id: 'period', task_id: id(1) }, { id: id(11), relationship_id: 'period', reward_id: id(12) }];
+    mocks.rows.action_point_entries = [{ id: id(13), relationship_id: 'period', event_id: id(10), amount: 5 }];
+    const data = await readTaskFeedbackData(scope);
+    expect(data.events.map(event => event.id)).toEqual([id(10)]);
+    expect(data.points).toEqual(mocks.rows.action_point_entries);
+    expect(mocks.requests.map(row => row.table).sort()).toEqual(['action_events', 'action_point_entries']);
+    mocks.after = () => { mocks.account = 'other'; };
+    await expect(readTaskFeedbackData(scope)).rejects.toThrow('account changed');
+  });
   it('pins the current account token and expected period; keeps imported rows without Auth IDs or private intent', async () => {
     mocks.rows.task_completion_history = [{ id: id(10), relationship_id: 'period', task_id: id(1), completed_at: '2025-04-01T12:00:00+00:00', action_event_id: null }, { id: id(11), relationship_id: 'period', action_event_id: id(12) }];
     const data = await readTaskActionData(scope); expect(data.imported).toHaveLength(1); expect(data.progress[id(1)].currentCount).toBe(1);

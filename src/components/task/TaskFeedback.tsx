@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { acknowledgeRewardFeedback } from '@/data/rewards/actionReadModel';
-import { useTaskActionData } from '@/data/tasks/actionReadModel';
+import { useTaskFeedbackData } from '@/data/tasks/actionReadModel';
 import { scopeKey } from '@/data/actions/contracts';
 
 /** Own recipient confirmations come from the durable outbox. An actor acting
@@ -10,7 +10,7 @@ import { scopeKey } from '@/data/actions/contracts';
 export function TaskFeedback() {
   const actions = useActionCommands();
   const settings = useNotificationSettings();
-  const query = useTaskActionData(actions.scope, actions.mode === 'atomic');
+  const query = useTaskFeedbackData(actions.scope, actions.mode === 'atomic');
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
   const [failure, setFailure] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(() => new Set());

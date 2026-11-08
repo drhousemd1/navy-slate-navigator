@@ -66,6 +66,8 @@ describe('exact account/backend deletion cleanup', () => {
   });
   it('matches only known structural query schemas', () => {
     expect(ownsDeletionQuery(['activity-metrics', 'week', scope.backendId, scope.accountId, 'period'], scope)).toBe(true);
+    expect(ownsDeletionQuery(['task-feedback-state', scope.backendId, scope.accountId, 'period', 'session'], scope)).toBe(true);
+    expect(ownsDeletionQuery(['task-feedback-state', scope.backendId, id(8), 'period', 'session'], scope)).toBe(false);
     expect(ownsDeletionQuery(['arbitrary', scope.backendId, scope.accountId], scope)).toBe(false);
     expect(ownsDeletionQuery(['wellbeing-v2', 'prefix' + scope.backendId, scope.accountId], scope)).toBe(false);
   });
