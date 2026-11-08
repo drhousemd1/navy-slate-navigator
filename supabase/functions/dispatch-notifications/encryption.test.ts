@@ -6,13 +6,17 @@
 import webpush from 'npm:web-push@3.6.7';
 import { createECDH, randomBytes } from 'node:crypto';
 import { Buffer } from 'node:buffer';
+import { normalizeVapidPrivateKey } from './vapid-keys.ts';
 
 function assert(value: boolean, message: string): asserts value {
   if (!value) throw new Error(message);
 }
 
-Deno.test('pinned Web Push encrypts a private payload under Deno without sending it', () => {
-  const vapid = webpush.generateVAPIDKeys();
+Deno.test('pinned Web Push encrypts with the original PKCS8 encoding under Deno without sending it', async () => {
+  const keys = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const publicKey = Buffer.from(await crypto.subtle.exportKey('raw', keys.publicKey)).toString('base64url');
+  const storedPrivateKey = Buffer.from(await crypto.subtle.exportKey('pkcs8', keys.privateKey)).toString('base64url');
+  const vapid = { publicKey, privateKey: await normalizeVapidPrivateKey(publicKey, storedPrivateKey) };
   const recipient = createECDH('prime256v1');
   recipient.generateKeys();
   const endpoint = 'https://fcm.googleapis.com/fcm/send/synthetic-offline-only';

@@ -1,6 +1,6 @@
 # Trusted notification dispatcher
 
-Local implementation; not deployed. Migration `20261027110000_trusted_notifications.sql` requires
+Hosted dispatcher staged on 2026-11-07 with delivery disabled. Migration `20261027110000_trusted_notifications.sql` requires
 the accepted 0900 messages and 1000 wellbeing schema. It creates no cron job and
 leaves `notification_configuration.delivery_enabled=false`. No existing account
 gate is changed. Existing subscriptions remain preserved but unverified/disabled;
@@ -22,12 +22,17 @@ Server environment: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
 `VAPID_SUBJECT`. The pinned `npm:web-push@3.6.7` library generates encrypted
 `aes128gcm` requests; bounded redirect-disabled Fetch performs transport. Supabase
 supports npm dependencies and Node APIs. The pinned encryption library has also
-been exercised under Deno with ephemeral keys and network access denied. The
-deployed worker, scheduler and real device display still require verification.
+been exercised under Deno with ephemeral keys and network access denied. Hosted
+startup with the existing key pair is now verified; scheduler operation and real
+device display still require their separate verification.
 
-Public VAPID keys are 87-character raw base64url; private keys are 43-character raw
-base64url. Unknown legacy PKCS8 keys fail closed. No code generates, converts,
-rotates, prints, or returns a private key. `get-vapid-public-key` returns
+Public VAPID keys are 87-character raw base64url. Private keys may be 43-character
+raw base64url scalars or the original app's base64url P-256 PKCS8 exports. The
+worker normalizes PKCS8 only in memory, verifies the public coordinates, and
+signs/verifies an ephemeral challenge before starting. Invalid or mismatched
+pairs fail closed. The conversion never writes or logs private key material, and
+no endpoint returns it.
+The existing stored key and public subscriptions stay unchanged. `get-vapid-public-key` returns
 `{publicKey,keyId}`; `keyId` is SHA-256 hex of the UTF-8 public-key string. Set that
 public fingerprint in the service-owned configuration row before registration.
 Do not enable delivery until the replacement endpoints, client integration,
@@ -102,6 +107,14 @@ Parent review, applied schema and an exclusive fixture lease remain prerequisite
 --config supabase/functions/dispatch-notifications/deno.json
 supabase/functions/dispatch-notifications/encryption.test.ts` (from the app root).
 
-Deployed source is not recovered (the six captured archives were empty). Live
-VAPID validity, authenticated scheduler operation, and supported device display
-remain external verification requirements. No live credentials were used here.
+At the earlier local-validation stage, six captured function archives were empty;
+those local checks used no live credentials. All six original hosted function
+archives have since been recovered under
+`planning/operations/hosted-release-20261107/function-backup/`. The private rollout
+receipt at `planning/operations/hosted-release-20261107/notification-rollout/stage-attempt.private/complete.private.json`
+records the hosted disabled-startup check: authenticated invocation returned
+`disabled` with all processing counts zero, anonymous invocation returned 401,
+and both stored VAPID fingerprints remained unchanged. This proves the existing
+key pair works with the deployed normalizer; it does not prove scheduled delivery
+or physical device display. Scheduler installation and delivery remained disabled
+at that checkpoint.
