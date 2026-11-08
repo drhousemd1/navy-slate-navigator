@@ -9,18 +9,18 @@ export function AccountDeletionProgress({ deletion, record }: { deletion: Accoun
   const wait = Math.max(0, Math.ceil((record.nextCheckAt - now) / 1_000));
   const busy = deletion.busyJob !== null; const disabled = busy || wait > 0;
   const complete = record.status?.state === 'complete';
-  const description = record.cleanupComplete ? 'The server confirmed your account was deleted, and this device’s data that could be verified as belonging to that account has been removed.'
+  const description = record.cleanupComplete ? 'Your account was deleted. Its verified data on this device has been removed.'
     : complete ? 'The server confirmed your account was deleted. Device cleanup still needs to finish.'
       : record.status?.state === 'retry_required' ? 'Deletion is unfinished. Continue this saved request to retry the remaining work.'
         : record.status ? `Deletion is unfinished. ${record.status.phase === 'storage' ? 'Stored-file cleanup remains.' : 'Account removal remains.'} Check its status or continue the same saved request.`
           : record.startRejected ? 'Deletion did not start. You can retry this saved request when available, or return to your account to review it again.'
             : record.attempted ? 'The deletion result is unknown. Check this saved request before doing anything else. Signing out is not confirmation of deletion.'
               : 'Recovery information was saved on this device, but no deletion result has been confirmed.';
-  return <section aria-label="Account deletion" className="mx-auto my-8 w-full max-w-lg rounded-lg border border-light-navy bg-navy p-6 text-white space-y-4">
-    <h1 className="text-xl font-semibold">{complete ? 'Account deleted' : 'Account deletion'}</h1>
+  return <section aria-label="Account deletion" className="mx-auto my-8 w-full max-w-md p-6 space-y-6 bg-card rounded-lg shadow-lg border border-border text-foreground">
+    <h1 className="text-2xl font-bold text-center text-foreground">{complete ? 'Account deleted' : 'Account deletion'}</h1>
     <p role="status" className="text-sm text-gray-300">{description}</p>
     <p className="text-sm text-gray-400">Shared messages, photos and recorded history may remain with the other person. Your profile is shown as “Deleted account”; text you wrote is not automatically anonymized.</p>
-    {record.cleanupComplete && record.legacyPreserved && <p className="text-sm text-amber-200">Some older device caches or drafts have no reliable account and backend label. They were preserved so another account’s data would not be erased. This does not mean the server deletion failed, and we cannot claim that all device data was erased.</p>}
+    {record.cleanupComplete && record.legacyPreserved && <p className="text-sm text-amber-200">Some older device caches or drafts could not be identified as yours and were kept. Your account deletion is complete.</p>}
     {!record.cleanupComplete && <p className="text-xs text-gray-400">Keep this browser’s site data until completion. Recovery is saved on this device; clearing site data removes that recovery access. Nothing is scheduled to run automatically.</p>}
     {deletion.errors[record.jobId] && <p role="alert" className="text-sm text-red-300">{deletion.errors[record.jobId]}</p>}
     {wait > 0 && !complete && <p className="text-sm text-gray-400">Try again in {wait} seconds.</p>}

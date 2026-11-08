@@ -46,7 +46,7 @@ const WellbeingPopover: React.FC<WellbeingPopoverProps> = ({
         </PopoverTrigger>
         <PopoverContent className="w-80 bg-navy border-light-navy text-white z-[9999] shadow-lg" side="bottom" align="start">
           <div className="text-center py-4">
-            <p role={error ? "alert" : undefined} className="text-gray-400">{error ? "Wellbeing could not be loaded." : `No saved check-in for ${partnerNickname}`}</p>
+            <p role={error ? "alert" : undefined} className="text-gray-400">{error ? "Wellbeing could not be loaded." : `No wellbeing data available for ${partnerNickname}`}</p>
             {error && onRetry && <Button variant="outline" onClick={onRetry}>Retry wellbeing</Button>}
           </div>
         </PopoverContent>

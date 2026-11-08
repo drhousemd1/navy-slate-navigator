@@ -1,4 +1,3 @@
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +10,6 @@ import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors'; // Added import
 
 export const ResetPasswordView: React.FC = () => {
-  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -178,7 +176,7 @@ export const ResetPasswordView: React.FC = () => {
             <p className="text-white mb-4">If you don't have a valid reset link, you can request a new one:</p>
             <Button
               onClick={() => navigate('/auth', { state: { view: 'forgot-password' } })}
-              className={`bg-blue-600 hover:bg-blue-700 ${isLightScheme ? 'text-white' : ''}`}
+              className="bg-blue-600 hover:bg-blue-700"
             >
               Request New Reset Link
             </Button>

@@ -21,7 +21,7 @@ export default function ColorScheme() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Color Schemes</h1>
           <p className="text-muted-foreground">
-            Choose a color scheme to personalize your app experience. Changes apply after they are saved.
+            Choose a color scheme to personalize your app experience.
           </p>
         </div>
 

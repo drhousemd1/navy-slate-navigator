@@ -23,6 +23,7 @@ export const usePartnerLinking = (user: User | null) => {
   const optionsRequest = useRef(0);
   const optionsController = useRef<AbortController | null>(null);
   const [optionsState, setOptionsState] = useState<{ scope: string; data: PartnerLinkOptions | null; loading: boolean; error: string | null } | null>(null);
+  const [operationError, setOperationError] = useState<{ scope: string; message: string } | null>(null);
 
   const refreshIdentity = useCallback(async (): Promise<IdentityState | null> => {
     if (!mounted.current || currentAccount.current !== accountId) return null;
@@ -138,18 +139,20 @@ export const usePartnerLinking = (user: User | null) => {
     } finally { clearTimeout(timer!); }
   }, [accountId, contextKey, identity.currentUserId, identity.status, identity.relationshipId, identity.relationshipSessionId]);
 
-  const runCommand = async (command: () => Promise<unknown>, successMessage?: string, failureTitle = 'Unable to update partner connection'): Promise<IdentityState | null> => {
+  const runCommand = async (command: () => Promise<unknown>, successMessage?: string, failureTitle = 'Unable to update partner connection', showPartnerError = true): Promise<IdentityState | null> => {
     if (!accountId || !mounted.current || currentAccount.current !== accountId || currentContext.current !== contextKey) return null;
     const startingRead = generation.current;
     const operation = ++commandGeneration.current;
     const isCurrent = () => mounted.current && currentAccount.current === accountId && commandGeneration.current === operation;
     setBusyAccount(accountId);
+    if (showPartnerError) setOperationError(null);
     try {
       await command();
       if (!isCurrent() || currentContext.current !== contextKey || generation.current !== startingRead) return null;
       const next = await refreshIdentity();
       if (!isCurrent()) return null;
       if (!next || !next.canAccessData) {
+        if (showPartnerError) setOperationError({ scope: contextKey, message: 'The request completed, but the account status could not be refreshed. Retry before continuing.' });
         toastManager.error('Refresh needed', 'The request completed, but the account status could not be refreshed. Retry before continuing.');
         return null;
       }
@@ -158,6 +161,7 @@ export const usePartnerLinking = (user: User | null) => {
     } catch (error) {
       if (isCurrent() && currentContext.current === contextKey && generation.current === startingRead) {
         logger.error('Partner request failed:', getErrorMessage(error));
+        if (showPartnerError) setOperationError({ scope: contextKey, message: identityCommandError(error) });
         toastManager.error(failureTitle, identityCommandError(error));
       }
       return null;
@@ -177,6 +181,7 @@ export const usePartnerLinking = (user: User | null) => {
     const isCurrent = () => mounted.current && currentAccount.current === accountId && currentContext.current === contextKey &&
       commandGeneration.current === operation && generation.current === startingRead;
     setBusyAccount(accountId);
+    setOperationError(null);
     // Replacement may succeed even if its response is lost. Never keep offering
     // the previous code as though it were still verified after that uncertainty.
     optionsRequest.current++; optionsController.current?.abort();
@@ -215,11 +220,15 @@ export const usePartnerLinking = (user: User | null) => {
     const startingRead = generation.current;
     const isCurrent = () => mounted.current && currentAccount.current === accountId && commandGeneration.current === operation;
     setBusyAccount(accountId);
+    setOperationError(null);
     try {
       const preview = await fetchLinkPreview(accountId, code);
       return isCurrent() && currentContext.current === contextKey && generation.current === startingRead ? preview : null;
     } catch (error) {
-      if (isCurrent() && currentContext.current === contextKey) toastManager.error('Unable to review connection', identityCommandError(error));
+      if (isCurrent() && currentContext.current === contextKey && generation.current === startingRead) {
+        setOperationError({ scope: contextKey, message: identityCommandError(error) });
+        toastManager.error('Unable to review connection', identityCommandError(error));
+      }
       return null;
     } finally {
       if (isCurrent()) setBusyAccount(null);
@@ -242,6 +251,9 @@ export const usePartnerLinking = (user: User | null) => {
     const expectedPeriod = relationshipIdentity.relationshipId;
     const expectedSession = relationshipIdentity.relationshipSessionId;
     if (!expectedPeriod || !isRelationshipSessionId(expectedSession)) {
+      if (mounted.current && currentAccount.current === accountId && currentContext.current === contextKey) {
+        setOperationError({ scope: contextKey, message: 'Load your current relationship before disconnecting.' });
+      }
       toastManager.error('Refresh needed', 'Load your current relationship before disconnecting.');
       return false;
     }
@@ -257,12 +269,12 @@ export const usePartnerLinking = (user: User | null) => {
     if (!expectedPeriod || !isRelationshipSessionId(expectedSession)) return false;
     const next = await runCommand(() => callIdentityCommand(accountId, 'set_relationship_permissions', {
       p_permissions: permissions, p_expected_relationship_id: expectedPeriod, p_expected_relationship_session_id: expectedSession,
-    }), 'Relationship permissions updated.');
+    }), 'Relationship permissions updated.', 'Unable to update partner connection', false);
     return !!next?.canAccessData;
   };
 
   const updateTimezone = async (timezone: string): Promise<boolean> => {
-    const next = await runCommand(() => callIdentityCommand(accountId, 'set_my_timezone', { p_timezone: timezone }), 'Timezone updated.', 'Unable to save timezone');
+    const next = await runCommand(() => callIdentityCommand(accountId, 'set_my_timezone', { p_timezone: timezone }), 'Timezone updated.', 'Unable to save timezone', false);
     return next?.timezone === timezone;
   };
 
@@ -276,6 +288,7 @@ export const usePartnerLinking = (user: User | null) => {
     partnerLinkOptions,
     partnerLinkOptionsLoading: optionsCurrent && optionsState.loading,
     partnerLinkOptionsError: optionsCurrent ? optionsState.error : null,
+    partnerLinkingError: operationError?.scope === contextKey ? operationError.message : null,
     reloadPartnerLinkOptions,
     refreshIdentity,
     generateLinkCode,

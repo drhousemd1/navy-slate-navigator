@@ -1,5 +1,4 @@
 import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import {
@@ -25,9 +24,8 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
   currentView = false 
 }) => {
   const text = useCoreTextClasses();
-  const light = useColorScheme().currentScheme === 'light-turquoise';
-  const tick = light ? { fill: 'hsl(var(--foreground))', style: { fill: 'hsl(var(--foreground))' } } : { fill: '#D1D5DB' };
-  const axisStroke = light ? 'hsl(var(--foreground))' : '#8E9196';
+  const tick = { fill: '#D1D5DB' };
+  const axisStroke = '#8E9196';
   const chartConfig = {
     subTasksCompleted: { color: '#0EA5E9', label: 'Sub Tasks Completed' },
     domTasksCompleted: { color: '#DC2626', label: 'Dom Tasks Completed' },
@@ -55,7 +53,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
           </h2>
           {showToggle && (
             <div className="flex items-center space-x-2">
-              <Label htmlFor="view-toggle" className={`text-sm ${light ? 'text-foreground' : 'text-nav-inactive'}`}>
+              <Label htmlFor="view-toggle" className={`text-sm text-nav-inactive`}>
                 Weekly
               </Label>
               <Switch
@@ -63,7 +61,7 @@ const WeeklyMetricsChart: React.FC<WeeklyMetricsChartProps> = ({
                 checked={currentView}
                 onCheckedChange={onToggleView}
               />
-              <Label htmlFor="view-toggle" className={`text-sm ${light ? 'text-foreground' : 'text-nav-inactive'}`}>
+              <Label htmlFor="view-toggle" className={`text-sm text-nav-inactive`}>
                 Monthly
               </Label>
             </div>

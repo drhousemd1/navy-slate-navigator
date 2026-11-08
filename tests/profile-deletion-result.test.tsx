@@ -27,21 +27,21 @@ async function confirmDeletion() {
 }
 
 describe('account deletion results on the real Profile page', () => {
-  it.each(['light-turquoise', 'default'])('keeps Profile labels/dialogs readable in %s without recoloring fixed controls', theme => {
-    mocks.theme = theme; const light = theme === 'light-turquoise';
+  it.each(['light-turquoise', 'default'])('preserves original Profile labels/dialogs in %s without recoloring fixed controls', theme => {
+    mocks.theme = theme;
     render(<MemoryRouter><Profile /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'Profile Settings' }).parentElement!.className).toContain(light ? 'text-foreground' : 'text-white');
-    expect(document.querySelector('label[for="nickname"]')!.className).toContain(light ? 'text-foreground' : 'text-gray-300');
-    expect(screen.getByText('local@example.invalid').className).toContain(light ? 'text-foreground' : 'text-gray-400');
-    expect(screen.getByText('Current Role').className).toContain(light ? 'text-foreground' : 'text-gray-300');
+    expect(screen.getByRole('heading', { name: 'Profile Settings' }).parentElement!.className).toContain('text-white');
+    expect(document.querySelector('label[for="nickname"]')!.className).toContain('text-gray-300');
+    expect(screen.getByText('local@example.invalid').className).toContain('text-gray-400');
+    expect(screen.getByText('Current Role').className).toContain('text-gray-300');
     expect(screen.getByRole('button', { name: 'Save Nickname' }).className).toContain('bg-gray-600 text-white');
     expect(document.querySelector('label[for="profileImageInput"] svg')!.getAttribute('class')).toContain('text-white');
     fireEvent.click(screen.getByRole('button', { name: 'Delete Account' }));
     const dialog = screen.getByRole('alertdialog');
-    expect(within(dialog).getByRole('heading', { name: 'Delete Account' }).className).toContain(light ? 'text-foreground' : 'text-white');
-    expect(within(dialog).getByText(/Delete your account and private account data permanently/).className).toContain(light ? 'text-foreground' : 'text-gray-300');
+    expect(within(dialog).getByRole('heading', { name: 'Delete Account' }).className).toContain('text-white');
+    expect(within(dialog).getByText(/Delete your account and private account data permanently/).className).toContain('text-gray-300');
     expect(within(dialog).getByRole('button', { name: 'Delete Account' }).className).toContain('bg-red-600 text-white');
-    if (light) expect(within(dialog).getByRole('button', { name: 'Cancel' }).className).toContain('text-foreground hover:text-white');
+    expect(within(dialog).getByRole('button', { name: 'Cancel' }).className).toContain('text-white');
   });
   it('keeps a returned backend rejection visible and never announces deletion success', async () => {
     mocks.deleteAccount.mockResolvedValue({ error: 'Recovery information could not be saved. No deletion request was sent.' });

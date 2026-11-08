@@ -42,20 +42,20 @@ beforeEach(() => { state.scheme = 'light-turquoise'; state.loading = false; stat
 afterEach(() => cleanup());
 const classes = (element: Element, token: string) => expect(element.classList.contains(token)).toBe(true);
 
-describe('Throne dashboard light-theme presentation', () => {
+describe('Throne dashboard original presentation', () => {
   it.each(COLOR_SCHEMES.map(scheme => scheme.name))('renders real axes/headers while retaining series colors in %s', scheme => {
     state.scheme = scheme; const light = scheme === 'light-turquoise';
     const { container } = render(<><WeeklyMetricsChart /><MonthlyMetricsChart /><WellbeingLineChart /></>);
-    for (const name of ['Weekly Activity', 'Monthly Activity', 'Weekly Wellness']) classes(screen.getByRole('heading', { name }), light ? 'text-foreground' : 'text-white');
+    for (const name of ['Weekly Activity', 'Monthly Activity', 'Weekly Wellness']) classes(screen.getByRole('heading', { name }), 'text-white');
     const ticks = [...container.querySelectorAll('.recharts-cartesian-axis-tick-value')];
     expect(ticks.length).toBeGreaterThan(5);
     for (const tick of ticks) {
-      expect(tick.getAttribute('fill')).toBe(light ? 'hsl(var(--foreground))' : '#D1D5DB');
+      expect(tick.getAttribute('fill')).toBe('#D1D5DB');
       // Inline fill outranks the monthly ChartContainer's muted tick selector.
-      expect((tick as SVGElement).style.fill).toBe(light ? 'hsl(var(--foreground))' : '');
+      expect((tick as SVGElement).style.fill).toBe('');
     }
     const axes = [...container.querySelectorAll('.recharts-cartesian-axis-line')];
-    for (const axis of axes) expect(axis.getAttribute('stroke')).toBe(light ? 'hsl(var(--foreground))' : '#8E9196');
+    for (const axis of axes) expect(axis.getAttribute('stroke')).toBe('#8E9196');
     for (const color of ['#0EA5E9', '#DC2626', '#F97316', '#9b87f5', '#EC4899', '#ea384c']) expect(container.innerHTML).toContain(`fill="${color}"`);
     for (const color of ['#3B82F6', '#EF4444']) expect(container.innerHTML).toContain(`fill="${color}"`);
     expect(JSON.stringify(COLOR_SCHEMES)).toBe(paletteBefore);
@@ -63,32 +63,32 @@ describe('Throne dashboard light-theme presentation', () => {
   it.each(COLOR_SCHEMES.map(scheme => scheme.name))('keeps totals, retained history and expanded settings readable in %s', scheme => {
     state.scheme = scheme; const light = scheme === 'light-turquoise';
     render(<><UnifiedMetricsTiles isMonthlyView={false} /><ActivityMetricsNotice metrics={metrics} /><AdminSettingsCard /></>);
-    for (const value of ['3', '2']) classes(screen.getByText(value), light ? 'text-foreground' : 'text-white');
-    classes(screen.getByText('Earlier records — all retained dates in this relationship'), light ? 'text-foreground' : 'text-gray-200');
-    classes(screen.getByText('Admin Settings'), light ? 'text-foreground' : 'text-white');
+    for (const value of ['3', '2']) classes(screen.getByText(value), 'text-white');
+    classes(screen.getByText('Earlier records — all retained dates in this relationship'), 'text-gray-200');
+    classes(screen.getByText('Admin Settings'), 'text-white');
     fireEvent.click(screen.getByRole('button', { name: 'Expand admin settings' }));
-    for (const name of ['Access Control', 'Global Rules', 'Notifications']) classes(screen.getByRole('heading', { name }), light ? 'text-foreground' : 'text-white');
-    classes(screen.getByText('Manage user roles and permissions'), light ? 'text-foreground' : 'text-nav-inactive');
+    for (const name of ['Access Control', 'Global Rules', 'Notifications']) classes(screen.getByRole('heading', { name }), 'text-white');
+    classes(screen.getByText('Manage user roles and permissions'), 'text-nav-inactive');
     classes(screen.getByText('Sub Tasks Completed:'), 'text-sky-400');
   });
-  it('keeps light error/empty/loading states readable without turning failures into zero totals', () => {
+  it('keeps original chart/tile containers in error and loading states without turning failures into zero totals', () => {
     state.error = new Error('Denied'); const view = render(<><UnifiedMetricsTiles isMonthlyView={false} /><WellbeingLineChart /></>);
-    for (const alert of screen.getAllByRole('alert')) expect(alert.closest('.text-foreground')).not.toBeNull();
-    expect(screen.queryByText('Sub Tasks Completed:')).toBeNull(); classes(screen.getByRole('button', { name: 'Retry activity' }), 'text-foreground');
+    expect(screen.getAllByRole('alert')).toHaveLength(2); expect(screen.queryByText('0')).toBeNull();
+    expect(screen.getByText('Sub Tasks Completed:')).toBeTruthy(); expect(screen.getAllByText('—')).toHaveLength(6); classes(screen.getByRole('button', { name: 'Retry activity' }), 'text-white');
     state.error = null; state.empty = true; view.rerender(<><WeeklyMetricsChart /><MonthlyMetricsChart /><WellbeingLineChart /></>);
-    for (const message of screen.getAllByText(/No (activity|wellness) data to display/)) classes(message, 'text-foreground');
-    state.loading = true; view.rerender(<ThroneRoom />); classes(screen.getByText('Loading your command center...'), 'text-foreground');
+    for (const message of screen.getAllByText(/No (activity|wellness) data to display/)) classes(message, 'text-white');
+    state.loading = true; view.rerender(<ThroneRoom />); classes(screen.getByText('Loading your command center...'), 'text-white');
   });
   it.each(COLOR_SCHEMES.map(scheme => scheme.name))('preserves recorded/unknown wellness values and bar colors in %s', scheme => {
     state.scheme = scheme; const light = scheme === 'light-turquoise';
     const view = render(<CompactWellbeingMetrics metrics={{ energy: 0 }} selectedDate="2026-11-02" selectedUserType="sub" />);
-    classes(screen.getByText('Submissive - 2026-11-02'), light ? 'text-foreground' : 'text-gray-300');
-    classes(screen.getByText('0%'), light ? 'text-foreground' : 'text-gray-400');
-    for (const value of screen.getAllByText('Not recorded')) classes(value, light ? 'text-foreground' : 'text-gray-400');
+    classes(screen.getByText('Submissive - 2026-11-02'), 'text-gray-300');
+    classes(screen.getByText('0%'), 'text-gray-400');
+    for (const value of screen.getAllByText('Not recorded')) classes(value, 'text-gray-400');
     const selectedBars = [...view.container.querySelectorAll('[style]')].map(element => element.getAttribute('style'));
     state.scheme = 'default'; view.rerender(<CompactWellbeingMetrics metrics={{ energy: 0 }} selectedDate="2026-11-02" selectedUserType="sub" />);
     expect([...view.container.querySelectorAll('[style]')].map(element => element.getAttribute('style'))).toEqual(selectedBars);
     state.scheme = scheme; view.rerender(<CompactWellbeingMetrics metrics={null} selectedDate={null} />);
-    for (const value of screen.getAllByText('Not recorded')) classes(value, light ? 'text-foreground' : 'text-nav-inactive');
+    for (const value of screen.getAllByText('Not recorded')) classes(value, 'text-nav-inactive');
   });
 });

@@ -68,7 +68,7 @@ export function cardActivity(data: ActivityMetrics, series: MetricName) {
   return { total: data.totals[series], range, days: data.dataArray.filter(day => day.date >= range.start && day.date < range.end).map(day => ({ date: day.date, count: day[series] })) };
 }
 export function newThroneDefinition(): ThroneDefinition {
-  return { title: '', description: '', series: 'subTasksCompleted', priority: 'medium', iconName: 'Activity', icon: null,
+  return { title: '', description: '', series: 'subTasksCompleted', priority: 'medium', iconName: null, icon: null,
     titleColor: '#FFFFFF', descriptionColor: '#8E9196', iconColor: '#FFFFFF', calendarColor: '#7E69AB',
     images: [null, null, null, null, null], opacity: 100, focalX: 50, focalY: 50, highlight: false };
 }

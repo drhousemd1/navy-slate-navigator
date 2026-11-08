@@ -1,4 +1,3 @@
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import { Card } from '@/components/ui/card';
@@ -16,14 +15,13 @@ interface RewardCardProps {
 }
 
 const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
-  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const { handleBuyReward, handleUseReward, totalPoints, domPoints } = useRewards();
   const [buying, setBuying] = React.useState(false);
   const [using, setUsing] = React.useState(false);
-  
+
   // Explicitly enforce boolean type for is_dom_reward
   const isDomReward = Boolean(reward.is_dom_reward);
-  
+
   // Use appropriate points based on reward type
   const currentPoints = isDomReward ? domPoints : totalPoints;
   const canAfford = currentPoints >= reward.cost;
@@ -31,7 +29,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
 
   const handleBuyClick = async () => {
     if (buying) return; // Prevent multiple clicks
-    
+
     try {
       setBuying(true);
       // Pass the isDomReward flag explicitly to ensure it's handled correctly
@@ -46,7 +44,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
 
   const handleUseClick = async () => {
     if (using) return; // Prevent multiple clicks
-    
+
     try {
       setUsing(true);
       await handleUseReward(reward.id);
@@ -61,7 +59,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
   // Get background style with focal points and opacity
   const getBgStyle = () => {
     if (!reward.background_image_url) return {};
-    
+
     return {
       backgroundImage: `url(${reward.background_image_url})`,
       backgroundSize: 'cover',
@@ -72,15 +70,15 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
 
   // Define styles based on if it's a dom reward
   const costBadgeColor = isDomReward ? "bg-red-600" : "bg-nav-active";
-  const buyButtonColor = isDomReward 
-    ? `bg-red-600 hover:bg-red-700 ${isLightScheme ? 'text-white' : ''}`
+  const buyButtonColor = isDomReward
+    ? "bg-red-600 hover:bg-red-700"
     : "bg-nav-active hover:bg-nav-active/80";
 
   // Define border color based on if it's a dom reward and if there's supply
-  const cardBorderColor = isDomReward 
+  const cardBorderColor = isDomReward
     ? "#ea384c" // Red for dom rewards
     : (hasAvailable ? "#FEF7CD" : "#00f0ff"); // Yellow for sub rewards with supply, blue otherwise
-  
+
   const cardBorderStyle = {
     borderColor: cardBorderColor,
     boxShadow: hasAvailable ? `0 0 8px 2px rgba(${isDomReward ? '234, 56, 76, 0.6' : '254, 247, 205, 0.6'})` : undefined
@@ -94,12 +92,12 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
           style={cardBorderStyle}>
       {/* Background image with opacity */}
       {reward.background_image_url && (
-        <div 
-          className="absolute inset-0 z-0" 
+        <div
+          className="absolute inset-0 z-0"
           style={getBgStyle()}
         />
       )}
-      
+
       {/* Card content */}
       <div className="relative z-10 p-4 flex flex-col h-full">
         <div className="flex justify-between items-start">
@@ -112,7 +110,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
                 </Badge>
               </div>
             )}
-            
+
             <h3 className={cn(
               "text-lg font-semibold",
               reward.highlight_effect && "bg-yellow-300/30 px-2 py-1 rounded",
@@ -120,7 +118,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
             style={{ color: reward.title_color }}>
               {reward.title}
             </h3>
-            
+
             {reward.description && (
               <p className={cn(
                 "text-sm mt-1",
@@ -131,21 +129,21 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
               </p>
             )}
           </div>
-          
+
           <div className="flex flex-col items-end">
             {onEdit && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onEdit}
                 className="h-8 px-2 text-light-navy hover:text-white hover:bg-light-navy"
               >
                 Edit
               </Button>
             )}
-            
-            <div 
-              className="text-sm font-medium rounded-full px-3 py-1 mt-1 flex items-center" 
+
+            <div
+              className="text-sm font-medium rounded-full px-3 py-1 mt-1 flex items-center"
               style={{ backgroundColor: isDomReward ? "#ea384c" : (reward.calendar_color || '#7E69AB') }}
             >
               {isDomReward ? (
@@ -157,7 +155,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="mt-auto pt-4 flex justify-between items-center">
           <div className="flex items-center">
             <Badge className={`${supplyBadgeColor} text-white font-bold flex items-center gap-1`}>
@@ -165,7 +163,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
               <span>{reward.supply}</span>
             </Badge>
           </div>
-          
+
           <div className="flex space-x-2">
             <Button
               variant="outline"
@@ -181,7 +179,7 @@ const RewardCard: React.FC<RewardCardProps> = ({ reward, onEdit }) => {
                 </span>
               ) : "Use"}
             </Button>
-            
+
             <Button
               size="sm"
               disabled={!canAfford || buying}

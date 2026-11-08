@@ -1,4 +1,3 @@
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -22,7 +21,6 @@ const UserIdsContext = createContext<UserIdsContextType | undefined>(undefined);
 const publicAccountPaths = new Set(['/auth', '/forgot-password', '/reset-password']);
 
 export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const { user, loading: authLoading, relationshipIdentity, refreshIdentity, signOut, updateUserRole, unlinkFromPartner } = useAuth();
   const { pathname } = useLocation();
   const queryClient = useQueryClient();
@@ -117,18 +115,18 @@ export const UserIdsProvider: React.FC<React.PropsWithChildren> = ({ children })
       {needsBoundary && !publicAccountPaths.has(pathname) ? (
         !authLoading && recovery === 'unreachable' && !cacheError ? <OfflineRecovery key={accountId} backendId={supabaseBackendId} accountId={accountId}
           checking={isLoadingUserIds} onRetry={() => void repair(initializeUserIds)} onSignOut={() => void repair(signOutAndRemoveRecovery)} /> :
-        <main className="flex h-full min-h-0 items-center justify-center overflow-y-auto bg-dark-navy p-6 text-white">
-          <section className="w-full max-w-md rounded-lg border border-light-navy bg-navy p-6 space-y-4" aria-labelledby="identity-heading">
-            <h1 id="identity-heading" className="text-xl font-semibold">{isLoadingUserIds ? 'Loading your account' : canSetRole ? 'Set up your role' : 'Account connection needs attention'}</h1>
-            <p role={isLoadingUserIds ? 'status' : 'alert'} className="text-sm text-gray-300">
+        <main className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+          <section className="w-full max-w-md p-6 space-y-6 bg-card rounded-lg shadow-lg border border-border" aria-labelledby="identity-heading">
+            <h1 id="identity-heading" className="text-2xl font-bold text-center text-foreground">{isLoadingUserIds ? 'Loading your account' : canSetRole ? 'Set up your role' : 'Account connection needs attention'}</h1>
+            <p role={isLoadingUserIds ? 'status' : 'alert'} className="text-sm text-muted-foreground">
               {isLoadingUserIds ? 'Checking your profile and partner connection…' : effectiveIdentity.error}
             </p>
-            {actionError && <p role="alert" className="text-sm text-red-300">{actionError}</p>}
+            {actionError && <p role="alert" className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">{actionError}</p>}
             {canSetRole && <div className="flex gap-3">
-              {(['dom', 'sub'] as ProfileRole[]).map(role => <Button key={role} disabled={isRepairing} onClick={() => void repair(() => updateUserRole(role))} className={`bg-cyan-600 hover:bg-cyan-700 ${isLightScheme ? 'text-white' : ''}`}>{role === 'dom' ? 'Choose Dom' : 'Choose Sub'}</Button>)}
+              {(['dom', 'sub'] as ProfileRole[]).map(role => <Button key={role} disabled={isRepairing} onClick={() => void repair(() => updateUserRole(role))} className="bg-primary hover:bg-primary/90">{role === 'dom' ? 'Choose Dom' : 'Choose Sub'}</Button>)}
             </div>}
             {identity.status === 'invalid' && identity.partnerUserId && <div className="space-y-2">
-              <p className="text-sm text-gray-300">{identity.lifecycleReady ? 'Disconnect the invalid connection before repairing your role or connecting again. Existing history is archived by the account service.' : 'This connection needs repair. Partner changes are temporarily unavailable until the relationship history and privacy upgrade is ready. You can retry loading your account, or still use password recovery.'}</p>
+              <p className="text-sm text-muted-foreground">{identity.lifecycleReady ? 'Disconnect this connection before choosing your role or connecting again. Your existing history will be kept.' : 'Partner changes are temporarily unavailable. Retry loading your account, or use password recovery.'}</p>
               <Button disabled={isRepairing || !identity.lifecycleReady || !identity.relationshipSessionId} variant="outline" className="border-red-500 text-red-300" onClick={() => void repair(unlinkFromPartner)}>Disconnect partner</Button>
             </div>}
             {!isLoadingUserIds && <div className="flex gap-3">

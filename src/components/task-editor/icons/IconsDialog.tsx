@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,7 +19,6 @@ const IconsDialog: React.FC<IconsDialogProps> = ({
   iconColor,
   onSelectIcon
 }) => {
-  const text = useCoreTextClasses();
   const handleIconSelect = (iconName: string) => {
     onSelectIcon(iconName);
     onClose();
@@ -28,9 +26,9 @@ const IconsDialog: React.FC<IconsDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent aria-describedby={undefined} className={`bg-navy border-light-navy ${text.primary} max-w-md max-h-[80vh]`}>
+      <DialogContent aria-describedby={undefined} className="bg-navy border-light-navy text-white max-w-md max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className={`text-xl font-bold ${text.primary}`}>
+          <DialogTitle className="text-xl font-bold text-white">
             Preset Icons
           </DialogTitle>
         </DialogHeader>

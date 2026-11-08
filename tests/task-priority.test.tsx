@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { render, screen, cleanup } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { Form } from '@/components/ui/form';
 import PrioritySelector from '@/components/task-editor/PrioritySelector';
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 afterEach(cleanup);
 it('updates the shared task/rule priority display after an editor resets to saved data', () => {
   function Editor({ priority }: { priority: string }) {

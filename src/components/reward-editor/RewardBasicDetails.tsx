@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { Control } from 'react-hook-form';
@@ -21,7 +20,6 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
   incrementCost,
   decrementCost,
 }) => {
-  const text = useCoreTextClasses();
   return (
     <div className="space-y-4">
       <FormField
@@ -29,11 +27,11 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
         name="title"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className={text.primary}>Reward Title</FormLabel>
+            <FormLabel className="text-white">Reward Title</FormLabel>
             <FormControl>
               <Input
                 placeholder="Reward title (e.g., Movie night, Massage)"
-                className={`bg-dark-navy border-light-navy ${text.field}`}
+                className="bg-dark-navy border-light-navy text-white"
                 {...field}
               />
             </FormControl>
@@ -46,11 +44,11 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
         name="description"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className={text.primary}>Description</FormLabel>
+            <FormLabel className="text-white">Description</FormLabel>
             <FormControl>
               <Textarea 
                 placeholder="Detailed description of the reward" 
-                className={`bg-dark-navy border-light-navy ${text.field} min-h-[100px]`}
+                className="bg-dark-navy border-light-navy text-white min-h-[100px]"
                 {...field} 
               />
             </FormControl>
@@ -63,7 +61,7 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
         name="cost"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className={text.primary}>Cost (Points)</FormLabel>
+            <FormLabel className="text-white">Cost (Points)</FormLabel>
             <div className="flex items-center space-x-2">
                 <Button
                   type="button"
@@ -71,7 +69,7 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
                   variant="outline"
                   size="icon"
                   onClick={decrementCost}
-                  className={`h-10 w-10 bg-dark-navy border-light-navy ${text.primary} hover:bg-light-navy`}
+                  className="h-10 w-10 bg-dark-navy border-light-navy text-white hover:bg-light-navy"
                 >
                   <Minus aria-hidden="true" className="h-4 w-4" />
                 </Button>
@@ -79,7 +77,7 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
                   <Input
                     type="number"
                     min="0"
-                    className={`bg-dark-navy border-light-navy ${text.field} text-center`}
+                    className="bg-dark-navy border-light-navy text-white text-center"
                     {...field}
                     value={field.value || 0}
                     onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
@@ -91,7 +89,7 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
                   variant="outline"
                   size="icon"
                   onClick={incrementCost}
-                  className={`h-10 w-10 bg-dark-navy border-light-navy ${text.primary} hover:bg-light-navy`}
+                  className="h-10 w-10 bg-dark-navy border-light-navy text-white hover:bg-light-navy"
                 >
                   <Plus aria-hidden="true" className="h-4 w-4" />
                 </Button>
@@ -106,8 +104,8 @@ const RewardBasicDetails: React.FC<RewardBasicDetailsProps> = ({
         render={({ field }) => (
           <FormItem className="flex flex-row items-center justify-between">
             <div className="space-y-0.5">
-              <FormLabel className={text.primary}>Dom Reward</FormLabel>
-              <p className={`text-sm ${text.primary}`}>Only Dom can purchase and redeem this reward</p>
+              <FormLabel className="text-white">Dom Reward</FormLabel>
+              <p className="text-sm text-white">Only Dom can purchase and redeem this reward</p>
             </div>
             <FormControl>
               <Switch checked={field.value} onCheckedChange={field.onChange} />

@@ -56,8 +56,8 @@ describe('actual reward controls use the recorded command path', () => {
     mocks.actions.data.rewards[0].is_dom_reward = true;
     render(<RewardsProvider><MountedCard /></RewardsProvider>);
     expect((screen.getByRole('button', { name: 'Buy' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText('Sub owns 1')).toBeTruthy();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Use Sub reward' }));
+    expect(screen.queryByText('Sub owns 1')).toBeNull();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Use', exact: true }));
     expect(mocks.actions.enqueue).toHaveBeenCalledWith({ kind: 'reward_redeem', rewardId: 'reward', inventoryCurrency: 'sub' });
     expect(screen.getByRole('status').textContent).toContain('"subRewardTypesCount":1');
     expect(screen.getByRole('status').textContent).toContain('"domRewardTypesCount":0');
@@ -66,9 +66,21 @@ describe('actual reward controls use the recorded command path', () => {
     mocks.identity.currentRole = 'dom'; mocks.identity.participantId = 'dom-participant';
     render(<RewardsProvider><MountedCard /></RewardsProvider>);
     expect((screen.getByRole('button', { name: 'Buy' }) as HTMLButtonElement).disabled).toBe(true);
-    await userEvent.setup().click(screen.getByRole('button', { name: /Gift to Sub/ }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'More actions for Quiet evening' }));
+    await userEvent.setup().click(screen.getByRole('menuitem', { name: 'Gift to Sub' }));
     expect(mocks.actions.enqueue).toHaveBeenCalledWith({ kind: 'reward_gift', rewardId: 'reward' });
     expect(screen.getByRole('status').textContent).toContain('"domPoints":50');
+  });
+  it('asks for inventory currency only when both owned currencies are usable', async () => {
+    mocks.identity.currentRole = 'dom'; mocks.identity.participantId = 'dom-participant';
+    mocks.actions.data.lots.push(lot({ id: 'dom-lot', owner_participant_id: 'dom-participant', currency: 'dom' }));
+    render(<RewardsProvider><MountedCard /></RewardsProvider>);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Use', exact: true }));
+    expect(mocks.actions.enqueue).not.toHaveBeenCalled();
+    expect(screen.getByRole('menuitem', { name: 'Sub reward' })).toBeTruthy();
+    await user.click(screen.getByRole('menuitem', { name: 'Dom reward' }));
+    expect(mocks.actions.enqueue).toHaveBeenCalledExactlyOnceWith({ kind: 'reward_redeem', rewardId: 'reward', inventoryCurrency: 'dom' });
   });
   it('keeps unresolved commands visible and prevents another card action', () => {
     const command = { commandId: 'pending', kind: 'reward_buy', rewardId: 'reward', expectedCost: 7, expectedRelationshipId: 'period' };

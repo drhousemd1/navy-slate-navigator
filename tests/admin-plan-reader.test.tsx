@@ -34,8 +34,8 @@ describe('private plan reader publication and identity boundaries', () => {
     expect(frame.getAttribute('srcdoc')).toContain('Publication 1');
     expect(frame.getAttribute('sandbox')).toBe('allow-scripts allow-popups allow-popups-to-escape-sandbox');
     expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin'); expect(frame.getAttribute('referrerpolicy')).toBe('no-referrer');
-    expect(screen.getByText(/Publication 1 · v1 · Published/)).toBeTruthy();
-    expect(screen.queryByText(/Dated baseline plan/)).toBeNull();
+    expect(screen.getByText(/^Published /)).toBeTruthy();
+    expect(screen.queryByText(/Historical plan/)).toBeNull();
     expect(f.rpc).toHaveBeenCalledWith('can_read_admin_document', {});
     expect(f.store.mock.calls[0][0].bearer).toBe('synthetic-session');
   });
@@ -46,7 +46,7 @@ describe('private plan reader publication and identity boundaries', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Refresh plan' })); expect(iframe()).toBeNull();
     expect(f.read).toHaveBeenCalledTimes(1);
     await act(async () => access.resolve({ data: true, error: null }));
-    await screen.findByText(/Refresh failed. Showing your previously verified publication/);
+    await screen.findByText('Refresh failed. Showing the last verified version.');
     expect(iframe()?.getAttribute('srcdoc')).toContain('Publication 1'); expect(f.rpc).toHaveBeenCalledTimes(2);
   });
   it.each(['denied', 'error'] as const)('never shows previous HTML when the new membership check is %s', async status => {
@@ -60,7 +60,7 @@ describe('private plan reader publication and identity boundaries', () => {
     render(<AdminRebuildPlan />); await screen.findByTitle('Private rebuild plan');
     f.read.mockRejectedValueOnce(new PublicationError('access', 'Denied'));
     fireEvent.click(screen.getByRole('button', { name: 'Refresh plan' })); await screen.findByText(/The plan could not be loaded/);
-    expect(iframe()).toBeNull(); expect(screen.queryByText(/Showing your previously verified publication/)).toBeNull();
+    expect(iframe()).toBeNull(); expect(screen.queryByText(/Showing the last verified version/)).toBeNull();
   });
   it('clears on account switch and ignores the previous account’s late completion', async () => {
     const pending = deferred<VerifiedPublication>(); f.read.mockReturnValueOnce(pending.promise);
@@ -75,8 +75,8 @@ describe('private plan reader publication and identity boundaries', () => {
   it('keeps the dated-baseline qualification when a later publication selects old verified content', async () => {
     const old = publication(4, '1785c7f5dd8a3fd7469dc87ab2e6285fe2b78e627fc990a82a79e871551cd672'); old.manifest.version = 'v1-historical';
     f.read.mockResolvedValueOnce(old); render(<AdminRebuildPlan />); await screen.findByTitle('Private rebuild plan');
-    expect(screen.getByText(/Dated baseline plan, written before this admin page was published/)).toBeTruthy();
-    expect(screen.getByText(/Publication 4 · v1-historical · Published/)).toBeTruthy();
+    expect(screen.getByText(/Historical plan; later implementation changes are not included/)).toBeTruthy();
+    expect(screen.getByText(/^Published /)).toBeTruthy();
     expect(screen.queryByText(/Updated/)).toBeNull();
   });
 });

@@ -21,19 +21,19 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe('actual message composer and image controls', () => {
-  it('uses light text on fixed outgoing bubbles and dark text on themed incoming/input surfaces, preserving navy on switch-back', () => {
+  it('preserves original bubble, timestamp and input colors across theme switches', () => {
     mocks.theme = 'light-turquoise';
     const tree = () => <><MessageInput message="Draft" setMessage={vi.fn()} imageFile={null} setImageFile={vi.fn()} handleSendMessage={vi.fn()} isUploading={false} />
       <MessageItem message={message(10, { content: 'Incoming text' })} scope={scope} conversation={conversation} onImageLoad={vi.fn()} />
       <MessageItem message={message(11, { author: 'you', content: 'Outgoing text' })} scope={scope} conversation={conversation} onImageLoad={vi.fn()} /></>;
     const view = render(tree());
-    expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('text-foreground');
-    expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('placeholder:text-foreground');
-    expect(screen.getByRole('button', { name: 'Send message' }).className).toContain('text-white');
+    expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('text-white');
+    expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('placeholder:text-gray-500');
+    expect(screen.getByRole('button', { name: 'Send message' }).className).toContain('text-primary-foreground');
     expect(screen.getByRole('button', { name: 'Send message' }).className).toContain('bg-cyan-700');
-    expect(screen.getByText('Incoming text').parentElement!.className).toContain('text-foreground');
+    expect(screen.getByText('Incoming text').parentElement!.className).toContain('text-white');
     expect(screen.getByText('Outgoing text').parentElement!.className).toContain('bg-cyan-800 text-white');
-    expect(document.querySelector('time')!.parentElement!.className).not.toContain('opacity-40');
+    expect(document.querySelector('time')!.parentElement!.className).toContain('opacity-40');
     mocks.theme = 'default'; view.rerender(tree());
     expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('text-white');
     expect(screen.getByRole('textbox', { name: 'Message' }).className).toContain('placeholder:text-gray-500');

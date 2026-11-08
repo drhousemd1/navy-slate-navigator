@@ -17,9 +17,12 @@ import { documentText } from '@/data/encyclopedia/content';
 import { entry, receipt, scope, image, deferred } from './encyclopedia.helpers';
 import RichArticleEditor from '@/components/encyclopedia/RichArticleEditor';
 const clients: QueryClient[] = [];
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView');
 function setup() { const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
   return { client, ...render(<QueryClientProvider client={client}><Encyclopedia /></QueryClientProvider>) }; }
 beforeEach(() => {
+  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() });
   localStorage.clear(); mocks.auth = { user: { id: 'account-a' }, loading: false };
   mocks.read.mockReset().mockResolvedValue({ canEdit: true, entries: [entry()] }); mocks.write.mockReset().mockImplementation(async (_scope, request) => receipt(request));
   mocks.image.mockReset().mockResolvedValue(image);
@@ -27,7 +30,11 @@ beforeEach(() => {
   Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
   Range.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) });
 });
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; });
+afterEach(() => {
+  cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals();
+  if (originalScrollIntoView) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScrollIntoView);
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+});
 async function edit() { fireEvent.click(await screen.findByRole('button', { name: 'Edit Reference article' })); return await screen.findByRole('dialog', { name: 'Edit Encyclopedia Entry' }); }
 
 describe('real Encyclopedia reader and editorial consumers', () => {
@@ -70,38 +77,38 @@ describe('real Encyclopedia reader and editorial consumers', () => {
   });
   it('preserves original body/image/metadata on title-only edits and exact zero controls', async () => {
     setup(); const dialog = await edit();
-    expect((within(dialog).getByRole('slider', { name: 'Horizontal focal point' }) as HTMLInputElement).value).toBe('0');
+    expect((within(dialog).getByRole('group', { name: 'Image focal point' }).querySelector('img') as HTMLImageElement).style.objectPosition).toBe('0% 0%');
     expect((within(dialog).getByRole('slider', { name: 'Popup Image Opacity' }) as HTMLInputElement).value).toBe('0');
-    expect((within(dialog).getByRole('checkbox', { name: 'Highlight Effect' }) as HTMLInputElement).checked).toBe(false);
+    expect(within(dialog).getByRole('switch', { name: 'Highlight Effect' }).getAttribute('aria-checked')).toBe('false');
     expect(within(dialog).getByRole('textbox', { name: 'Pop-up Text' }).textContent).toBe(entry().popup_text);
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Title', exact: true }), { target: { value: 'New title' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(mocks.write.mock.calls[0][1].patch).toEqual({ title: 'New title' });
   });
-  it('creates an intentionally empty body and explicit theme-default colors, using the saved stable ID', async () => {
+  it('creates an intentionally empty body and explicit unset colors, using the saved stable ID', async () => {
     setup(); fireEvent.click(await screen.findByRole('button', { name: 'Add Entry' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Title', exact: true }), { target: { value: 'Empty-body reference' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(mocks.write).toHaveBeenCalledTimes(1));
     expect(mocks.write.mock.calls[0][1]).toMatchObject({ expectedRevision: 0, patch: { title: 'Empty-body reference', subtext: '', titleColor: null, subtextColor: null, contentDocument: { version: 1, blocks: [] } } });
   });
-  it('uses theme colors only for unset colors and never turns that fallback into saved custom colors', async () => {
+  it('uses original reader defaults for unset colors without writing them into saved custom colors', async () => {
     mocks.read.mockResolvedValue({ canEdit: true, entries: [entry({ title_color: null, subtext_color: null })] });
     setup(); const tile = await screen.findByRole('button', { name: 'Reference article Saved description' });
-    expect(tile.querySelector('h3 span')?.getAttribute('style')).toContain('var(--foreground)');
-    expect(tile.querySelector('p span')?.getAttribute('style')).toContain('var(--foreground)');
-    fireEvent.click(tile); expect(screen.getByRole('dialog').querySelector('h1 span')?.getAttribute('style')).toContain('var(--foreground)');
+    expect(tile.querySelector('h3 span')?.getAttribute('style')).toContain('rgb(255, 255, 255)');
+    expect(tile.querySelector('p span')?.getAttribute('style')).toContain('rgb(209, 213, 219)');
+    fireEvent.click(tile); expect(screen.getByRole('dialog').querySelector('h1 span')?.getAttribute('style')).toContain('rgb(255, 255, 255)');
     fireEvent.click(screen.getByRole('button', { name: 'Close encyclopedia entry' })); await edit();
     const color = screen.getByRole('textbox', { name: 'Title Color' }) as HTMLInputElement;
-    expect(color.value).toBe(''); expect(color.placeholder).toBe('Theme default');
-    expect(screen.getByLabelText('Choose title color').parentElement?.getAttribute('style')).toContain('var(--foreground)');
+    expect(color.value).toBe('#FFFFFF'); expect(color.placeholder).toBe('#FFFFFF');
+    expect(screen.getByLabelText('Choose title color').getAttribute('style')).toContain('rgb(255, 255, 255)');
     fireEvent.change(screen.getByRole('textbox', { name: 'Title', exact: true }), { target: { value: 'Text-only entry' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' })); await screen.findByText('Entry saved.');
     expect(mocks.write.mock.calls[0][1].patch).toEqual({ title: 'Text-only entry' });
   });
-  it('clears an explicit color only when the editor chooses theme default', async () => {
-    setup(); await edit(); fireEvent.click(screen.getByRole('button', { name: 'Use theme default title color' }));
+  it('clears an explicit color only when the editor clears its original color field', async () => {
+    setup(); await edit(); fireEvent.change(screen.getByRole('textbox', { name: 'Title Color' }), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' })); await screen.findByText('Entry saved.');
     expect(mocks.write.mock.calls[0][1].patch).toEqual({ titleColor: null });
   });
@@ -133,8 +140,8 @@ describe('real Encyclopedia reader and editorial consumers', () => {
   });
   it('requires a clear delete confirmation and sends no patch', async () => {
     setup(); await edit(); fireEvent.click(screen.getByRole('button', { name: 'Delete', exact: true }));
-    expect(mocks.write).not.toHaveBeenCalled(); expect(screen.getByRole('group', { name: 'Confirm deletion' }).textContent).toContain('shared library for everyone');
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm delete' })); await screen.findByText('Entry deleted.');
+    expect(mocks.write).not.toHaveBeenCalled(); expect(screen.getByRole('alertdialog').textContent).toContain('permanently delete this encyclopedia entry');
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Delete', exact: true })); await screen.findByText('Entry deleted.');
     expect(mocks.write.mock.calls[0][1]).toMatchObject({ kind: 'delete', expectedRevision: 4 }); expect(mocks.write.mock.calls[0][1]).not.toHaveProperty('patch');
   });
   it('removes authoring controls after revoked permission but preserves the pending draft', async () => {
@@ -171,6 +178,6 @@ describe('real Encyclopedia reader and editorial consumers', () => {
     await waitFor(() => expect(changed).toHaveBeenCalled()); const doc = changed.mock.calls.at(-1)![0];
     expect(documentText(doc)).toContain('BoldItalicUnderlineLarge\nEnd'); expect(JSON.stringify(doc)).not.toContain('unsafe');
     expect(JSON.stringify(doc)).toContain('"bold":true'); expect(JSON.stringify(doc)).toContain('"italic":true'); expect(JSON.stringify(doc)).toContain('"underline":true'); expect(JSON.stringify(doc)).toContain('"fontSize":"2rem"');
-    expect(screen.getByRole('button', { name: 'Bold' })).toBeTruthy(); expect(screen.getByRole('combobox', { name: 'Font size' }).children).toHaveLength(5);
+    expect(screen.getByRole('button', { name: 'Toggle bold' })).toBeTruthy(); fireEvent.click(screen.getByRole('combobox', { name: 'Font size' })); expect(await screen.findAllByRole('option')).toHaveLength(5);
   });
 });

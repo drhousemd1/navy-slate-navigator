@@ -4,12 +4,10 @@ import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { acknowledgeRewardFeedback } from '@/data/rewards/actionReadModel';
 import { useTaskActionData } from '@/data/tasks/actionReadModel';
 import { scopeKey } from '@/data/actions/contracts';
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 /** Own recipient confirmations come from the durable outbox. An actor acting
  * for a partner sees only a local acknowledgment, never a claim of delivery. */
 export function TaskFeedback() {
-  const text = useCoreTextClasses();
   const actions = useActionCommands();
   const settings = useNotificationSettings();
   const query = useTaskActionData(actions.scope, actions.mode === 'atomic');
@@ -56,14 +54,14 @@ export function TaskFeedback() {
     if (!feedback || dismissed.has(key(feedback.eventId))) return [];
     return [{ id: feedback.eventId, title: feedback.subjectTitle, undo: entry.command.kind === 'undo', recipient: false, points: receipt.pointDeltas ?? [] }];
   });
-  return <div className="space-y-2 pointer-events-auto">
-    {[...ownCards, ...partnerCards].map(card => <article key={card.id} role="status" className={`rounded-lg border border-cyan-500 bg-navy p-4 ${text.primary} shadow-lg motion-safe:animate-fade-in`}>
+  return <div className="pointer-events-auto">
+    {[...ownCards, ...partnerCards].map(card => <article key={card.id} role="status" className="w-full max-w-none rounded-none shadow-none border-none bg-background/95 text-foreground text-xs py-2 px-4 m-0">
       <strong>{card.undo ? 'Task Undo confirmed' : 'Task completion confirmed'}</strong>
-      <p className="text-sm">{card.title}</p>
+      <p className="text-xs">{card.title}</p>
       {card.points.map((point, index) => <p key={index}>{point.currency === 'dom' ? 'Dom' : 'Sub'} balance: {point.amount > 0 ? '+' : ''}{point.amount} points{card.recipient ? '' : ' for your partner'}</p>)}
       {card.points.length === 0 && <p>No points changed.</p>}
       {failure[key(card.id)] && <p role="alert">{failure[key(card.id)]}</p>}
-      <button className="mt-2 text-sm underline disabled:opacity-50" disabled={saving.has(key(card.id))}
+      <button className="text-xs underline disabled:opacity-50" disabled={saving.has(key(card.id))}
         onClick={() => card.recipient ? void ack(card.id) : setDismissed(previous => new Set([...previous, key(card.id)]))}>
         {saving.has(key(card.id)) ? 'Confirming dismissal…' : failure[key(card.id)] ? 'Retry dismissal' : 'Dismiss task confirmation'}
       </button>

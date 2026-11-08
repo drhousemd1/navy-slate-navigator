@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useForm } from 'react-hook-form';
@@ -22,7 +22,8 @@ vi.mock('@/components/activity/SavedActions', () => ({ SavedActions: () => null 
 vi.mock('@/components/activity/ActivityHistory', () => ({ ActivityHistory: ({ children }: any) => <section>{children}</section> }));
 Element.prototype.hasPointerCapture ??= () => false;
 Element.prototype.scrollIntoView ??= () => {};
-afterEach(() => { cleanup(); localStorage.clear(); theme.currentScheme = 'default'; });
+beforeEach(() => { vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} }); });
+afterEach(() => { cleanup(); localStorage.clear(); theme.currentScheme = 'default'; vi.unstubAllGlobals(); });
 function Editor({ initial = {}, atomic = true, onSubmit }: { initial?: Partial<LocalTaskFormValues>; atomic?: boolean; onSubmit?: () => void }) {
   const form = useForm<LocalTaskFormValues>({ defaultValues: { frequency: 'daily', frequency_count: 3, mandatory: false, deadline_date: null, deadline_time: null, deadline_weekday: null, ...initial } });
   return <Form {...form}><form onSubmit={event => { event.preventDefault(); onSubmit?.(); }}><TaskScheduleFields form={form} atomic={atomic} disabled={false} /><output data-testid="values">{JSON.stringify(form.watch())}</output>{onSubmit && <button type="submit">Save</button>}</form></Form>;
@@ -63,7 +64,7 @@ describe('task type interactions', () => {
     await userEvent.setup().click(screen.getByRole('combobox', { name: 'Frequency' }));
     await userEvent.setup().click(screen.getByRole('option', { name: 'One-time' }));
     expect(values()).toMatchObject({ frequency: 'once', frequency_count: 1, deadline_time: null, mandatory: false });
-    expect(screen.getByText(/stays completed until undone/)).toBeTruthy();
+    expect(screen.queryByText(/stays completed until undone/)).toBeNull();
     expect(screen.queryByText('Times per period')).toBeNull();
     await userEvent.setup().click(screen.getByLabelText('Set a deadline'));
     fireEvent.change(screen.getByLabelText('Due date'), { target: { value: '2026-11-07' } });
@@ -71,20 +72,20 @@ describe('task type interactions', () => {
     await userEvent.setup().click(screen.getByLabelText('Mandatory task'));
     expect(values()).toMatchObject({ deadline_date: '2026-11-07', deadline_time: '08:30', deadline_weekday: null, mandatory: true });
   });
-  it('retains a loaded weekly deadline and explicit Dom timezone instruction, without resetting values on render', () => {
+  it('retains a loaded weekly deadline without resetting values or adding timezone instructions', () => {
     render(<Editor initial={{ frequency: 'weekly', deadline_time: '08:00', deadline_weekday: 2, mandatory: true, is_dom_task: true }} />);
     expect((screen.getByLabelText('Due weekday') as HTMLSelectElement).value).toBe('2');
     expect((screen.getByLabelText('Due time') as HTMLInputElement).value).toBe('08:00');
-    expect(screen.getByText(/Uses the Dom’s saved timezone/)).toBeTruthy();
+    expect(screen.queryByText(/Uses the Dom’s saved timezone/)).toBeNull();
     expect(values().mandatory).toBe(true);
   });
-  it('keeps new schedule controls legible in the light palette', () => {
+  it('uses the original field text classes for schedule controls in the light palette', () => {
     theme.currentScheme = 'light-turquoise';
     render(<Editor initial={{ frequency: 'weekly', deadline_time: '08:00', deadline_weekday: 2 }} />);
-    expect(screen.getByRole('group', { name: 'Task schedule' }).className).toContain('text-foreground');
-    expect(screen.getByRole('combobox', { name: 'Frequency' }).className).toContain('text-foreground');
-    expect(screen.getByLabelText('Due weekday').className).toContain('text-foreground');
-    expect(screen.getByLabelText('Due time').className).toContain('text-foreground');
+    expect(screen.getByRole('group', { name: 'Task schedule' }).className).not.toContain('text-white');
+    expect(screen.getByRole('combobox', { name: 'Frequency' }).className).toContain('text-white');
+    expect(screen.getByLabelText('Due weekday').className).toContain('text-white');
+    expect(screen.getByLabelText('Due time').className).toContain('text-white');
   });
   it('restores one-time deadline and mandatory edits through the real scoped draft provider', async () => {
     const taskData = { id: 'draft-task', frequency: 'once', frequency_count: 1, mandatory: true, deadline_date: '2026-11-07', deadline_time: '09:00:00' };
@@ -109,16 +110,16 @@ describe('task type interactions', () => {
     const complete = vi.fn();
     render(<TaskCard atomic title="Task" description="" points={5} frequency="once" progress={progress} onToggleCompletion={complete} />);
     expect(screen.getByText('Mandatory')).toBeTruthy();
-    expect(screen.getByText(/Overdue · you can still complete/)).toBeTruthy();
-    expect(screen.getByText(/Due Nov 1, 2026, 9:00 AM · Pacific\/Honolulu/)).toBeTruthy();
+    expect(screen.getByText('Overdue')).toBeTruthy();
+    expect(screen.getByText('Due Nov 1, 2026, 9:00 AM').getAttribute('title')).toBe('Pacific/Honolulu');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Complete' }));
     expect(complete).toHaveBeenCalledTimes(1);
   });
   it('one-time completion stays visibly finished when the week marks are empty', () => {
     render(<TaskCard atomic title="Task" description="" points={5} frequency="once" progress={{ ...progress, currentCount: 1, completed: true, overdue: false, lastCompletionLate: true }} onToggleCompletion={vi.fn()} />);
     expect((screen.getByRole('button', { name: 'Completed' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/One-time · Completed/)).toBeTruthy();
-    expect(screen.getByText(/Last completion was late/)).toBeTruthy();
+    expect(screen.queryByText(/One-time · Completed/)).toBeNull();
+    expect(screen.queryByText(/Last completion was late/)).toBeNull();
   });
   it('history shows recorded due/late/mandatory facts after definition edits, without assigning them to older events', () => {
     const event = { id: 'event', task_id: 'task', kind: 'task_completed', provenance: 'command', recorded_at: '2026-11-02T12:00:00Z', subject: { title: 'Original task', role: 'sub' }, actor_participant_id: 'sub', calendar: { localDate: '2026-11-02', timeZone: 'Pacific/Honolulu' },

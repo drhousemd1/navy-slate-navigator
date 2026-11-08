@@ -38,10 +38,10 @@ describe('confirmed task feedback', () => {
     expect(mocks.ack).toHaveBeenLastCalledWith(mocks.actions.scope, 'event', 'action_confirmed'); expect(screen.queryByRole('status')).toBeNull();
   });
 
-  it.each(COLOR_SCHEMES.map(s => s.name))('keeps task completion and Undo confirmations readable in %s without acknowledgement on repaint', theme => {
+  it.each(COLOR_SCHEMES.map(s => s.name))('keeps confirmation contents and original text classes in %s without acknowledgement on repaint', theme => {
     mocks.theme = theme;
     const view = render(<TaskFeedback />);
-    const expected = theme === 'light-turquoise' ? 'text-foreground' : 'text-white';
+    const expected = 'text-foreground';
     expect(screen.getByRole('status').classList.contains(expected)).toBe(true);
     expect(screen.getByText('Task completion confirmed')).toBeTruthy();
     mocks.data.events[0].kind = 'action_undone'; mocks.data.points[0].amount = -5;
@@ -50,7 +50,7 @@ describe('confirmed task feedback', () => {
     expect(screen.getByRole('status').classList.contains(expected)).toBe(true); expect(mocks.ack).not.toHaveBeenCalled();
   });
 
-  it.each(COLOR_SCHEMES.map(s => s.name))('keeps purchase, gift, use and reward Undo confirmations readable in %s', theme => {
+  it.each(COLOR_SCHEMES.map(s => s.name))('keeps original confirmation classes and purchase, gift, use and Undo contents in %s', theme => {
     mocks.theme = theme; mocks.settings.preferences.types.rewardPurchased = true;
     mocks.actions.data.events = [{ id: 'original-reward-event' }];
     const view = render(<RewardFeedback />);
@@ -58,7 +58,7 @@ describe('confirmed task feedback', () => {
       mocks.actions.confirmed = [{ command: { kind, commandId: 'command', eventId: 'original-reward-event' }, state: { status: 'confirmed', receipt: { feedback: [{ subjectTitle: 'Saved reward title' }] } } }];
       view.rerender(<RewardFeedback />);
       expect(screen.getByText(label)).toBeTruthy();
-      expect(screen.getByRole('status').classList.contains(theme === 'light-turquoise' ? 'text-foreground' : 'text-white')).toBe(true);
+      expect(screen.getByRole('status').classList.contains('text-foreground')).toBe(true);
       expect(screen.getByText('Saved reward title')).toBeTruthy();
     }
     expect(mocks.ack).not.toHaveBeenCalled();

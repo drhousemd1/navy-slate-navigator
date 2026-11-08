@@ -1,6 +1,5 @@
 
 import React from 'react';
-import PunishmentCard from '../PunishmentCard';
 import { PunishmentData } from '@/contexts/punishments/types';
 import { StandardLoading, StandardError, StandardEmpty } from '@/components/common/StandardizedStates';
 
@@ -9,6 +8,7 @@ interface PunishmentListProps {
   isLoading: boolean;
   onEditPunishment: (punishment: PunishmentData) => void;
   error?: Error | null;
+  renderCard: (punishment: PunishmentData) => React.ReactNode;
 }
 
 const PunishmentList: React.FC<PunishmentListProps> = ({ 
@@ -16,6 +16,7 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   isLoading, 
   onEditPunishment,
   error,
+  renderCard,
 }) => {
 
   if (isLoading && punishments.length === 0) {
@@ -33,11 +34,7 @@ const PunishmentList: React.FC<PunishmentListProps> = ({
   return (
     <div className="space-y-4 mt-4">
       {punishments.map((punishment) => (
-        <PunishmentCard
-          key={punishment.id}
-          {...punishment}
-          onEdit={() => onEditPunishment(punishment)}
-        />
+        <React.Fragment key={punishment.id}>{renderCard(punishment)}</React.Fragment>
       ))}
     </div>
   );

@@ -23,10 +23,10 @@ export function OfflineRecovery({ backendId, accountId, checking, onRetry, onSig
     return () => { active = false; clearInterval(interval); void store.close().catch(() => {}); };
   }, [accountId, backendId]);
   const visible = saved?.account === accountId && saved.backend === backendId ? saved : null;
-  return <main className="h-full overflow-y-auto bg-dark-navy p-6 text-white">
-    <section className="mx-auto max-w-lg space-y-5 rounded-lg border border-light-navy bg-navy p-6" aria-labelledby="recovery-heading">
-      <h1 id="recovery-heading" className="text-xl font-semibold">Connection unavailable</h1>
-      <p role="status">Read-only recovery. Your current account and relationship could not be verified. No actions can be sent from this view.</p>
+  return <main className="h-full overflow-y-auto bg-background p-4 text-foreground">
+    <section className="mx-auto w-full max-w-md p-6 space-y-6 bg-card rounded-lg shadow-lg border border-border" aria-labelledby="recovery-heading">
+      <h1 id="recovery-heading" className="text-2xl font-bold text-center text-foreground">Connection unavailable</h1>
+      <p role="status">Your account connection could not be verified. Saved information is read-only until you reconnect.</p>
       {snapshot ? <div className="space-y-2 border-t border-light-navy pt-4">
         <h2 className="font-semibold">Your last confirmed totals</h2>
         <p className="text-sm text-gray-300">Saved {new Date(snapshot.savedAt).toLocaleString()}. These totals may have changed. Pending actions are not included.</p>
@@ -38,7 +38,7 @@ export function OfflineRecovery({ backendId, accountId, checking, onRetry, onSig
         {!visible ? <p>Reading saved actions…</p> : visible.error ? <p role="alert">Saved actions could not be read. Their records have not been deleted. Do not clear site data.</p> : visible.rows.length ? <ul className="space-y-3">
           {visible.rows.map(row => <li key={row.id}><strong>{actionLabels[row.kind] ?? 'Action'}</strong> — {savedActionStatus(row.status, true)}</li>)}
         </ul> : <p>No unconfirmed actions were found for this account on this device.</p>}
-        <p className="text-sm text-gray-300">Earlier actions are retained. After your connection is checked, actions saved for the current connection can resume. Older actions stay saved and can only be checked for an existing confirmation.</p>
+        <p className="text-sm text-gray-300">Saved actions can resume after your connection is verified. Earlier connections’ actions remain available to check.</p>
       </div>
       <div className="flex flex-wrap gap-3">
         <Button disabled={checking} onClick={onRetry}>{checking ? 'Checking connection…' : 'Retry connection'}</Button>

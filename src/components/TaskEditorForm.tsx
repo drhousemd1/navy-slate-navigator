@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React, { useState } from 'react';
 import { Task } from '@/lib/taskUtils';
@@ -36,7 +35,6 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
   onDelete,
   onCancel
 }) => {
-  const text = useCoreTextClasses();
   const [loading, setLoading] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -137,7 +135,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
 
         return (
           <form onSubmit={form.handleSubmit(handleSaveWithClear)} className="space-y-6">
-            {operationError && <p role="alert" className={text.warning}>{operationError}</p>}
+            {operationError && <p role="alert" className="text-amber-300">{operationError}</p>}
             <TaskBasicDetails control={form.control} isSaving={loading} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -162,7 +160,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             <TaskScheduleFields form={form} atomic={atomicAccounting} disabled={loading} />
             
             <div className="space-y-4">
-              <FormLabel className={`${text.primary} text-lg`}>Background Image</FormLabel>
+              <FormLabel className="text-white text-lg">Background Image</FormLabel>
               <TaskImageSection
                 control={form.control}
                 imagePreview={imagePreview} 
@@ -180,7 +178,7 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
             </div>
             
             <div className="space-y-4">
-              <FormLabel className={`${text.primary} text-lg`}>Task Icon</FormLabel>
+              <FormLabel className="text-white text-lg">Task Icon</FormLabel>
               <div className="grid grid-cols-2 gap-4">
                 <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
                   <IconSelector
@@ -236,8 +234,8 @@ const TaskEditorForm: React.FC<TaskEditorFormProps> = ({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between">
                   <div className="space-y-0.5">
-                    <FormLabel className={text.primary}>Highlight Effect</FormLabel>
-                    <p className={`text-sm ${text.primary}`}>Apply a yellow highlight behind title and description</p>
+                    <FormLabel className="text-white">Highlight Effect</FormLabel>
+                    <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
                   </div>
                   <FormControl>
                     <Switch

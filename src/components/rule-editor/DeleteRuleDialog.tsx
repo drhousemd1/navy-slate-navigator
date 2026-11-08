@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import {
@@ -18,18 +17,18 @@ interface DeleteRuleDialogProps {
   isOpen: boolean;
   preserveHistory?: boolean;
   isDeleting?: boolean;
+  error?: string | null;
   onOpenChange: (isOpen: boolean) => void;
   onDelete: () => void;
   ruleName?: string;
 }
 
 const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
-  isOpen, preserveHistory = false, isDeleting = false,
+  isOpen, preserveHistory = false, isDeleting = false, error,
   onOpenChange,
   onDelete,
   ruleName,
 }) => {
-  const text = useCoreTextClasses();
   return (
     <>
       <Button 
@@ -52,15 +51,16 @@ const DeleteRuleDialog: React.FC<DeleteRuleDialogProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <AlertDialogHeader>
-            <AlertDialogTitle className={text.primary}>Delete Rule</AlertDialogTitle>
-            <AlertDialogDescription className={text.muted}>
+            <AlertDialogTitle className="text-white">Delete Rule</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete {ruleName ? `the rule "${ruleName}"` : 'this rule'}? {preserveHistory ? 'Past activity and Undo records will remain in History.' : 'This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
           <AlertDialogFooter>
             <AlertDialogCancel 
               disabled={isDeleting}
-              className={`bg-dark-navy ${text.primary} border-light-navy hover:bg-light-navy`}
+              className="bg-dark-navy text-white border-light-navy hover:bg-light-navy"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

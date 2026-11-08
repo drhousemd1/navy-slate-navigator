@@ -11,7 +11,7 @@ const PointsBubbles: React.FC = () => {
   const badgeStyle = { backgroundColor: "#000000", borderColor: "#00f0ff", borderWidth: "1px" };
 
   return (
-    <div className="flex max-w-full flex-wrap items-center gap-2">
+    <div className="flex items-center gap-2">
       <Badge 
         className="text-white font-bold px-3 py-1 flex items-center gap-1"
         style={badgeStyle}

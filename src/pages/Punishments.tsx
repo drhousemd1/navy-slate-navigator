@@ -1,3 +1,4 @@
+import { StandardLoading } from '@/components/common/StandardizedStates';
 
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
@@ -5,6 +6,7 @@ import PunishmentsHeader from '../components/punishments/PunishmentsHeader';
 import PunishmentEditor from '../components/PunishmentEditor';
 import { PunishmentData } from '@/contexts/punishments/types';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import PunishmentCard from '@/components/PunishmentCard';
 import PunishmentList from '@/components/punishments/PunishmentList';
 import { usePunishmentsQuery, PunishmentsQueryResult } from '@/data/punishments/queries';
 import { useCreatePunishment, useUpdatePunishment, useDeletePunishment, CreatePunishmentVariables, UpdatePunishmentVariables } from '@/data/punishments/mutations';
@@ -12,7 +14,6 @@ import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { AtomicPunishmentsContent } from '@/components/punishments/AtomicPunishmentsContent';
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 const PunishmentsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewPunishment?: () => void }>
@@ -105,6 +106,7 @@ const PunishmentsContent: React.FC<{
       <PunishmentsHeader />
       
       <PunishmentList 
+        renderCard={punishment => <PunishmentCard {...punishment} onEdit={() => handleEditPunishment(punishment)} />}
         punishments={punishments}
         isLoading={isLoadingPunishments}
         onEditPunishment={handleEditPunishment}
@@ -126,7 +128,6 @@ const PunishmentsContent: React.FC<{
 };
 
 const Punishments: React.FC = () => {
-  const text = useCoreTextClasses();
   const actions = useActionCommands();
   const contentRef = useRef<{ handleAddNewPunishment?: () => void }>({});
   
@@ -141,9 +142,11 @@ const Punishments: React.FC = () => {
       <ErrorBoundary fallbackMessage="Could not load punishments. Please try reloading.">
         {actions.mode === 'legacy' ? <PunishmentsContent contentRef={contentRef} /> : actions.mode === 'atomic' ?
           <AtomicPunishmentsContent key={`${actions.scope?.accountId}:${actions.scope?.relationshipId}`} contentRef={contentRef} /> :
-          <div className={`p-6 ${text.primary}`} role={actions.mode === 'error' ? 'alert' : 'status'}>
-            <p>{actions.error || 'Checking your current punishment account…'}</p>
-            {actions.mode === 'error' && <button className="underline" onClick={() => void actions.refresh()}>Retry</button>}
+          <div className="p-4 pt-6 max-w-4xl mx-auto">
+            <PunishmentsHeader />
+            {actions.mode === 'error' ? <div role="alert" className="text-white text-center py-10">
+              <p>{actions.error}</p><button className="underline" onClick={() => void actions.refresh()}>Retry</button>
+            </div> : <StandardLoading />}
           </div>}
       </ErrorBoundary>
     </AppLayout>

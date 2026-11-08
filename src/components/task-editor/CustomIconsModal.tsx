@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,9 +12,14 @@ interface CustomIconsModalProps {
   onClose: () => void;
   onSelectIcon: (iconUrl: string) => void;
   iconColor: string;
+  library?: {
+    icons: CustomIcon[];
+    isLoading?: boolean;
+    upload: (file: File) => Promise<void>;
+  };
 }
 
-interface CustomIcon {
+export interface CustomIcon {
   id: string;
   url: string;
   created_at: string;
@@ -26,20 +30,25 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
   isOpen,
   onClose,
   onSelectIcon,
-  iconColor
+  iconColor,
+  library
 }) => {
-  const text = useCoreTextClasses();
   const [customIcons, setCustomIcons] = useState<CustomIcon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
 
+  const externalLibrary = library !== undefined;
+  const displayedIcons = library?.icons ?? customIcons;
+  const displayedLoading = externalLibrary ? !!library?.isLoading : isLoading;
+
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !externalLibrary) {
       fetchCustomIcons();
     }
-  }, [isOpen]);
+  }, [isOpen, externalLibrary]);
 
   const fetchCustomIcons = async () => {
+    if (externalLibrary) return;
     try {
       setIsLoading(true);
       
@@ -91,6 +100,10 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
     setIsUploading(true);
     
     try {
+      if (library) {
+        await library.upload(file);
+        return;
+      }
       const { error: uploadError } = await supabase
         .storage
         .from('custom-icons')
@@ -126,16 +139,16 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`bg-navy border-light-navy ${text.primary} max-w-md max-h-[80vh]`}>
+      <DialogContent aria-describedby={undefined} className="bg-navy border-light-navy text-white max-w-md max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className={`text-xl font-bold ${text.primary}`}>
+          <DialogTitle className="text-xl font-bold text-white">
             Custom Icons
           </DialogTitle>
         </DialogHeader>
         
         <div className="mb-4">
           <Button 
-            className={`w-full bg-light-navy hover:bg-navy ${text.primary} flex items-center justify-center gap-2`}
+            className="w-full bg-light-navy hover:bg-navy text-white flex items-center justify-center gap-2"
             onClick={() => document.getElementById('icon-upload-input')?.click()}
             disabled={isUploading}
           >
@@ -153,18 +166,20 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
         </div>
         
         <ScrollArea className="h-[60vh] pr-4">
-          {isLoading ? (
+          {displayedLoading ? (
             <div className="flex justify-center items-center h-40">
-              <p className={text.subtle}>Loading custom icons...</p>
+              <p className="text-light-navy">Loading custom icons...</p>
             </div>
-          ) : customIcons.length === 0 ? (
+          ) : displayedIcons.length === 0 ? (
             <div className="flex justify-center items-center h-40">
-              <p className={text.subtle}>No custom icons uploaded yet.</p>
+              <p className="text-light-navy">No custom icons uploaded yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 mt-4">
-              {customIcons.map((icon) => (
-                <div
+              {displayedIcons.map((icon) => (
+                <button
+                  type="button"
+                  aria-label={icon.name}
                   key={icon.id}
                   className="aspect-square rounded-md bg-light-navy flex items-center justify-center cursor-pointer hover:bg-navy transition-colors p-2"
                   onClick={() => handleSelectIcon(icon.url)}
@@ -176,7 +191,7 @@ const CustomIconsModal: React.FC<CustomIconsModalProps> = ({
                     className="h-6 w-6 object-contain"
                     style={{ filter: iconColor !== '#FFFFFF' ? `drop-shadow(0 0 1px ${iconColor})` : 'none' }}
                   />
-                </div>
+                </button>
               ))}
             </div>
           )}

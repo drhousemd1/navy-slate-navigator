@@ -1,4 +1,3 @@
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { useNavigate } from 'react-router-dom';
@@ -21,7 +20,6 @@ import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errors';
 
 const Profile: React.FC = () => {
-  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const navigate = useNavigate();
   const { 
     user, 
@@ -147,7 +145,7 @@ const Profile: React.FC = () => {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-full">
-          <p className={isLightScheme ? 'text-foreground' : 'text-white'}>Loading user profile...</p>
+          <p className="text-white">Loading user profile...</p>
         </div>
       </AppLayout>
     );
@@ -155,11 +153,11 @@ const Profile: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className={`container mx-auto px-4 py-8 ${isLightScheme ? 'text-foreground' : 'text-white'}`}>
+      <div className="container mx-auto px-4 py-8 text-white">
         <h1 className="text-3xl font-bold mb-8 text-center">Profile Settings</h1>
 
         {error && (
-          <div className={`bg-red-900/30 border border-red-700 ${isLightScheme ? 'text-red-900' : 'text-red-300'} px-4 py-3 rounded mb-6`} role="alert">
+          <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded mb-6" role="alert">
             <p>{error}</p>
           </div>
         )}
@@ -173,7 +171,7 @@ const Profile: React.FC = () => {
                 {profileImage ? (
                   <AvatarImage src={profileImage} alt={nickname || user.email || 'User'} />
                 ) : null }
-                <AvatarFallback className={`bg-light-navy ${isLightScheme ? 'text-foreground' : 'text-cyan-300'}`}>
+                <AvatarFallback className="bg-light-navy text-cyan-300">
                   {nickname ? nickname.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U')}
                 </AvatarFallback>
               </Avatar>
@@ -189,12 +187,12 @@ const Profile: React.FC = () => {
               />
             </div>
             {newProfileImageFile && (
-              <Button onClick={handleProfileImageUpload} className={`mt-4 bg-cyan-600 hover:bg-cyan-700 ${isLightScheme ? 'text-white' : ''}`} disabled={loadingProfileImage}>
+              <Button onClick={handleProfileImageUpload} className="mt-4 bg-cyan-600 hover:bg-cyan-700" disabled={loadingProfileImage}>
                 {loadingProfileImage ? 'Uploading...' : 'Save New Image'}
               </Button>
             )}
             {profileImage && !newProfileImageFile && (
-              <Button variant="ghost" onClick={() => setIsDeleteAvatarDialogOpen(true)} className={`mt-2 ${isLightScheme ? 'text-red-700' : 'text-red-400'} ${isLightScheme ? 'hover:text-red-800' : 'hover:text-red-300'}`}>
+              <Button variant="ghost" onClick={() => setIsDeleteAvatarDialogOpen(true)} className="mt-2 text-red-400 hover:text-red-300">
                 <Trash2 className="w-4 h-4 mr-2" /> Remove Image
               </Button>
             )}
@@ -203,7 +201,7 @@ const Profile: React.FC = () => {
           {/* Nickname Section */}
           <form onSubmit={handleNicknameChange} className="space-y-6 mb-8">
             <div>
-              <Label htmlFor="nickname" className={`block text-sm font-medium ${isLightScheme ? 'text-foreground' : 'text-gray-300'} mb-1`}>
+              <Label htmlFor="nickname" className="block text-sm font-medium text-gray-300 mb-1">
                 Nickname
               </Label>
               <Input
@@ -222,8 +220,8 @@ const Profile: React.FC = () => {
 
           {/* Email Section (Read-only) */}
           <div className="mb-8">
-            <Label className={`block text-sm font-medium ${isLightScheme ? 'text-foreground' : 'text-gray-300'} mb-1`}>Email</Label>
-            <p className={`${isLightScheme ? 'text-foreground' : 'text-gray-400'} bg-navy p-3 rounded border border-light-navy`}>{user.email}</p>
+            <Label className="block text-sm font-medium text-gray-300 mb-1">Email</Label>
+            <p className="text-gray-400 bg-navy p-3 rounded border border-light-navy">{user.email}</p>
           </div>
 
           <TimezoneSection />

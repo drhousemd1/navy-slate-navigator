@@ -52,25 +52,25 @@ afterEach(() => {
 });
 
 describe.each(kinds)('actual %s editor theme', kind => {
-  it.each([false, true])('keeps all five palettes readable in the real mobile=%s form and submits the same saved appearance', async mobile => {
+  it.each([false, true])('keeps original form colors across all five palettes in mobile=%s and submits the saved appearance', async mobile => {
     mocks.mobile = mobile;
     const view = render(editor(kind));
     await screen.findByRole('textbox', { name: titleLabel(kind) });
     for (const theme of palettes) {
       mocks.theme = theme; view.rerender(editor(kind));
-      const expected = theme === 'light-turquoise' ? 'text-foreground' : 'text-white';
+      const expected = 'text-white';
       const dialog = screen.getByRole('dialog');
       expect(within(dialog).getByRole('heading', { name: new RegExp(`Edit ${kind}`, 'i') }).classList.contains(expected)).toBe(true);
-      expect(within(dialog).getByText(/Modify the existing/).classList.contains(theme === 'light-turquoise' ? 'text-foreground' : 'text-light-navy')).toBe(true);
+      expect(within(dialog).getByText(/Modify the existing/).classList.contains('text-light-navy')).toBe(true);
       for (const label of [titleLabel(kind), 'Description', 'Title Color hex value', 'Subtext Color hex value', 'Icon Color hex value']) {
         expect(within(dialog).getByRole('textbox', { name: label }).classList.contains(expected)).toBe(true);
-        expect(within(dialog).getByRole('textbox', { name: label }).classList.contains('placeholder:text-foreground')).toBe(theme === 'light-turquoise');
+        expect(within(dialog).getByRole('textbox', { name: label }).classList.contains('placeholder:text-foreground')).toBe(false);
       }
       for (const label of ['Browse Presets', 'Browse Custom', 'Remove Image', 'Upload Icon', 'Remove Icon']) {
         expect(within(dialog).getByRole('button', { name: label }).classList.contains(expected)).toBe(true);
       }
       expect(within(dialog).getByText('Highlight Effect').classList.contains(expected)).toBe(true);
-      expect(within(dialog).getByText(/Closing keeps your draft/).parentElement?.classList.contains(theme === 'light-turquoise' ? 'text-foreground' : 'text-gray-300')).toBe(true);
+      expect(within(dialog).queryByText(/Closing keeps your draft/)).toBeNull();
       expect((within(dialog).getByRole('textbox', { name: 'Title Color hex value' }) as HTMLInputElement).value).toBe('#FFFFFF');
       expect((within(dialog).getByRole('textbox', { name: 'Subtext Color hex value' }) as HTMLInputElement).value).toBe('#8E9196');
       expect(within(dialog).getByRole('switch', { name: 'Highlight Effect' }).getAttribute('aria-checked')).toBe('true');
@@ -90,21 +90,22 @@ describe.each(kinds)('actual %s editor theme', kind => {
       highlight_effect: true, background_image_url: image, background_opacity: 0, focal_point_x: 0, focal_point_y: 100 });
   });
 
-  it('keeps nested preset and delete dialog text readable while preserving icon color and confirmation behavior', async () => {
+  it('keeps original nested preset and delete dialog colors, saved icon color and cancellation behavior', async () => {
     render(editor(kind)); const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Browse Presets' }));
     const preset = screen.getByRole('dialog', { name: 'Preset Icons' });
-    expect(within(preset).getByRole('heading').classList.contains('text-foreground')).toBe(true);
+    expect(within(preset).getByRole('heading').classList.contains('text-white')).toBe(true);
     const choice = within(preset).getByRole('button', { name: 'Select Heart icon' });
     expect((choice.querySelector('svg') as SVGElement).style.color).toBe('rgb(18, 52, 86)');
     await user.click(choice);
     const removeName = kind === 'task' ? 'Delete Task' : kind === 'rule' ? 'Delete Rule' : 'Delete';
     await user.click(screen.getByRole('button', { name: removeName }));
     const confirm = screen.getByRole('alertdialog');
-    expect(within(confirm).getByRole('heading').classList.contains('text-foreground')).toBe(true);
+    expect(within(confirm).getByRole('heading').classList.contains('text-white')).toBe(true);
     const description = document.getElementById(confirm.getAttribute('aria-describedby')!);
-    expect(description?.classList.contains('text-foreground')).toBe(true);
-    expect(within(confirm).getByRole('button', { name: 'Cancel' }).classList.contains('text-foreground')).toBe(true);
+    expect(description?.classList.contains('text-white')).toBe(true);
+    expect(description?.textContent).toContain(kind === 'reward' ? 'refund' : kind === 'task' ? 'completion history' : 'History');
+    expect(within(confirm).getByRole('button', { name: 'Cancel' }).classList.contains('text-white')).toBe(true);
     expect(within(confirm).getByRole('button', { name: 'Delete' }).classList.contains('text-white')).toBe(true);
     await user.click(within(confirm).getByRole('button', { name: 'Cancel' }));
     expect(mocks.remove).not.toHaveBeenCalled(); expect(mocks.save).not.toHaveBeenCalled();
@@ -112,35 +113,30 @@ describe.each(kinds)('actual %s editor theme', kind => {
   });
 });
 
-it('keeps custom icon loading/empty text readable on the light panel without starting an upload', async () => {
+it('keeps original custom icon dialog colors and empty-state copy without starting an upload', async () => {
   render(editor('task'));
   await userEvent.setup().click(await screen.findByRole('button', { name: 'Browse Custom' }));
   const dialog = screen.getByRole('dialog', { name: 'Custom Icons' });
-  expect(within(dialog).getByRole('heading').classList.contains('text-foreground')).toBe(true);
-  expect((await within(dialog).findByText('No custom icons uploaded yet.')).classList.contains('text-foreground')).toBe(true);
-  expect(within(dialog).getByRole('button', { name: 'Upload New Icon' }).classList.contains('text-foreground')).toBe(true);
+  expect(within(dialog).getByRole('heading').classList.contains('text-white')).toBe(true);
+  expect((await within(dialog).findByText('No custom icons uploaded yet.')).classList.contains('text-light-navy')).toBe(true);
+  expect(within(dialog).getByRole('button', { name: 'Upload New Icon' }).classList.contains('text-white')).toBe(true);
   expect(mocks.list).toHaveBeenCalledOnce(); expect(mocks.save).not.toHaveBeenCalled();
 });
 
-it.each(['task', 'reward', 'punishment'] as const)('keeps a %s save failure readable and preserves the open form', async kind => {
+it.each(['task', 'reward', 'punishment'] as const)('keeps a %s save failure visible in its existing error color and preserves the open form', async kind => {
   mocks.save.mockRejectedValue(new Error('Changes were not confirmed'));
   render(editor(kind));
   fireEvent.submit((await screen.findByRole('textbox', { name: titleLabel(kind) })).closest('form')!);
   const alert = await screen.findByRole('alert');
-  expect(alert.textContent).toBe('Changes were not confirmed'); expect(alert.classList.contains('text-foreground')).toBe(true);
+  expect(alert.textContent).toBe('Changes were not confirmed'); expect(alert.classList.contains(kind === 'punishment' ? 'text-red-300' : 'text-amber-300')).toBe(true);
   expect(mocks.close).not.toHaveBeenCalled(); expect(screen.getByRole('textbox', { name: titleLabel(kind) })).toBeTruthy();
 });
 
-it('uses a foreground color with sufficient contrast on the three light editor panel surfaces', () => {
-  function luminance(hsl: string) {
-    const [h, s, l] = hsl.split(' ').map(Number.parseFloat), a = s / 100 * Math.min(l / 100, 1 - l / 100);
-    return [0, 8, 4].map(n => { const k = (n + h / 30) % 12, c = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-    }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
-  }
-  const palette = getColorScheme('light-turquoise')!.variables, text = luminance(palette['--foreground']);
-  for (const surface of ['--navy', '--dark-navy', '--light-navy'] as const) {
-    const background = luminance(palette[surface]);
-    expect((Math.max(text, background) + 0.05) / (Math.min(text, background) + 0.05)).toBeGreaterThanOrEqual(4.5);
-  }
+it('preserves the original light palette tokens instead of substituting a new editor palette', () => {
+  expect(getColorScheme('light-turquoise')!.variables).toMatchObject({
+    '--primary-foreground': '0 0% 100%',
+    '--navy': '210 40% 94%',
+    '--dark-navy': '210 40% 96%',
+    '--light-navy': '220 13% 91%',
+  });
 });

@@ -1,4 +1,5 @@
 vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
+vi.mock('@/contexts/auth', () => ({ useAuth: () => ({ getNickname: () => 'Synthetic nickname' }) }));
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -22,14 +23,18 @@ describe('real messages page with scoped hooks', () => {
     mocks.api.list.mockResolvedValue({ currentConversationId: null, conversations: [archived] });
     mocks.api.page.mockResolvedValue({ ...page([message(10, { content: 'Retained synthetic text' })]), conversation: archived });
     render(<Messages />);
-    await screen.findByRole('combobox', { name: 'Conversation' }); expect(mocks.api.page).not.toHaveBeenCalled();
-    expect(screen.getByText('Choose a retained conversation to read it.')).toBeTruthy(); fireEvent.change(screen.getByRole('combobox', { name: 'Conversation' }), { target: { value: archived.id } });
+    await screen.findByRole('button', { name: 'View retained conversation' }); expect(mocks.api.page).not.toHaveBeenCalled();
+    expect(screen.queryByRole('combobox', { name: 'Conversation' })).toBeNull();
+    expect(screen.getByText('Choose a retained conversation to read it.')).toBeTruthy(); fireEvent.click(screen.getByRole('button', { name: 'View retained conversation' }));
     await screen.findByText('Retained synthetic text'); expect(screen.getByText('This retained conversation is read-only.')).toBeTruthy();
     expect(screen.getByText('Names and avatars are hidden. Message text and images may still identify people.')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Send message' }) as HTMLButtonElement).disabled).toBe(true); expect(mocks.api.send).not.toHaveBeenCalled();
   });
   it('loads an authenticated current conversation automatically and exposes a failed refresh without losing rows', async () => {
+    mocks.api.page.mockResolvedValue(page([message(10, { author: 'you' })]));
     render(<Messages />); await screen.findByText('Synthetic 10');
+    expect(screen.getByText('Synthetic nickname')).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: 'Conversation' })).toBeNull();
     mocks.api.list.mockRejectedValue(new Error('Cannot refresh synthetic messages'));
     await act(async () => { window.dispatchEvent(new Event('focus')); await flush(); });
     await screen.findByText('Cannot refresh synthetic messages'); expect(screen.getByText('Synthetic 10')).toBeTruthy();

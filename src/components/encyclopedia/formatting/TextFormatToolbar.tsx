@@ -17,6 +17,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/comp
 import { Separator } from "@/components/ui/separator";
 
 interface TextFormatToolbarProps {
+  disabled?: boolean;
   onToggleBold: () => void;
   onToggleUnderline: () => void;
   onToggleItalic?: () => void;
@@ -36,6 +37,7 @@ interface TextFormatToolbarProps {
 }
 
 const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
+  disabled = false,
   onToggleBold,
   onToggleUnderline,
   onToggleItalic,
@@ -51,7 +53,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
   return (
     <div className="bg-white border border-light-navy rounded-md p-2 mb-2 flex flex-wrap items-center gap-2">
       <TooltipProvider>
-        <ToggleGroup type="multiple" className="justify-start">
+        <ToggleGroup disabled={disabled} type="multiple" className="justify-start">
           <Tooltip>
             <TooltipTrigger asChild>
               <ToggleGroupItem 
@@ -169,7 +171,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
       
       {onListFormat && (
         <TooltipProvider>
-          <ToggleGroup type="multiple" className="justify-start">
+          <ToggleGroup disabled={disabled} type="multiple" className="justify-start">
             <Tooltip>
               <TooltipTrigger asChild>
                 <ToggleGroupItem 
@@ -209,7 +211,7 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
         <>
           <Separator orientation="vertical" className="h-6" />
           <TooltipProvider>
-            <ToggleGroup type="single" className="justify-start"> {/* Added ToggleGroup wrapper */}
+            <ToggleGroup disabled={disabled} type="single" className="justify-start"> {/* Added ToggleGroup wrapper */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <ToggleGroupItem 
@@ -232,11 +234,11 @@ const TextFormatToolbar: React.FC<TextFormatToolbarProps> = ({
       
       <Separator orientation="vertical" className="h-6" />
       
-      <Select
+      <Select disabled={disabled}
         value={currentFormatting.fontSize || '1rem'} 
         onValueChange={onFontSizeChange}
       >
-        <SelectTrigger className="w-32 bg-white border-gray-300 text-black hover:bg-gray-50">
+        <SelectTrigger aria-label="Font size" className="w-32 bg-white border-gray-300 text-black hover:bg-gray-50">
           <SelectValue placeholder="Font size" />
         </SelectTrigger>
         <SelectContent className="bg-white border-gray-300 text-black">

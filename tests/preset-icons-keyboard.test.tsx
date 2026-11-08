@@ -7,6 +7,7 @@ import PredefinedIconsGrid from '@/components/task-editor/PredefinedIconsGrid';
 // This test exercises the real preset owner/dialog. The separate, unopened
 // custom-gallery branch imports a backend client and is outside this path.
 vi.mock('@/components/task-editor/CustomIconsModal', () => ({ default: () => null }));
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 
 beforeEach(() => {
   localStorage.clear();

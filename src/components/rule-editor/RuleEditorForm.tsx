@@ -1,4 +1,4 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
+import { StandardLoading } from '@/components/common/StandardizedStates';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -51,7 +51,7 @@ interface RuleEditorFormProps {
 
 const RuleEditorForm: React.FC<RuleEditorFormProps> = (props) => {
   const scope = useEditorDraftScope();
-  if (!scope) return <p role="status">Checking your draft account…</p>;
+  if (!scope) return <StandardLoading />;
   return <RuleEditorSession key={editorDraftKey(scope, `rule-editor-${props.ruleData?.id || 'new'}`)} {...props} scope={scope} />;
 };
 
@@ -61,10 +61,11 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
   onDelete,
   onCancel,
 }) => {
-  const text = useCoreTextClasses();
   const [loading, setLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const form = useForm<RuleFormValues>({
     shouldFocusError: false,
@@ -143,6 +144,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
 
   const onSubmitWrapped = async (values: RuleFormValues) => {
     setLoading(true);
+    setSaveError(null);
     try {
       const currentValues = getValues();
       const ruleToSave: Partial<Rule> = {
@@ -160,6 +162,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
       onCancel();
     } catch (error) {
       logger.error('[RuleEditorForm] Error saving rule:', error);
+      setSaveError(getErrorMessage(error));
       toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setLoading(false);
@@ -170,6 +173,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
     if (isDeleting) return;
     if (ruleData?.id && onDelete) {
       setIsDeleting(true);
+      setDeleteError(null);
       try {
         await onDelete(ruleData.id);
         await draft.clearPersistedState();
@@ -177,6 +181,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
         onCancel();
       } catch (error) {
         logger.error('[RuleEditorForm] Error deleting rule:', error);
+        setDeleteError(getErrorMessage(error));
         toast({ title: "Error", description: "Failed to delete rule. Please try again.", variant: "destructive" });
       } finally {
         setIsDeleting(false);
@@ -184,21 +189,22 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
     }
   };
 
-  if (!draft.ready) return <p role="status">Loading your draft…</p>;
+  if (!draft.ready) return <StandardLoading />;
   return (
     <Form {...form}>
       <EditorDraftNotice draft={draft} />
       <form onSubmit={formHandleSubmit(onSubmitWrapped)} className="space-y-6">
+        {saveError && <p role="alert" className="text-sm text-red-300">{saveError}</p>}
         <FormField
           control={control}
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className={text.primary}>Rule Title</FormLabel>
+              <FormLabel className="text-white">Rule Title</FormLabel>
               <FormControl>
                 <Input
                   placeholder="Rule title (e.g., No swearing)"
-                  className={`bg-dark-navy border-light-navy ${text.field}`}
+                  className="bg-dark-navy border-light-navy text-white"
                   {...field}
                 />
               </FormControl>
@@ -211,11 +217,11 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className={text.primary}>Description</FormLabel>
+              <FormLabel className="text-white">Description</FormLabel>
               <FormControl>
                 <Textarea 
                   placeholder="Detailed description of the rule" 
-                  className={`bg-dark-navy border-light-navy ${text.field} min-h-[100px]`}
+                  className="bg-dark-navy border-light-navy text-white min-h-[100px]"
                   {...field} 
                 />
               </FormControl>
@@ -226,7 +232,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
         <PrioritySelector control={control} name="priority" />
         
         <div className="space-y-4">
-          <FormLabel className={`${text.primary} text-lg`}>Background Image</FormLabel>
+          <FormLabel className="text-white text-lg">Background Image</FormLabel>
           <BackgroundImageSelector
             control={control}
             imagePreview={imagePreview}
@@ -244,7 +250,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
         </div>
 
         <div className="space-y-4">
-          <FormLabel className={`${text.primary} text-lg`}>Rule Icon</FormLabel>
+          <FormLabel className="text-white text-lg">Rule Icon</FormLabel>
           <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-dashed border-light-navy rounded-lg p-4 text-center">
               <IconSelector
@@ -277,8 +283,8 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between">
               <div className="space-y-0.5">
-                <FormLabel className={text.primary}>Highlight Effect</FormLabel>
-                <p className={`text-sm ${text.primary}`}>Apply a yellow highlight behind title and description</p>
+                <FormLabel className="text-white">Highlight Effect</FormLabel>
+                <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
               </div>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -287,13 +293,14 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
           )}
         />
         
-        <div className="pt-4 w-full flex flex-wrap items-center justify-end gap-3">
+        <div className="pt-4 w-full flex items-center justify-end gap-3">
           {ruleData?.id && onDelete && (
             <DeleteRuleDialog
               isDeleting={isDeleting}
+              error={deleteError}
               preserveHistory={preserveHistory}
               isOpen={isDeleteDialogOpen}
-              onOpenChange={setIsDeleteDialogOpen}
+              onOpenChange={open => { setDeleteError(null); setIsDeleteDialogOpen(open); }}
               onDelete={handleDeleteWrapped}
               ruleName={ruleData?.title || 'this rule'}
             />
@@ -308,7 +315,7 @@ const RuleEditorSession: React.FC<RuleEditorFormProps & { scope: EditorDraftScop
           </Button>
           <Button
             type="submit"
-            className={`bg-nav-active ${text.primary} hover:bg-nav-active/90 flex items-center gap-2`}
+            className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
             disabled={loading}
           >
             {loading ? 'Saving...' : (

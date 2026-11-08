@@ -103,7 +103,9 @@ export async function readRewardActionData(scope: ActionQueueScope, signal?: Abo
   ]);
   await assertCurrentActionScope(scope, token, signal);
   if (deliveries.some(row => row.recipient_participant_id !== scope.participantId)) throw new Error('Invalid refund recipient.');
-  return { rewards: rewards.filter(reward => !reward.deleted_at), wallets, lots, events: events.filter(event => event.reward_id), points, deliveries, acknowledged: acks.map(row => row.event_id),
+  // Keep the original newest-first catalog within each role group. ID ordering
+  // above is for stable pagination, not a replacement for presentation order.
+  return { rewards: rewards.filter(reward => !reward.deleted_at).sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')), wallets, lots, events: events.filter(event => event.reward_id), points, deliveries, acknowledged: acks.map(row => row.event_id),
     importedUsage: importedUsage.map(row => ({ ...row, currentTitle: rewards.find(reward => reward.id === row.reward_id)?.title })) };
 }
 export async function acknowledgeRewardFeedback(scope: ActionQueueScope, eventId: string, kind: 'points_refunded' | 'action_confirmed' = 'points_refunded'): Promise<void> {

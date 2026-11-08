@@ -68,7 +68,7 @@ describe('mounted task page and server progress', () => {
     mocks.data.tasks[0].frequency = 'weekly'; mocks.data.progress[task.id] = { ...progress, frequency: 'weekly', usageData: [1,1,0,0,0,0,0], currentCount: 2, completed: true };
     mount(); expect(screen.getByText('2/2')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Completed' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText('Monday–Sunday · Pacific/Honolulu')).toBeTruthy();
+    expect(screen.queryByText('Monday–Sunday · Pacific/Honolulu')).toBeNull();
   });
   it('marks the server’s Sunday even when the browser clock is on another date', () => {
     vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-26T12:00:00Z'));

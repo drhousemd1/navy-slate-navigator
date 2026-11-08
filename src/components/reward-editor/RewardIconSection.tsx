@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { Control } from 'react-hook-form';
@@ -24,10 +23,9 @@ const RewardIconSection: React.FC<RewardIconSectionProps> = ({
   onUploadIcon,
   onRemoveIcon,
 }) => {
-  const text = useCoreTextClasses();
   return (
     <div className="space-y-4">
-      <FormLabel className={`${text.primary} text-lg`}>Reward Icon</FormLabel>
+      <FormLabel className="text-white text-lg">Reward Icon</FormLabel>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
         <div className="md:col-span-1 border-2 border-dashed border-light-navy rounded-lg p-4 text-center min-h-[150px] flex flex-col justify-center">
           <IconSelector

@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { Control, FieldValues, Path } from 'react-hook-form';
@@ -18,7 +17,6 @@ const ColorPickerField = <T extends FieldValues>({
   label, 
   defaultColor = '#FFFFFF' 
 }: ColorPickerFieldProps<T>) => {
-  const text = useCoreTextClasses();
   return (
     <FormField
       control={control}
@@ -29,7 +27,7 @@ const ColorPickerField = <T extends FieldValues>({
         
         return (
           <FormItem>
-            <FormLabel className={text.primary}>{label}</FormLabel>
+            <FormLabel className="text-white">{label}</FormLabel>
             <div className="flex items-center gap-2">
                 {/* Direct color input styled as a button */}
                 <FormControl>
@@ -60,7 +58,7 @@ const ColorPickerField = <T extends FieldValues>({
                     }
                   }}
                   placeholder="#FFFFFF"
-                  className={`flex-1 bg-dark-navy border-light-navy ${text.field} font-mono text-sm`}
+                  className="flex-1 bg-dark-navy border-light-navy text-white font-mono text-sm"
                 />
             </div>
           </FormItem>

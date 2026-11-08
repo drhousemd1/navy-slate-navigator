@@ -96,8 +96,8 @@ describe('saved timezone profile control', () => {
     render(<TimezoneSection />);
     const input = screen.getByLabelText('Timezone') as HTMLInputElement;
     expect(input.value).toBe('America/Boise');
-    expect(screen.getByText(/Your own deadlines use this saved timezone/)).toBeTruthy();
-    expect(screen.getByText(/travel will not change it automatically/)).toBeTruthy();
+    expect(screen.getByText('Task deadlines use this timezone, even when you travel.')).toBeTruthy();
+    expect(screen.queryByText(/Saved timezone:/)).toBeNull();
     fireEvent.change(input, { target: { value: 'Europe/London' } });
     expect(mocks.auth.updateTimezone).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Save Timezone' }));

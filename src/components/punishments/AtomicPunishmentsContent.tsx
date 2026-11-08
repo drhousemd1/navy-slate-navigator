@@ -1,12 +1,8 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import PunishmentsHeader from './PunishmentsHeader';
+import PunishmentList from './PunishmentList';
+import { PunishmentCardView } from './PunishmentCardView';
 import PunishmentEditor from '@/components/PunishmentEditor';
-import PunishmentBackground from './PunishmentBackground';
-import PunishmentCardHeader from './PunishmentCardHeader';
-import PunishmentCardContent from './PunishmentCardContent';
-import PunishmentCardFooter from './PunishmentCardFooter';
-import { Card } from '@/components/ui/card';
 import { RecordingActivity } from '@/components/recordings/RecordingActivity';
 import { useRecordingData } from '@/data/recordings/useRecordingData';
 import { reviewedRecordingContext, savedWeekday, type RecordingDefinition } from '@/data/recordings/readModel';
@@ -18,11 +14,11 @@ import RandomPunishmentSelections from './RandomPunishmentSelections';
 import { reviewRandomPunishments, type ReviewedPunishment } from './hooks/randomPunishmentReview';
 
 export function AtomicPunishmentsContent({ contentRef }: { contentRef: MutableRefObject<{ handleAddNewPunishment?: () => void }> }) {
-  const text = useCoreTextClasses();
   const state = useRecordingData('punishment');
   const [editor, setEditor] = useState<{ punishment?: PunishmentData } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingAction, setSavingAction] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const viewKey = JSON.stringify([state.actions.scope ? scopeKey(state.actions.scope) : null, state.identity.currentRole]);
   const currentView = useRef({ key: viewKey });
   if (currentView.current.key !== viewKey) currentView.current = { key: viewKey };
@@ -63,32 +59,24 @@ export function AtomicPunishmentsContent({ contentRef }: { contentRef: MutableRe
     finally { if (mounted.current && currentView.current === view) { clickLock.current = false; setSavingAction(false); } }
   };
   return <div className="p-4 pt-6 max-w-4xl mx-auto">
-    <PunishmentsHeader />
-    <RecordingActivity type="punishment" data={state.data} error={error || state.error?.message} refresh={state.refresh} />
+    <PunishmentsHeader onOpenHistory={() => setHistoryOpen(true)} />
+    <RecordingActivity type="punishment" data={state.data} error={error || state.error?.message} refresh={state.refresh} historyOpen={historyOpen} onHistoryOpenChange={setHistoryOpen} />
     <Button className="mb-4 bg-red-600 hover:bg-red-700 text-white" disabled={!!state.actionReason || state.pending || savingAction}
       onClick={() => setRandomView(view)}><Shuffle className="mr-2 h-4 w-4" />Random Punishment</Button>
-    {state.actionReason && <p className={`mb-3 text-sm ${text.secondary}`}>{state.actionReason}</p>}
-    {state.isLoading && <p role="status" className={text.primary}>Loading punishments…</p>}
-    {state.data && state.data.definitions.length === 0 && <p className={text.secondary}>No punishments yet. Use Add to create one.</p>}
-    <div className="space-y-4">{[...(state.data?.definitions as PunishmentData[] ?? [])].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')).map(punishment => {
-      const progress = state.data?.progress.find(item => item.subjectId === punishment.id);
-      return <Card key={punishment.id} className="relative overflow-hidden border-2 border-red-500 bg-navy">
-        <PunishmentBackground {...punishment} />
-        <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
-          <PunishmentCardHeader points={punishment.points} dom_points={punishment.dom_points} dom_supply={punishment.dom_supply}
-            onPunish={() => void record(punishment).catch(cause => { if (mounted.current && currentView.current === view) setError(cause instanceof Error ? cause.message : 'The punishment could not be saved.'); })}
-            disabled={!!state.actionReason || state.pending || savingAction || !progress?.expectedContext} />
-          <PunishmentCardContent {...punishment} />
-          {progress?.expectedContext?.kind === 'punishment_apply' && <div className={`text-xs ${punishment.background_image_url && punishment.background_opacity !== 0 ? 'text-gray-300' : text.secondary}`}>
-            <p>Sub actions: {progress.expectedContext.sub.localDate} · {progress.expectedContext.sub.timeZone}</p>
-            {progress.expectedContext.dom && <p>Dom award: {progress.expectedContext.dom.localDate} · {progress.expectedContext.dom.timeZone}</p>}
-          </div>}
-          <PunishmentCardFooter frequency_count={progress?.currentCount ?? 0} usage_data={[...(progress?.usageData ?? [0,0,0,0,0,0,0])]}
-            calendar_color={punishment.calendar_color} currentDayIndex={savedWeekday(progress?.localDate)} editDisabled={!state.canManage}
-            onEdit={() => setEditor({ punishment })} />
-        </div>
-      </Card>;
-    })}</div>
+    {state.actionReason && <p className="mb-3 text-sm text-white">{state.actionReason}</p>}
+    <PunishmentList
+      punishments={[...(state.data?.definitions as PunishmentData[] ?? [])].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))}
+      isLoading={state.isLoading} error={state.error}
+      onEditPunishment={punishment => setEditor({ punishment })}
+      renderCard={punishment => {
+        const progress = state.data?.progress.find(item => item.subjectId === punishment.id);
+        return <PunishmentCardView {...punishment}
+          frequency_count={progress?.currentCount ?? 0} usage_data={[...(progress?.usageData ?? [0,0,0,0,0,0,0])]}
+          currentDayIndex={savedWeekday(progress?.localDate)} editDisabled={!state.canManage}
+          disabled={!!state.actionReason || state.pending || savingAction || !progress?.expectedContext}
+          onPunish={() => void record(punishment).catch(cause => { if (mounted.current && currentView.current === view) setError(cause instanceof Error ? cause.message : 'The punishment could not be saved.'); })}
+          onEdit={() => setEditor({ punishment })} />;
+      }} />
     {randomView === view && <RandomPunishmentSelections options={randomReview.options}
       unavailableReason={state.actionReason || (state.pending && !savingAction ? 'Finish the saved action before picking another punishment.' : null)}
       loading={state.isLoading || !state.data} readError={state.error?.message || randomReview.error}

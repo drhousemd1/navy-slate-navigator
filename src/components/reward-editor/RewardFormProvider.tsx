@@ -1,3 +1,4 @@
+import { StandardLoading } from '@/components/common/StandardizedStates';
 
 import React from 'react';
 import { useEditorDraftScope } from '@/hooks/useEditorDraftScope';
@@ -38,7 +39,7 @@ interface RewardFormProviderProps {
 
 const RewardFormProvider: React.FC<RewardFormProviderProps> = (props) => {
   const scope = useEditorDraftScope();
-  if (!scope) return <p role="status">Checking your draft account…</p>;
+  if (!scope) return <StandardLoading />;
   return <RewardFormSession key={editorDraftKey(scope, `${props.formBaseId}-${props.rewardData?.id || 'new'}`)} {...props} scope={scope} />;
 };
 
@@ -70,7 +71,7 @@ const RewardFormSession: React.FC<RewardFormProviderProps & { scope: EditorDraft
   });
 
   const draft = useFormStatePersister<RewardFormValues>(`${formBaseId}-${rewardData?.id || 'new'}`, form, { scope });
-  if (!draft.ready) return <p role="status">Loading your draft…</p>;
+  if (!draft.ready) return <StandardLoading />;
   return (
     <>
       <EditorDraftNotice draft={draft} />

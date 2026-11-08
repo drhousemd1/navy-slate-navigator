@@ -12,6 +12,7 @@ vi.mock('@/utils/image/compression', () => ({ compressImage: (...args: unknown[]
 const identity = vi.hoisted(() => ({ scope: { backendId: 'local', accountId: 'alice', relationshipId: 'period', relationshipSessionId: '00000000-0000-4000-8000-000000000090' } as any }));
 vi.mock('@/hooks/useEditorDraftScope', () => ({ useEditorDraftScope: () => identity.scope }));
 vi.mock('@/contexts/RewardsContext', () => ({ useRewards: () => ({ atomicAccounting: true }) }));
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
 vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), debug: vi.fn() } }));

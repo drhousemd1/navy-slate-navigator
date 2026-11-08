@@ -183,7 +183,7 @@ describe.each([['page', Notifications], ['profile section', NotificationSettings
     pending.set('GET:A', [Promise.resolve(response({ message: 'denied' }, 403))]);
     render(<Component />, { wrapper: setup().wrapper });
     await screen.findByRole('alert');
-    expect(screen.getByText('Get notified when deleting a reward returns points from your unused purchases')).toBeTruthy();
+    expect(screen.getByText('Get notified when unused rewards are refunded')).toBeTruthy();
     expect((screen.getByRole('switch', { name: 'Points Refunded' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('switch', { name: 'Push Notifications' }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Retry notification preferences' }));

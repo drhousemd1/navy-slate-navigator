@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
@@ -24,7 +23,6 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
   onSave, 
   onDelete 
 }) => {
-  const text = useCoreTextClasses();
   const isMobile = useIsMobile();
   
   const handleSave = async (formData: TaskFormValues) => { // formData is TaskFormValues
@@ -45,10 +43,10 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
         <SheetContent side="bottom" className="h-[100vh] bg-navy border-light-navy pt-10 px-0 overflow-y-auto">
           <div className="px-4">
             <SheetHeader className="text-center mb-6">
-              <SheetTitle className={`text-2xl font-bold ${text.primary}`}>
+              <SheetTitle className="text-2xl font-bold text-white">
                 {taskData?.id ? 'Edit Task' : 'Create New Task'}
               </SheetTitle>
-              <SheetDescription className={text.subtle}>
+              <SheetDescription className="text-light-navy">
                 {taskData?.id ? 'Modify the existing task' : 'Create a new task to track'}
               </SheetDescription>
             </SheetHeader>
@@ -68,12 +66,12 @@ const TaskEditor: React.FC<TaskEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`max-w-[90vw] max-h-[90vh] bg-navy border-light-navy ${text.primary} overflow-y-auto`}>
+      <DialogContent className="max-w-[90vw] max-h-[90vh] bg-navy border-light-navy text-white overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className={`text-2xl font-bold ${text.primary}`}>
+          <DialogTitle className="text-2xl font-bold text-white">
             {taskData?.id ? 'Edit Task' : 'Create New Task'}
           </DialogTitle>
-          <DialogDescription className={text.subtle}>
+          <DialogDescription className="text-light-navy">
             {taskData?.id ? 'Modify the existing task' : 'Create a new task to track'}
           </DialogDescription>
         </DialogHeader>

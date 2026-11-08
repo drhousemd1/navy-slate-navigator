@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
@@ -25,10 +24,9 @@ const TaskFormActions: React.FC<TaskFormActionsProps> = ({
   onCancel,
   onDelete
 }) => {
-  const text = useCoreTextClasses();
   return (
     <div className="flex flex-col space-y-4 mt-6 md:mt-8">
-      <div className="flex flex-wrap items-center justify-end gap-3 pt-4">
+      <div className="flex items-center justify-end space-x-3 pt-4">
         {taskData?.id && onDelete && (
           <DeleteTaskDialog
             atomicAccounting={atomicAccounting}
@@ -51,7 +49,7 @@ const TaskFormActions: React.FC<TaskFormActionsProps> = ({
         
         <Button 
           type="submit" 
-          className={`bg-nav-active ${text.primary} hover:bg-nav-active/90 flex items-center gap-2`}
+          className="bg-nav-active text-white hover:bg-nav-active/90 flex items-center gap-2"
           disabled={isSaving}
         >
           {isSaving ? (

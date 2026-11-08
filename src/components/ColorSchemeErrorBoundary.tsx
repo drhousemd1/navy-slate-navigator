@@ -1,4 +1,5 @@
 import React, { Component, ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
 import { applyColorScheme, getColorScheme } from '@/lib/colorSchemes';
 
 export class ColorSchemeErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -16,10 +17,10 @@ export class ColorSchemeErrorBoundary extends Component<{ children: ReactNode },
   render() {
     if (this.state.hasError) {
       return (
-        <main role="alert" style={{ minHeight: '100vh', background: '#151e2d', color: '#ffffff', padding: '2rem' }}>
-          <h1 className="text-xl font-bold mb-2">The app could not be displayed</h1>
-          <p className="mb-4">Reload to try again.</p>
-          <button type="button" className="rounded border px-4 py-2" onClick={() => window.location.reload()}>Reload app</button>
+        <main role="alert" className="flex flex-col items-center justify-center h-screen bg-background text-foreground p-4" style={{ background: 'hsl(222.2 84% 4.9%)', color: 'hsl(210 40% 98%)' }}>
+          <h1 className="text-2xl font-semibold mb-4">The app could not be displayed</h1>
+          <p className="mb-4 text-center">Reload to try again.</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>Reload app</Button>
         </main>
       );
     }

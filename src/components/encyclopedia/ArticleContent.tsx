@@ -7,7 +7,7 @@ function markStyle(marks: TextMarks = {}): React.CSSProperties {
     fontSize: marks.fontSize };
 }
 export default function ArticleContent({ document }: { document: ContentDocument }) {
-  return <>{document.blocks.map((block, index) => <p key={index} className="text-lg mb-4 text-foreground whitespace-pre-wrap min-h-4 break-words">
+  return <>{document.blocks.map((block, index) => !block.children.some(child => child.type === 'text' && child.text.trim()) ? <div key={index} className="h-4" /> : <p key={index} className="text-lg mb-4 text-white whitespace-pre-wrap break-words">
     {block.children.map((child, i) => child.type === 'hardBreak' ? <br key={i} /> : <span key={i} style={markStyle(child.marks)}>{child.text}</span>)}
   </p>)}</>;
 }

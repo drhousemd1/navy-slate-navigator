@@ -24,6 +24,6 @@ describe.each([['profile', NotificationSettings], ['notification page', Notifica
     fireEvent.click(toggle);
     expect(mocks.update).toHaveBeenCalledWith('wellnessCheckin', true);
     expect(mocks.toggle).not.toHaveBeenCalled();
-    expect(screen.getByText('Allow push delivery for your saved personal reminder schedule')).toBeTruthy();
+    expect(screen.getByText('Get your daily wellness reminder')).toBeTruthy();
   });
 });

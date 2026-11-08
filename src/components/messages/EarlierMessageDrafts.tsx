@@ -1,4 +1,3 @@
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { messageDraftRepository, type MessageDraft } from '@/data/messages/drafts';
@@ -6,7 +5,6 @@ import { messageTransport } from '@/data/messages/transport';
 import { messageScopeKey, type MessageScope } from '@/data/messages/types';
 
 export default function EarlierMessageDrafts({ scope }: { scope: MessageScope }) {
-  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const key = messageScopeKey(scope);
   const [rows, setRows] = useState<MessageDraft[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
@@ -32,7 +30,7 @@ export default function EarlierMessageDrafts({ scope }: { scope: MessageScope })
     finally { if (active.current === key) setBusy(null); }
   };
   if (!rows.length && !notice) return null;
-  return <details className={`px-4 py-2 border-b border-light-navy text-sm ${isLightScheme ? 'text-foreground' : 'text-gray-300'}`}><summary>Saved drafts from earlier connections ({rows.length})</summary>
+  return <details className={`px-4 py-2 border-b border-light-navy text-sm text-gray-300`}><summary>Saved drafts from earlier connections ({rows.length})</summary>
     {notice && <p role="status" className="py-2">{notice}</p>}
     {rows.map(row => <div key={row.key} className="py-2 space-y-1"><p>{row.status === 'editing' ? 'Unsent draft' : 'Earlier message request'} · {new Date(row.updatedAt).toLocaleString()}</p>
       <p className="whitespace-pre-wrap break-words">{row.text || (row.image ? 'Saved image draft' : 'Empty draft')}</p>

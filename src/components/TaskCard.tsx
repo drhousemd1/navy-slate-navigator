@@ -3,6 +3,7 @@ import React from 'react';
 import type { TaskProgress } from '@/domain/actions/types';
 import { taskDayIndex } from '@/data/tasks/actionReadModel';
 import { Card } from './ui/card';
+import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Edit } from 'lucide-react';
 import PriorityBadge from './task/PriorityBadge';
@@ -11,8 +12,7 @@ import CompletionButton from './task/CompletionButton';
 import CompletionCounter from './task/CompletionCounter';
 import TaskIcon from './task/TaskIcon';
 import FrequencyTracker from './task/FrequencyTracker';
-import CardText from './common/CardText';
-import { useCoreTextClasses } from './common/useCoreTextClasses';
+import HighlightedText from './task/HighlightedText';
 import { getCurrentDayOfWeek } from '@/lib/taskUtils';
 
 interface TaskCardProps {
@@ -70,8 +70,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
   icon_color = '#9b87f5',
   is_dom_task = false
 }) => {
-  const text = useCoreTextClasses();
-  const hasVisibleImage = !!backgroundImage && backgroundOpacity !== 0;
   const currentDayOfWeek = atomic && progress ? taskDayIndex(progress) : getCurrentDayOfWeek();
   const currentCompletions = atomic ? progress?.currentCount ?? 0 : usage_data[currentDayOfWeek] || 0;
   const maxCompletions = atomic ? progress?.target ?? frequency_count : frequency_count || 1;
@@ -93,7 +91,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
       <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
         <div className="flex justify-between items-start mb-3">
-          <div className="flex flex-wrap items-center gap-2"><PriorityBadge priority={priority} />{atomic && progress?.mandatory && <span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-950">Mandatory</span>}</div>
+          {atomic && progress?.mandatory ? <div className="flex items-center gap-2">
+            <PriorityBadge priority={priority} />
+            <Badge className="text-white font-medium" style={{ backgroundColor: '#000000', borderColor: is_dom_task ? '#ff0000' : '#00f0ff', borderWidth: '1px' }}>Mandatory</Badge>
+          </div> : <PriorityBadge priority={priority} />}
           
           {onToggleCompletion && (
             <div className="flex items-center gap-2">
@@ -127,8 +128,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           
           <div className="flex-1 flex flex-col">
             <h3 className="text-xl font-semibold inline-block">
-              <CardText
-                surface="--card" hasImage={hasVisibleImage}
+              <HighlightedText
                 text={title} 
                 highlight={highlight_effect || false} 
                 color={title_color} 
@@ -136,8 +136,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </h3>
             
             <div className="text-sm mt-1 inline-block">
-              <CardText
-                surface="--card" hasImage={hasVisibleImage}
+              <HighlightedText
                 text={description} 
                 highlight={highlight_effect || false} 
                 color={subtext_color} 
@@ -169,13 +168,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </Button>}
           </div>
         </div>
-        {atomic && progress && <p className={`mt-2 text-xs ${hasVisibleImage ? 'text-gray-300' : text.secondary}`}>{progress.frequency === 'once' ? `One-time · ${progress.completed ? 'Completed' : 'Not completed'} · marks show this week` : progress.frequency === 'weekly' ? 'Monday–Sunday' : 'Today'} · {progress.timeZone}</p>}
-        {atomic && progress?.dueAt && <p className={`mt-2 text-sm ${hasVisibleImage ? 'text-gray-100' : text.primary}`}>
-          Due {new Intl.DateTimeFormat('en', { timeZone: progress.timeZone, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(progress.dueAt))} · {progress.timeZone}
-          {progress.overdue && <span className="block font-semibold">Overdue · you can still complete this for normal points.</span>}
+        {atomic && progress?.dueAt && <p className="mt-2 text-sm text-white">
+          <time dateTime={progress.dueAt} title={progress.timeZone}>Due {new Intl.DateTimeFormat('en', { timeZone: progress.timeZone, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(progress.dueAt))}</time>
+          {progress.overdue && <span className="ml-2 font-semibold">Overdue</span>}
         </p>}
-        {atomic && progress?.lastCompletionLate === true && <p className={`mt-1 text-sm ${hasVisibleImage ? 'text-gray-100' : text.primary}`}>Last completion was late · normal points awarded.</p>}
-        {progressError && <p className={`mt-2 text-sm ${hasVisibleImage ? 'text-amber-300' : text.warning}`}>{progressError}</p>}
+        {progressError && <p className="mt-2 text-sm text-amber-300">{progressError}</p>}
       </div>
       
       {isFullyCompleted && (

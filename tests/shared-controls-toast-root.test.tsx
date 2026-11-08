@@ -28,11 +28,11 @@ afterEach(() => {
   cleanup();
 });
 
-it('shows one notification through the real App and provider composition', async () => {
+it('shows one compact notification through the real App and provider composition', async () => {
   render(<React.StrictMode><AppProviders><App /></AppProviders></React.StrictMode>);
   act(() => { toast({ title: 'Saved once', description: 'The updated settings have been saved.' }); });
   expect(await screen.findAllByText('Saved once')).toHaveLength(1);
-  expect(screen.getAllByText('The updated settings have been saved.')).toHaveLength(1);
+  expect(screen.queryByText('The updated settings have been saved.')).toBeNull();
   expect(document.querySelectorAll('[data-sonner-toaster]')).toHaveLength(1);
   expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(1);
 });

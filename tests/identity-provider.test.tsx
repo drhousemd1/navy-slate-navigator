@@ -34,6 +34,34 @@ afterEach(cleanup);
 beforeEach(() => { vi.resetAllMocks(); mocks.prepare.mockResolvedValue(undefined); });
 
 describe('authoritative identity request lifecycle', () => {
+  it('exposes a preview failure for inline display and clears it when the same account retries', async () => {
+    mocks.fetch.mockResolvedValue(solo('A'));
+    const failure = 'This invitation changed. Ask your partner for a new code.';
+    mocks.preview.mockRejectedValueOnce(new Error(failure)).mockResolvedValueOnce({ mode: 'fresh', previousRelationshipId: null, canContinuePrevious: false });
+    const { result } = renderHook(() => usePartnerLinking(user('A')));
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
+    await act(async () => { expect(await result.current.previewPartnerCode('old-code')).toBeNull(); });
+    expect(result.current.partnerLinkingError).toBe(failure);
+    await act(async () => { expect(await result.current.previewPartnerCode('new-code')).toMatchObject({ mode: 'fresh' }); });
+    expect(result.current.partnerLinkingError).toBeNull();
+    expect(mocks.command).not.toHaveBeenCalled();
+  });
+
+  it('does not expose a delayed preview failure after the relationship session changes', async () => {
+    let reject!: (reason: Error) => void;
+    mocks.fetch.mockResolvedValue(solo('A'));
+    mocks.preview.mockReturnValue(new Promise((_resolve, fail) => { reject = fail; }));
+    const { result } = renderHook(() => usePartnerLinking(user('A')));
+    await waitFor(() => expect(result.current.relationshipIdentity.status).toBe('unlinked'));
+    let preview!: Promise<unknown>;
+    act(() => { preview = result.current.previewPartnerCode('old-code'); });
+    mocks.fetch.mockResolvedValue({ ...solo('A'), relationshipSessionId: '00000000-0000-4000-8000-000000000091' });
+    await act(async () => { await result.current.refreshIdentity(); });
+    await act(async () => { reject(new Error('Old invitation failure')); await preview; });
+    expect(result.current.partnerLinkingError).toBeNull();
+    expect(mocks.error).not.toHaveBeenCalled();
+  });
+
   const choices = (id = 'A', session = solo(id).relationshipSessionId) => ({ relationshipId: `period-${id}`, relationshipSessionId: session,
     canGenerateFresh: true, invitation: null, archivedRelationships: [{ relationshipId: 'previous', startedAt: '2025-01-01T00:00:00Z', endedAt: '2025-02-01T00:00:00Z', formerPartnerLabel: 'Former partner', canGenerateContinue: true }] });
 
@@ -182,6 +210,7 @@ describe('authoritative identity request lifecycle', () => {
     expect(mocks.command).toHaveBeenCalledExactlyOnceWith('A', 'unlink_my_partner', { p_expected_relationship_id: 'old-period', p_expected_relationship_session_id: '00000000-0000-4000-8000-000000000090' });
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
     expect(mocks.success).not.toHaveBeenCalled();
+    expect(result.current.partnerLinkingError).toBe('PERIOD_CHANGED');
   });
 
   it('accepts the exact reviewed continuation mode and period, and does not report success if refresh fails', async () => {
@@ -323,7 +352,7 @@ describe('real UserIds boundary', () => {
     auth({ ...emptyIdentity('invalid', 'A', 'Partner invalid'), problem: 'same_role', partnerUserId: 'D', lifecycleReady: false });
     renderBoundary();
     expect((screen.getByRole('button', { name: 'Disconnect partner' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/Partner changes are temporarily unavailable until/)).toBeTruthy();
+    expect(screen.getByText('Partner changes are temporarily unavailable. Retry loading your account, or use password recovery.')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Retry' }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

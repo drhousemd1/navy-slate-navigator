@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React, { useState } from 'react';
 import {
@@ -24,7 +23,6 @@ const DeletePunishmentDialog: React.FC<DeletePunishmentDialogProps> = ({
   onDelete,
   punishmentName
 }) => {
-  const text = useCoreTextClasses();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const remove = async () => {
@@ -36,13 +34,13 @@ const DeletePunishmentDialog: React.FC<DeletePunishmentDialogProps> = ({
   };
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent className={`bg-navy border-light-navy ${text.primary} max-w-md`}>
+      <AlertDialogContent className="bg-navy border-light-navy text-white max-w-md">
         <div className="flex flex-col items-center text-center px-4 py-6">
           <AlertDialogHeader className="mb-6">
-            <AlertDialogTitle className={`${text.primary} text-2xl font-bold`}>
+            <AlertDialogTitle className="text-white text-2xl font-bold">
               Delete Punishment
             </AlertDialogTitle>
-            <AlertDialogDescription className={`${text.primary} mt-4`}>
+            <AlertDialogDescription className="text-white mt-4">
               {punishmentName ? 
                 `Are you sure you want to delete "${punishmentName}"? This action cannot be undone.` : 
                 "Are you sure you want to delete this punishment? This action cannot be undone."}
@@ -50,12 +48,12 @@ const DeletePunishmentDialog: React.FC<DeletePunishmentDialogProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           
-          {error && <p role="alert" className={`${text.danger} mb-3`}>{error}</p>}
+          {error && <p role="alert" className="text-red-300 mb-3">{error}</p>}
           <div className="flex justify-center gap-6 w-full mt-2">
             <Button
               onClick={() => onOpenChange(false)}
               disabled={deleting}
-              className={`bg-transparent border border-slate-700 ${text.primary} hover:bg-slate-800 w-36 h-12 rounded-md hover:text-white`}
+              className="bg-transparent border border-slate-700 text-white hover:bg-slate-800 w-36 h-12 rounded-md"
             >
               Cancel
             </Button>

@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React, { useState } from 'react';
 import { Form } from '@/components/ui/form';
@@ -47,7 +46,6 @@ const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
   onCancel,
   children
 }) => {
-  const text = useCoreTextClasses();
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -90,7 +88,7 @@ const RewardFormSubmitHandler: React.FC<RewardFormSubmitHandlerProps> = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {saveError && <p role="alert" className={text.warning}>{saveError}</p>}
+        {saveError && <p role="alert" className="text-amber-300">{saveError}</p>}
         {childrenWithProps}
       </form>
     </Form>

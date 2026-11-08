@@ -5,15 +5,12 @@ import { Card } from './ui/card';
 import RewardHeader from './rewards/RewardHeader';
 import RewardContent from './rewards/RewardContent';
 import RewardFooter from './rewards/RewardFooter';
-import { useToast } from '../hooks/use-toast';
 import { Reward } from '@/data/rewards/types';
 import { useRewardUsageQuery } from '@/data/rewards/queries/useRewardUsageQuery';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { useUserIds } from '@/contexts/UserIdsContext';
 import { useRewards } from '@/contexts/RewardsContext';
 import { rewardInventory } from '@/data/rewards/actionReadModel';
-import { Button } from './ui/button';
-import { useCoreTextClasses } from './common/useCoreTextClasses';
 
 interface RewardCardProps {
   reward: Reward;
@@ -28,8 +25,6 @@ const RewardCard: React.FC<RewardCardProps> = ({
   handleBuyReward,
   handleUseReward
 }) => {
-  const text = useCoreTextClasses();
-  const { toast } = useToast();
   const actions = useActionCommands();
   const identity = useUserIds();
   const rewardsContext = useRewards();
@@ -38,6 +33,9 @@ const RewardCard: React.FC<RewardCardProps> = ({
   const [actionError, setActionError] = useState<string | null>(null);
   const busy = saving || actions.entries.some(entry => blocksNewAction(entry, actions.scope));
   const inventory = rewardInventory(actions.data?.lots ?? [], reward.id);
+  const usableInventory = inventory.filter(item => item.currency === 'dom'
+    ? identity.currentRole === 'dom'
+    : ['both', identity.currentRole].includes(identity.permissions?.sub_reward_redeem));
   const perform = async (operation: () => Promise<void>) => {
     setActionError(null); setSaving(true);
     try { await operation(); } catch (error) { setActionError(error instanceof Error ? error.message : 'Action could not be saved.'); }
@@ -61,7 +59,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
     title,
     description = "",
     cost,
-    supply,
+    supply: savedSupply,
     is_dom_reward = false,
     icon_name = 'Gift',
     icon_color = '#9b87f5',
@@ -74,6 +72,7 @@ const RewardCard: React.FC<RewardCardProps> = ({
     subtext_color = '#8E9196',
     calendar_color = '#7E69AB',
   } = reward;
+  const supply = atomic ? inventory.reduce((total, item) => total + item.quantity, 0) : savedSupply;
 
   const handleBuy = () => {
     if (atomic) { void perform(() => rewardsContext.handleBuyReward(reward.id, reward.cost)); return; }
@@ -83,6 +82,10 @@ const RewardCard: React.FC<RewardCardProps> = ({
   };
 
   const handleUse = () => {
+    if (atomic) {
+      if (!busy && usableInventory.length === 1) void perform(() => rewardsContext.handleUseReward(reward.id, usableInventory[0].currency));
+      return;
+    }
     if (handleUseReward && id) {
       handleUseReward(id);
     }
@@ -123,23 +126,17 @@ const RewardCard: React.FC<RewardCardProps> = ({
           isDomReward={is_dom_reward}
           onBuy={handleBuy}
           onUse={handleUse}
-          hideUse={atomic}
+          useDisabled={atomic && (busy || usableInventory.length === 0 || !actions.data)}
+          useOptions={atomic && usableInventory.length > 1 ? usableInventory.map(item => ({
+            label: `${item.currency === 'dom' ? 'Dom' : 'Sub'} reward`,
+            onSelect: () => { if (!busy) void perform(() => rewardsContext.handleUseReward(reward.id, item.currency)); },
+          })) : undefined}
           buyDisabled={atomic && (busy || identity.currentRole !== (is_dom_reward ? 'dom' : 'sub') || !actions.data)}
+          onGift={atomic && identity.currentRole === 'dom' && !is_dom_reward && actions.data?.wallets.some(wallet => wallet.currency === 'sub')
+            ? () => { if (!busy) void perform(() => rewardsContext.handleGiftReward(reward.id)); } : undefined}
+          giftDisabled={busy}
         />
-        {atomic && <div className="mb-3 space-y-2 text-sm text-white">
-          <p>{is_dom_reward ? 'Dom buys with Dom points' : 'Sub buys with Sub points'}</p>
-          {inventory.map(item => {
-            const allowed = item.currency === 'dom' ? identity.currentRole === 'dom' : ['both', identity.currentRole].includes(identity.permissions?.sub_reward_redeem);
-            return <div key={item.currency} className="flex flex-wrap items-center gap-2">
-              <span>{item.currency === 'dom' ? 'Dom' : 'Sub'} owns {item.quantity}</span>
-              <Button size="sm" variant="outline" className={text.primary} disabled={busy || !allowed} onClick={() => void perform(() => rewardsContext.handleUseReward(reward.id, item.currency))}>Use {item.currency === 'dom' ? 'Dom' : 'Sub'} reward</Button>
-              {!allowed && <span className="text-gray-300">Use is restricted by your relationship permissions.</span>}
-            </div>;
-          })}
-          {identity.currentRole === 'dom' && !is_dom_reward && actions.data?.wallets.some(wallet => wallet.currency === 'sub') && <Button size="sm" variant="outline" className={text.primary} disabled={busy} onClick={() => void perform(() => rewardsContext.handleGiftReward(reward.id))}>Gift to Sub · no points charged</Button>}
-          {busy && <p role="status">Waiting for the saved action’s confirmation.</p>}
-          {actionError && <p role="alert" className="text-amber-300">{actionError}</p>}
-        </div>}
+        {atomic && actionError && <p role="alert" className="mb-3 text-sm text-amber-300">{actionError}</p>}
         
         <RewardContent
           title={title}

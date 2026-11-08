@@ -54,18 +54,23 @@ describe('shared Throne query and visible result states', () => {
     expect(screen.getByRole('status').textContent).toContain('Loading');
     await screen.findByRole('alert');
     expect(screen.getByRole('alert').textContent).toContain('unavailable');
-    expect(screen.queryByText('Sub Tasks Completed:')).toBeNull();
+    expect(screen.getByText('Sub Tasks Completed:')).toBeTruthy();
+    expect(screen.getAllByText('—')).toHaveLength(6);
+    expect(screen.queryAllByText('0')).toHaveLength(0);
     mocks.source.mockResolvedValue(source());
     await userEvent.click(screen.getByRole('button', { name: 'Retry activity' }));
-    await screen.findByText('Sub Tasks Completed:');
-    expect(screen.getAllByText('0')).toHaveLength(6);
+    await waitFor(() => expect(screen.getAllByText('0')).toHaveLength(6));
+    expect(screen.getByText('Sub Tasks Completed:')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });
   it('loads only the selected weekly/monthly view and preserves all six labels when toggled', async () => {
     const component = render(<UnifiedMetricsTiles isMonthlyView={false} />, { wrapper: wrapper() });
-    await screen.findByText('Sub Rewards Redeemed:'); expect(mocks.source).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getAllByText('0')).toHaveLength(6));
+    expect(screen.getByText('Sub Rewards Redeemed:')).toBeTruthy(); expect(mocks.source).toHaveBeenCalledTimes(1);
     component.rerender(<UnifiedMetricsTiles isMonthlyView />);
-    await screen.findByText('Dom Tasks Completed:');
+    expect(screen.getByText('Dom Tasks Completed:')).toBeTruthy();
+    expect(screen.getAllByText('—')).toHaveLength(6);
+    await waitFor(() => expect(screen.getAllByText('0')).toHaveLength(6));
     expect(mocks.source).toHaveBeenCalledTimes(2); expect(mocks.clocks).toHaveBeenCalledTimes(1);
     expect(screen.getAllByText('0')).toHaveLength(6);
   });
@@ -92,10 +97,14 @@ describe('shared Throne query and visible result states', () => {
     expect(result.current.metrics?.totals.subTasksCompleted).toBe(1);
     expect(mocks.source).toHaveBeenCalledTimes(2);
   });
-  it('labels retained earlier records as all dates, separate from exact current counts', () => {
+  it('keeps retained earlier records in collapsed details, separate from exact current counts', async () => {
     const metrics = projectActivity({ ...source(), legacy: [{ id: 'old', kind: 'task', role: null, recordedAt: '2020-01-01T00:00:00Z' },
       { id: 'old-reward', kind: 'reward', role: null, recordedAt: '2020-01-01T00:00:00Z' }] }, [metricRange('week', 'sub', 'UTC', new Date())]);
     render(<ActivityMetricsNotice metrics={metrics} />);
+    const details = screen.getByText('Activity details').closest('details')!;
+    expect(details.open).toBe(false);
+    await userEvent.click(screen.getByText('Activity details'));
+    expect(details.open).toBe(true);
     expect(screen.getByText('Earlier records — all retained dates in this relationship')).toBeTruthy();
     expect(screen.getByText(/1 task completions/)).toBeTruthy();
     expect(screen.getByText(/1 reward-use records/)).toBeTruthy();

@@ -1,4 +1,3 @@
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { getBrowserTimezone, isValidTimezone } from '@/lib/identity';
 
 export default function TimezoneSection() {
-  const isLightScheme = useColorScheme().currentScheme === 'light-turquoise';
   const { relationshipIdentity: identity, updateTimezone, refreshIdentity } = useAuth();
   const accountId = identity.currentUserId;
   const currentAccount = useRef(accountId);
@@ -58,21 +56,19 @@ export default function TimezoneSection() {
     }
   };
 
-  return <section className="mb-8 space-y-3" aria-labelledby="timezone-heading">
-    <h2 id="timezone-heading" className={`text-lg font-semibold ${isLightScheme ? 'text-foreground' : 'text-white'}`}>Your Timezone</h2>
-    <p className={`text-sm ${isLightScheme ? 'text-foreground' : 'text-gray-400'}`}>Your own deadlines use this saved timezone. We use your browser timezone only for the initial default; travel will not change it automatically.</p>
-    <p className={`text-sm ${isLightScheme ? 'text-foreground' : 'text-gray-300'}`}>Saved timezone: <span className="font-medium">{identity.timezone ?? 'Not set yet'}</span></p>
+  return <section className="mb-8 space-y-3" aria-label="Timezone settings">
     <form onSubmit={event => void save(event)} className="space-y-3">
-      <Label htmlFor="profile-timezone" className={isLightScheme ? 'text-foreground' : 'text-gray-300'}>Timezone</Label>
-      <Input id="profile-timezone" list="profile-timezone-options" value={draft} onChange={event => { setDraft(event.target.value); setError(null); }} autoComplete="off" spellCheck={false} disabled={busy || !identity.canAccessData} className={`bg-navy border-light-navy ${isLightScheme ? 'text-foreground' : 'text-white'}`} placeholder="America/Boise" aria-describedby="timezone-hint" />
+      <Label id="timezone-heading" htmlFor="profile-timezone" className="block text-sm font-medium text-gray-300">Timezone</Label>
+      <Input id="profile-timezone" list="profile-timezone-options" value={draft} onChange={event => { setDraft(event.target.value); setError(null); }} autoComplete="off" spellCheck={false} disabled={busy || !identity.canAccessData} className="bg-navy border-light-navy text-white" placeholder="America/Boise" aria-describedby="timezone-hint" />
       <datalist id="profile-timezone-options">{choices.map(zone => <option key={zone} value={zone} />)}</datalist>
-      <p id="timezone-hint" className={`text-xs ${isLightScheme ? 'text-foreground' : 'text-gray-400'}`}>Search by region and city, or enter an IANA timezone such as America/Boise.</p>
+      <p id="timezone-hint" className="text-xs text-gray-400">Task deadlines use this timezone, even when you travel.</p>
+      {draft.trim() !== identity.timezone && <p className="text-sm text-gray-300">Saved timezone: <span className="font-medium">{identity.timezone ?? 'Not set yet'}</span></p>}
       <Button type="submit" disabled={busy || !identity.canAccessData || draft.trim() === identity.timezone} className="bg-gray-600 text-white hover:bg-gray-500">{busy ? 'Saving…' : 'Save Timezone'}</Button>
     </form>
     {identity.timezoneInitializationError && <div className="space-y-2">
-      <p role="alert" className={`text-sm ${isLightScheme ? 'text-amber-900' : 'text-amber-300'}`}>{identity.timezoneInitializationError}</p>
+      <p role="alert" className="text-sm text-amber-300">{identity.timezoneInitializationError}</p>
       <Button type="button" variant="outline" disabled={busy} onClick={() => void refreshIdentity()}>Retry default timezone</Button>
     </div>}
-    {error && <p role="alert" className={`text-sm ${isLightScheme ? 'text-red-700' : 'text-red-300'}`}>{error}</p>}
+    {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
   </section>;
 }

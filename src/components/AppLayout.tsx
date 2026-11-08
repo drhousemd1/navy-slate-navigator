@@ -1,4 +1,3 @@
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React, { ReactNode } from 'react';
 import MobileNavbar from './MobileNavbar';
@@ -21,8 +20,6 @@ interface AppLayoutProps {
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
-  const { currentScheme } = useColorScheme();
-  const isLightScheme = currentScheme === 'light-turquoise';
   const location = useLocation();
   const navigate = useNavigate();
   const { getNickname, getProfileImage, getUserRoleSync } = useAuth();
@@ -97,7 +94,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
                     }}
                   />
                 ) : null}
-                <AvatarFallback className={`bg-light-navy text-xs ${isLightScheme ? 'text-foreground' : 'text-nav-active'}`}>
+                <AvatarFallback className="bg-light-navy text-nav-active text-xs">
                   {nickname ? nickname.charAt(0).toUpperCase() : 'G'}
                 </AvatarFallback>
               </Avatar>
@@ -105,8 +102,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
             
             {/* Username and role display */}
             <div className="ml-2 min-w-0 flex-shrink">
-              <p className="text-foreground text-sm font-medium leading-tight break-words truncate">{nickname}</p>
-              <p className={`text-xs leading-tight break-words truncate ${isLightScheme ? 'text-foreground' : 'text-muted-foreground'}`}>{userRole}</p>
+              <p className="text-white text-sm font-medium leading-tight break-words truncate">{nickname}</p>
+              <p className="text-gray-400 text-xs leading-tight break-words truncate">{userRole}</p>
             </div>
 
             {/* Partner display - shows when user has a linked partner - now inline */}
@@ -127,7 +124,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
               <Crown
                 aria-hidden="true"
                 className={`w-5 h-5 cursor-pointer transition-colors ${
-                  isThroneRoomPage ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7] neon-icon') : 'text-muted-foreground hover:text-foreground'
+                  isThroneRoomPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
                 }`}
               />
             </button>
@@ -143,25 +140,25 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onAddNewItem }) => {
                 <MessageSquare
                   aria-hidden="true"
                   className={`w-5 h-5 cursor-pointer transition-colors ${
-                    isMessagesPage ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7] neon-icon') : 'text-muted-foreground hover:text-foreground'
+                    isMessagesPage ? 'text-[#00FFF7] neon-icon' : 'text-gray-300 hover:text-cyan-500'
                   }`}
                 />
               </button>
-              {unreadCount === null ? (unreadError && <span aria-label="Unread message count unavailable" title="Unread messages could not be checked" className={`absolute -top-1 -right-1 text-xs ${isLightScheme ? 'text-foreground' : 'text-amber-200'}`}>?</span>) : <span title={unreadError ? 'Last confirmed unread count; refresh unavailable' : undefined}><NotificationBadge count={unreadCount} />{unreadError && <span aria-label="Unread count may be outdated" className={`absolute -bottom-2 right-0 text-xs ${isLightScheme ? 'text-foreground' : 'text-amber-200'}`}>!</span>}</span>}
+              {unreadCount === null ? (unreadError && <span aria-label="Unread message count unavailable" title="Unread messages could not be checked" className="absolute -top-1 -right-1 text-xs text-amber-200">?</span>) : <span title={unreadError ? 'Last confirmed unread count; refresh unavailable' : undefined}><NotificationBadge count={unreadCount} />{unreadError && <span aria-label="Unread count may be outdated" className="absolute -bottom-2 right-0 text-xs text-amber-200">!</span>}</span>}
             </div>
           </div>
         </div>
       </div>
       
       {/* Main content with adjusted padding to account for safe area header */}
-      <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full">
+      <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] pb-16 overflow-y-auto overflow-x-hidden animate-fade-in allow-scroll-y w-full max-w-full">
         <div className="w-full max-w-full overflow-x-hidden h-full">
           {children}
         </div>
       </main>
       
       {shouldShowAddButton && !isMessagesPage && (
-        <div className={`fixed left-0 right-0 flex justify-center z-40`} style={{bottom: `calc(4.5rem + env(safe-area-inset-bottom))`}}>
+        <div className="fixed left-0 right-0 flex justify-center z-40" style={{bottom: `calc(3rem + env(safe-area-inset-bottom))`}}>
           <Button 
             aria-label={addButtonLabel}
             className={`${useCircleButton 

@@ -20,12 +20,12 @@ export default function WellbeingHistory({ scope, timezone }: { scope: Wellbeing
     {row.provenance === 'legacy_snapshot' && <p className="text-xs text-gray-400 mt-2">Original row created {legacyCreatedTime(row)}. Earlier overwritten check-ins cannot be recovered. Stored score retained.</p>}
     <dl className="grid grid-cols-2 gap-2 text-sm mt-2">{Object.entries(METRIC_DEFINITIONS).map(([key, definition]) => <div key={key}><dt className="text-gray-400">{definition.label}</dt><dd>{row.metrics[key as keyof typeof row.metrics] ?? 'Not recorded'}</dd></div>)}</dl>
   </details>;
-  return <section className="rounded-lg bg-navy border border-light-navy p-4 text-white space-y-3" aria-label="Wellbeing history">
-    <h2 className="font-semibold">Your check-in history</h2><label className="text-sm">Month <input aria-label="History month" type="month" value={month} onChange={e => setMonth(e.target.value)} className="bg-dark-navy border border-light-navy rounded p-2 ml-2" /></label>
+  return <details className="rounded-lg bg-navy border border-light-navy p-4 text-white" aria-label="Wellbeing history">
+    <summary className="font-semibold cursor-pointer">Your check-in history</summary><div className="space-y-3 mt-3"><label className="text-sm">Month <input aria-label="History month" type="month" value={month} onChange={e => setMonth(e.target.value)} className="bg-dark-navy border border-light-navy rounded p-2 ml-2" /></label>
     <p className="text-xs text-gray-400">Every confirmed check-in is retained. Charts show the latest one on each saved local date.</p>
     {!valid ? <p className="text-sm text-gray-400">Choose a month to view dated check-ins.</p> : query.isError ? <div role="alert"><p>History could not be loaded.</p><Button variant="outline" onClick={() => void query.refetch()}>Retry history</Button></div> : query.isPending ? <p role="status">Checking history…</p> : <>
       {query.data?.dated.length ? query.data.dated.map(entry) : <p className="text-sm text-gray-400">No check-ins recorded in this month.</p>}
       {!!query.data?.legacy.length && <div><h3 className="text-sm font-semibold">Imported status records · original local dates unknown</h3>{query.data.legacy.map(entry)}</div>}
     </>}
-  </section>;
+  </div></details>;
 }

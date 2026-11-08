@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import React from 'react';
 import { Control } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
@@ -11,7 +10,6 @@ interface PunishmentColorSettingsProps {
 }
 
 const PunishmentColorSettings: React.FC<PunishmentColorSettingsProps> = ({ control }) => {
-  const text = useCoreTextClasses();
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -46,8 +44,8 @@ const PunishmentColorSettings: React.FC<PunishmentColorSettingsProps> = ({ contr
         render={({ field }) => (
           <FormItem className="flex flex-row items-center justify-between">
             <div className="space-y-0.5">
-              <FormLabel className={text.primary}>Highlight Effect</FormLabel>
-              <p className={`text-sm ${text.primary}`}>Apply a yellow highlight behind title and description</p>
+              <FormLabel className="text-white">Highlight Effect</FormLabel>
+              <p className="text-sm text-white">Apply a yellow highlight behind title and description</p>
             </div>
             <FormControl>
               <Switch

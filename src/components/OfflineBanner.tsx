@@ -9,9 +9,9 @@ export const OfflineBanner = () => {
   if (isOnline) return null;
   
   return (
-    <div role="status" className="shrink-0 bg-amber-950 text-amber-100 px-4 py-2 flex items-center justify-center">
+    <div role="status" className="fixed bottom-0 left-0 right-0 bg-yellow-600 text-white px-4 py-2 shadow-lg flex items-center justify-center z-50 animate-fade-in">
       <WifiOff aria-hidden="true" className="w-4 h-4 mr-2 shrink-0" />
-      <p className="text-sm">Connection unavailable. Check Saved actions for what is pending; displayed totals may be out of date.</p>
+      <p className="text-sm font-medium">You're currently offline. Some features may be limited.</p>
     </div>
   );
 };
@@ -27,7 +27,7 @@ export const NetworkStatusIndicator = () => {
         <WifiOff className="w-4 h-4 text-yellow-500" />
       )}
       <span className="ml-2 text-xs font-medium">
-        {isOnline ? 'Network connected' : 'Offline'}
+        {isOnline ? 'Online' : 'Offline'}
       </span>
     </div>
   );

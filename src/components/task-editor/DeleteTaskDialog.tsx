@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,6 @@ interface DeleteTaskDialogProps {
 }
 
 const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ atomicAccounting = false, disabled = false, isOpen, onOpenChange, onDelete, taskName }) => {
-  const text = useCoreTextClasses();
   return (
     <>
       <Button type="button" disabled={disabled}
@@ -45,14 +43,14 @@ const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({ atomicAccounting = 
           onClick={(e) => e.stopPropagation()}
         >
           <AlertDialogHeader>
-            <AlertDialogTitle className={text.primary}>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription className={text.muted}>
+            <AlertDialogTitle className="text-white">Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete {taskName ? `the task "${taskName}"` : 'this task'}? {atomicAccounting ? 'The task will leave current cards. Its completion history and Undo corrections remain available; points are not changed by removal.' : 'This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel 
-              className={`bg-dark-navy ${text.primary} border-light-navy hover:bg-light-navy`}
+              className="bg-dark-navy text-white border-light-navy hover:bg-light-navy"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

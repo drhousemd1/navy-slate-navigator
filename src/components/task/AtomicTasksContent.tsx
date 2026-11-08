@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
@@ -13,7 +12,6 @@ import type { TaskFormValues, TaskWithId } from '@/data/tasks/types';
 import { scopeKey, blocksNewAction } from '@/data/actions/contracts';
 
 export function AtomicTasksContent() {
-  const text = useCoreTextClasses();
   const actions = useActionCommands();
   const identity = useUserIds();
   const key = actions.scope ? scopeKey(actions.scope) : null;
@@ -25,6 +23,7 @@ export function AtomicTasksContent() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   useEffect(() => { setEditing(null); setEditorOpen(false); setError(null); setSaving(false); }, [key]);
   const pending = actions.entries.some(entry => blocksNewAction(entry, actions.scope));
   const canManage = taskPermission(identity.permissions ?? {}, identity.currentRole, 'definition_manage');
@@ -56,16 +55,13 @@ export function AtomicTasksContent() {
     setEditing(null); setEditorOpen(true);
   }}>
     <div className="p-4 pt-6 max-w-4xl mx-auto">
-      <TasksHeader onCreateTask={() => {}} />
-      {[...new Set(Object.values(query.data?.progress ?? {}).filter(value => value.expectedContext).map(value =>
-        `${value.currency === 'dom' ? 'Dom' : 'Sub'} actions: ${value.localDate} · ${value.timeZone}`))].map(calendar =>
-        <p key={calendar} className={`mb-2 text-xs ${text.secondary}`}>{calendar}</p>)}
-      {(actions.error || query.error || error) && <div role="alert" className={`mb-3 rounded border border-amber-500 bg-navy p-3 ${text.primary}`}>
+      <TasksHeader onCreateTask={() => {}} onOpenHistory={() => setHistoryOpen(true)} />
+      {(actions.error || query.error || error) && <div role="alert" className="mb-3 text-sm text-red-500">
         <p>{error || query.error?.message || actions.error}</p>
         <button className="underline" onClick={() => { setError(null); void actions.refresh(); }}>Refresh confirmed data</button>
       </div>}
-      {!canComplete && <p className={`mb-3 text-sm ${text.warning}`}>Your relationship permission does not allow task completion. History remains available.</p>}
-      <TaskActivity data={query.data} />
+      {!canComplete && <p className="mb-3 text-sm text-white">Your relationship permission does not allow task completion.</p>}
+      <TaskActivity data={query.data} historyOpen={historyOpen} onHistoryOpenChange={setHistoryOpen} />
       <TasksList tasks={query.data?.tasks.filter(task => !task.deleted_at) ?? []} isLoading={!query.data && !query.isError}
         error={query.error} atomic progress={query.data?.progress} progressErrors={query.data?.progressErrors}
         actionDisabled={!canComplete || pending || saving} onEditTask={canManage && !pending ? task => { setEditing(task); setEditorOpen(true); } : undefined}

@@ -16,8 +16,8 @@ export const AppLogo: React.FC<AppLogoProps> = ({ size = 'responsive', className
   const current = useCurrentLogo();
   const sizeStyle = LOGO_SIZES[size];
   const classes = cn('flex items-center justify-center', onClick && 'cursor-pointer hover:opacity-80 transition-opacity focus-visible:ring-2 focus-visible:ring-cyan-500', className);
-  const content = loading ? <span className="text-xs text-muted-foreground">Loading...</span> :
-    <LogoImage source={logoSource(current.data?.version, supabaseBackendId)} alt={alt} className="w-full h-full object-contain" />;
+  if (loading) return <div className={cn('bg-muted animate-pulse rounded-lg flex items-center justify-center', className)} style={{ width: sizeStyle, height: sizeStyle }}><div className="text-xs text-muted-foreground">Loading...</div></div>;
+  const content = <LogoImage source={logoSource(current.data?.version, supabaseBackendId)} alt={alt} className="w-full h-full object-contain" />;
   return onClick ? <button type="button" className={classes} onClick={onClick} style={{ width: sizeStyle, height: sizeStyle }}>{content}</button> :
     <div className={classes} style={{ width: sizeStyle, height: sizeStyle }}>{content}</div>;
 };

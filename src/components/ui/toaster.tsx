@@ -8,13 +8,12 @@ export function Toaster() {
       toastOptions={{
         duration: 2000,
         className: "w-full max-w-none rounded-none shadow-none border-none bg-background/95 text-foreground text-xs py-2 px-4 m-0",
-        descriptionClassName: "whitespace-normal break-words",
-        classNames: { title: "whitespace-normal break-words", content: "min-w-0" },
+        descriptionClassName: "hidden",
       }}
       closeButton={false}
       richColors={false}
       expand={false}
-      offset={16}
+      offset={0}
       gap={0}
     />
   );

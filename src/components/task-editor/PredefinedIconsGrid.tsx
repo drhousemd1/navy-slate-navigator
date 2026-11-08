@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,6 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
   iconColor, 
   onSelectIcon
 }) => {
-  const text = useCoreTextClasses();
   const [isPresetsDialogOpen, setIsPresetsDialogOpen] = useState(false);
   const [isCustomDialogOpen, setIsCustomDialogOpen] = useState(false);
 
@@ -54,7 +52,7 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
       <div className="space-y-3 mb-4">
         <Button 
           type="button"
-          className={`w-full bg-light-navy hover:bg-navy ${text.primary}`}
+          className="w-full bg-light-navy hover:bg-navy text-white"
           onClick={() => setIsPresetsDialogOpen(true)}
         >
           Browse Presets
@@ -62,7 +60,7 @@ const PredefinedIconsGrid: React.FC<PredefinedIconsGridProps> = ({
         
         <Button 
           type="button"
-          className={`w-full bg-light-navy hover:bg-navy ${text.primary}`}
+          className="w-full bg-light-navy hover:bg-navy text-white"
           onClick={() => setIsCustomDialogOpen(true)}
         >
           Browse Custom

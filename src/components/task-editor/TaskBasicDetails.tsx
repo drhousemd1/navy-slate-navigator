@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import { FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
@@ -17,7 +16,6 @@ const TaskBasicDetails: React.FC<TaskBasicDetailsProps> = ({
   control, 
   isSaving = false 
 }) => {
-  const text = useCoreTextClasses();
   return (
     <div className="space-y-4">
       <FormField
@@ -25,11 +23,11 @@ const TaskBasicDetails: React.FC<TaskBasicDetailsProps> = ({
         name="title"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className={text.primary}>Title</FormLabel>
+            <FormLabel className="text-white">Title</FormLabel>
             <FormControl>
               <Input 
                 placeholder="Task title" 
-                className={`bg-dark-navy border-light-navy ${text.field}`}
+                className="bg-dark-navy border-light-navy text-white"
                 {...field} 
                 disabled={isSaving}
               />
@@ -43,11 +41,11 @@ const TaskBasicDetails: React.FC<TaskBasicDetailsProps> = ({
         name="description"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className={text.primary}>Description</FormLabel>
+            <FormLabel className="text-white">Description</FormLabel>
             <FormControl>
               <Textarea 
                 placeholder="Task description" 
-                className={`bg-dark-navy border-light-navy ${text.field} min-h-[100px]`}
+                className="bg-dark-navy border-light-navy text-white min-h-[100px]"
                 {...field}
                 disabled={isSaving}
               />
@@ -62,8 +60,8 @@ const TaskBasicDetails: React.FC<TaskBasicDetailsProps> = ({
         render={({ field }) => (
           <FormItem className="flex flex-row items-center justify-between">
             <div className="space-y-0.5">
-              <FormLabel className={text.primary}>Dominant Task</FormLabel>
-              <p className={`text-sm ${text.primary}`}>Switch to dominant task</p>
+              <FormLabel className="text-white">Dominant Task</FormLabel>
+              <p className="text-sm text-white">Switch to dominant task</p>
             </div>
             <FormControl>
               <Switch

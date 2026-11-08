@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
@@ -23,7 +22,6 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
   onSave,
   onDelete
 }) => {
-  const text = useCoreTextClasses();
   const isMobile = useIsMobile();
   
   useEffect(() => {
@@ -73,10 +71,10 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
         <SheetContent side="bottom" className="h-[100vh] bg-navy border-light-navy pt-10 px-0 overflow-y-auto">
           <div className="px-4">
             <SheetHeader className="text-center mb-6">
-              <SheetTitle className={`text-2xl font-bold ${text.primary}`}>
+              <SheetTitle className="text-2xl font-bold text-white">
                 {rewardData ? 'Edit Reward' : 'Create New Reward'}
               </SheetTitle>
-              <SheetDescription className={text.subtle}>
+              <SheetDescription className="text-light-navy">
                 {rewardData ? 'Modify the existing reward' : 'Create a new reward to redeem'}
               </SheetDescription>
             </SheetHeader>
@@ -95,12 +93,12 @@ const RewardEditor: React.FC<RewardEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`max-w-[90vw] max-h-[90vh] bg-navy border-light-navy ${text.primary} overflow-y-auto`}>
+      <DialogContent className="max-w-[90vw] max-h-[90vh] bg-navy border-light-navy text-white overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className={`text-2xl font-bold ${text.primary}`}>
+          <DialogTitle className="text-2xl font-bold text-white">
             {rewardData ? 'Edit Reward' : 'Create New Reward'}
           </DialogTitle>
-          <DialogDescription className={text.subtle}>
+          <DialogDescription className="text-light-navy">
             {rewardData ? 'Modify the existing reward' : 'Create a new reward to redeem'}
           </DialogDescription>
         </DialogHeader>

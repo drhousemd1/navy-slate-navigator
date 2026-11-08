@@ -1,3 +1,4 @@
+import { StandardLoading } from '@/components/common/StandardizedStates';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { AtomicTasksContent } from '@/components/task/AtomicTasksContent';
 import React, { useState, useEffect } from 'react';
@@ -196,7 +197,7 @@ const Tasks: React.FC = () => {
   if (actions.mode === 'legacy') return <LegacyTasks />;
   if (actions.mode === 'atomic') return <AtomicTasksContent key={`${actions.scope?.accountId}:${actions.scope?.relationshipId}`} />;
   return <AppLayout><div className="p-4 pt-6 max-w-4xl mx-auto"><TasksHeader onCreateTask={() => {}} />
-    {actions.mode === 'error' ? <div role="alert"><p>{actions.error}</p><button className="underline" onClick={() => void actions.refresh()}>Retry loading tasks</button></div> : <p>Loading task account…</p>}
+    {actions.mode === 'error' ? <div role="alert"><p>{actions.error}</p><button className="underline" onClick={() => void actions.refresh()}>Retry loading tasks</button></div> : <StandardLoading />}
   </div></AppLayout>;
 };
 export default Tasks;

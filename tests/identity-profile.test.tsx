@@ -12,11 +12,23 @@ afterEach(cleanup);
 beforeEach(() => {
   mocks.auth = { relationshipIdentity: { ...resolveIdentity('A', { id: 'A', role: 'dom', linked_partner_id: null }), relationshipId: 'solo', relationshipSessionId: '00000000-0000-4000-8000-000000000090' },
     partnerLinkOptions: { relationshipId: 'solo', relationshipSessionId: '00000000-0000-4000-8000-000000000090', canGenerateFresh: true, invitation: null, archivedRelationships: [] },
-    partnerLinkOptionsLoading: false, partnerLinkOptionsError: null, reloadPartnerLinkOptions: vi.fn(), partnerLinkingLoading: false, partnerLinkingAvailable: true, generateLinkCode: vi.fn(), previewPartnerCode: vi.fn(),
+    partnerLinkOptionsLoading: false, partnerLinkOptionsError: null, partnerLinkingError: null, reloadPartnerLinkOptions: vi.fn(), partnerLinkingLoading: false, partnerLinkingAvailable: true, generateLinkCode: vi.fn(), previewPartnerCode: vi.fn(),
     linkToPartner: vi.fn().mockResolvedValue(false), unlinkFromPartner: vi.fn() };
 });
 
 describe('profile relationship controls', () => {
+  it('keeps connection failure details visible beside the controls without relying on toast descriptions', () => {
+    const view = render(<PartnerLinkingSection />);
+    expect(screen.queryByRole('alert')).toBeNull();
+    mocks.auth.partnerLinkingError = 'This invitation changed. Ask your partner for a new code.';
+    view.rerender(<PartnerLinkingSection />);
+    expect(screen.getByRole('alert').textContent).toBe(mocks.auth.partnerLinkingError);
+    expect(screen.getByLabelText('Connect to Partner')).toBeTruthy();
+    mocks.auth.partnerLinkingError = null;
+    view.rerender(<PartnerLinkingSection />);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   const previous = { relationshipId: '00000000-0000-4000-8000-000000000001', startedAt: '2025-01-01T12:00:00Z', endedAt: '2025-03-01T12:00:00Z', formerPartnerLabel: 'Former partner', canGenerateContinue: true };
   const withPrevious = (invitation = null) => {
     mocks.auth.partnerLinkOptions = { ...mocks.auth.partnerLinkOptions as object, invitation, archivedRelationships: [previous] };

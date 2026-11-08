@@ -1,4 +1,3 @@
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -40,15 +39,13 @@ const navItems: NavItem[] = [
 ];
 
 const MobileNavbar: React.FC = () => {
-  const { currentScheme } = useColorScheme();
-  const isLightScheme = currentScheme === 'light-turquoise';
   const location = useLocation();
   const currentPath = location.pathname;
 
   logger.debug('MobileNavbar currentPath:', currentPath);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 pb-safe-bottom bg-navy border-t border-light-navy backdrop-blur-lg z-50 prevent-mobile-scroll">
+    <nav className="fixed bottom-0 left-0 right-0 bg-navy border-t border-light-navy backdrop-blur-lg z-50 prevent-mobile-scroll">
       <div className="grid grid-cols-4 h-16 px-4">
         {navItems.map((item) => {
           const isActive = currentPath === item.path;
@@ -59,14 +56,14 @@ const MobileNavbar: React.FC = () => {
               to={item.path}
               aria-current={isActive ? 'page' : undefined}
               className={`flex flex-col items-center justify-center h-full transition-colors duration-200 ${
-                isActive ? (isLightScheme ? 'text-foreground' : 'text-[#00FFF7]') : (isLightScheme ? 'text-foreground' : 'text-nav-inactive')
+                isActive ? 'text-[#00FFF7]' : 'text-nav-inactive'
               }`}
             >
-              <div className={`flex items-center justify-center h-5 ${isActive && !isLightScheme ? 'neon-icon' : ''}`}>
+              <div className={`flex items-center justify-center h-5 ${isActive ? 'neon-icon' : ''}`}>
                 {item.icon}
               </div>
               <div className="h-5 mt-1 overflow-hidden">
-                <span className={`text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block ${isActive ? (isLightScheme ? 'font-semibold underline underline-offset-2' : 'neon-text') : ''}`}>
+                <span className={`text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis px-1 block ${isActive ? 'neon-text' : ''}`}>
                   {item.name}
                 </span>
               </div>

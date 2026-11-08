@@ -1,3 +1,4 @@
+import { StandardLoading } from '@/components/common/StandardizedStates';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
@@ -14,7 +15,6 @@ import { useAuth } from '@/contexts/auth';
 import { forceResetAllRuleUsageData } from '@/lib/rulesUtils';
 import { useActionCommands } from '@/contexts/ActionCommandsContext';
 import { AtomicRulesContent } from '@/components/rule/AtomicRulesContent';
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 const RulesPageContent: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -147,7 +147,6 @@ const RulesPageContent: React.FC = () => {
 };
 
 const Rules: React.FC = () => {
-  const text = useCoreTextClasses();
   const actions = useActionCommands();
   return (
     <AppLayout onAddNewItem={() => {
@@ -160,10 +159,12 @@ const Rules: React.FC = () => {
       <ErrorBoundary fallbackMessage="Could not load rules. Please try reloading.">
           {actions.mode === 'legacy' ? <RulesPageContent /> : actions.mode === 'atomic' ?
             <AtomicRulesContent key={`${actions.scope?.accountId}:${actions.scope?.relationshipId}`} /> :
-            <div className={`p-6 ${text.primary}`} role={actions.mode === 'error' ? 'alert' : 'status'}>
-              <p>{actions.error || 'Checking your current rules account…'}</p>
-              {actions.mode === 'error' && <button className="underline" onClick={() => void actions.refresh()}>Retry</button>}
-            </div>}
+            <div className="p-4 pt-6 max-w-4xl mx-auto">
+            <RulesHeader />
+            {actions.mode === 'error' ? <div role="alert" className="text-white text-center py-10">
+              <p>{actions.error}</p><button className="underline" onClick={() => void actions.refresh()}>Retry</button>
+            </div> : <StandardLoading />}
+          </div>}
       </ErrorBoundary>
     </AppLayout>
   );

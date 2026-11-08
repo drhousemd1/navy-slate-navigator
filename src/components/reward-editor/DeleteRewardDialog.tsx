@@ -1,4 +1,3 @@
-import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
 
 import React from 'react';
 import {
@@ -29,27 +28,26 @@ const DeleteRewardDialog: React.FC<DeleteRewardDialogProps> = ({
   busy = false,
   error
 }) => {
-  const text = useCoreTextClasses();
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent className={`bg-navy border-light-navy ${text.primary} max-w-md`}>
+      <AlertDialogContent className="bg-navy border-light-navy text-white max-w-md">
         <div className="flex flex-col items-center text-center px-4 py-6">
           <AlertDialogHeader className="mb-6">
-            <AlertDialogTitle className={`${text.primary} text-2xl font-bold`}>
+            <AlertDialogTitle className="text-white text-2xl font-bold">
               Delete Reward
             </AlertDialogTitle>
-            <AlertDialogDescription className={`${text.primary} mt-4`}>
+            <AlertDialogDescription className="text-white mt-4">
               {atomicAccounting ? `Delete “${rewardName ?? 'this reward'}”? Unused purchases will be cancelled and their recorded points returned to each owner. Gifts refund zero points. Used items and History remain. The deletion is final after confirmation.` : rewardName ?
                 `Are you sure you want to delete "${rewardName}"? This action cannot be undone.` : 
                 "Are you sure you want to delete this reward? This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {error && <p role="alert" className={text.warning}>{error}</p>}
+          {error && <p role="alert" className="text-amber-300">{error}</p>}
           
           <div className="flex justify-center gap-6 w-full mt-2">
             <Button
               onClick={() => onOpenChange(false)}
-              className={`bg-transparent border border-slate-700 ${text.primary} hover:bg-slate-800 w-36 h-12 rounded-md hover:text-white`}
+              className="bg-transparent border border-slate-700 text-white hover:bg-slate-800 w-36 h-12 rounded-md"
             >
               Cancel
             </Button>

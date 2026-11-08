@@ -48,10 +48,10 @@ describe('restored Random Punishment through the real page consumer', () => {
     render(<AtomicPunishmentsContent contentRef={{ current: {} }} />); open();
     expect(picker().getByRole('button', { name: 'Cancel' })).toBeTruthy();
     await advance();
-    expect(picker().getByText('Sub balance: −10 points')).toBeTruthy();
-    expect(picker().getByText('Dom balance: +4 points')).toBeTruthy();
-    expect(picker().getByText('Sub actions: 2026-10-26 · Pacific/Kiritimati')).toBeTruthy();
-    expect(picker().getByText('Dom award: 2026-10-25 · America/Boise')).toBeTruthy();
+    expect(picker().getByLabelText('Sub balance: −10 points')).toBeTruthy();
+    expect(picker().getByLabelText('Dom balance: +4 points')).toBeTruthy();
+    expect(picker().queryByText('Sub actions: 2026-10-26 · Pacific/Kiritimati')).toBeNull();
+    expect(picker().queryByText('Dom award: 2026-10-25 · America/Boise')).toBeNull();
     const background = screen.getByRole('dialog').querySelector('[style*="background-image"]') as HTMLElement;
     expect(background.style.opacity).toBe('0'); expect(background.style.backgroundPosition).toBe('0% 100%');
     fireEvent.click(picker().getByRole('button', { name: 'Re-roll' })); await advance();
@@ -86,7 +86,7 @@ describe('restored Random Punishment through the real page consumer', () => {
   it('shows zero effects exactly and permits zero legacy supply, just like ordinary Punish', async () => {
     mocks.state.data = fixture(0, 0);
     render(<AtomicPunishmentsContent contentRef={{ current: {} }} />); open(); await advance();
-    expect(picker().getByText('Sub balance: 0 points')).toBeTruthy(); expect(picker().getByText('Dom balance: 0 points')).toBeTruthy();
+    expect(picker().getByLabelText('Sub balance: 0 points')).toBeTruthy(); expect(picker().getByLabelText('Dom balance: 0 points')).toBeTruthy();
     fireEvent.click(picker().getByRole('button', { name: 'Apply Punishment' })); await flush();
     expect(mocks.actions.enqueue.mock.calls[0][0].expectedContext).toMatchObject({ subDeduction: 0, domAward: 0 });
   });

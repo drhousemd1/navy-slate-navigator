@@ -11,6 +11,7 @@ interface RulesListProps {
   onEditRule: (rule: Rule) => void;
   onRuleBroken: (rule: Rule) => void;
   error?: Error | null;
+  getCardState?: (rule: Rule) => { disabled?: boolean; editDisabled?: boolean; currentDayIndex?: number };
 }
 
 const RulesList: React.FC<RulesListProps> = ({ 
@@ -19,6 +20,7 @@ const RulesList: React.FC<RulesListProps> = ({
   onEditRule,
   onRuleBroken,
   error,
+  getCardState,
 }) => {
 
   if (isLoading && rules.length === 0) {
@@ -42,6 +44,7 @@ const RulesList: React.FC<RulesListProps> = ({
         <RuleCard
           key={rule.id}
           rule={rule}
+          {...getCardState?.(rule)}
           onEditRule={onEditRule}
           onRuleBroken={onRuleBroken}
         />

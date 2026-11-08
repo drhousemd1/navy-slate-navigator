@@ -14,6 +14,8 @@ import { useUserProfile } from './auth/useUserProfile';
 import { useAccountDeletion } from './auth/useAccountDeletion';
 import { isDeletedAccount } from '@/data/accountDeletion/tombstone';
 import { AccountDeletionProgress } from '@/components/account/AccountDeletionProgress';
+import { StandardLoading } from '@/components/common/StandardizedStates';
+import { Button } from '@/components/ui/button';
 import { useRoleTransitions } from './auth/useRoleTransitions';
 import { usePartnerLinking } from './auth/usePartnerLinking';
 import { logger } from '@/lib/logger';
@@ -50,6 +52,7 @@ export interface AuthContextType extends AuthState {
   partnerLinkOptions: ReturnType<typeof usePartnerLinking>['partnerLinkOptions'];
   partnerLinkOptionsLoading: boolean;
   partnerLinkOptionsError: string | null;
+  partnerLinkingError: string | null;
   reloadPartnerLinkOptions: ReturnType<typeof usePartnerLinking>['reloadPartnerLinkOptions'];
   previewPartnerCode: ReturnType<typeof usePartnerLinking>['previewPartnerCode'];
   updateRelationshipPermissions: ReturnType<typeof usePartnerLinking>['updateRelationshipPermissions'];
@@ -306,6 +309,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     partnerLinkOptions: partnerLinkingUtils.partnerLinkOptions,
     partnerLinkOptionsLoading: partnerLinkingUtils.partnerLinkOptionsLoading,
     partnerLinkOptionsError: partnerLinkingUtils.partnerLinkOptionsError,
+    partnerLinkingError: partnerLinkingUtils.partnerLinkingError,
     reloadPartnerLinkOptions: partnerLinkingUtils.reloadPartnerLinkOptions,
     previewPartnerCode: partnerLinkingUtils.previewPartnerCode,
     updateRelationshipPermissions: partnerLinkingUtils.updateRelationshipPermissions,
@@ -323,8 +327,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <AuthContext.Provider value={contextValue}>
-      {accountDeletion.loading ? <p className="p-6 text-gray-300" role="status">Checking saved account recovery…</p>
-        : accountDeletion.loadError ? <div className="p-6 text-white"><p role="alert">{accountDeletion.loadError}</p><button onClick={() => void accountDeletion.reload()}>Retry recovery check</button></div>
+      {accountDeletion.loading ? <div role="status" aria-label="Checking saved account recovery"><StandardLoading /></div>
+        : accountDeletion.loadError ? <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><div className="w-full max-w-md p-6 space-y-6 bg-card rounded-lg shadow-lg border border-border"><p role="alert" className="text-red-400 text-sm py-2 px-3 bg-red-900/30 border border-red-900 rounded">{accountDeletion.loadError}</p><Button className="w-full bg-primary hover:bg-primary/90" onClick={() => void accountDeletion.reload()}>Retry recovery check</Button></div></div>
           : accountDeletion.records.find(record => record.scope.accountId === authState.user?.id)
             ? <AccountDeletionProgress deletion={accountDeletion} record={accountDeletion.records.find(record => record.scope.accountId === authState.user?.id)!} />
             : children}

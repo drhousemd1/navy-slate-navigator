@@ -31,6 +31,23 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe('actual recording page components', () => {
+  it('keeps the original white fallback check while honoring an explicitly selected or uploaded rule icon', () => {
+    mocks.state.data.definitions = [{ ...base, icon_color: '#123456' }];
+    const { container, rerender } = render(<AtomicRulesContent />);
+    const fallback = container.querySelector('svg.lucide-check') as SVGElement;
+    expect(fallback.classList.contains('text-white')).toBe(true);
+    expect(fallback.style.color).toBe('');
+    mocks.state.data.definitions = [{ ...base, icon_name: 'Heart', icon_color: '#123456' }];
+    rerender(<AtomicRulesContent />);
+    expect(container.querySelector('svg.lucide-check')).toBeNull();
+    expect((container.querySelector('svg.lucide-heart') as SVGElement).style.color).toBe('rgb(18, 52, 86)');
+    expect(mocks.state.data.definitions[0].icon_color).toBe('#123456');
+    const image = 'data:image/png;base64,aW1hZ2U=';
+    mocks.state.data.definitions = [{ ...base, icon_url: image, icon_color: '#123456' }];
+    rerender(<AtomicRulesContent />);
+    expect(screen.getByRole('img', { name: 'Task icon' }).getAttribute('src')).toBe(image);
+    expect(mocks.actions.enqueue).not.toHaveBeenCalled();
+  });
   it('records a rule through the queue once and navigates only after durable save', async () => {
     let done!: () => void;mocks.actions.enqueue.mockImplementation(() => new Promise<void>(resolve => { done = resolve; }));
     const { container } = render(<AtomicRulesContent />);
@@ -63,14 +80,14 @@ describe('actual recording page components', () => {
     expect(screen.getByRole('button', { name: 'Punish' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByText(/Pending; saved on this device/)).toBeTruthy();
   });
-  it('shows both affected calendars and saves the same reviewed punishment values, not the browser date', async () => {
+  it('saves both reviewed punishment calendars without adding calendar prose to the tile', async () => {
     const expectedContext = { ...punishmentContext(base.id), subDeduction: 10, domAward: 4,
       sub: { ...punishmentContext().sub, timeZone: progress.timeZone },
       dom: { ...punishmentContext().dom, localDate: '2026-10-25', weekStartDate: '2026-10-19' } };
     mocks.state.data.progress = [{ ...progress, subjectType: 'punishment', expectedContext }];
     render(<AtomicPunishmentsContent contentRef={{ current: {} }} />);
-    expect(screen.getByText('Sub actions: 2026-10-26 · Pacific/Kiritimati')).toBeTruthy();
-    expect(screen.getByText('Dom award: 2026-10-25 · America/Boise')).toBeTruthy();
+    expect(screen.queryByText('Sub actions: 2026-10-26 · Pacific/Kiritimati')).toBeNull();
+    expect(screen.queryByText('Dom award: 2026-10-25 · America/Boise')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Punish' }));
     await waitFor(() => expect(mocks.actions.enqueue).toHaveBeenCalledWith({ kind: 'punishment_apply', punishmentId: base.id, expectedContext }));
   });

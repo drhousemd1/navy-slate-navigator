@@ -5,6 +5,7 @@ import RewardEditor from '../components/RewardEditor';
 import RewardsHeader from '../components/rewards/RewardsHeader';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { RewardActivity } from '@/components/rewards/RewardActivity';
+import { useActionCommands } from '@/contexts/ActionCommandsContext';
 
 import { Reward, RewardFormValues } from '@/data/rewards/types'; 
 
@@ -14,6 +15,8 @@ import { logger } from '@/lib/logger';
 const RewardsContent: React.FC<{
   contentRef: React.MutableRefObject<{ handleAddNewReward?: () => void }>
 }> = ({ contentRef }) => {
+  const actions = useActionCommands();
+  const [historyOpen, setHistoryOpen] = useState(false);
   const { 
     rewards,
     isLoading,
@@ -121,8 +124,8 @@ const RewardsContent: React.FC<{
   
   return (
     <div className="p-4 pt-6 max-w-4xl mx-auto">
-      <RewardsHeader onAddNewReward={handleAddNewReward} /> 
-      <RewardActivity />
+      <RewardsHeader onAddNewReward={handleAddNewReward} onOpenHistory={actions.mode === 'atomic' ? () => setHistoryOpen(true) : undefined} />
+      <RewardActivity historyOpen={historyOpen} onHistoryOpenChange={setHistoryOpen} />
       <div className="mt-4">
         <RewardsList 
           rewards={rewards}

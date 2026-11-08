@@ -42,6 +42,7 @@ describe.each([['task', Tasks, 'Title'], ['rule', Rules, 'Rule Title']] as const
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(mocks.save).toHaveBeenCalledOnce()); await waitFor(() => expect(screen.getByRole('button', { name: 'Save Changes' })).toBeTruthy());
     expect((screen.getByRole('textbox', { name: label }) as HTMLInputElement).value).toBe('Keep this input');
+    if (kind === 'rule' && result === 'reject') expect(screen.getByRole('alert').textContent).toContain('Permission rejected');
     fireEvent(window, new Event('pagehide'));
     const key = editorDraftKey(scope, `${kind}-editor-new`);
     expect(JSON.parse(localStorage.getItem(key)!).values.title).toBe('Keep this input');

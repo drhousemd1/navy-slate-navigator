@@ -4,7 +4,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextStyle from '@tiptap/extension-text-style';
 import { ENCYCLOPEDIA_FONT_SIZES, type ContentDocument, type ContentInline, type TextMarks } from '@/types/encyclopedia';
-import { Button } from '@/components/ui/button';
+import TextFormatToolbar from './formatting/TextFormatToolbar';
 
 const FontStyle = TextStyle.extend({ addAttributes() { return { fontSize: { default: null,
   parseHTML: element => ENCYCLOPEDIA_FONT_SIZES.find(size => size === element.style.fontSize) ?? null,
@@ -41,21 +41,21 @@ export default function RichArticleEditor({ initialDocument, onChange, disabled 
     extensions: [StarterKit.configure({ heading: false, bulletList: false, orderedList: false, listItem: false,
       blockquote: false, code: false, codeBlock: false, strike: false, horizontalRule: false }), Underline, FontStyle],
     content: toEditor(initialDocument), editable: !disabled,
-    editorProps: { attributes: { role: 'textbox', 'aria-label': 'Pop-up Text', 'aria-multiline': 'true', class: 'min-h-[200px] p-3 outline-none whitespace-pre-wrap' } },
+    editorProps: { attributes: { role: 'textbox', 'aria-label': 'Pop-up Text', 'aria-multiline': 'true', class: 'w-full h-full min-h-[100px] outline-none text-black whitespace-pre-wrap leading-[1.5]' } },
     onUpdate: ({ editor }) => onChange(fromEditor(editor.getJSON())),
   });
   useEffect(() => { editor?.setEditable(!disabled, false); }, [editor, disabled]);
   if (!editor) return <p>Loading text editor...</p>;
+  const selection = editor.state.selection;
   return <div className="space-y-2">
-    <div className="bg-white border border-light-navy rounded-md p-2 flex flex-wrap gap-2 text-black" role="toolbar" aria-label="Article formatting">
-      <Button type="button" variant="ghost" disabled={disabled} aria-pressed={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>Bold</Button>
-      <Button type="button" variant="ghost" disabled={disabled} aria-pressed={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>Italic</Button>
-      <Button type="button" variant="ghost" disabled={disabled} aria-pressed={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>Underline</Button>
-      <label className="flex items-center gap-2">Font size<select aria-label="Font size" className="bg-white text-black border rounded p-2" disabled={disabled}
-        value={editor.getAttributes('textStyle').fontSize ?? '1rem'} onChange={event => editor.chain().focus().setMark('textStyle', { fontSize: event.target.value }).run()}>
-        {ENCYCLOPEDIA_FONT_SIZES.map((size, i) => <option key={size} value={size}>{['Small', 'Medium', 'Large', 'X-Large', 'XX-Large'][i]}</option>)}
-      </select></label>
+    <TextFormatToolbar disabled={disabled}
+      selectedTextRange={selection.empty ? null : { start: selection.from, end: selection.to }}
+      currentFormatting={{ isBold: editor.isActive('bold'), isUnderlined: editor.isActive('underline'), isItalic: editor.isActive('italic'), fontSize: editor.getAttributes('textStyle').fontSize ?? '1rem' }}
+      onToggleBold={() => editor.chain().focus().toggleBold().run()}
+      onToggleUnderline={() => editor.chain().focus().toggleUnderline().run()}
+      onFontSizeChange={fontSize => editor.chain().focus().setMark('textStyle', { fontSize }).run()} />
+    <div className="flex w-full rounded-md border border-light-navy bg-dark-navy px-3 py-2 text-sm text-white ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-auto min-h-[200px] max-h-[600px]">
+      <EditorContent className="w-full" editor={editor} />
     </div>
-    <div className="bg-white text-black rounded border border-light-navy"><EditorContent editor={editor} /></div>
   </div>;
 }

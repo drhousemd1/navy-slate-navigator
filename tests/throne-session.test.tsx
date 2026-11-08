@@ -13,7 +13,12 @@ const owner = '10000000-0000-4000-8000-000000000001', other = '20000000-0000-400
 function login(id: string, sessionId = 'first', suffix = 'signature') {
   state.auth = { user: { id }, session: { user: { id }, access_token: `header.${btoa(JSON.stringify({ sub: id, session_id: sessionId }))}.${suffix}` } };
 }
-beforeEach(() => { login(owner); vi.spyOn(throneTransport, 'read').mockResolvedValue([]); vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })); });
+beforeEach(() => {
+  login(owner);
+  vi.spyOn(throneTransport, 'read').mockResolvedValue([]);
+  vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+});
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 describe('active personal card session boundary', () => {
   it('keeps a draft across token refresh, but discards its view at a new login even for the same account', async () => {

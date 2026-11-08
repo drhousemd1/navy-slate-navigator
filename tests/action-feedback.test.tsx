@@ -35,25 +35,22 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('confirmed refund feedback', () => {
-  it.each(COLOR_SCHEMES.map(s => s.name))('preserves the dark refund colors and applies readable text throughout the %s card', theme => {
+  it.each(COLOR_SCHEMES.map(s => s.name))('uses the restored refund palette without theme text substitution in the %s card', theme => {
     // jsdom does not resolve custom properties. Substitute the real palette
     // values into the real stylesheet, then check its rendered selector cascade.
     const style = document.createElement('style'), palette = getColorScheme(theme)!.variables;
     style.textContent = feedbackCss.replace(/var\((--[a-z-]+)\)/g, (match, key) => palette[key as keyof typeof palette] ?? match);
     document.head.append(style);
     try {
-      const light = theme === 'light-turquoise';
-      const view = render(<ConfirmedActionFeedback activeScope={sub} result={result()} enabled lightSurface={light} ledger={createActionFeedbackLedger()} />);
+      const view = render(<ConfirmedActionFeedback activeScope={sub} result={result()} enabled ledger={createActionFeedbackLedger()} />);
       const card = screen.getByRole('article');
-      const probe = document.createElement('span'); probe.style.color = `hsl(${palette['--foreground']})`; document.body.append(probe);
-      const foreground = getComputedStyle(probe).color; probe.remove();
-      for (const [selector, dark] of [
+      for (const [selector, color] of [
         ['.action-feedback-eyebrow', 'rgb(253, 230, 138)'], ['.action-feedback-amount', 'rgb(253, 230, 138)'],
-        ['.action-feedback-amount span', 'rgb(248, 250, 252)'], ['.action-feedback-recipient', 'rgb(165, 243, 252)'],
-        ['.action-feedback-reward', 'rgb(248, 250, 252)'], ['.action-feedback-reason', 'rgb(203, 213, 225)'],
-        ['.action-feedback-balance', 'rgb(203, 213, 225)'], ['.action-feedback-balance strong', 'rgb(248, 250, 252)'],
+        ['.action-feedback-amount span', 'rgb(255, 255, 255)'], ['.action-feedback-recipient', 'rgb(165, 243, 252)'],
+        ['.action-feedback-reward', 'rgb(255, 255, 255)'], ['.action-feedback-reason', 'rgb(203, 213, 225)'],
+        ['.action-feedback-balance', 'rgb(203, 213, 225)'], ['.action-feedback-balance strong', 'rgb(255, 255, 255)'],
         ['.action-feedback-dismiss', 'rgb(203, 213, 225)'],
-      ]) expect(getComputedStyle(card.querySelector(selector)!).color).toBe(light ? foreground : dark);
+      ]) expect(getComputedStyle(card.querySelector(selector)!).color).toBe(color);
       expect(view.container.querySelectorAll('.action-feedback-coin')).toHaveLength(8);
       expect(getComputedStyle(view.container.querySelector('.action-feedback-coin')!).borderTopColor).toBe('rgb(251, 191, 36)');
     } finally { style.remove(); }

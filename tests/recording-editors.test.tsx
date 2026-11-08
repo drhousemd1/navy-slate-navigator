@@ -6,6 +6,7 @@ import PunishmentFormSubmitHandler from '@/components/punishments/form/Punishmen
 import { punishmentFormSchema } from '@/components/punishments/form/PunishmentFormProvider';
 import DeleteRuleDialog from '@/components/rule-editor/DeleteRuleDialog';
 vi.mock('@/hooks/useEditorDraftScope', () => ({ useEditorDraftScope: () => null }));
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 vi.mock('@/hooks/useFormStatePersister', () => ({ useFormStatePersister: () => ({ clearPersistedState: vi.fn() }) }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), debug: vi.fn(), info: vi.fn() } }));
 function SubmitButton({ isSaving }: { isSaving?: boolean }) { return <button type="submit" disabled={isSaving}>Save fixture</button>; }

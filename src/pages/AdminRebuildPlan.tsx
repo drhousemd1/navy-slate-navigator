@@ -67,7 +67,7 @@ export default function AdminRebuildPlan() {
           <p className="text-xs uppercase tracking-wide text-slate-400">Admin</p>
           <h1 id="rebuild-plan-heading" className="text-xl font-semibold">Rebuild plan</h1>
           {publication && <p className="text-xs text-slate-400">
-            Publication {publication.head.sequence} · {publication.manifest.version} · Published {new Date(publication.publishedAt).toLocaleString()}
+            Published {new Date(publication.publishedAt).toLocaleString()}
           </p>}
         </div>
         <Button variant="outline" onClick={() => setRevision(value => value + 1)}>Refresh plan</Button>
@@ -78,12 +78,11 @@ export default function AdminRebuildPlan() {
           <p className="mt-2">Check your connection and use Refresh plan to try again.</p>
         </div> : publication ? <>
           {stale && <p role={failed ? 'alert' : 'status'} className="mb-2 text-sm text-slate-300">
-            {failed ? 'Refresh failed. Showing your previously verified publication; the latest version is unconfirmed.' : 'Checking for updates. Showing your previously verified publication.'}
+            {failed ? 'Refresh failed. Showing the last verified version.' : 'Checking for updates…'}
           </p>}
           <p className="mb-2 text-xs text-slate-400">
-            {historicalBaselines.has(publication.manifest.sha256) && 'Dated baseline plan, written before this admin page was published; it does not reflect all later implementation work. '}
-            Maintained in Codex. Checkbox clicks here are temporary; source updates are published as a new version.
-            Supporting files remain in the project workspace.
+            {historicalBaselines.has(publication.manifest.sha256) && 'Historical plan; later implementation changes are not included. '}
+            Maintained in Codex. Checkbox changes here are temporary.
           </p>
           <iframe key={`${userId}-${publication.head.sha256}`} title={publication.manifest.title} srcDoc={publication.html}
             sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer"

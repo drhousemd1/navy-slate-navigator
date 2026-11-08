@@ -50,7 +50,7 @@ const Notifications: React.FC = () => {
       },
       rewardRefunded: {
         title: 'Points Refunded',
-        description: 'Get notified when deleting a reward returns points from your unused purchases'
+        description: 'Get notified when unused rewards are refunded'
       },
       punishmentPerformed: {
         title: 'Punishment Performed',
@@ -62,7 +62,7 @@ const Notifications: React.FC = () => {
       },
       wellnessCheckin: {
         title: 'Wellness Check-in',
-        description: 'Allow push delivery for your saved personal reminder schedule'
+        description: 'Get your daily wellness reminder'
       },
       messages: {
         title: 'Messages',
@@ -87,7 +87,7 @@ const Notifications: React.FC = () => {
               Push Notifications
             </h2>
             
-            {isLoading && <p role="status" className="text-sm text-gray-400">Loading notification preferences…</p>}
+            {isLoading && <p role="status" className="text-gray-400 text-sm">Loading notification preferences…</p>}
             {loadError && <div className="space-y-2">
               <p role="alert" className="text-sm text-red-300">{loadError}</p>
               <Button variant="outline" disabled={isLoading || isSaving} onClick={() => void loadPreferences()}>Retry notification preferences</Button>
@@ -99,7 +99,7 @@ const Notifications: React.FC = () => {
                 <Bell className={`w-5 h-5 ${preferences.enabled ? 'text-cyan-500' : 'text-gray-400'}`} />
                 <div>
                   <p className="text-white font-medium">Push Notifications</p>
-                  <p className="text-gray-400 text-sm">Account preference across your devices</p>
+                  <p className="text-gray-400 text-sm">Enable notifications across your devices</p>
                 </div>
               </div>
               <Switch

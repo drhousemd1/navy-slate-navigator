@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useForm } from 'react-hook-form';
@@ -163,20 +163,20 @@ it('returns focus through a nested picker before returning to the external edito
   await waitFor(() => expect(document.activeElement).toBe(opener));
 });
 
-it('renders the full description in the actual toast renderer and keeps the action', async () => {
+it('renders the original compact toast without a description and keeps the action usable', async () => {
   const user = userEvent.setup();
+  const retryUpload = vi.fn();
   render(<Toaster />);
   const description = 'The image could not be uploaded. Keep this draft and try again when the connection returns.';
-  act(() => { toast({ title: 'Upload failed', description, variant: 'destructive', action: <button>Retry upload</button> }); });
-  const detail = await screen.findByText(description);
-  expect(detail.className).not.toMatch(/\bhidden\b/);
-  expect(screen.getByRole('button', { name: 'Retry upload' })).toBeTruthy();
+  act(() => { toast({ title: 'Upload failed', description, variant: 'destructive', action: <button onClick={retryUpload}>Retry upload</button> }); });
+  const title = await screen.findByText('Upload failed');
+  expect(screen.queryByText(description)).toBeNull();
+  expect(title.closest('[data-sonner-toast]')?.className).toContain('single-line-toast');
+  expect(screen.queryByRole('button', { name: 'Close toast' })).toBeNull();
   const item = sonnerToast.getHistory().find(item => 'title' in item && item.title === 'Upload failed');
-  expect(item).toMatchObject({ description, duration: 10000, closeButton: true });
-  expect(detail.closest('[data-sonner-toast]')?.className).not.toContain('single-line-toast');
-  // Keyboard activation exercises dismissal without jsdom's missing pointer
-  // capture API; actual pointer placement is checked in the browser fixture.
-  act(() => { screen.getByRole('button', { name: 'Close toast' }).focus(); });
+  expect(item).toMatchObject({ description: null, duration: 2000, position: 'top-center' });
+  // Keyboard activation keeps the action accessible in the compact renderer.
+  act(() => { screen.getByRole('button', { name: 'Retry upload' }).focus(); });
   await user.keyboard('{Enter}');
-  await waitFor(() => expect(screen.queryByText(description)).toBeNull());
+  expect(retryUpload).toHaveBeenCalledOnce();
 });

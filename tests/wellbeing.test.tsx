@@ -218,7 +218,7 @@ describe('saved report recovery and UI', () => {
 
   it('renders eight editable unsaved controls, zero and missing readings truthfully, without sending on change', () => {
     render(<WellbeingForm scope={scope} timezone="America/Boise" latest={null} />, { wrapper: wrapper() });
-    expect(screen.getAllByRole('slider')).toHaveLength(8); expect(screen.getByText(/starting values are an unsaved draft/)).toBeTruthy();
+    expect(screen.getAllByRole('slider')).toHaveLength(8); expect(screen.getByText('Not saved yet')).toBeTruthy();
     fireEvent.change(screen.getByRole('slider', { name: 'Energy Level' }), { target: { value: '100' } });
     expect((screen.getByRole('slider', { name: 'Energy Level' }) as HTMLInputElement).value).toBe('100');
     expect(readWellbeingDraft(scope)?.metrics.energy).toBe(100); expect(calls).toHaveLength(0);

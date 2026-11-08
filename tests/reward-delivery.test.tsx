@@ -52,12 +52,12 @@ describe('mounted recipient refund delivery', () => {
     expect(mocks.ack).toHaveBeenCalledTimes(2);
     expect(mocks.actions.refresh).toHaveBeenCalledOnce();
   });
-  it.each(COLOR_SCHEMES.map(s => s.name))('passes the %s presentation to a real refund card without acknowledging on a theme change', theme => {
+  it.each(COLOR_SCHEMES.map(s => s.name))('preserves the refund presentation in %s without acknowledging on a theme change', theme => {
     mocks.theme = theme;
     const view = render(<RewardFeedback />);
-    expect(screen.getByRole('article').classList.contains('action-feedback-light')).toBe(theme === 'light-turquoise');
+    expect(screen.getByRole('article').classList.contains('action-feedback-light')).toBe(false);
     mocks.theme = theme === 'light-turquoise' ? 'default' : 'light-turquoise'; view.rerender(<RewardFeedback />);
-    expect(screen.getByRole('article').classList.contains('action-feedback-light')).toBe(mocks.theme === 'light-turquoise');
+    expect(screen.getByRole('article').classList.contains('action-feedback-light')).toBe(false);
     expect(screen.getByText('Returned to your balance')).toBeTruthy(); expect(mocks.ack).not.toHaveBeenCalled();
   });
   it('rejects stale preference ownership and describes the actor’s partner refund truthfully', () => {

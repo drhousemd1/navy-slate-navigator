@@ -22,7 +22,7 @@ describe('message list visibility and scrolling', () => {
   it('preserves the viewport on prepend and does not jump down for incoming messages while reading older history', () => {
     const displayed = vi.fn(); const props = { scope, conversation, loadingOlder: false, hasOlder: true, loadOlder: vi.fn(), onDisplayed: displayed, readError: null };
     const view = render(<MessageList {...props} messages={[message(20), message(21)]} />);
-    const log = screen.getByRole('log'); let height = 500;
+    const log = screen.getByRole('log').querySelector('[data-radix-scroll-area-viewport]') as HTMLElement; let height = 500;
     Object.defineProperty(log, 'scrollHeight', { configurable: true, get: () => height }); Object.defineProperty(log, 'clientHeight', { configurable: true, value: 100 });
     log.scrollTop = 150; fireEvent.scroll(log);
     height = 700; view.rerender(<MessageList {...props} messages={[message(10), message(20), message(21)]} />); expect(log.scrollTop).toBe(350);

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import RewardEditorForm from '@/components/reward-editor/RewardEditorForm';
 
 vi.mock('@/contexts/RewardsContext', () => ({ useRewards: () => ({ atomicAccounting: true }) }));
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
 vi.mock('@/components/reward-editor/RewardFormProvider', () => ({ default: ({ children }: any) => children({ watch: (name: string) => name === 'icon_name' || name === 'background_image_url' ? null : 50, setValue: vi.fn() }, vi.fn().mockResolvedValue(true)) }));
 vi.mock('@/components/reward-editor/RewardFormSubmitHandler', () => ({ default: ({ children }: any) => <>{children}</> }));

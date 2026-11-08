@@ -1,3 +1,4 @@
+import { StandardLoading } from '@/components/common/StandardizedStates';
 
 import React from 'react';
 import { useEditorDraftScope } from '@/hooks/useEditorDraftScope';
@@ -42,7 +43,7 @@ interface PunishmentFormProviderProps {
 
 const PunishmentFormProvider: React.FC<PunishmentFormProviderProps> = (props) => {
   const scope = useEditorDraftScope();
-  if (!scope) return <p role="status">Checking your draft account…</p>;
+  if (!scope) return <StandardLoading />;
   return <PunishmentFormSession key={editorDraftKey(scope, `${props.formBaseId}-${props.punishmentData?.id || 'new'}`)} {...props} scope={scope} />;
 };
 
@@ -75,7 +76,7 @@ const PunishmentFormSession: React.FC<PunishmentFormProviderProps & { scope: Edi
   });
 
   const draft = useFormStatePersister<PunishmentFormValues>(`${formBaseId}-${punishmentData?.id || 'new'}`, form, { scope });
-  if (!draft.ready) return <p role="status">Loading your draft…</p>;
+  if (!draft.ready) return <StandardLoading />;
   return (
     <Form {...form}>
       <EditorDraftNotice draft={draft} />

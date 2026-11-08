@@ -48,7 +48,7 @@ export const NotificationSettings: React.FC = () => {
       return { title: 'Reward Redeemed', description: 'Get notified when your partner redeems a reward' };
     }
     if (type === 'rewardRefunded') {
-      return { title: 'Points Refunded', description: 'Get notified when deleting a reward returns points from your unused purchases' };
+      return { title: 'Points Refunded', description: 'Get notified when unused rewards are refunded' };
     }
     if (type === 'punishmentPerformed') {
       return { title: 'Punishment Performed', description: 'Get notified when your partner applies a punishment' };
@@ -57,7 +57,7 @@ export const NotificationSettings: React.FC = () => {
       return { title: 'Wellness Updated', description: 'Get notified when your partner updates their wellness score' };
     }
     if (type === 'wellnessCheckin') {
-      return { title: 'Wellness Check-in', description: 'Allow push delivery for your saved personal reminder schedule' };
+      return { title: 'Wellness Check-in', description: 'Get your daily wellness reminder' };
     }
     if (type === 'messages') {
       return { title: 'Messages', description: 'Get notified when you receive a new message from your partner' };
@@ -77,7 +77,7 @@ export const NotificationSettings: React.FC = () => {
       </h2>
       
       <div className="bg-navy p-4 rounded border border-light-navy space-y-4">
-        {isLoading && <p role="status" className="text-sm text-gray-400">Loading notification preferences…</p>}
+        {isLoading && <p role="status" className="text-gray-400 text-sm">Loading notification preferences…</p>}
         {loadError && <div className="space-y-2">
           <p role="alert" className="text-sm text-red-300">{loadError}</p>
           <Button variant="outline" disabled={isLoading || isSaving} onClick={() => void loadPreferences()}>Retry notification preferences</Button>
@@ -89,7 +89,7 @@ export const NotificationSettings: React.FC = () => {
             <Bell className={`w-5 h-5 ${preferences.enabled ? 'text-cyan-500' : 'text-gray-400'}`} />
             <div>
               <p className="text-white font-medium">Push Notifications</p>
-              <p className="text-gray-400 text-sm">Account preference across your devices</p>
+              <p className="text-gray-400 text-sm">Enable notifications across your devices</p>
             </div>
           </div>
           <Switch

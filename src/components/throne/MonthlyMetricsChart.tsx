@@ -1,5 +1,4 @@
 import { useCoreTextClasses } from '@/components/common/useCoreTextClasses';
-import { useColorScheme } from '@/contexts/ColorSchemeContext';
 import React, { useRef, useState, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -27,9 +26,8 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
   currentView = true 
 }) => {
   const text = useCoreTextClasses();
-  const light = useColorScheme().currentScheme === 'light-turquoise';
-  const tick = light ? { fill: 'hsl(var(--foreground))', style: { fill: 'hsl(var(--foreground))' } } : { fill: '#D1D5DB' };
-  const axisStroke = light ? 'hsl(var(--foreground))' : '#8E9196';
+  const tick = { fill: '#D1D5DB' };
+  const axisStroke = '#8E9196';
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
@@ -203,7 +201,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
             </h2>
             {showToggle && (
               <div className="flex items-center space-x-2">
-                <Label htmlFor="view-toggle" className={`text-sm ${light ? 'text-foreground' : 'text-nav-inactive'}`}>
+                <Label htmlFor="view-toggle" className={`text-sm text-nav-inactive`}>
                   Weekly
                 </Label>
                 <Switch
@@ -211,7 +209,7 @@ const MonthlyMetricsChart: React.FC<MonthlyMetricsChartProps> = ({
                   checked={currentView}
                   onCheckedChange={onToggleView}
                 />
-                <Label htmlFor="view-toggle" className={`text-sm ${light ? 'text-foreground' : 'text-nav-inactive'}`}>
+                <Label htmlFor="view-toggle" className={`text-sm text-nav-inactive`}>
                   Monthly
                 </Label>
               </div>

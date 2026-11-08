@@ -52,10 +52,10 @@ describe('shared app logo controls', () => {
     expect(mocks.write.mock.calls[1][1]).toBe(first); expect(mocks.compress).toHaveBeenCalledTimes(2);
   });
   it('restores an archived ID using the current revision and retains both versions', async () => {
-    await ready(); await userEvent.click(screen.getByRole('button', { name: 'Restore Original app logo' }));
+    await ready(); await userEvent.click(screen.getByText('Logo history', { selector: 'summary' })); await userEvent.click(screen.getByRole('button', { name: 'Restore Original app logo' }));
     await screen.findByText('Previous logo restored for everyone.');
     expect(mocks.write.mock.calls[0][1]).toMatchObject({ kind: 'restore', versionId: original.id, expectedRevision: 1 });
-    expect(screen.getByRole('region', { name: 'Previous app logos' })).toBeTruthy(); expect(screen.getAllByAltText(/logo/i).length).toBe(3);
+    expect(screen.getByLabelText('Previous app logos').getAttribute('open')).not.toBeNull(); expect(screen.getAllByAltText(/logo/i).length).toBe(2);
   });
   it('requires review after a conflict then uses a new command at the refreshed revision', async () => {
     await ready(); mocks.write.mockRejectedValueOnce(new BrandingError('LOGO_REVISION_CONFLICT'));

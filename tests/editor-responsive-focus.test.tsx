@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+vi.mock('@/contexts/ColorSchemeContext', () => ({ useColorScheme: () => ({ currentScheme: 'default' }) }));
+
 // Keep the production editor shells and their actual responsive/focus hooks.
 // Form storage/business behavior is outside this keyboard lifecycle regression.
 vi.mock('@/components/TaskEditorForm', () => ({ default: () => <><input aria-label="Task title" /><button>Save task</button></> }));

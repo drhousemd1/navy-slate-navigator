@@ -1,12 +1,8 @@
 
 import React from 'react';
-import { Card } from './ui/card';
+import { PunishmentCardView } from './punishments/PunishmentCardView';
 import PunishmentEditor from './PunishmentEditor';
 // import { cn } from '@/lib/utils'; // Not used
-import PunishmentCardHeader from './punishments/PunishmentCardHeader';
-import PunishmentCardContent from './punishments/PunishmentCardContent';
-import PunishmentCardFooter from './punishments/PunishmentCardFooter';
-import PunishmentBackground from './punishments/PunishmentBackground';
 import { usePunishmentCard } from './punishments/hooks/usePunishmentCard';
 import { PunishmentData } from '@/contexts/punishments/types';
 
@@ -60,42 +56,9 @@ const PunishmentCard: React.FC<PunishmentCardProps> = (props) => {
 
   return (
     <>
-      <Card className="relative overflow-hidden border-2 border-red-500 bg-navy">
-        <PunishmentBackground 
-          background_image_url={background_image_url}
-          background_opacity={background_opacity}
-          focal_point_x={focal_point_x}
-          focal_point_y={focal_point_y}
-        />
-        
-        <div className="relative z-10 flex flex-col p-4 md:p-6 h-full">
-          <PunishmentCardHeader 
-            points={points}
-            dom_points={displayDomPoints} 
-            dom_supply={dom_supply} // Pass dom_supply
-            onPunish={handlePunish}
-          />
-          
-          <PunishmentCardContent 
-            icon_name={icon_name}
-            icon_color={icon_color}
-            title={title}
-            description={description}
-            title_color={title_color}
-            subtext_color={subtext_color}
-            highlight_effect={highlight_effect}
-            background_image_url={background_image_url}
-            background_opacity={background_opacity}
-          />
-          
-          <PunishmentCardFooter 
-            frequency_count={frequencyCount}
-            calendar_color={calendar_color}
-            usage_data={weekData}
-            onEdit={handleEditAction}
-          />
-        </div>
-      </Card>
+      <PunishmentCardView {...currentPunishment}
+        frequency_count={frequencyCount} usage_data={weekData}
+        onPunish={handlePunish} onEdit={handleEditAction} />
       
       <PunishmentEditor 
         isOpen={isEditorOpen}

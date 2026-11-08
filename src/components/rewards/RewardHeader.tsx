@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Badge } from '../ui/badge';
-import { Box, Ticket, Coins, Crown, Minus } from 'lucide-react';
+import { Box, Ticket, Coins, Crown, Minus, MoreHorizontal, Gift } from 'lucide-react';
 import { Button } from '../ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { logger } from '@/lib/logger'; // Added logger import
 
 interface RewardHeaderProps {
@@ -13,7 +14,10 @@ interface RewardHeaderProps {
   onBuy: (cost: number) => void;
   onUse: () => void;
   buyDisabled?: boolean;
-  hideUse?: boolean;
+  useDisabled?: boolean;
+  useOptions?: { label: string; onSelect: () => void }[];
+  onGift?: () => void;
+  giftDisabled?: boolean;
 }
 
 const RewardHeader: React.FC<RewardHeaderProps> = ({
@@ -24,7 +28,10 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
   onBuy,
   onUse,
   buyDisabled = false,
-  hideUse = false
+  useDisabled = false,
+  useOptions,
+  onGift,
+  giftDisabled = false
 }) => {
   // Colors based on reward type
   const buyButtonColor = isDomReward 
@@ -57,17 +64,30 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
           <span>{supply}</span>
         </Badge>
         
-        {supply > 0 && !hideUse && (
+        {supply > 0 && (useOptions && useOptions.length > 1 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={useDisabled}
+                className="p-1 h-7 text-blue-500 border-blue-500 hover:bg-blue-500/10 hover:text-blue-400 flex items-center gap-1">
+                <Ticket className="h-4 w-4" /><span>Use</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-navy border-light-navy text-foreground">
+              {useOptions.map(option => <DropdownMenuItem key={option.label} disabled={useDisabled} onSelect={option.onSelect}>{option.label}</DropdownMenuItem>)}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
           <Button 
             variant="outline" 
             size="sm"
             className="p-1 h-7 text-blue-500 border-blue-500 hover:bg-blue-500/10 hover:text-blue-400 flex items-center gap-1"
             onClick={onUse}
+            disabled={useDisabled}
           >
             <Ticket className="h-4 w-4" />
             <span>Use</span>
           </Button>
-        )}
+        ))}
       </div>
       
       <div className="flex items-center gap-2">
@@ -90,6 +110,16 @@ const RewardHeader: React.FC<RewardHeaderProps> = ({
         >
           Buy
         </Button>
+        {onGift && <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-white" aria-label={`More actions for ${title}`} disabled={giftDisabled}>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-navy border-light-navy text-foreground">
+            <DropdownMenuItem disabled={giftDisabled} onSelect={onGift}><Gift className="mr-2 h-4 w-4" />Gift to Sub</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>}
       </div>
     </div>
   );
